@@ -34,6 +34,10 @@ final class LocationTrackerViewModel {
     var elapsedSeconds: Int64 = 0
     var pointCount = 0
     var finishedTrackID: String?
+    private(set) var currentTrackID: String?
+    private(set) var currentTrackName: String?
+    private(set) var currentDistanceMeters: Double = 0
+    private(set) var currentMaxSpeedMetersPerSecond: Double?
 
     @ObservationIgnored private let repository: TrackRepository
     @ObservationIgnored private let locationService: LocationService
@@ -44,8 +48,6 @@ final class LocationTrackerViewModel {
     @ObservationIgnored private var pendingPoints: [TrackPoint] = []
     @ObservationIgnored private var lastFlushDate = Date()
     @ObservationIgnored private var lastLocation: CLLocation?
-    @ObservationIgnored private var totalDistanceMeters: Double = 0
-    @ObservationIgnored private var maxSpeedMetersPerSecond: Double?
 
     init(repository: TrackRepository, locationService: LocationService, syncEngine: any SyncEngine) {
         self.repository = repository
@@ -73,14 +75,16 @@ final class LocationTrackerViewModel {
         do {
             try repository.insertTrack(track)
             currentTrack = track
+            currentTrackID = track.id
+            currentTrackName = track.name
             state = .recording
             pointCount = 0
             elapsedSeconds = 0
             finishedTrackID = nil
             pendingPoints = []
             lastLocation = nil
-            totalDistanceMeters = 0
-            maxSpeedMetersPerSecond = nil
+            currentDistanceMeters = 0
+            currentMaxSpeedMetersPerSecond = nil
             lastFlushDate = Date()
             startElapsedTimer(startedAt: track.startedAt)
             startLocationUpdates(trackID: track.id, accuracy: selectedAccuracy)
@@ -103,14 +107,14 @@ final class LocationTrackerViewModel {
             try flushPendingPoints()
             let endedAt = SyncableTimestamp.nowMilliseconds()
             let duration = max(1, (endedAt - track.startedAt) / 1000)
-            let averageSpeed = totalDistanceMeters > 0 ? totalDistanceMeters / Double(duration) : nil
+            let averageSpeed = currentDistanceMeters > 0 ? currentDistanceMeters / Double(duration) : nil
             let finished = try repository.finishTrack(
                 id: track.id,
                 endedAt: endedAt,
-                distanceMeters: totalDistanceMeters,
+                distanceMeters: currentDistanceMeters,
                 durationSeconds: duration,
                 averageSpeedMetersPerSecond: averageSpeed,
-                maxSpeedMetersPerSecond: maxSpeedMetersPerSecond
+                maxSpeedMetersPerSecond: currentMaxSpeedMetersPerSecond
             )
             currentTrack = finished
             finishedTrackID = finished?.id
@@ -138,12 +142,12 @@ final class LocationTrackerViewModel {
         currentCoordinate = location.coordinate
 
         if let lastLocation {
-            totalDistanceMeters += location.distance(from: lastLocation)
+            currentDistanceMeters += location.distance(from: lastLocation)
         }
         lastLocation = location
 
         if location.speed >= 0 {
-            maxSpeedMetersPerSecond = max(maxSpeedMetersPerSecond ?? 0, location.speed)
+            currentMaxSpeedMetersPerSecond = max(currentMaxSpeedMetersPerSecond ?? 0, location.speed)
         }
 
         let point = TrackPoint.make(trackID: trackID, location: location, deviceID: repository.deviceID)

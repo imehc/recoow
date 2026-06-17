@@ -1,55 +1,30 @@
 import SwiftUI
 
-/// 应用根导航。后续新增工具时，只需要在 ToolRoute 和 tools 中追加入口。
+/// 应用根导航。后续新增工具时，在 ToolRoute 中追加入口即可继承主页、设置和详情隐藏 Tab 的规则。
 struct AppRoot: View {
-    @Environment(AppContainer.self) private var container
-
-    private let tools: [ToolRoute] = [.locationTracker]
+    @State private var selectedTab: AppTab = .home
 
     var body: some View {
-        TabView {
-            Tab("工具", systemImage: "wrench.and.screwdriver") {
+        TabView(selection: $selectedTab) {
+            Tab("首页", systemImage: "house", value: .home) {
                 NavigationStack {
-                    List(tools) { tool in
-                        NavigationLink(value: tool) {
-                            Label(tool.title, systemImage: tool.systemImage)
-                        }
-                    }
-                    .navigationTitle("工具")
-                    .navigationDestination(for: ToolRoute.self) { tool in
-                        switch tool {
-                        case .locationTracker:
-                            LocationTrackerView()
-                        }
+                    HomeView {
+                        selectedTab = .settings
                     }
                 }
             }
 
-            Tab("历史", systemImage: "clock") {
+            Tab("历史", systemImage: "clock", value: .history) {
                 NavigationStack {
                     TrackHistoryView()
                 }
             }
-        }
-    }
-}
 
-private enum ToolRoute: String, CaseIterable, Identifiable, Hashable {
-    case locationTracker
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .locationTracker:
-            "轨迹记录"
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .locationTracker:
-            "location.fill"
+            Tab("设置", systemImage: "gearshape", value: .settings) {
+                NavigationStack {
+                    SettingsView()
+                }
+            }
         }
     }
 }

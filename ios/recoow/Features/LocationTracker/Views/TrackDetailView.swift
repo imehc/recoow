@@ -12,60 +12,55 @@ struct TrackDetailView: View {
     let trackID: String
 
     var body: some View {
-        List {
+        Form {
             Section {
-                ZStack {
-                    Map(position: $cameraPosition) {
-                        if displayCoordinates.count > 1 {
-                            MapPolyline(coordinates: displayCoordinates)
-                                .stroke(.blue, lineWidth: 4)
-                        }
-
-                        if let first = displayCoordinates.first {
-                            Marker("起点", systemImage: "play.fill", coordinate: first)
-                                .tint(.green)
-                        }
-
-                        if let last = displayCoordinates.last, displayCoordinates.count > 1 {
-                            Marker("终点", systemImage: "flag.checkered", coordinate: last)
-                                .tint(.red)
-                        }
-                    }
-                    .frame(minHeight: 320)
-                    .clipShape(.rect(cornerRadius: 8))
-
-                    if points.isEmpty {
-                        ContentUnavailableView("暂无采样点", systemImage: "location.slash")
-                            .background(.thinMaterial)
-                            .clipShape(.rect(cornerRadius: 8))
-                    }
-                }
-                .listRowInsets(EdgeInsets())
+                TrackMapView(
+                    cameraPosition: $cameraPosition,
+                    points: points,
+                    displayCoordinates: displayCoordinates
+                )
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
             }
 
             if let track {
-                Section("概要") {
+                Section("摘要") {
                     LabeledContent("名称", value: track.name)
-                    LabeledContent("距离", value: AppFormatters.distance(track.distanceMeters))
-                    LabeledContent("时长", value: AppFormatters.duration(track.durationSeconds))
-                    LabeledContent("平均速度", value: AppFormatters.speed(track.averageSpeedMetersPerSecond))
-                    LabeledContent("最大速度", value: AppFormatters.speed(track.maxSpeedMetersPerSecond))
-                    LabeledContent("采样点", value: "\(points.count)")
+
+                    LabeledContent {
+                        Label(statusTitle, systemImage: statusSystemImage)
+                            .foregroundStyle(statusColor)
+                    } label: {
+                        Text("状态")
+                    }
+
+                    LabeledContent("距离", value: AppFormatters.distance(displayDistanceMeters))
+                    LabeledContent("时长", value: AppFormatters.duration(displayDurationSeconds))
+                    LabeledContent("采样点", value: "\(displayPointCount)")
+                    LabeledContent("精度", value: "\(track.desiredAccuracyMeters)m")
+                    LabeledContent("平均速度", value: AppFormatters.speed(displayAverageSpeed))
+                    LabeledContent("最高速度", value: AppFormatters.speed(displayMaxSpeed))
+                }
+            } else if errorMessage == nil {
+                Section {
+                    ProgressView("正在加载")
                 }
             }
 
             if let errorMessage {
-                Section("错误") {
-                    Text(errorMessage)
-                        .font(.footnote)
+                Section {
+                    Label(errorMessage, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.red)
                 }
             }
         }
         .navigationTitle(track?.name ?? "轨迹详情")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .task(id: trackID) {
             load()
+        }
+        .onChange(of: container.locationTrackerViewModel.pointCount) { _, _ in
+            reloadIfActive()
         }
     }
 
@@ -80,6 +75,120 @@ struct TrackDetailView: View {
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func reloadIfActive() {
+        guard isActiveTrack else { return }
+        load()
+    }
+
+    private var isActiveTrack: Bool {
+        container.locationTrackerViewModel.isRecording &&
+            container.locationTrackerViewModel.currentTrackID == trackID
+    }
+
+    private var statusTitle: String {
+        if isActiveTrack {
+            return "记录中"
+        }
+
+        if track?.endedAt == nil {
+            return "未结束"
+        }
+
+        return "已完成"
+    }
+
+    private var statusSystemImage: String {
+        if isActiveTrack {
+            return "dot.radiowaves.left.and.right"
+        }
+
+        if track?.endedAt == nil {
+            return "exclamationmark.circle"
+        }
+
+        return "checkmark.circle"
+    }
+
+    private var statusColor: Color {
+        if isActiveTrack {
+            return .green
+        }
+
+        if track?.endedAt == nil {
+            return .orange
+        }
+
+        return .secondary
+    }
+
+    private var displayPointCount: Int {
+        if isActiveTrack {
+            return max(points.count, container.locationTrackerViewModel.pointCount)
+        }
+
+        return points.count
+    }
+
+    private var displayDistanceMeters: Double {
+        if isActiveTrack {
+            return container.locationTrackerViewModel.currentDistanceMeters
+        }
+
+        if let distanceMeters = track?.distanceMeters, distanceMeters > 0 {
+            return distanceMeters
+        }
+
+        return calculatedDistanceMeters
+    }
+
+    private var displayDurationSeconds: Int64 {
+        if isActiveTrack {
+            return container.locationTrackerViewModel.elapsedSeconds
+        }
+
+        if let durationSeconds = track?.durationSeconds, durationSeconds > 0 {
+            return durationSeconds
+        }
+
+        return calculatedDurationSeconds
+    }
+
+    private var displayAverageSpeed: Double? {
+        if let averageSpeed = track?.averageSpeedMetersPerSecond {
+            return averageSpeed
+        }
+
+        guard displayDistanceMeters > 0, displayDurationSeconds > 0 else { return nil }
+        return displayDistanceMeters / Double(displayDurationSeconds)
+    }
+
+    private var displayMaxSpeed: Double? {
+        if isActiveTrack, let speed = container.locationTrackerViewModel.currentMaxSpeedMetersPerSecond {
+            return speed
+        }
+
+        if let speed = track?.maxSpeedMetersPerSecond {
+            return speed
+        }
+
+        return points.compactMap(\.speedMetersPerSecond).max()
+    }
+
+    private var calculatedDurationSeconds: Int64 {
+        guard let first = points.first, let last = points.last else { return 0 }
+        return max(0, (last.timestampMilliseconds - first.timestampMilliseconds) / 1000)
+    }
+
+    private var calculatedDistanceMeters: Double {
+        guard points.count > 1 else { return 0 }
+
+        return zip(points, points.dropFirst()).reduce(0) { partialResult, pair in
+            let start = CLLocation(latitude: pair.0.latitude, longitude: pair.0.longitude)
+            let end = CLLocation(latitude: pair.1.latitude, longitude: pair.1.longitude)
+            return partialResult + end.distance(from: start)
         }
     }
 

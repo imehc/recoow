@@ -219,3 +219,4 @@ sequenceDiagram
 4. 在 `AppContainer` 注册新 Repository 或 ViewModel 工厂。
 5. 在 `AppRoot` 添加工具入口或新的 Tab。
 6. 在本文档追加该 feature 的概念模型、逻辑模型和物理模型小节。
+Deployment

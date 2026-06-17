@@ -84,9 +84,22 @@ final class TrackRepository: @unchecked Sendable {
         }
     }
 
+    func deleteTracks(ids: [String]) throws {
+        guard ids.isEmpty == false else { return }
+
+        try database.writer.write { db in
+            for id in ids {
+                try deleteTrack(id: id, db: db)
+            }
+        }
+    }
+
     func fetchTrack(id: String) throws -> Track? {
         try database.reader.read { db in
-            try Track.fetchOne(db, key: id)
+            try Track
+                .filter(Column("id") == id)
+                .filter(Column("deleted_at") == nil)
+                .fetchOne(db)
         }
     }
 
@@ -94,8 +107,26 @@ final class TrackRepository: @unchecked Sendable {
         try database.reader.read { db in
             try TrackPoint
                 .filter(Column("track_id") == trackID)
+                .filter(Column("deleted_at") == nil)
                 .order(Column("timestamp_ms").asc)
                 .fetchAll(db)
+        }
+    }
+
+    func fetchPointCounts(trackIDs: [String]) throws -> [String: Int] {
+        guard trackIDs.isEmpty == false else { return [:] }
+
+        return try database.reader.read { db in
+            var counts: [String: Int] = [:]
+
+            for trackID in trackIDs {
+                counts[trackID] = try TrackPoint
+                    .filter(Column("track_id") == trackID)
+                    .filter(Column("deleted_at") == nil)
+                    .fetchCount(db)
+            }
+
+            return counts
         }
     }
 
@@ -122,6 +153,48 @@ final class TrackRepository: @unchecked Sendable {
             continuation.onTermination = { @Sendable _ in
                 cancellable.cancel()
             }
+        }
+    }
+
+    private func deleteTrack(id: String, db: Database) throws {
+        guard var track = try Track.fetchOne(db, key: id), track.deletedAt == nil else {
+            return
+        }
+
+        let deletedAt = SyncableTimestamp.nowMilliseconds()
+        track.deletedAt = deletedAt
+        track.updatedAt = deletedAt
+        track.syncStatus = .pending
+
+        try track.update(db)
+        try changeLogRepository.append(
+            db: db,
+            table: Track.databaseTableName,
+            entityID: track.id,
+            operation: .delete,
+            payload: track,
+            clientTimestampMilliseconds: track.updatedAt
+        )
+
+        let points = try TrackPoint
+            .filter(Column("track_id") == id)
+            .filter(Column("deleted_at") == nil)
+            .fetchAll(db)
+
+        for var point in points {
+            point.deletedAt = deletedAt
+            point.updatedAt = deletedAt
+            point.syncStatus = .pending
+
+            try point.update(db)
+            try changeLogRepository.append(
+                db: db,
+                table: TrackPoint.databaseTableName,
+                entityID: point.id,
+                operation: .delete,
+                payload: point,
+                clientTimestampMilliseconds: point.updatedAt
+            )
         }
     }
 }
