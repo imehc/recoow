@@ -9,11 +9,20 @@ struct LocationTrackerContent: View {
         Form {
             Section("状态") {
                 LabeledContent {
-                    Text(viewModel.currentTrackName ?? "准备开始新的轨迹")
-                        .foregroundStyle(.secondary)
+                    if let currentTrackName = viewModel.currentTrackName {
+                        Text(currentTrackName)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("准备开始新的轨迹")
+                            .foregroundStyle(.secondary)
+                    }
                 } label: {
-                    Label(viewModel.state.title, systemImage: statusSystemImage)
-                        .foregroundStyle(statusColor)
+                    Label {
+                        Text(LocalizedStringKey(viewModel.state.title))
+                    } icon: {
+                        Image(systemName: statusSystemImage)
+                    }
+                    .foregroundStyle(statusColor)
                 }
 
                 LabeledContent("时长", value: AppFormatters.duration(viewModel.elapsedSeconds))
@@ -50,8 +59,12 @@ struct LocationTrackerContent: View {
 
             Section {
                 Button(action: toggleRecording) {
-                    Label(recordingButtonTitle, systemImage: recordingButtonImage)
-                        .frame(maxWidth: .infinity)
+                    Label {
+                        Text(LocalizedStringKey(recordingButtonTitle))
+                    } icon: {
+                        Image(systemName: recordingButtonImage)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(viewModel.isRecording ? .red : .blue)

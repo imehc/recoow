@@ -10,11 +10,15 @@ struct ActiveFeatureBanner: View {
             FeatureIconView(route: route)
 
             VStack(alignment: .leading, spacing: 4) {
-                Label("\(route.title)进行中", systemImage: "dot.radiowaves.left.and.right")
-                    .font(.headline)
-                    .foregroundStyle(.green)
+                Label {
+                    Text(route.titleKey) + Text("进行中")
+                } icon: {
+                    Image(systemName: "dot.radiowaves.left.and.right")
+                }
+                .font(.headline)
+                .foregroundStyle(.green)
 
-                Text("\(AppFormatters.duration(elapsedSeconds)) · \(pointCount) 个采样点")
+                Text("\(AppFormatters.duration(elapsedSeconds)) · \(AppFormatters.sampleCount(pointCount))")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

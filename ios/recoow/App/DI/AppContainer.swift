@@ -10,8 +10,11 @@ final class AppContainer {
     @ObservationIgnored let deviceIdentifier: DeviceIdentifier
     @ObservationIgnored let locationService: LocationService
     @ObservationIgnored let trackRepository: TrackRepository
+    @ObservationIgnored let decisionRepository: DecisionRepository
+    @ObservationIgnored let itemLocatorRepository: ItemLocatorRepository
     @ObservationIgnored let locationTrackerViewModel: LocationTrackerViewModel
     @ObservationIgnored let featureVisibilitySettings: FeatureVisibilitySettings
+    let appPreferences: AppPreferences
 
     init(
         database: AppDatabase,
@@ -19,16 +22,22 @@ final class AppContainer {
         deviceIdentifier: DeviceIdentifier,
         locationService: LocationService,
         trackRepository: TrackRepository,
+        decisionRepository: DecisionRepository,
+        itemLocatorRepository: ItemLocatorRepository,
         locationTrackerViewModel: LocationTrackerViewModel,
-        featureVisibilitySettings: FeatureVisibilitySettings
+        featureVisibilitySettings: FeatureVisibilitySettings,
+        appPreferences: AppPreferences
     ) {
         self.database = database
         self.syncEngine = syncEngine
         self.deviceIdentifier = deviceIdentifier
         self.locationService = locationService
         self.trackRepository = trackRepository
+        self.decisionRepository = decisionRepository
+        self.itemLocatorRepository = itemLocatorRepository
         self.locationTrackerViewModel = locationTrackerViewModel
         self.featureVisibilitySettings = featureVisibilitySettings
+        self.appPreferences = appPreferences
     }
 
     /// App 启动入口。数据库初始化失败属于不可恢复配置错误，直接暴露给开发阶段。
@@ -39,6 +48,16 @@ final class AppContainer {
             let changeLogRepository = ChangeLogRepository(database: database)
             let syncEngine = NoopSyncEngine(changeLogRepository: changeLogRepository)
             let trackRepository = TrackRepository(
+                database: database,
+                changeLogRepository: changeLogRepository,
+                deviceIdentifier: deviceIdentifier
+            )
+            let decisionRepository = DecisionRepository(
+                database: database,
+                changeLogRepository: changeLogRepository,
+                deviceIdentifier: deviceIdentifier
+            )
+            let itemLocatorRepository = ItemLocatorRepository(
                 database: database,
                 changeLogRepository: changeLogRepository,
                 deviceIdentifier: deviceIdentifier
@@ -56,8 +75,11 @@ final class AppContainer {
                 deviceIdentifier: deviceIdentifier,
                 locationService: locationService,
                 trackRepository: trackRepository,
+                decisionRepository: decisionRepository,
+                itemLocatorRepository: itemLocatorRepository,
                 locationTrackerViewModel: locationTrackerViewModel,
-                featureVisibilitySettings: FeatureVisibilitySettings()
+                featureVisibilitySettings: FeatureVisibilitySettings(),
+                appPreferences: AppPreferences()
             )
         } catch {
             fatalError("AppContainer 初始化失败: \(error)")
@@ -76,6 +98,16 @@ final class AppContainer {
                 changeLogRepository: changeLogRepository,
                 deviceIdentifier: deviceIdentifier
             )
+            let decisionRepository = DecisionRepository(
+                database: database,
+                changeLogRepository: changeLogRepository,
+                deviceIdentifier: deviceIdentifier
+            )
+            let itemLocatorRepository = ItemLocatorRepository(
+                database: database,
+                changeLogRepository: changeLogRepository,
+                deviceIdentifier: deviceIdentifier
+            )
             let locationService = LocationService()
             let locationTrackerViewModel = LocationTrackerViewModel(
                 repository: trackRepository,
@@ -89,8 +121,11 @@ final class AppContainer {
                 deviceIdentifier: deviceIdentifier,
                 locationService: locationService,
                 trackRepository: trackRepository,
+                decisionRepository: decisionRepository,
+                itemLocatorRepository: itemLocatorRepository,
                 locationTrackerViewModel: locationTrackerViewModel,
-                featureVisibilitySettings: FeatureVisibilitySettings(defaults: nil)
+                featureVisibilitySettings: FeatureVisibilitySettings(defaults: nil),
+                appPreferences: AppPreferences(defaults: nil)
             )
         } catch {
             fatalError("Preview AppContainer 初始化失败: \(error)")

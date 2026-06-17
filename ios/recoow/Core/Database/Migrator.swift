@@ -5,6 +5,8 @@ enum AppMigrator {
     static func makeMigrator() -> DatabaseMigrator {
         var migrator = DatabaseMigrator()
         V1InitialSchema.register(in: &migrator)
+        V2ToolsSchema.register(in: &migrator)
+        V3DecisionChoiceHistorySchema.register(in: &migrator)
         return migrator
     }
 

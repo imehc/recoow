@@ -125,6 +125,13 @@ final class LocationTrackerViewModel {
         }
     }
 
+    func applyUpdatedTrackDetails(_ track: Track) {
+        guard currentTrackID == track.id else { return }
+
+        currentTrack = track
+        currentTrackName = track.name
+    }
+
     private func startLocationUpdates(trackID: String, accuracy: LocationAccuracy) {
         recordingTask = Task { [weak self] in
             guard let self else { return }

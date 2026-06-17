@@ -8,6 +8,7 @@ struct TrackDetailView: View {
     @State private var displayCoordinates: [CLLocationCoordinate2D] = []
     @State private var errorMessage: String?
     @State private var cameraPosition: MapCameraPosition = .automatic
+    @State private var editingTrack: Track?
 
     let trackID: String
 
@@ -26,9 +27,22 @@ struct TrackDetailView: View {
                 Section("摘要") {
                     LabeledContent("名称", value: track.name)
 
+                    if let note = track.note, note.isEmpty == false {
+                        LabeledContent {
+                            Text(note)
+                                .multilineTextAlignment(.trailing)
+                        } label: {
+                            Text("备注")
+                        }
+                    }
+
                     LabeledContent {
-                        Label(statusTitle, systemImage: statusSystemImage)
-                            .foregroundStyle(statusColor)
+                        Label {
+                            Text(LocalizedStringKey(statusTitle))
+                        } icon: {
+                            Image(systemName: statusSystemImage)
+                        }
+                        .foregroundStyle(statusColor)
                     } label: {
                         Text("状态")
                     }
@@ -56,6 +70,22 @@ struct TrackDetailView: View {
         .navigationTitle(track?.name ?? "轨迹详情")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if let track {
+                    Button("编辑", systemImage: "pencil") {
+                        editingTrack = track
+                    }
+                }
+            }
+        }
+        .sheet(item: $editingTrack) { track in
+            NavigationStack {
+                TrackEditView(track: track) { updatedTrack in
+                    self.track = updatedTrack
+                }
+            }
+        }
         .task(id: trackID) {
             load()
         }

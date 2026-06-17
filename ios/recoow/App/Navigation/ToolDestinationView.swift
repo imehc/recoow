@@ -8,6 +8,10 @@ struct ToolDestinationView: View {
             switch route {
             case .locationTracker:
                 LocationTrackerView()
+            case .decisionMaker:
+                DecisionCollectionsView()
+            case .itemLocator:
+                ItemLocatorView()
             }
         }
         .toolbar(.hidden, for: .tabBar)

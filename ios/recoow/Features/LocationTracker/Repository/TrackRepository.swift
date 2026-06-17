@@ -84,6 +84,30 @@ final class TrackRepository: @unchecked Sendable {
         }
     }
 
+    func updateTrackDetails(id: String, name: String, note: String?) throws -> Track? {
+        try database.writer.write { db in
+            guard var track = try Track.fetchOne(db, key: id), track.deletedAt == nil else {
+                return nil
+            }
+
+            track.name = name
+            track.note = note
+            track.updatedAt = SyncableTimestamp.nowMilliseconds()
+            track.syncStatus = .pending
+
+            try track.update(db)
+            try changeLogRepository.append(
+                db: db,
+                table: Track.databaseTableName,
+                entityID: track.id,
+                operation: .update,
+                payload: track,
+                clientTimestampMilliseconds: track.updatedAt
+            )
+            return track
+        }
+    }
+
     func deleteTracks(ids: [String]) throws {
         guard ids.isEmpty == false else { return }
 

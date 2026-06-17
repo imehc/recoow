@@ -23,6 +23,13 @@ struct TrackHistoryRow: View {
                 }
             }
 
+            if let note = track.note, note.isEmpty == false {
+                Text(note)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
             HStack(spacing: 12) {
                 Label(AppFormatters.distance(displayDistance), systemImage: "point.topleft.down.curvedto.point.bottomright.up")
                 Label(AppFormatters.duration(displayDuration), systemImage: "timer")

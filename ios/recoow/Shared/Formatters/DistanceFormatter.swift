@@ -15,14 +15,14 @@ enum AppFormatters {
         let remainingSeconds = seconds % 60
 
         if hours > 0 {
-            return "\(hours)小时 \(minutes)分钟"
+            return AppLocalization.format("duration.hours.minutes", hours, minutes)
         }
 
         if minutes > 0 {
-            return "\(minutes)分钟 \(remainingSeconds)秒"
+            return AppLocalization.format("duration.minutes.seconds", minutes, remainingSeconds)
         }
 
-        return "\(remainingSeconds)秒"
+        return AppLocalization.format("duration.seconds", remainingSeconds)
     }
 
     static func speed(_ metersPerSecond: Double?) -> String {
@@ -32,5 +32,17 @@ enum AppFormatters {
 
     static func coordinate(latitude: Double, longitude: Double) -> String {
         String(format: "%.6f, %.6f", latitude, longitude)
+    }
+
+    static func dateTime(milliseconds: Int64) -> String {
+        let date = Date(timeIntervalSince1970: Double(milliseconds) / 1000)
+        return date.formatted(
+            Date.FormatStyle(date: .abbreviated, time: .shortened)
+                .locale(AppLocalization.currentLocale)
+        )
+    }
+
+    static func sampleCount(_ count: Int) -> String {
+        AppLocalization.format("sample.count", count)
     }
 }

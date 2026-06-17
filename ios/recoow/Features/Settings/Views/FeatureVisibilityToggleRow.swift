@@ -16,9 +16,9 @@ struct FeatureVisibilityToggleRow: View {
         Toggle(isOn: $isVisible) {
             Label {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(route.title)
+                    Text(route.titleKey)
 
-                    Text(route.subtitle)
+                    Text(route.subtitleKey)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

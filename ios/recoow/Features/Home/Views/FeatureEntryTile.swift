@@ -9,10 +9,10 @@ struct FeatureEntryTile: View {
             FeatureIconView(route: route)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(route.title)
+                Text(route.titleKey)
                     .font(.headline)
 
-                Text(route.subtitle)
+                Text(route.subtitleKey)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)

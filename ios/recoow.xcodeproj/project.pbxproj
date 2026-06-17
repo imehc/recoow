@@ -96,6 +96,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				"zh-Hans",
 				Base,
 			);
 			mainGroup = 3ABF80232FE1551D003C5066;
@@ -264,8 +265,11 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "记刻";
+				INFOPLIST_KEY_CFBundleLocalizations = "en zh-Hans";
+				INFOPLIST_KEY_NSCameraUsageDescription = "需要使用相机拍摄图片以帮助记录选项或物品位置";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "需要后台持续记录定位以完成轨迹采样";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "需要在使用期间获取您的位置以记录轨迹";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "需要从照片图库选择图片以帮助记录选项或物品位置";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UIBackgroundModes = location;
@@ -305,8 +309,11 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "记刻";
+				INFOPLIST_KEY_CFBundleLocalizations = "en zh-Hans";
+				INFOPLIST_KEY_NSCameraUsageDescription = "需要使用相机拍摄图片以帮助记录选项或物品位置";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "需要后台持续记录定位以完成轨迹采样";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "需要在使用期间获取您的位置以记录轨迹";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "需要从照片图库选择图片以帮助记录选项或物品位置";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UIBackgroundModes = location;

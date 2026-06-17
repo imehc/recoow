@@ -5,13 +5,17 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("主页功能入口") {
+            AppPreferencesSection(preferences: container.appPreferences)
+
+            Section {
                 ForEach(ToolRoute.allCases) { route in
                     FeatureVisibilityToggleRow(
                         route: route,
                         settings: container.featureVisibilitySettings
                     )
                 }
+            } header: {
+                Text("主页功能入口")
             }
         }
         .navigationTitle("设置")
