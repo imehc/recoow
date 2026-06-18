@@ -37,6 +37,21 @@ enum HistoryEntry: Identifiable, Hashable {
         }
     }
 
+    var route: ToolRoute {
+        switch self {
+        case .track:
+            .locationTracker
+        case .decisionChoice:
+            .decisionMaker
+        case .storedItem:
+            .itemLocator
+        case .reminder:
+            .reminders
+        case .bill:
+            .bills
+        }
+    }
+
     var date: Date {
         Date(timeIntervalSince1970: Double(timestamp) / 1000)
     }

@@ -19,6 +19,7 @@ final class AppContainer {
     @ObservationIgnored let locationTrackerViewModel: LocationTrackerViewModel
     @ObservationIgnored let featureVisibilitySettings: FeatureVisibilitySettings
     let appPreferences: AppPreferences
+    var historyFilterRequest: HistoryFilter?
 
     init(
         database: AppDatabase,

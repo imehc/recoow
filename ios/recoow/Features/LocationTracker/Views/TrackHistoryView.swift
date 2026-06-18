@@ -29,7 +29,11 @@ struct TrackHistoryView: View {
                     activeElapsedSeconds: container.locationTrackerViewModel.elapsedSeconds,
                     activePointCount: container.locationTrackerViewModel.pointCount,
                     activeDistanceMeters: container.locationTrackerViewModel.currentDistanceMeters,
-                    isRecording: container.locationTrackerViewModel.isRecording
+                    isRecording: container.locationTrackerViewModel.isRecording,
+                    filterRequest: container.historyFilterRequest,
+                    clearFilter: {
+                        container.historyFilterRequest = nil
+                    }
                 )
             } else {
                 ProgressView("正在加载")
@@ -38,12 +42,14 @@ struct TrackHistoryView: View {
         .navigationTitle("历史")
         .navigationDestination(for: TrackDetailRoute.self) { route in
             TrackDetailView(trackID: route.id)
+                .toolbar(.hidden, for: .tabBar)
         }
         .navigationDestination(for: DecisionChoiceRecordRoute.self) { route in
             DecisionChoiceRecordDetailView(
                 recordID: route.id,
                 choiceRecordImageTransition: imageTransition(for: route)
             )
+            .toolbar(.hidden, for: .tabBar)
         }
         .navigationDestination(for: StoredItemRoute.self) { route in
             if let itemLocatorViewModel {
@@ -52,6 +58,7 @@ struct TrackHistoryView: View {
                     itemID: route.id,
                     itemImageTransition: itemImageTransition
                 )
+                .toolbar(.hidden, for: .tabBar)
             }
         }
         .navigationDestination(for: ReminderRoute.self) { route in
@@ -61,6 +68,7 @@ struct TrackHistoryView: View {
                     reminderID: route.id,
                     reminderImageTransition: imageTransition(for: route)
                 )
+                .toolbar(.hidden, for: .tabBar)
             }
         }
         .navigationDestination(for: BillRoute.self) { route in
@@ -70,6 +78,7 @@ struct TrackHistoryView: View {
                     billID: route.id,
                     billImageTransition: imageTransition(for: route)
                 )
+                .toolbar(.hidden, for: .tabBar)
             }
         }
         .task {
@@ -163,6 +172,9 @@ private struct TrackHistoryContent: View {
     @State private var deletionConfirmation: HistoryDeletionConfirmation?
     @State private var selectedDate = Date()
     @State private var weekAnchorDate = Date()
+    @State private var activeFilter: HistoryFilter?
+    @State private var searchText = ""
+    @State private var selectedRouteFilter: ToolRoute?
 
     let choiceRecordImageTransition: Namespace.ID
     let itemImageTransition: Namespace.ID
@@ -173,6 +185,8 @@ private struct TrackHistoryContent: View {
     let activePointCount: Int
     let activeDistanceMeters: Double
     let isRecording: Bool
+    let filterRequest: HistoryFilter?
+    let clearFilter: () -> Void
 
     private let calendar = Calendar.current
 
@@ -366,16 +380,24 @@ private struct TrackHistoryContent: View {
             }
             .listStyle(.insetGrouped)
         }
+        .searchable(text: $searchText, prompt: AppLocalization.string("搜索历史记录"))
         .toolbar {
-            if historyEntries.isEmpty == false {
-                ToolbarItem(placement: .topBarLeading) {
-                    if isEditing {
-                        Button("删除", systemImage: "trash", action: requestDeleteSelectedEntries)
-                            .disabled(selectedDeletableEntries.isEmpty)
-                            .tint(.red)
-                    }
+            ToolbarItem(placement: .topBarLeading) {
+                if isEditing {
+                    Button("删除", systemImage: "trash", action: requestDeleteSelectedEntries)
+                        .disabled(selectedDeletableEntries.isEmpty)
+                        .tint(.red)
+                } else {
+                    HistoryFilterMenu(
+                        selectedRoute: $selectedRouteFilter,
+                        activeFilter: activeFilter,
+                        isFiltering: isFiltering,
+                        clearFilter: clearActiveFilter
+                    )
                 }
+            }
 
+            if historyEntries.isEmpty == false {
                 ToolbarItem(placement: .topBarTrailing) {
                     EditButton()
                 }
@@ -399,6 +421,18 @@ private struct TrackHistoryContent: View {
         .onChange(of: selectedDate) {
             selectedEntryIDs = []
         }
+        .onChange(of: searchText) {
+            selectedEntryIDs = []
+        }
+        .onChange(of: selectedRouteFilter) {
+            selectedEntryIDs = []
+        }
+        .onAppear {
+            applyFilterRequest(filterRequest)
+        }
+        .onChange(of: filterRequest) { _, newValue in
+            applyFilterRequest(newValue)
+        }
     }
 
     private var allHistoryEntries: [HistoryEntry] {
@@ -411,8 +445,20 @@ private struct TrackHistoryContent: View {
     }
 
     private var historyEntries: [HistoryEntry] {
-        allHistoryEntries.filter { entry in
-            entry.isOnSameDay(as: selectedDate, calendar: calendar)
+        let scopedEntries: [HistoryEntry]
+
+        if let activeFilter {
+            scopedEntries = allHistoryEntries.filter { entry in
+                matches(entry, filter: activeFilter)
+            }
+        } else {
+            scopedEntries = allHistoryEntries.filter { entry in
+                entry.isOnSameDay(as: selectedDate, calendar: calendar)
+            }
+        }
+
+        return scopedEntries.filter { entry in
+            matchesRouteFilter(entry) && matchesSearch(entry)
         }
     }
 
@@ -423,11 +469,23 @@ private struct TrackHistoryContent: View {
     }
 
     private var emptyHistoryTitle: String {
-        AppLocalization.string(allHistoryEntries.isEmpty ? "暂无历史记录" : "当天暂无记录")
+        if allHistoryEntries.isEmpty {
+            return AppLocalization.string("暂无历史记录")
+        }
+
+        if activeFilter != nil || selectedRouteFilter != nil || normalizedSearchText.isEmpty == false {
+            return AppLocalization.string("暂无匹配记录")
+        }
+
+        return AppLocalization.string("当天暂无记录")
     }
 
     private var emptyHistorySystemImage: String {
         allHistoryEntries.isEmpty ? "clock" : "calendar"
+    }
+
+    private var isFiltering: Bool {
+        activeFilter != nil || selectedRouteFilter != nil
     }
 
     private func isActive(_ track: Track) -> Bool {
@@ -573,6 +631,98 @@ private struct TrackHistoryContent: View {
 
     private func clearPendingDeletion() {
         deletionConfirmation = nil
+    }
+
+    private func applyFilterRequest(_ filter: HistoryFilter?) {
+        activeFilter = filter
+        selectedRouteFilter = nil
+        searchText = ""
+        selectedEntryIDs = []
+
+        guard let start = filter?.dateInterval?.start else { return }
+        selectedDate = start
+        weekAnchorDate = start
+    }
+
+    private func clearActiveFilter() {
+        activeFilter = nil
+        clearFilter()
+    }
+
+    private func matches(_ entry: HistoryEntry, filter: HistoryFilter) -> Bool {
+        if let route = filter.route, entry.route != route {
+            return false
+        }
+
+        if let dateInterval = filter.dateInterval {
+            return dateInterval.contains(entry.date)
+        }
+
+        return true
+    }
+
+    private func matchesRouteFilter(_ entry: HistoryEntry) -> Bool {
+        guard let selectedRouteFilter else { return true }
+        return entry.route == selectedRouteFilter
+    }
+
+    private func matchesSearch(_ entry: HistoryEntry) -> Bool {
+        let query = normalizedSearchText
+        guard query.isEmpty == false else { return true }
+
+        return searchableText(for: entry)
+            .localizedCaseInsensitiveContains(query)
+    }
+
+    private var normalizedSearchText: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func searchableText(for entry: HistoryEntry) -> String {
+        let values: [String?] = switch entry {
+        case .track(let track):
+            [
+                track.name,
+                track.note,
+                AppLocalization.string(entry.route.title)
+            ]
+        case .decisionChoice(let record):
+            [
+                record.collectionTitle,
+                record.optionTitle,
+                record.optionDetail,
+                record.optionCustomInfo,
+                AppLocalization.string(entry.route.title)
+            ]
+        case .storedItem(let item):
+            [
+                item.title,
+                item.location,
+                item.note,
+                item.tags,
+                item.searchKeywords,
+                itemLocatorViewModel.categoryName(for: item),
+                AppLocalization.string(entry.route.title)
+            ]
+        case .reminder(let reminder):
+            [
+                reminder.title,
+                reminder.note,
+                reminder.memoryIcon,
+                AppLocalization.string(entry.route.title)
+            ]
+        case .bill(let bill):
+            [
+                bill.title,
+                bill.note,
+                bill.billCategory.localizedTitle,
+                bill.billPaymentMethod.localizedTitle,
+                AppFormatters.money(cents: bill.finalAmountCents),
+                AppLocalization.string(entry.route.title)
+            ]
+        }
+
+        return values.compactMap(\.self).joined(separator: " ")
     }
 }
 

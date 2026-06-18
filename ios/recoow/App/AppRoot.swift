@@ -22,6 +22,17 @@ struct AppRoot: View {
                 }
             }
 
+            Tab("统计", systemImage: "chart.bar.xaxis", value: .statistics) {
+                NavigationStack {
+                    StatisticsView(
+                        openHistory: {
+                            container.historyFilterRequest = nil
+                            selectedTab = .history
+                        }
+                    )
+                }
+            }
+
             Tab("设置", systemImage: "gearshape", value: .settings) {
                 NavigationStack {
                     SettingsView()
