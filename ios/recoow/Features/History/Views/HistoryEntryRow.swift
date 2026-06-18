@@ -5,6 +5,9 @@ struct HistoryEntryRow: View {
     let pointCount: Int
     let isActiveTrack: Bool
     let choiceRecordImageTransition: Namespace.ID
+    let itemImageTransition: Namespace.ID
+    let reminderImageTransition: Namespace.ID
+    let itemCategoryName: String
     let activeElapsedSeconds: Int64
     let activeDistanceMeters: Double
 
@@ -22,6 +25,17 @@ struct HistoryEntryRow: View {
             DecisionChoiceHistoryEntryRow(
                 record: record,
                 choiceRecordImageTransition: choiceRecordImageTransition
+            )
+        case .storedItem(let item):
+            StoredItemHistoryEntryRow(
+                item: item,
+                categoryName: itemCategoryName,
+                itemImageTransition: itemImageTransition
+            )
+        case .reminder(let reminder):
+            ReminderHistoryEntryRow(
+                reminder: reminder,
+                reminderImageTransition: reminderImageTransition
             )
         }
     }

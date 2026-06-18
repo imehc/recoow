@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct StoredItemRow: View {
+struct StoredItemHistoryEntryRow: View {
     let item: StoredItem
     let categoryName: String
     let itemImageTransition: Namespace.ID
@@ -12,10 +12,16 @@ struct StoredItemRow: View {
                     .matchedTransitionSource(id: item.id, in: itemImageTransition)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.title)
-                    .font(.headline)
-                    .lineLimit(2)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(item.title)
+                        .font(.headline)
+                        .lineLimit(2)
+
+                    Spacer(minLength: 8)
+
+                    HistoryTypeTag(route: .itemLocator)
+                }
 
                 Text(item.location)
                     .font(.subheadline)
@@ -23,7 +29,12 @@ struct StoredItemRow: View {
                     .lineLimit(2)
 
                 Label(categoryName, systemImage: "folder")
-                    .font(.subheadline)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                Text(AppFormatters.dateTime(milliseconds: item.updatedAt))
+                    .font(.footnote)
                     .foregroundStyle(.secondary)
             }
         }

@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct StoredItemFormView: View {
     @Environment(\.dismiss) private var dismiss
@@ -10,13 +9,7 @@ struct StoredItemFormView: View {
     @State private var tags: String
     @State private var searchKeywords: String
     @State private var imageData: Data?
-    @State private var isShowingPhotoSourcePicker = false
-    @State private var isPreparingPhoto = false
-    @State private var imageErrorMessage: String?
-    @State private var previewPhoto: PhotoPreviewItem?
-    @State private var pendingEditablePhoto: EditablePhoto?
-    @State private var editablePhoto: EditablePhoto?
-    @State private var isShowingPhotoEditor = false
+    @State private var photoInputCoordinator = EditablePhotoInputCoordinator()
 
     let item: StoredItem?
     let viewModel: ItemLocatorViewModel
@@ -50,15 +43,10 @@ struct StoredItemFormView: View {
                     .lineLimit(3...)
             }
 
-            PhotoInputSection(
+            EditablePhotoInputSection(
                 imageData: $imageData,
                 placeholderSystemImage: "shippingbox",
-                isPreparingPhoto: isPreparingPhoto,
-                errorMessage: imageErrorMessage,
-                onPreviewPhoto: previewCurrentPhoto,
-                onSourceRequest: showPhotoSourcePicker,
-                onEditPhoto: editCurrentPhoto,
-                onRemovePhoto: removePhoto
+                coordinator: photoInputCoordinator
             )
 
             Section("辅助记忆") {
@@ -72,6 +60,10 @@ struct StoredItemFormView: View {
         }
         .navigationTitle(item == nil ? "添加物品" : "编辑物品")
         .navigationBarTitleDisplayMode(.inline)
+        .editablePhotoInputPresentation(
+            coordinator: photoInputCoordinator,
+            imageData: $imageData
+        )
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("取消", action: cancel)
@@ -82,23 +74,6 @@ struct StoredItemFormView: View {
                     .disabled(trimmedTitle.isEmpty || trimmedLocation.isEmpty)
             }
         }
-        .navigationDestination(isPresented: $isShowingPhotoEditor) {
-            if let editablePhoto {
-                PhotoEditorView(
-                    image: editablePhoto.image,
-                    onCancel: cancelPhotoEditing,
-                    onSave: saveEditedImage
-                )
-            } else {
-                ContentUnavailableView("无法编辑图片", systemImage: "photo")
-            }
-        }
-        .fullScreenCover(isPresented: $isShowingPhotoSourcePicker, onDismiss: presentPendingEditorIfNeeded) {
-            PhotoSourcePickerView(
-                onPhotoPicked: beginEditingPickedImage
-            )
-        }
-        .sheet(item: $previewPhoto, content: PhotoPreviewView.init)
     }
 
     private var trimmedTitle: String {
@@ -126,87 +101,6 @@ struct StoredItemFormView: View {
 
     private func cancel() {
         dismiss()
-    }
-
-    private func showPhotoSourcePicker() {
-        guard !isPreparingPhoto else { return }
-        imageErrorMessage = nil
-        isShowingPhotoSourcePicker = true
-    }
-
-    private func showPhotoEditor(_ photo: EditablePhoto) {
-        editablePhoto = photo
-        isShowingPhotoEditor = true
-    }
-
-    private func beginEditingPickedImage(_ data: Data) {
-        imageErrorMessage = nil
-        isPreparingPhoto = true
-
-        Task {
-            defer { isPreparingPhoto = false }
-
-            guard let photo = await PhotoImagePreparer.editablePhoto(from: data) else {
-                imageErrorMessage = "无法准备照片，请重试"
-                return
-            }
-
-            pendingEditablePhoto = photo
-            presentPendingEditorIfPossible()
-        }
-    }
-
-    private func presentPendingEditorIfNeeded() {
-        presentPendingEditorIfPossible()
-    }
-
-    private func presentPendingEditorIfPossible() {
-        guard let photo = pendingEditablePhoto,
-              !isShowingPhotoSourcePicker
-        else { return }
-
-        pendingEditablePhoto = nil
-        showPhotoEditor(photo)
-    }
-
-    private func editCurrentPhoto() {
-        guard let imageData else { return }
-        imageErrorMessage = nil
-        isPreparingPhoto = true
-
-        Task {
-            defer { isPreparingPhoto = false }
-
-            guard let photo = await PhotoImagePreparer.editablePhoto(from: imageData) else {
-                imageErrorMessage = "无法编辑当前图片，请重试"
-                return
-            }
-
-            pendingEditablePhoto = photo
-            presentPendingEditorIfPossible()
-        }
-    }
-
-    private func removePhoto() {
-        imageErrorMessage = nil
-        previewPhoto = nil
-        pendingEditablePhoto = nil
-        editablePhoto = nil
-    }
-
-    private func previewCurrentPhoto() {
-        guard let imageData else { return }
-        previewPhoto = PhotoPreviewItem(imageData: imageData)
-    }
-
-    private func cancelPhotoEditing() {
-        isShowingPhotoEditor = false
-    }
-
-    private func saveEditedImage(_ data: Data) {
-        imageData = data
-        isShowingPhotoEditor = false
-        editablePhoto = nil
     }
 
     private func save() {

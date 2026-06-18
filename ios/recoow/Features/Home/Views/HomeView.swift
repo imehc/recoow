@@ -71,7 +71,7 @@ struct HomeView: View {
         switch route {
         case .locationTracker:
             locationTracker.isRecording
-        case .decisionMaker, .itemLocator:
+        case .decisionMaker, .itemLocator, .reminders:
             false
         }
     }

@@ -12,6 +12,9 @@ final class AppContainer {
     @ObservationIgnored let trackRepository: TrackRepository
     @ObservationIgnored let decisionRepository: DecisionRepository
     @ObservationIgnored let itemLocatorRepository: ItemLocatorRepository
+    @ObservationIgnored let reminderRepository: ReminderRepository
+    @ObservationIgnored let notificationScheduler: any AppNotificationScheduling
+    @ObservationIgnored let reminderNotificationService: ReminderNotificationService
     @ObservationIgnored let locationTrackerViewModel: LocationTrackerViewModel
     @ObservationIgnored let featureVisibilitySettings: FeatureVisibilitySettings
     let appPreferences: AppPreferences
@@ -24,6 +27,9 @@ final class AppContainer {
         trackRepository: TrackRepository,
         decisionRepository: DecisionRepository,
         itemLocatorRepository: ItemLocatorRepository,
+        reminderRepository: ReminderRepository,
+        notificationScheduler: any AppNotificationScheduling,
+        reminderNotificationService: ReminderNotificationService,
         locationTrackerViewModel: LocationTrackerViewModel,
         featureVisibilitySettings: FeatureVisibilitySettings,
         appPreferences: AppPreferences
@@ -35,6 +41,9 @@ final class AppContainer {
         self.trackRepository = trackRepository
         self.decisionRepository = decisionRepository
         self.itemLocatorRepository = itemLocatorRepository
+        self.reminderRepository = reminderRepository
+        self.notificationScheduler = notificationScheduler
+        self.reminderNotificationService = reminderNotificationService
         self.locationTrackerViewModel = locationTrackerViewModel
         self.featureVisibilitySettings = featureVisibilitySettings
         self.appPreferences = appPreferences
@@ -62,6 +71,13 @@ final class AppContainer {
                 changeLogRepository: changeLogRepository,
                 deviceIdentifier: deviceIdentifier
             )
+            let reminderRepository = ReminderRepository(
+                database: database,
+                changeLogRepository: changeLogRepository,
+                deviceIdentifier: deviceIdentifier
+            )
+            let notificationScheduler = LocalNotificationScheduler()
+            let reminderNotificationService = ReminderNotificationService(scheduler: notificationScheduler)
             let locationService = LocationService()
             let locationTrackerViewModel = LocationTrackerViewModel(
                 repository: trackRepository,
@@ -77,6 +93,9 @@ final class AppContainer {
                 trackRepository: trackRepository,
                 decisionRepository: decisionRepository,
                 itemLocatorRepository: itemLocatorRepository,
+                reminderRepository: reminderRepository,
+                notificationScheduler: notificationScheduler,
+                reminderNotificationService: reminderNotificationService,
                 locationTrackerViewModel: locationTrackerViewModel,
                 featureVisibilitySettings: FeatureVisibilitySettings(),
                 appPreferences: AppPreferences()
@@ -108,6 +127,13 @@ final class AppContainer {
                 changeLogRepository: changeLogRepository,
                 deviceIdentifier: deviceIdentifier
             )
+            let reminderRepository = ReminderRepository(
+                database: database,
+                changeLogRepository: changeLogRepository,
+                deviceIdentifier: deviceIdentifier
+            )
+            let notificationScheduler = LocalNotificationScheduler()
+            let reminderNotificationService = ReminderNotificationService(scheduler: notificationScheduler)
             let locationService = LocationService()
             let locationTrackerViewModel = LocationTrackerViewModel(
                 repository: trackRepository,
@@ -123,6 +149,9 @@ final class AppContainer {
                 trackRepository: trackRepository,
                 decisionRepository: decisionRepository,
                 itemLocatorRepository: itemLocatorRepository,
+                reminderRepository: reminderRepository,
+                notificationScheduler: notificationScheduler,
+                reminderNotificationService: reminderNotificationService,
                 locationTrackerViewModel: locationTrackerViewModel,
                 featureVisibilitySettings: FeatureVisibilitySettings(defaults: nil),
                 appPreferences: AppPreferences(defaults: nil)

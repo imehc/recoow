@@ -4,15 +4,23 @@ struct TrackHistoryView: View {
     @Environment(AppContainer.self) private var container
     @State private var trackViewModel: TrackHistoryViewModel?
     @State private var decisionHistoryViewModel: DecisionChoiceHistoryViewModel?
+    @State private var itemLocatorViewModel: ItemLocatorViewModel?
+    @State private var remindersViewModel: RemindersViewModel?
     @Namespace private var choiceRecordImageTransition
+    @Namespace private var itemImageTransition
+    @Namespace private var reminderImageTransition
 
     var body: some View {
         Group {
-            if let trackViewModel, let decisionHistoryViewModel {
+            if let trackViewModel, let decisionHistoryViewModel, let itemLocatorViewModel, let remindersViewModel {
                 TrackHistoryContent(
                     viewModel: trackViewModel,
                     decisionHistoryViewModel: decisionHistoryViewModel,
+                    itemLocatorViewModel: itemLocatorViewModel,
+                    remindersViewModel: remindersViewModel,
                     choiceRecordImageTransition: choiceRecordImageTransition,
+                    itemImageTransition: itemImageTransition,
+                    reminderImageTransition: reminderImageTransition,
                     activeTrackID: container.locationTrackerViewModel.currentTrackID,
                     activeElapsedSeconds: container.locationTrackerViewModel.elapsedSeconds,
                     activePointCount: container.locationTrackerViewModel.pointCount,
@@ -33,6 +41,24 @@ struct TrackHistoryView: View {
                 choiceRecordImageTransition: imageTransition(for: route)
             )
         }
+        .navigationDestination(for: StoredItemRoute.self) { route in
+            if let itemLocatorViewModel {
+                StoredItemDetailView(
+                    viewModel: itemLocatorViewModel,
+                    itemID: route.id,
+                    itemImageTransition: itemImageTransition
+                )
+            }
+        }
+        .navigationDestination(for: ReminderRoute.self) { route in
+            if let remindersViewModel {
+                ReminderDetailView(
+                    viewModel: remindersViewModel,
+                    reminderID: route.id,
+                    reminderImageTransition: imageTransition(for: route)
+                )
+            }
+        }
         .task {
             if trackViewModel == nil {
                 let model = TrackHistoryViewModel(
@@ -51,6 +77,25 @@ struct TrackHistoryView: View {
                 model.startObserving()
                 decisionHistoryViewModel = model
             }
+
+            if itemLocatorViewModel == nil {
+                let model = ItemLocatorViewModel(
+                    repository: container.itemLocatorRepository,
+                    syncEngine: container.syncEngine
+                )
+                model.startObserving()
+                itemLocatorViewModel = model
+            }
+
+            if remindersViewModel == nil {
+                let model = RemindersViewModel(
+                    repository: container.reminderRepository,
+                    notificationService: container.reminderNotificationService,
+                    syncEngine: container.syncEngine
+                )
+                model.startObserving()
+                remindersViewModel = model
+            }
         }
     }
 
@@ -63,21 +108,39 @@ struct TrackHistoryView: View {
 
         return choiceRecordImageTransition
     }
+
+    private func imageTransition(for route: ReminderRoute) -> Namespace.ID? {
+        guard remindersViewModel?.reminders.contains(where: { reminder in
+            reminder.id == route.id && reminder.imageData != nil
+        }) == true else {
+            return nil
+        }
+
+        return reminderImageTransition
+    }
 }
 
 private struct TrackHistoryContent: View {
     @Environment(\.editMode) private var editMode
     @Bindable var viewModel: TrackHistoryViewModel
     @Bindable var decisionHistoryViewModel: DecisionChoiceHistoryViewModel
+    @Bindable var itemLocatorViewModel: ItemLocatorViewModel
+    @Bindable var remindersViewModel: RemindersViewModel
     @State private var selectedEntryIDs = Set<String>()
     @State private var deletionConfirmation: HistoryDeletionConfirmation?
+    @State private var selectedDate = Date()
+    @State private var weekAnchorDate = Date()
 
     let choiceRecordImageTransition: Namespace.ID
+    let itemImageTransition: Namespace.ID
+    let reminderImageTransition: Namespace.ID
     let activeTrackID: String?
     let activeElapsedSeconds: Int64
     let activePointCount: Int
     let activeDistanceMeters: Double
     let isRecording: Bool
+
+    private let calendar = Calendar.current
 
     var body: some View {
         ZStack {
@@ -96,8 +159,37 @@ private struct TrackHistoryContent: View {
                     }
                 }
 
+                if let errorMessage = itemLocatorViewModel.errorMessage {
+                    Section {
+                        Label(errorMessage, systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.red)
+                    }
+                }
+
+                if let errorMessage = remindersViewModel.errorMessage {
+                    Section {
+                        Label(errorMessage, systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.red)
+                    }
+                }
+
+                if let notificationMessage = remindersViewModel.notificationMessage {
+                    Section {
+                        Label(notificationMessage, systemImage: "bell.slash")
+                            .foregroundStyle(.orange)
+                    }
+                }
+
+                Section {
+                    CalendarWeekStrip(
+                        selectedDate: $selectedDate,
+                        weekAnchorDate: $weekAnchorDate,
+                        entryCountsByDay: entryCountsByDay
+                    )
+                }
+
                 if historyEntries.isEmpty {
-                    ContentUnavailableView("暂无历史记录", systemImage: "clock")
+                    ContentUnavailableView(emptyHistoryTitle, systemImage: emptyHistorySystemImage)
                 } else {
                     ForEach(historyEntries) { entry in
                         switch entry {
@@ -108,6 +200,9 @@ private struct TrackHistoryContent: View {
                                     pointCount: pointCount(for: track),
                                     isActiveTrack: isActive(track),
                                     choiceRecordImageTransition: choiceRecordImageTransition,
+                                    itemImageTransition: itemImageTransition,
+                                    reminderImageTransition: reminderImageTransition,
+                                    itemCategoryName: "",
                                     activeElapsedSeconds: activeElapsedSeconds,
                                     activeDistanceMeters: activeDistanceMeters
                                 )
@@ -131,6 +226,57 @@ private struct TrackHistoryContent: View {
                                     pointCount: 0,
                                     isActiveTrack: false,
                                     choiceRecordImageTransition: choiceRecordImageTransition,
+                                    itemImageTransition: itemImageTransition,
+                                    reminderImageTransition: reminderImageTransition,
+                                    itemCategoryName: "",
+                                    activeElapsedSeconds: activeElapsedSeconds,
+                                    activeDistanceMeters: activeDistanceMeters
+                                )
+                            }
+                            .tag(entry.id)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button {
+                                    requestDeleteEntries([entry])
+                                } label: {
+                                    Label("删除", systemImage: "trash")
+                                }
+                                .tint(.red)
+                            }
+
+                        case .storedItem(let item):
+                            NavigationLink(value: StoredItemRoute(id: item.id)) {
+                                HistoryEntryRow(
+                                    entry: entry,
+                                    pointCount: 0,
+                                    isActiveTrack: false,
+                                    choiceRecordImageTransition: choiceRecordImageTransition,
+                                    itemImageTransition: itemImageTransition,
+                                    reminderImageTransition: reminderImageTransition,
+                                    itemCategoryName: itemLocatorViewModel.categoryName(for: item),
+                                    activeElapsedSeconds: activeElapsedSeconds,
+                                    activeDistanceMeters: activeDistanceMeters
+                                )
+                            }
+                            .tag(entry.id)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button {
+                                    requestDeleteEntries([entry])
+                                } label: {
+                                    Label("删除", systemImage: "trash")
+                                }
+                                .tint(.red)
+                            }
+
+                        case .reminder(let reminder):
+                            NavigationLink(value: ReminderRoute(id: reminder.id)) {
+                                HistoryEntryRow(
+                                    entry: entry,
+                                    pointCount: 0,
+                                    isActiveTrack: false,
+                                    choiceRecordImageTransition: choiceRecordImageTransition,
+                                    itemImageTransition: itemImageTransition,
+                                    reminderImageTransition: reminderImageTransition,
+                                    itemCategoryName: "",
                                     activeElapsedSeconds: activeElapsedSeconds,
                                     activeDistanceMeters: activeDistanceMeters
                                 )
@@ -170,7 +316,7 @@ private struct TrackHistoryContent: View {
                 title: Text(deletionConfirmationTitle(for: confirmation)),
                 message: Text(deletionConfirmationMessage(for: confirmation)),
                 primaryButton: .destructive(Text(deletionConfirmationButtonTitle(for: confirmation))) {
-                    confirmDeleteTracks(confirmation.entries)
+                    confirmDeleteEntries(confirmation.entries)
                 },
                 secondaryButton: .cancel(Text("取消"), action: clearPendingDeletion)
             )
@@ -180,12 +326,37 @@ private struct TrackHistoryContent: View {
                 selectedEntryIDs = []
             }
         }
+        .onChange(of: selectedDate) {
+            selectedEntryIDs = []
+        }
+    }
+
+    private var allHistoryEntries: [HistoryEntry] {
+        let trackEntries = viewModel.tracks.map(HistoryEntry.track)
+        let decisionEntries = decisionHistoryViewModel.records.map(HistoryEntry.decisionChoice)
+        let itemEntries = itemLocatorViewModel.items.map(HistoryEntry.storedItem)
+        let reminderEntries = remindersViewModel.reminders.map(HistoryEntry.reminder)
+        return (trackEntries + decisionEntries + itemEntries + reminderEntries).sorted { $0.timestamp > $1.timestamp }
     }
 
     private var historyEntries: [HistoryEntry] {
-        let trackEntries = viewModel.tracks.map(HistoryEntry.track)
-        let decisionEntries = decisionHistoryViewModel.records.map(HistoryEntry.decisionChoice)
-        return (trackEntries + decisionEntries).sorted { $0.timestamp > $1.timestamp }
+        allHistoryEntries.filter { entry in
+            entry.isOnSameDay(as: selectedDate, calendar: calendar)
+        }
+    }
+
+    private var entryCountsByDay: [Date: Int] {
+        allHistoryEntries.reduce(into: [:]) { counts, entry in
+            counts[calendar.startOfDay(for: entry.date), default: 0] += 1
+        }
+    }
+
+    private var emptyHistoryTitle: String {
+        allHistoryEntries.isEmpty ? "暂无历史记录" : "当天暂无记录"
+    }
+
+    private var emptyHistorySystemImage: String {
+        allHistoryEntries.isEmpty ? "clock" : "calendar"
     }
 
     private func isActive(_ track: Track) -> Bool {
@@ -213,7 +384,7 @@ private struct TrackHistoryContent: View {
             switch entry {
             case .track(let track):
                 isActive(track) == false
-            case .decisionChoice:
+            case .decisionChoice, .storedItem, .reminder:
                 true
             }
         }
@@ -228,7 +399,7 @@ private struct TrackHistoryContent: View {
             switch entry {
             case .track(let track):
                 isActive(track) == false
-            case .decisionChoice:
+            case .decisionChoice, .storedItem, .reminder:
                 true
             }
         }
@@ -274,10 +445,14 @@ private struct TrackHistoryContent: View {
             track.name
         case .decisionChoice(let record):
             record.optionTitle
+        case .storedItem(let item):
+            item.title
+        case .reminder(let reminder):
+            reminder.title
         }
     }
 
-    private func confirmDeleteTracks(_ entries: [HistoryEntry]) {
+    private func confirmDeleteEntries(_ entries: [HistoryEntry]) {
         clearPendingDeletion()
 
         let trackIDs = entries.compactMap { entry in
@@ -292,10 +467,26 @@ private struct TrackHistoryContent: View {
             }
             return nil
         }
+        let itemIDs = entries.compactMap { entry in
+            if case .storedItem(let item) = entry {
+                return item.id
+            }
+            return nil
+        }
+        let reminderIDs = entries.compactMap { entry in
+            if case .reminder(let reminder) = entry {
+                return reminder.id
+            }
+            return nil
+        }
 
         Task {
             await viewModel.deleteTracks(ids: trackIDs)
             await decisionHistoryViewModel.deleteRecords(ids: decisionRecordIDs)
+            for itemID in itemIDs {
+                await itemLocatorViewModel.deleteItem(id: itemID)
+            }
+            await remindersViewModel.deleteReminders(ids: reminderIDs)
         }
         selectedEntryIDs.subtract(entries.map(\.id))
     }

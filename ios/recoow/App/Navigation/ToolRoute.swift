@@ -4,6 +4,7 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable {
     case locationTracker
     case decisionMaker
     case itemLocator
+    case reminders
 
     var id: String { rawValue }
 
@@ -19,6 +20,8 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable {
             "选什么"
         case .itemLocator:
             "在哪里"
+        case .reminders:
+            "提提醒"
         }
     }
 
@@ -34,6 +37,8 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable {
             "管理选项并随机选择"
         case .itemLocator:
             "记录物品放在哪里"
+        case .reminders:
+            "指定时间提醒与提前提醒"
         }
     }
 
@@ -45,6 +50,8 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable {
             "shuffle"
         case .itemLocator:
             "shippingbox.fill"
+        case .reminders:
+            "bell.badge.fill"
         }
     }
 
@@ -56,6 +63,8 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable {
             .orange
         case .itemLocator:
             .blue
+        case .reminders:
+            .purple
         }
     }
 }

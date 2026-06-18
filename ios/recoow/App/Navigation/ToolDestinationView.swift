@@ -12,6 +12,8 @@ struct ToolDestinationView: View {
                 DecisionCollectionsView()
             case .itemLocator:
                 ItemLocatorView()
+            case .reminders:
+                RemindersView()
             }
         }
         .toolbar(.hidden, for: .tabBar)
