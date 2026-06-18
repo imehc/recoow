@@ -7,6 +7,7 @@ struct HistoryEntryRow: View {
     let choiceRecordImageTransition: Namespace.ID
     let itemImageTransition: Namespace.ID
     let reminderImageTransition: Namespace.ID
+    let billImageTransition: Namespace.ID
     let itemCategoryName: String
     let activeElapsedSeconds: Int64
     let activeDistanceMeters: Double
@@ -36,6 +37,11 @@ struct HistoryEntryRow: View {
             ReminderHistoryEntryRow(
                 reminder: reminder,
                 reminderImageTransition: reminderImageTransition
+            )
+        case .bill(let bill):
+            BillHistoryEntryRow(
+                bill: bill,
+                billImageTransition: billImageTransition
             )
         }
     }

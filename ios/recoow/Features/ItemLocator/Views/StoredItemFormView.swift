@@ -10,6 +10,7 @@ struct StoredItemFormView: View {
     @State private var searchKeywords: String
     @State private var imageData: Data?
     @State private var photoInputCoordinator = EditablePhotoInputCoordinator()
+    @FocusState private var focusedField: String?
 
     let item: StoredItem?
     let viewModel: ItemLocatorViewModel
@@ -29,7 +30,11 @@ struct StoredItemFormView: View {
     var body: some View {
         Form {
             Section("基础信息") {
-                TextField("物品标题", text: $title)
+                LabeledContent("物品标题") {
+                    TextField("请输入物品标题", text: $title)
+                        .multilineTextAlignment(.trailing)
+                        .focused($focusedField, equals: "title")
+                }
 
                 Picker("分类", selection: $categoryID) {
                     Text("未分类").tag(nil as String?)
@@ -39,8 +44,15 @@ struct StoredItemFormView: View {
                     }
                 }
 
-                TextField("位置说明", text: $location, axis: .vertical)
-                    .lineLimit(3...)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("位置说明")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    TextField("请输入位置说明", text: $location, axis: .vertical)
+                        .lineLimit(3...)
+                        .focused($focusedField, equals: "location")
+                }
             }
 
             EditablePhotoInputSection(
@@ -50,14 +62,30 @@ struct StoredItemFormView: View {
             )
 
             Section("辅助记忆") {
-                TextField("备注", text: $note, axis: .vertical)
-                    .lineLimit(3...)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("备注")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
 
-                TextField("标签", text: $tags)
+                    TextField("请输入备注", text: $note, axis: .vertical)
+                        .lineLimit(3...)
+                        .focused($focusedField, equals: "note")
+                }
 
-                TextField("搜索关键词", text: $searchKeywords)
+                LabeledContent("标签") {
+                    TextField("请输入标签", text: $tags)
+                        .multilineTextAlignment(.trailing)
+                        .focused($focusedField, equals: "tags")
+                }
+
+                LabeledContent("搜索关键词") {
+                    TextField("请输入搜索关键词", text: $searchKeywords)
+                        .multilineTextAlignment(.trailing)
+                        .focused($focusedField, equals: "searchKeywords")
+                }
             }
         }
+        .dismissesKeyboardOnTap(focusedField: $focusedField)
         .navigationTitle(item == nil ? "添加物品" : "编辑物品")
         .navigationBarTitleDisplayMode(.inline)
         .editablePhotoInputPresentation(

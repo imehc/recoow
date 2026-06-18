@@ -4,6 +4,7 @@ struct ItemCategoryFormView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
     @State private var note: String
+    @FocusState private var focusedField: String?
 
     let category: ItemCategory?
     let viewModel: ItemLocatorViewModel
@@ -18,12 +19,24 @@ struct ItemCategoryFormView: View {
     var body: some View {
         Form {
             Section("分类") {
-                TextField("名称", text: $name)
+                LabeledContent("名称") {
+                    TextField("请输入名称", text: $name)
+                        .multilineTextAlignment(.trailing)
+                        .focused($focusedField, equals: "name")
+                }
 
-                TextField("备注", text: $note, axis: .vertical)
-                    .lineLimit(3...)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("备注")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    TextField("请输入备注", text: $note, axis: .vertical)
+                        .lineLimit(3...)
+                        .focused($focusedField, equals: "note")
+                }
             }
         }
+        .dismissesKeyboardOnTap(focusedField: $focusedField)
         .navigationTitle(category == nil ? "添加分类" : "编辑分类")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

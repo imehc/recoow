@@ -3,6 +3,7 @@ import SwiftUI
 /// 应用根导航。后续新增工具时，在 ToolRoute 中追加入口即可继承主页、设置和详情隐藏 Tab 的规则。
 struct AppRoot: View {
     @Environment(AppContainer.self) private var container
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: AppTab = .home
 
     var body: some View {
@@ -29,6 +30,15 @@ struct AppRoot: View {
         }
         .environment(\.locale, container.appPreferences.locale)
         .preferredColorScheme(container.appPreferences.colorScheme)
+        .task {
+            await container.notificationScheduler.clearBadge()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            Task {
+                await container.notificationScheduler.clearBadge()
+            }
+        }
     }
 }
 

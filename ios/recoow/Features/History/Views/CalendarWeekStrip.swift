@@ -12,7 +12,7 @@ struct CalendarWeekStrip: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
-                Button("上一周", systemImage: "chevron.left", action: showPreviousWeek)
+                Button(AppLocalization.string("上一周"), systemImage: "chevron.left", action: showPreviousWeek)
                     .labelStyle(.iconOnly)
 
                 Button(action: showDateSelection) {
@@ -23,10 +23,10 @@ struct CalendarWeekStrip: View {
                 }
                     .frame(maxWidth: .infinity)
 
-                Button("下一周", systemImage: "chevron.right", action: showNextWeek)
+                Button(AppLocalization.string("下一周"), systemImage: "chevron.right", action: showNextWeek)
                     .labelStyle(.iconOnly)
 
-                Button("今天", systemImage: "calendar", action: showToday)
+                Button(AppLocalization.string("今天"), systemImage: "calendar", action: showToday)
                     .font(.subheadline)
                     .disabled(calendar.isDateInToday(selectedDate))
             }

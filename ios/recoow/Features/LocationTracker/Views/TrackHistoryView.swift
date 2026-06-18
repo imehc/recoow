@@ -6,21 +6,25 @@ struct TrackHistoryView: View {
     @State private var decisionHistoryViewModel: DecisionChoiceHistoryViewModel?
     @State private var itemLocatorViewModel: ItemLocatorViewModel?
     @State private var remindersViewModel: RemindersViewModel?
+    @State private var billsViewModel: BillsViewModel?
     @Namespace private var choiceRecordImageTransition
     @Namespace private var itemImageTransition
     @Namespace private var reminderImageTransition
+    @Namespace private var billImageTransition
 
     var body: some View {
         Group {
-            if let trackViewModel, let decisionHistoryViewModel, let itemLocatorViewModel, let remindersViewModel {
+            if let trackViewModel, let decisionHistoryViewModel, let itemLocatorViewModel, let remindersViewModel, let billsViewModel {
                 TrackHistoryContent(
                     viewModel: trackViewModel,
                     decisionHistoryViewModel: decisionHistoryViewModel,
                     itemLocatorViewModel: itemLocatorViewModel,
                     remindersViewModel: remindersViewModel,
+                    billsViewModel: billsViewModel,
                     choiceRecordImageTransition: choiceRecordImageTransition,
                     itemImageTransition: itemImageTransition,
                     reminderImageTransition: reminderImageTransition,
+                    billImageTransition: billImageTransition,
                     activeTrackID: container.locationTrackerViewModel.currentTrackID,
                     activeElapsedSeconds: container.locationTrackerViewModel.elapsedSeconds,
                     activePointCount: container.locationTrackerViewModel.pointCount,
@@ -56,6 +60,15 @@ struct TrackHistoryView: View {
                     viewModel: remindersViewModel,
                     reminderID: route.id,
                     reminderImageTransition: imageTransition(for: route)
+                )
+            }
+        }
+        .navigationDestination(for: BillRoute.self) { route in
+            if let billsViewModel {
+                BillDetailView(
+                    viewModel: billsViewModel,
+                    billID: route.id,
+                    billImageTransition: imageTransition(for: route)
                 )
             }
         }
@@ -96,6 +109,15 @@ struct TrackHistoryView: View {
                 model.startObserving()
                 remindersViewModel = model
             }
+
+            if billsViewModel == nil {
+                let model = BillsViewModel(
+                    repository: container.billRepository,
+                    syncEngine: container.syncEngine
+                )
+                model.startObserving()
+                billsViewModel = model
+            }
         }
     }
 
@@ -118,6 +140,16 @@ struct TrackHistoryView: View {
 
         return reminderImageTransition
     }
+
+    private func imageTransition(for route: BillRoute) -> Namespace.ID? {
+        guard billsViewModel?.bills.contains(where: { bill in
+            bill.id == route.id && bill.imageData != nil
+        }) == true else {
+            return nil
+        }
+
+        return billImageTransition
+    }
 }
 
 private struct TrackHistoryContent: View {
@@ -126,6 +158,7 @@ private struct TrackHistoryContent: View {
     @Bindable var decisionHistoryViewModel: DecisionChoiceHistoryViewModel
     @Bindable var itemLocatorViewModel: ItemLocatorViewModel
     @Bindable var remindersViewModel: RemindersViewModel
+    @Bindable var billsViewModel: BillsViewModel
     @State private var selectedEntryIDs = Set<String>()
     @State private var deletionConfirmation: HistoryDeletionConfirmation?
     @State private var selectedDate = Date()
@@ -134,6 +167,7 @@ private struct TrackHistoryContent: View {
     let choiceRecordImageTransition: Namespace.ID
     let itemImageTransition: Namespace.ID
     let reminderImageTransition: Namespace.ID
+    let billImageTransition: Namespace.ID
     let activeTrackID: String?
     let activeElapsedSeconds: Int64
     let activePointCount: Int
@@ -173,6 +207,13 @@ private struct TrackHistoryContent: View {
                     }
                 }
 
+                if let errorMessage = billsViewModel.errorMessage {
+                    Section {
+                        Label(errorMessage, systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.red)
+                    }
+                }
+
                 if let notificationMessage = remindersViewModel.notificationMessage {
                     Section {
                         Label(notificationMessage, systemImage: "bell.slash")
@@ -202,6 +243,7 @@ private struct TrackHistoryContent: View {
                                     choiceRecordImageTransition: choiceRecordImageTransition,
                                     itemImageTransition: itemImageTransition,
                                     reminderImageTransition: reminderImageTransition,
+                                    billImageTransition: billImageTransition,
                                     itemCategoryName: "",
                                     activeElapsedSeconds: activeElapsedSeconds,
                                     activeDistanceMeters: activeDistanceMeters
@@ -228,6 +270,7 @@ private struct TrackHistoryContent: View {
                                     choiceRecordImageTransition: choiceRecordImageTransition,
                                     itemImageTransition: itemImageTransition,
                                     reminderImageTransition: reminderImageTransition,
+                                    billImageTransition: billImageTransition,
                                     itemCategoryName: "",
                                     activeElapsedSeconds: activeElapsedSeconds,
                                     activeDistanceMeters: activeDistanceMeters
@@ -252,6 +295,7 @@ private struct TrackHistoryContent: View {
                                     choiceRecordImageTransition: choiceRecordImageTransition,
                                     itemImageTransition: itemImageTransition,
                                     reminderImageTransition: reminderImageTransition,
+                                    billImageTransition: billImageTransition,
                                     itemCategoryName: itemLocatorViewModel.categoryName(for: item),
                                     activeElapsedSeconds: activeElapsedSeconds,
                                     activeDistanceMeters: activeDistanceMeters
@@ -276,6 +320,32 @@ private struct TrackHistoryContent: View {
                                     choiceRecordImageTransition: choiceRecordImageTransition,
                                     itemImageTransition: itemImageTransition,
                                     reminderImageTransition: reminderImageTransition,
+                                    billImageTransition: billImageTransition,
+                                    itemCategoryName: "",
+                                    activeElapsedSeconds: activeElapsedSeconds,
+                                    activeDistanceMeters: activeDistanceMeters
+                                )
+                            }
+                            .tag(entry.id)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button {
+                                    requestDeleteEntries([entry])
+                                } label: {
+                                    Label("删除", systemImage: "trash")
+                                }
+                                .tint(.red)
+                            }
+
+                        case .bill(let bill):
+                            NavigationLink(value: BillRoute(id: bill.id)) {
+                                HistoryEntryRow(
+                                    entry: entry,
+                                    pointCount: 0,
+                                    isActiveTrack: false,
+                                    choiceRecordImageTransition: choiceRecordImageTransition,
+                                    itemImageTransition: itemImageTransition,
+                                    reminderImageTransition: reminderImageTransition,
+                                    billImageTransition: billImageTransition,
                                     itemCategoryName: "",
                                     activeElapsedSeconds: activeElapsedSeconds,
                                     activeDistanceMeters: activeDistanceMeters
@@ -336,7 +406,8 @@ private struct TrackHistoryContent: View {
         let decisionEntries = decisionHistoryViewModel.records.map(HistoryEntry.decisionChoice)
         let itemEntries = itemLocatorViewModel.items.map(HistoryEntry.storedItem)
         let reminderEntries = remindersViewModel.reminders.map(HistoryEntry.reminder)
-        return (trackEntries + decisionEntries + itemEntries + reminderEntries).sorted { $0.timestamp > $1.timestamp }
+        let billEntries = billsViewModel.bills.map(HistoryEntry.bill)
+        return (trackEntries + decisionEntries + itemEntries + reminderEntries + billEntries).sorted { $0.timestamp > $1.timestamp }
     }
 
     private var historyEntries: [HistoryEntry] {
@@ -352,7 +423,7 @@ private struct TrackHistoryContent: View {
     }
 
     private var emptyHistoryTitle: String {
-        allHistoryEntries.isEmpty ? "暂无历史记录" : "当天暂无记录"
+        AppLocalization.string(allHistoryEntries.isEmpty ? "暂无历史记录" : "当天暂无记录")
     }
 
     private var emptyHistorySystemImage: String {
@@ -384,7 +455,7 @@ private struct TrackHistoryContent: View {
             switch entry {
             case .track(let track):
                 isActive(track) == false
-            case .decisionChoice, .storedItem, .reminder:
+            case .decisionChoice, .storedItem, .reminder, .bill:
                 true
             }
         }
@@ -399,7 +470,7 @@ private struct TrackHistoryContent: View {
             switch entry {
             case .track(let track):
                 isActive(track) == false
-            case .decisionChoice, .storedItem, .reminder:
+            case .decisionChoice, .storedItem, .reminder, .bill:
                 true
             }
         }
@@ -449,6 +520,8 @@ private struct TrackHistoryContent: View {
             item.title
         case .reminder(let reminder):
             reminder.title
+        case .bill(let bill):
+            bill.title
         }
     }
 
@@ -479,6 +552,12 @@ private struct TrackHistoryContent: View {
             }
             return nil
         }
+        let billIDs = entries.compactMap { entry in
+            if case .bill(let bill) = entry {
+                return bill.id
+            }
+            return nil
+        }
 
         Task {
             await viewModel.deleteTracks(ids: trackIDs)
@@ -487,6 +566,7 @@ private struct TrackHistoryContent: View {
                 await itemLocatorViewModel.deleteItem(id: itemID)
             }
             await remindersViewModel.deleteReminders(ids: reminderIDs)
+            await billsViewModel.deleteBills(ids: billIDs)
         }
         selectedEntryIDs.subtract(entries.map(\.id))
     }

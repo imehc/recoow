@@ -4,6 +4,7 @@ struct DecisionCollectionFormView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var title: String
     @State private var note: String
+    @FocusState private var focusedField: String?
 
     let collection: DecisionCollection?
     let viewModel: DecisionCollectionsViewModel
@@ -18,12 +19,24 @@ struct DecisionCollectionFormView: View {
     var body: some View {
         Form {
             Section("基础信息") {
-                TextField("标题", text: $title)
+                LabeledContent("标题") {
+                    TextField("请输入标题", text: $title)
+                        .multilineTextAlignment(.trailing)
+                        .focused($focusedField, equals: "title")
+                }
 
-                TextField("备注", text: $note, axis: .vertical)
-                    .lineLimit(3...)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("备注")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    TextField("请输入备注", text: $note, axis: .vertical)
+                        .lineLimit(3...)
+                        .focused($focusedField, equals: "note")
+                }
             }
         }
+        .dismissesKeyboardOnTap(focusedField: $focusedField)
         .navigationTitle(collection == nil ? "添加集合" : "编辑集合")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

@@ -8,6 +8,7 @@ enum AppMigrator {
         V2ToolsSchema.register(in: &migrator)
         V3DecisionChoiceHistorySchema.register(in: &migrator)
         V4RemindersSchema.register(in: &migrator)
+        V5BillsSchema.register(in: &migrator)
         return migrator
     }
 

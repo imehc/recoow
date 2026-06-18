@@ -4,6 +4,7 @@ protocol AppNotificationScheduling: Sendable {
     func schedule(_ request: AppNotificationRequest) async throws
     func schedule(_ requests: [AppNotificationRequest]) async throws
     func cancel(identifiers: [String])
+    func clearBadge() async
 }
 
 extension AppNotificationScheduling {

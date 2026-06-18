@@ -29,7 +29,7 @@ struct ReminderRow: View {
                     .foregroundStyle(.secondary)
 
                 if reminder.leadTime != .none {
-                    Label(reminder.leadTime.title, systemImage: "clock.badge")
+                    Label(reminder.leadTime.titleKey, systemImage: "clock.badge")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

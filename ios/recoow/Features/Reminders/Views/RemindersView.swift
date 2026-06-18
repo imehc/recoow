@@ -53,6 +53,7 @@ struct RemindersView: View {
 private struct RemindersContent: View {
     @Bindable var viewModel: RemindersViewModel
     @State private var isShowingAddReminder = false
+    @State private var reminderPendingDeletion: ReminderRecord?
 
     let reminderImageTransition: Namespace.ID
 
@@ -92,7 +93,7 @@ private struct RemindersContent: View {
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button {
-                                    deleteReminder(reminder)
+                                    requestDeleteReminder(reminder)
                                 } label: {
                                     Label("删除", systemImage: "trash")
                                 }
@@ -113,7 +114,7 @@ private struct RemindersContent: View {
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button {
-                                    deleteReminder(reminder)
+                                    requestDeleteReminder(reminder)
                                 } label: {
                                     Label("删除", systemImage: "trash")
                                 }
@@ -133,13 +134,31 @@ private struct RemindersContent: View {
                 ReminderFormView(reminder: nil, viewModel: viewModel)
             }
         }
+        .alert(item: $reminderPendingDeletion) { reminder in
+            Alert(
+                title: Text(AppLocalization.format("delete.record.title", reminder.title)),
+                message: Text(AppLocalization.string("删除后该记录会从历史中移除。")),
+                primaryButton: .destructive(Text("删除")) {
+                    confirmDeleteReminder(reminder)
+                },
+                secondaryButton: .cancel(Text("取消")) {
+                    reminderPendingDeletion = nil
+                }
+            )
+        }
     }
 
     private func showAddReminder() {
         isShowingAddReminder = true
     }
 
-    private func deleteReminder(_ reminder: ReminderRecord) {
+    private func requestDeleteReminder(_ reminder: ReminderRecord) {
+        reminderPendingDeletion = reminder
+    }
+
+    private func confirmDeleteReminder(_ reminder: ReminderRecord) {
+        reminderPendingDeletion = nil
+
         Task {
             await viewModel.deleteReminder(id: reminder.id)
         }

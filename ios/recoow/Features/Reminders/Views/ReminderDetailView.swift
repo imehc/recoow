@@ -4,7 +4,7 @@ struct ReminderDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var viewModel: RemindersViewModel
     @State private var reminderForEditing: ReminderRecord?
-    @State private var isConfirmingDelete = false
+    @State private var reminderPendingDeletion: ReminderRecord?
 
     let reminderID: String
     let reminderImageTransition: Namespace.ID?
@@ -51,7 +51,7 @@ struct ReminderDetailView: View {
             Section("提醒") {
                 LabeledContent("标题", value: reminder.title)
                 LabeledContent("时间", value: AppFormatters.dateTime(milliseconds: reminder.scheduledAt))
-                LabeledContent("提前提醒", value: reminder.leadTime.title)
+                LabeledContent("提前提醒", value: reminder.leadTime.localizedTitle)
                 LabeledContent("状态", value: statusText(for: reminder))
             }
 
@@ -81,36 +81,41 @@ struct ReminderDetailView: View {
 
             ToolbarItem(placement: .bottomBar) {
                 Button("删除", systemImage: "trash", role: .destructive) {
-                    isConfirmingDelete = true
+                    reminderPendingDeletion = reminder
                 }
             }
         }
-        .confirmationDialog("删除提醒？", isPresented: $isConfirmingDelete) {
-            Button("删除", role: .destructive) {
-                deleteReminder()
-            }
-
-            Button("取消", role: .cancel) { }
-        } message: {
-            Text("删除后该提醒会从列表和历史记录中移除。")
+        .alert(item: $reminderPendingDeletion) { reminder in
+            Alert(
+                title: Text(AppLocalization.format("delete.record.title", reminder.title)),
+                message: Text(AppLocalization.string("删除后该记录会从历史中移除。")),
+                primaryButton: .destructive(Text("删除")) {
+                    deleteReminder(id: reminder.id)
+                },
+                secondaryButton: .cancel(Text("取消")) {
+                    reminderPendingDeletion = nil
+                }
+            )
         }
     }
 
     private func statusText(for reminder: ReminderRecord) -> String {
         if reminder.isUpcoming {
-            return "待提醒"
+            return AppLocalization.string("待提醒")
         }
 
         if reminder.isEnabled {
-            return "已到期"
+            return AppLocalization.string("已到期")
         }
 
-        return "已关闭"
+        return AppLocalization.string("已关闭")
     }
 
-    private func deleteReminder() {
+    private func deleteReminder(id: String) {
+        reminderPendingDeletion = nil
+
         Task {
-            await viewModel.deleteReminder(id: reminderID)
+            await viewModel.deleteReminder(id: id)
             dismiss()
         }
     }

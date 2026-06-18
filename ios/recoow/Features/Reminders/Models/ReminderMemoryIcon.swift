@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 enum ReminderMemoryIcon: String, CaseIterable, Identifiable, Sendable {
     case bell = "🔔"
@@ -37,6 +38,10 @@ enum ReminderMemoryIcon: String, CaseIterable, Identifiable, Sendable {
         case .work:
             "工作"
         }
+    }
+
+    var titleKey: LocalizedStringKey {
+        LocalizedStringKey(title)
     }
 
     static func resolved(from rawValue: String?) -> ReminderMemoryIcon {

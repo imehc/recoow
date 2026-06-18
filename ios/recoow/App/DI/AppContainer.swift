@@ -13,6 +13,7 @@ final class AppContainer {
     @ObservationIgnored let decisionRepository: DecisionRepository
     @ObservationIgnored let itemLocatorRepository: ItemLocatorRepository
     @ObservationIgnored let reminderRepository: ReminderRepository
+    @ObservationIgnored let billRepository: BillRepository
     @ObservationIgnored let notificationScheduler: any AppNotificationScheduling
     @ObservationIgnored let reminderNotificationService: ReminderNotificationService
     @ObservationIgnored let locationTrackerViewModel: LocationTrackerViewModel
@@ -28,6 +29,7 @@ final class AppContainer {
         decisionRepository: DecisionRepository,
         itemLocatorRepository: ItemLocatorRepository,
         reminderRepository: ReminderRepository,
+        billRepository: BillRepository,
         notificationScheduler: any AppNotificationScheduling,
         reminderNotificationService: ReminderNotificationService,
         locationTrackerViewModel: LocationTrackerViewModel,
@@ -42,6 +44,7 @@ final class AppContainer {
         self.decisionRepository = decisionRepository
         self.itemLocatorRepository = itemLocatorRepository
         self.reminderRepository = reminderRepository
+        self.billRepository = billRepository
         self.notificationScheduler = notificationScheduler
         self.reminderNotificationService = reminderNotificationService
         self.locationTrackerViewModel = locationTrackerViewModel
@@ -76,6 +79,11 @@ final class AppContainer {
                 changeLogRepository: changeLogRepository,
                 deviceIdentifier: deviceIdentifier
             )
+            let billRepository = BillRepository(
+                database: database,
+                changeLogRepository: changeLogRepository,
+                deviceIdentifier: deviceIdentifier
+            )
             let notificationScheduler = LocalNotificationScheduler()
             let reminderNotificationService = ReminderNotificationService(scheduler: notificationScheduler)
             let locationService = LocationService()
@@ -94,6 +102,7 @@ final class AppContainer {
                 decisionRepository: decisionRepository,
                 itemLocatorRepository: itemLocatorRepository,
                 reminderRepository: reminderRepository,
+                billRepository: billRepository,
                 notificationScheduler: notificationScheduler,
                 reminderNotificationService: reminderNotificationService,
                 locationTrackerViewModel: locationTrackerViewModel,
@@ -132,6 +141,11 @@ final class AppContainer {
                 changeLogRepository: changeLogRepository,
                 deviceIdentifier: deviceIdentifier
             )
+            let billRepository = BillRepository(
+                database: database,
+                changeLogRepository: changeLogRepository,
+                deviceIdentifier: deviceIdentifier
+            )
             let notificationScheduler = LocalNotificationScheduler()
             let reminderNotificationService = ReminderNotificationService(scheduler: notificationScheduler)
             let locationService = LocationService()
@@ -150,6 +164,7 @@ final class AppContainer {
                 decisionRepository: decisionRepository,
                 itemLocatorRepository: itemLocatorRepository,
                 reminderRepository: reminderRepository,
+                billRepository: billRepository,
                 notificationScheduler: notificationScheduler,
                 reminderNotificationService: reminderNotificationService,
                 locationTrackerViewModel: locationTrackerViewModel,

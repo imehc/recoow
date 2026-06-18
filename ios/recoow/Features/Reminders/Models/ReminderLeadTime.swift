@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 enum ReminderLeadTime: Int, CaseIterable, Identifiable, Codable, Sendable {
     case none = 0
@@ -27,12 +28,20 @@ enum ReminderLeadTime: Int, CaseIterable, Identifiable, Codable, Sendable {
         }
     }
 
+    var titleKey: LocalizedStringKey {
+        LocalizedStringKey(title)
+    }
+
+    var localizedTitle: String {
+        AppLocalization.string(title)
+    }
+
     var notificationSubtitle: String? {
         switch self {
         case .none:
             nil
         default:
-            title
+            localizedTitle
         }
     }
 }

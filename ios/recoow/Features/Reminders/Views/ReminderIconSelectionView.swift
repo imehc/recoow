@@ -4,6 +4,7 @@ struct ReminderIconSelectionView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var selection: String
     @State private var customIcon = ""
+    @FocusState private var focusedField: String?
 
     private let columns = [
         GridItem(.adaptive(minimum: 56), spacing: 14)
@@ -26,19 +27,24 @@ struct ReminderIconSelectionView: View {
                                 }
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel(icon.title)
+                        .accessibilityLabel(icon.titleKey)
                     }
                 }
 
                 HStack(spacing: 12) {
-                    TextField("自定义", text: $customIcon)
+                    Text("自定义")
+                        .foregroundStyle(.secondary)
+
+                    TextField("请输入图标", text: $customIcon)
                         .textInputAutocapitalization(.never)
+                        .focused($focusedField, equals: "customIcon")
 
                     Button("使用", action: selectCustomIcon)
                         .disabled(normalizedCustomIcon.isEmpty)
                 }
             }
         }
+        .dismissesKeyboardOnTap(focusedField: $focusedField)
         .contentMargins(.horizontal, 20, for: .scrollContent)
         .contentMargins(.vertical, 18, for: .scrollContent)
         .navigationTitle("选择图标")

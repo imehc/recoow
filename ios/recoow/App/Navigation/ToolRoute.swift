@@ -5,6 +5,7 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable {
     case decisionMaker
     case itemLocator
     case reminders
+    case bills
 
     var id: String { rawValue }
 
@@ -22,6 +23,8 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable {
             "在哪里"
         case .reminders:
             "提提醒"
+        case .bills:
+            "记一笔"
         }
     }
 
@@ -39,6 +42,8 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable {
             "记录物品放在哪里"
         case .reminders:
             "指定时间提醒与提前提醒"
+        case .bills:
+            "记录价格、优惠与备注"
         }
     }
 
@@ -52,6 +57,8 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable {
             "shippingbox.fill"
         case .reminders:
             "bell.badge.fill"
+        case .bills:
+            "receipt.fill"
         }
     }
 
@@ -65,6 +72,8 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable {
             .blue
         case .reminders:
             .purple
+        case .bills:
+            .teal
         }
     }
 }

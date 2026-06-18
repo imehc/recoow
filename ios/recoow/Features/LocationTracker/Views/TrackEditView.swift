@@ -7,6 +7,7 @@ struct TrackEditView: View {
     @State private var note: String
     @State private var errorMessage: String?
     @State private var isSaving = false
+    @FocusState private var focusedField: String?
 
     let track: Track
     let onSaved: (Track) -> Void
@@ -21,10 +22,21 @@ struct TrackEditView: View {
     var body: some View {
         Form {
             Section("基础信息") {
-                TextField("名称", text: $name)
+                LabeledContent("名称") {
+                    TextField("请输入名称", text: $name)
+                        .multilineTextAlignment(.trailing)
+                        .focused($focusedField, equals: "name")
+                }
 
-                TextField("备注", text: $note, axis: .vertical)
-                    .lineLimit(3...)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("备注")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    TextField("请输入备注", text: $note, axis: .vertical)
+                        .lineLimit(3...)
+                        .focused($focusedField, equals: "note")
+                }
             }
 
             if let errorMessage {
@@ -34,6 +46,7 @@ struct TrackEditView: View {
                 }
             }
         }
+        .dismissesKeyboardOnTap(focusedField: $focusedField)
         .navigationTitle("编辑轨迹")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

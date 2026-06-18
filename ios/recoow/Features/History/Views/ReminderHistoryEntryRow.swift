@@ -28,7 +28,7 @@ struct ReminderHistoryEntryRow: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                Label(reminder.leadTime.title, systemImage: "clock.badge")
+                Label(reminder.leadTime.titleKey, systemImage: "clock.badge")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

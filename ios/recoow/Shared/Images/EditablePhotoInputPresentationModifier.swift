@@ -25,6 +25,14 @@ struct EditablePhotoInputPresentationModifier: ViewModifier {
                     onPhotoPicked: coordinator.beginEditingPickedImage
                 )
             }
+            .onChange(of: coordinator.isShowingPhotoSourcePicker) { _, isShowing in
+                if isShowing == false {
+                    coordinator.presentPendingEditorIfNeeded()
+                }
+            }
+            .onChange(of: coordinator.pendingEditablePhoto?.id) {
+                coordinator.presentPendingEditorIfNeeded()
+            }
             .sheet(item: $coordinator.previewPhoto, content: PhotoPreviewView.init)
     }
 

@@ -16,6 +16,7 @@ struct DecisionOptionFormView: View {
     @State private var pendingEditablePhoto: EditablePhoto?
     @State private var editablePhoto: EditablePhoto?
     @State private var isShowingPhotoEditor = false
+    @FocusState private var focusedField: String?
 
     let option: DecisionOption?
     let viewModel: DecisionOptionsViewModel
@@ -34,13 +35,31 @@ struct DecisionOptionFormView: View {
     var body: some View {
         Form {
             Section("基础信息") {
-                TextField("标题", text: $title)
+                LabeledContent("标题") {
+                    TextField("请输入标题", text: $title)
+                        .multilineTextAlignment(.trailing)
+                        .focused($focusedField, equals: "title")
+                }
 
-                TextField("描述", text: $detail, axis: .vertical)
-                    .lineLimit(3...)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("描述")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
 
-                TextField("自定义信息", text: $customInfo, axis: .vertical)
-                    .lineLimit(3...)
+                    TextField("请输入描述", text: $detail, axis: .vertical)
+                        .lineLimit(3...)
+                        .focused($focusedField, equals: "detail")
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("自定义信息")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    TextField("请输入自定义信息", text: $customInfo, axis: .vertical)
+                        .lineLimit(3...)
+                        .focused($focusedField, equals: "customInfo")
+                }
             }
 
             PhotoInputSection(
@@ -62,6 +81,7 @@ struct DecisionOptionFormView: View {
                 Toggle("启用", isOn: $isEnabled)
             }
         }
+        .dismissesKeyboardOnTap(focusedField: $focusedField)
         .navigationTitle(option == nil ? "添加选项" : "编辑选项")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

@@ -1,0 +1,234 @@
+import SwiftUI
+
+struct BillFormView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var title: String
+    @State private var originalAmountText: String
+    @State private var discountAmountText: String
+    @State private var finalAmountText: String
+    @State private var category: BillCategory
+    @State private var paymentMethod: BillPaymentMethod
+    @State private var note: String
+    @State private var occurredDate: Date
+    @State private var imageData: Data?
+    @State private var isUpdatingFinalAmount = false
+    @State private var isFinalAmountManuallyEdited = false
+    @State private var photoInputCoordinator = EditablePhotoInputCoordinator()
+    @FocusState private var focusedField: String?
+
+    let bill: BillRecord?
+    let viewModel: BillsViewModel
+
+    init(bill: BillRecord?, viewModel: BillsViewModel) {
+        self.bill = bill
+        self.viewModel = viewModel
+        _title = State(initialValue: bill?.title ?? "")
+        _originalAmountText = State(initialValue: bill.map { AppFormatters.amountInput(cents: $0.originalAmountCents) } ?? "")
+        _discountAmountText = State(initialValue: bill.map { AppFormatters.amountInput(cents: $0.discountAmountCents) } ?? "")
+        _finalAmountText = State(initialValue: bill.map { AppFormatters.amountInput(cents: $0.finalAmountCents) } ?? "")
+        _category = State(initialValue: bill?.billCategory ?? .dining)
+        _paymentMethod = State(initialValue: bill?.billPaymentMethod ?? .wechat)
+        _note = State(initialValue: bill?.note ?? "")
+        _occurredDate = State(initialValue: bill?.occurredDate ?? Date())
+        _imageData = State(initialValue: bill?.imageData)
+    }
+
+    var body: some View {
+        Form {
+            Section("基础信息") {
+                LabeledContent("标题") {
+                    TextField("请输入标题", text: $title)
+                        .multilineTextAlignment(.trailing)
+                        .focused($focusedField, equals: "title")
+                }
+
+                DatePicker(
+                    "日期",
+                    selection: $occurredDate,
+                    displayedComponents: [.date, .hourAndMinute]
+                )
+            }
+
+            Section("金额") {
+                LabeledContent("原价") {
+                    TextField("请输入原价", text: $originalAmountText)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .focused($focusedField, equals: "originalAmount")
+                }
+
+                LabeledContent("优惠") {
+                    TextField("请输入优惠", text: $discountAmountText)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .focused($focusedField, equals: "discountAmount")
+                }
+
+                LabeledContent("实付") {
+                    TextField("请输入实付金额", text: $finalAmountText)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .focused($focusedField, equals: "finalAmount")
+                }
+            }
+
+            Section("分类") {
+                Picker("分类", selection: $category) {
+                    ForEach(BillCategory.allCases) { category in
+                        Label(category.title, systemImage: category.systemImage)
+                            .tag(category)
+                    }
+                }
+
+                Picker("支付方式", selection: $paymentMethod) {
+                    ForEach(BillPaymentMethod.allCases) { method in
+                        Label(method.title, systemImage: method.systemImage)
+                            .tag(method)
+                    }
+                }
+            }
+
+            EditablePhotoInputSection(
+                imageData: $imageData,
+                placeholderSystemImage: "receipt",
+                coordinator: photoInputCoordinator
+            )
+
+            Section("备注") {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("备注")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    TextField("请输入备注", text: $note, axis: .vertical)
+                        .lineLimit(3...)
+                        .focused($focusedField, equals: "note")
+                }
+            }
+        }
+        .dismissesKeyboardOnTap(focusedField: $focusedField)
+        .navigationTitle(bill == nil ? "添加账单" : "编辑账单")
+        .navigationBarTitleDisplayMode(.inline)
+        .editablePhotoInputPresentation(
+            coordinator: photoInputCoordinator,
+            imageData: $imageData
+        )
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("取消", action: cancel)
+            }
+
+            ToolbarItem(placement: .confirmationAction) {
+                Button("保存", action: save)
+                    .disabled(isSaveDisabled)
+            }
+        }
+        .onChange(of: originalAmountText) {
+            updateFinalAmountIfNeeded()
+        }
+        .onChange(of: discountAmountText) {
+            updateFinalAmountIfNeeded()
+        }
+        .onChange(of: finalAmountText) {
+            handleFinalAmountChange()
+        }
+    }
+
+    private var trimmedTitle: String {
+        title.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var normalizedNote: String? {
+        let value = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
+    }
+
+    private var originalAmountCents: Int64? {
+        AppFormatters.cents(from: originalAmountText)
+    }
+
+    private var discountAmountCents: Int64? {
+        if discountAmountText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return 0
+        }
+
+        return AppFormatters.cents(from: discountAmountText)
+    }
+
+    private var finalAmountCents: Int64? {
+        AppFormatters.cents(from: finalAmountText)
+    }
+
+    private var isSaveDisabled: Bool {
+        guard trimmedTitle.isEmpty == false,
+              let originalAmountCents,
+              let discountAmountCents,
+              let finalAmountCents
+        else {
+            return true
+        }
+
+        return originalAmountCents <= 0 || discountAmountCents > originalAmountCents || finalAmountCents < 0
+    }
+
+    private func cancel() {
+        dismiss()
+    }
+
+    private func updateFinalAmountIfNeeded() {
+        guard isFinalAmountManuallyEdited == false,
+              let originalAmountCents,
+              let discountAmountCents
+        else {
+            return
+        }
+
+        let calculatedFinalAmount = max(0, originalAmountCents - discountAmountCents)
+        isUpdatingFinalAmount = true
+        finalAmountText = AppFormatters.amountInput(cents: calculatedFinalAmount)
+    }
+
+    private func handleFinalAmountChange() {
+        if isUpdatingFinalAmount {
+            isUpdatingFinalAmount = false
+        } else {
+            isFinalAmountManuallyEdited = true
+        }
+    }
+
+    private func save() {
+        guard let originalAmountCents,
+              let discountAmountCents,
+              let finalAmountCents
+        else {
+            return
+        }
+
+        var record = bill ?? viewModel.makeBill(
+            title: trimmedTitle,
+            originalAmountCents: originalAmountCents,
+            discountAmountCents: discountAmountCents,
+            finalAmountCents: finalAmountCents,
+            category: category,
+            paymentMethod: paymentMethod,
+            note: normalizedNote,
+            occurredDate: occurredDate,
+            imageData: imageData
+        )
+
+        record.title = trimmedTitle
+        record.originalAmountCents = originalAmountCents
+        record.discountAmountCents = discountAmountCents
+        record.finalAmountCents = finalAmountCents
+        record.category = category.rawValue
+        record.paymentMethod = paymentMethod.rawValue
+        record.note = normalizedNote
+        record.occurredAt = BillsViewModel.milliseconds(for: occurredDate)
+        record.imageData = imageData
+
+        Task {
+            await viewModel.save(record)
+            dismiss()
+        }
+    }
+}

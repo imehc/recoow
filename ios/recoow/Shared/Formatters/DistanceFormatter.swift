@@ -42,6 +42,42 @@ enum AppFormatters {
         )
     }
 
+    static func money(cents: Int64) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = AppLocalization.currentLocale
+        formatter.currencyCode = Locale.autoupdatingCurrent.currency?.identifier ?? "CNY"
+        formatter.maximumFractionDigits = 2
+        formatter.minimumFractionDigits = 2
+
+        let amount = Decimal(cents) / Decimal(100)
+        return formatter.string(from: amount as NSDecimalNumber) ?? String(format: "%.2f", Double(cents) / 100)
+    }
+
+    static func amountInput(cents: Int64) -> String {
+        String(format: "%.2f", Double(cents) / 100)
+    }
+
+    static func cents(from amountText: String) -> Int64? {
+        let sanitized = amountText
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ",", with: "")
+            .replacingOccurrences(of: "¥", with: "")
+
+        guard sanitized.isEmpty == false,
+              let amount = Decimal(string: sanitized),
+              amount >= 0
+        else {
+            return nil
+        }
+
+        let cents = amount * Decimal(100)
+        var rounded = Decimal()
+        var source = cents
+        NSDecimalRound(&rounded, &source, 0, .plain)
+        return NSDecimalNumber(decimal: rounded).int64Value
+    }
+
     static func sampleCount(_ count: Int) -> String {
         AppLocalization.format("sample.count", count)
     }

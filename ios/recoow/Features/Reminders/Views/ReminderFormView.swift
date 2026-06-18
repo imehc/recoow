@@ -10,6 +10,7 @@ struct ReminderFormView: View {
     @State private var leadTime: ReminderLeadTime
     @State private var isEnabled: Bool
     @State private var photoInputCoordinator = EditablePhotoInputCoordinator()
+    @FocusState private var focusedField: String?
 
     let reminder: ReminderRecord?
     let viewModel: RemindersViewModel
@@ -29,12 +30,23 @@ struct ReminderFormView: View {
     var body: some View {
         Form {
             Section("基础信息") {
-                TextField("标题", text: $title)
+                LabeledContent("标题") {
+                    TextField("请输入标题", text: $title)
+                        .multilineTextAlignment(.trailing)
+                        .focused($focusedField, equals: "title")
+                }
 
                 ReminderIconPickerRow(selection: $memoryIcon)
 
-                TextField("备注", text: $note, axis: .vertical)
-                    .lineLimit(3...)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("备注")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    TextField("请输入备注", text: $note, axis: .vertical)
+                        .lineLimit(3...)
+                        .focused($focusedField, equals: "note")
+                }
             }
 
             Section("提醒时间") {
@@ -46,7 +58,7 @@ struct ReminderFormView: View {
 
                 Picker("提前提醒", selection: $leadTime) {
                     ForEach(ReminderLeadTime.allCases) { leadTime in
-                        Text(leadTime.title).tag(leadTime)
+                        Text(leadTime.titleKey).tag(leadTime)
                     }
                 }
 
@@ -59,6 +71,7 @@ struct ReminderFormView: View {
                 coordinator: photoInputCoordinator
             )
         }
+        .dismissesKeyboardOnTap(focusedField: $focusedField)
         .navigationTitle(reminder == nil ? "添加提醒" : "编辑提醒")
         .navigationBarTitleDisplayMode(.inline)
         .editablePhotoInputPresentation(

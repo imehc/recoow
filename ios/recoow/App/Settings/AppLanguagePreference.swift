@@ -24,6 +24,17 @@ enum AppLanguagePreference: String, CaseIterable, Identifiable {
         case .system:
             nil
         case .english:
+            "en-US"
+        case .simplifiedChinese:
+            "zh-Hans-CN"
+        }
+    }
+
+    var resourceIdentifier: String? {
+        switch self {
+        case .system:
+            nil
+        case .english:
             "en"
         case .simplifiedChinese:
             "zh-Hans"

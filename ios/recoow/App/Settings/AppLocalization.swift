@@ -11,8 +11,8 @@ enum AppLocalization {
     }
 
     static func string(_ key: String) -> String {
-        if let localeIdentifier = currentLanguage.localeIdentifier,
-           let path = Bundle.main.path(forResource: localeIdentifier, ofType: "lproj"),
+        if let resourceIdentifier = currentLanguage.resourceIdentifier,
+           let path = Bundle.main.path(forResource: resourceIdentifier, ofType: "lproj"),
            let bundle = Bundle(path: path) {
             return NSLocalizedString(key, bundle: bundle, comment: "")
         }

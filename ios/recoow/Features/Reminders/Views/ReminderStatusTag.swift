@@ -4,7 +4,7 @@ struct ReminderStatusTag: View {
     let reminder: ReminderRecord
 
     var body: some View {
-        Label(title, systemImage: systemImage)
+        Label(LocalizedStringKey(title), systemImage: systemImage)
             .font(.footnote)
             .foregroundStyle(tint)
             .labelStyle(.titleAndIcon)

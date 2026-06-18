@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import UserNotifications
 
 final class LocalNotificationScheduler: NSObject, AppNotificationScheduling, UNUserNotificationCenterDelegate, @unchecked Sendable {
@@ -57,6 +58,17 @@ final class LocalNotificationScheduler: NSObject, AppNotificationScheduling, UNU
         guard identifiers.isEmpty == false else { return }
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
         center.removeDeliveredNotifications(withIdentifiers: identifiers)
+    }
+
+    func clearBadge() async {
+        await withCheckedContinuation { continuation in
+            center.setBadgeCount(0) { error in
+                if let error {
+                    AppLogger.ui.error("Failed to clear notification badge: \(error.localizedDescription, privacy: .public)")
+                }
+                continuation.resume()
+            }
+        }
     }
 
     nonisolated func userNotificationCenter(

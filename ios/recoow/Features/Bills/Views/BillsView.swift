@@ -1,0 +1,156 @@
+import SwiftUI
+
+struct BillsView: View {
+    @Environment(AppContainer.self) private var container
+    @State private var viewModel: BillsViewModel?
+    @Namespace private var billImageTransition
+
+    var body: some View {
+        Group {
+            if let viewModel {
+                BillsContent(
+                    viewModel: viewModel,
+                    billImageTransition: billImageTransition
+                )
+            } else {
+                ProgressView("正在加载")
+            }
+        }
+        .navigationTitle("记一笔")
+        .navigationDestination(for: BillRoute.self) { route in
+            if let viewModel {
+                BillDetailView(
+                    viewModel: viewModel,
+                    billID: route.id,
+                    billImageTransition: imageTransition(for: route)
+                )
+            }
+        }
+        .task {
+            guard viewModel == nil else { return }
+
+            let model = BillsViewModel(
+                repository: container.billRepository,
+                syncEngine: container.syncEngine
+            )
+            model.startObserving()
+            viewModel = model
+        }
+    }
+
+    private func imageTransition(for route: BillRoute) -> Namespace.ID? {
+        guard viewModel?.bills.contains(where: { bill in
+            bill.id == route.id && bill.imageData != nil
+        }) == true else {
+            return nil
+        }
+
+        return billImageTransition
+    }
+}
+
+private struct BillsContent: View {
+    @Bindable var viewModel: BillsViewModel
+    @State private var isShowingAddBill = false
+    @State private var billPendingDeletion: BillRecord?
+
+    let billImageTransition: Namespace.ID
+
+    var body: some View {
+        List {
+            if let errorMessage = viewModel.errorMessage {
+                Section {
+                    Label(errorMessage, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.red)
+                }
+            }
+
+            BillSummarySection(
+                hasBills: viewModel.bills.isEmpty == false,
+                todayTotalCents: viewModel.todayTotalCents,
+                monthTotalCents: viewModel.currentMonthTotalCents,
+                monthDiscountCents: viewModel.currentMonthDiscountCents
+            )
+
+            if viewModel.bills.isEmpty == false {
+                BillFilterSection(viewModel: viewModel)
+            }
+
+            if viewModel.bills.isEmpty {
+                ContentUnavailableView {
+                    Label("暂无账单", systemImage: "receipt")
+                } description: {
+                    Text("添加一条支出记录")
+                } actions: {
+                    Button("记一笔", systemImage: "plus", action: showAddBill)
+                }
+            } else if viewModel.filteredBills.isEmpty {
+                ContentUnavailableView("没有匹配账单", systemImage: "magnifyingglass")
+            } else {
+                Section("账单") {
+                    ForEach(viewModel.filteredBills) { bill in
+                        NavigationLink(value: BillRoute(id: bill.id)) {
+                            BillRow(
+                                bill: bill,
+                                billImageTransition: billImageTransition
+                            )
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button {
+                                requestDeleteBill(bill)
+                            } label: {
+                                Label("删除", systemImage: "trash")
+                            }
+                            .tint(.red)
+                        }
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .searchable(text: $viewModel.searchText, prompt: "搜索账单")
+        .toolbar {
+            Button("记一笔", systemImage: "plus", action: showAddBill)
+        }
+        .sheet(isPresented: $isShowingAddBill) {
+            NavigationStack {
+                BillFormView(bill: nil, viewModel: viewModel)
+            }
+        }
+        .alert(item: $billPendingDeletion) { bill in
+            Alert(
+                title: Text(AppLocalization.format("delete.record.title", bill.title)),
+                message: Text(AppLocalization.string("删除后该记录会从历史中移除。")),
+                primaryButton: .destructive(Text("删除")) {
+                    confirmDeleteBill(bill)
+                },
+                secondaryButton: .cancel(Text("取消")) {
+                    billPendingDeletion = nil
+                }
+            )
+        }
+    }
+
+    private func showAddBill() {
+        isShowingAddBill = true
+    }
+
+    private func requestDeleteBill(_ bill: BillRecord) {
+        billPendingDeletion = bill
+    }
+
+    private func confirmDeleteBill(_ bill: BillRecord) {
+        billPendingDeletion = nil
+
+        Task {
+            await viewModel.deleteBill(id: bill.id)
+        }
+    }
+}
+
+#Preview {
+    NavigationStack {
+        BillsView()
+            .environment(AppContainer.preview)
+    }
+}

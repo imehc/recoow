@@ -5,6 +5,7 @@ enum HistoryEntry: Identifiable, Hashable {
     case decisionChoice(DecisionChoiceRecord)
     case storedItem(StoredItem)
     case reminder(ReminderRecord)
+    case bill(BillRecord)
 
     var id: String {
         switch self {
@@ -16,6 +17,8 @@ enum HistoryEntry: Identifiable, Hashable {
             "storedItem:\(item.id)"
         case .reminder(let reminder):
             "reminder:\(reminder.id)"
+        case .bill(let bill):
+            "bill:\(bill.id)"
         }
     }
 
@@ -29,6 +32,8 @@ enum HistoryEntry: Identifiable, Hashable {
             item.updatedAt
         case .reminder(let reminder):
             reminder.scheduledAt
+        case .bill(let bill):
+            bill.occurredAt
         }
     }
 

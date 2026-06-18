@@ -16,23 +16,24 @@ struct CalendarDateSelectionSheet: View {
     var body: some View {
         NavigationStack {
             VStack {
-                DatePicker("日期", selection: $draftDate, displayedComponents: .date)
+                DatePicker(AppLocalization.string("日期"), selection: $draftDate, displayedComponents: .date)
                     .datePickerStyle(.graphical)
             }
             .padding(.horizontal)
             .padding(.bottom)
-            .navigationTitle("选择日期")
+            .navigationTitle(AppLocalization.string("选择日期"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消", action: dismiss.callAsFunction)
+                    Button(AppLocalization.string("取消"), action: dismiss.callAsFunction)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("确定", action: confirmDate)
+                    Button(AppLocalization.string("确定"), action: confirmDate)
                 }
             }
         }
+        .environment(\.locale, AppLocalization.currentLocale)
     }
 
     private func confirmDate() {
