@@ -75,11 +75,7 @@ struct ItemCategoriesView: View {
                 ItemCategoryFormView(category: category, viewModel: viewModel)
             }
         }
-        .confirmationDialog(
-            deletionTitle,
-            isPresented: $isShowingDeletionConfirmation,
-            titleVisibility: .visible
-        ) {
+        .alert(deletionTitle, isPresented: $isShowingDeletionConfirmation) {
             Button("删除", role: .destructive, action: confirmDelete)
             Button("取消", role: .cancel, action: clearPendingDeletion)
         } message: {

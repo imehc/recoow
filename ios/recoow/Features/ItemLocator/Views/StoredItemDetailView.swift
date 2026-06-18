@@ -5,18 +5,15 @@ struct StoredItemDetailView: View {
     @State private var editingItem: StoredItem?
 
     let itemID: String
+    let itemImageTransition: Namespace.ID
 
     var body: some View {
         Group {
             if let item = viewModel.item(id: itemID) {
                 Form {
                     Section {
-                        HStack {
-                            Spacer()
-                            PhotoThumbnailView(imageData: item.imageData, systemImage: "shippingbox", size: 180)
-                            Spacer()
-                        }
-                        .padding(.vertical, 8)
+                        PhotoSquareImageView(imageData: item.imageData, systemImage: "shippingbox")
+                            .padding(.vertical, 8)
                     }
 
                     Section("位置") {
@@ -52,6 +49,7 @@ struct StoredItemDetailView: View {
         }
         .navigationTitle(viewModel.item(id: itemID)?.title ?? "物品详情")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationTransition(.zoom(sourceID: itemID, in: itemImageTransition))
         .sheet(item: $editingItem) { item in
             NavigationStack {
                 StoredItemFormView(item: item, viewModel: viewModel)

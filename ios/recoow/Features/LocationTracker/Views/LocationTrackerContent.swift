@@ -59,15 +59,21 @@ struct LocationTrackerContent: View {
 
             Section {
                 Button(action: toggleRecording) {
-                    Label {
-                        Text(LocalizedStringKey(recordingButtonTitle))
-                    } icon: {
+                    HStack(spacing: 8) {
                         Image(systemName: recordingButtonImage)
+                            .symbolRenderingMode(.monochrome)
+                            .foregroundStyle(.white)
+
+                        Text(LocalizedStringKey(recordingButtonTitle))
+                            .foregroundStyle(.white)
                     }
+                    .font(.body)
                     .frame(maxWidth: .infinity)
+                    .frame(height: 32)
+                    .background(recordingButtonTint, in: .rect(cornerRadius: AppDesign.cornerRadius))
+                    .contentShape(.rect)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(viewModel.isRecording ? .red : .blue)
+                .buttonStyle(.plain)
             }
         }
     }
@@ -86,6 +92,10 @@ struct LocationTrackerContent: View {
 
     private var recordingButtonImage: String {
         viewModel.isRecording ? "stop.fill" : "play.fill"
+    }
+
+    private var recordingButtonTint: Color {
+        viewModel.isRecording ? .red : .blue
     }
 
     private var statusSystemImage: String {

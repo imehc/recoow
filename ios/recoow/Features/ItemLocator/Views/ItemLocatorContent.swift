@@ -7,6 +7,7 @@ struct ItemLocatorContent: View {
     @State private var editingItem: StoredItem?
     @State private var pendingDeletionItem: StoredItem?
     @State private var isShowingDeletionConfirmation = false
+    let itemImageTransition: Namespace.ID
 
     var body: some View {
         List {
@@ -41,7 +42,11 @@ struct ItemLocatorContent: View {
                 } else {
                     ForEach(viewModel.filteredItems) { item in
                         NavigationLink(value: StoredItemRoute(id: item.id)) {
-                            StoredItemRow(item: item, categoryName: viewModel.categoryName(for: item))
+                            StoredItemRow(
+                                item: item,
+                                categoryName: viewModel.categoryName(for: item),
+                                itemImageTransition: itemImageTransition
+                            )
                         }
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) {
@@ -87,11 +92,7 @@ struct ItemLocatorContent: View {
                 ItemCategoriesView(viewModel: viewModel)
             }
         }
-        .confirmationDialog(
-            deletionTitle,
-            isPresented: $isShowingDeletionConfirmation,
-            titleVisibility: .visible
-        ) {
+        .alert(deletionTitle, isPresented: $isShowingDeletionConfirmation) {
             Button("删除", role: .destructive, action: confirmDelete)
             Button("取消", role: .cancel, action: clearPendingDeletion)
         } message: {

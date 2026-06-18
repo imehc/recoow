@@ -2,11 +2,13 @@ import SwiftUI
 
 struct DecisionChoiceHistoryEntryRow: View {
     let record: DecisionChoiceRecord
+    let choiceRecordImageTransition: Namespace.ID
 
     var body: some View {
         HStack(spacing: 12) {
             if let imageData = record.optionImageData {
-                PhotoThumbnailView(imageData: imageData, systemImage: "sparkles", size: AppDesign.rowIconSize)
+                PhotoThumbnailView(imageData: imageData, systemImage: "sparkles", size: 64)
+                    .matchedTransitionSource(id: record.id, in: choiceRecordImageTransition)
             }
 
             VStack(alignment: .leading, spacing: 6) {

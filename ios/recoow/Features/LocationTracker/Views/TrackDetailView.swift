@@ -36,15 +36,9 @@ struct TrackDetailView: View {
                         }
                     }
 
-                    LabeledContent {
-                        Label {
-                            Text(LocalizedStringKey(statusTitle))
-                        } icon: {
-                            Image(systemName: statusSystemImage)
-                        }
-                        .foregroundStyle(statusColor)
-                    } label: {
-                        Text("状态")
+                    LabeledContent("状态") {
+                        Text(LocalizedStringKey(statusTitle))
+                            .foregroundStyle(statusColor)
                     }
 
                     LabeledContent("距离", value: AppFormatters.distance(displayDistanceMeters))
@@ -128,18 +122,6 @@ struct TrackDetailView: View {
         }
 
         return "已完成"
-    }
-
-    private var statusSystemImage: String {
-        if isActiveTrack {
-            return "dot.radiowaves.left.and.right"
-        }
-
-        if track?.endedAt == nil {
-            return "exclamationmark.circle"
-        }
-
-        return "checkmark.circle"
     }
 
     private var statusColor: Color {

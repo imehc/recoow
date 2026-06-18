@@ -3,12 +3,12 @@ import SwiftUI
 struct DecisionChoiceRecordRow: View {
     let record: DecisionChoiceRecord
     var showsCollectionTitle = true
+    var thumbnailSize: CGFloat = 64
+    var choiceRecordImageTransition: Namespace.ID? = nil
 
     var body: some View {
         HStack(spacing: 12) {
-            if let imageData = record.optionImageData {
-                PhotoThumbnailView(imageData: imageData, systemImage: "sparkles", size: AppDesign.rowIconSize)
-            }
+            thumbnail
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(record.optionTitle)
@@ -30,5 +30,17 @@ struct DecisionChoiceRecordRow: View {
             Spacer(minLength: 8)
         }
         .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private var thumbnail: some View {
+        if let imageData = record.optionImageData {
+            if let choiceRecordImageTransition {
+                PhotoThumbnailView(imageData: imageData, systemImage: "sparkles", size: thumbnailSize)
+                    .matchedTransitionSource(id: record.id, in: choiceRecordImageTransition)
+            } else {
+                PhotoThumbnailView(imageData: imageData, systemImage: "sparkles", size: thumbnailSize)
+            }
+        }
     }
 }

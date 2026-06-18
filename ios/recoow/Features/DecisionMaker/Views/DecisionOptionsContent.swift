@@ -8,6 +8,7 @@ struct DecisionOptionsContent: View {
     @State private var pendingDeletionRecord: DecisionChoiceRecord?
     @State private var isShowingDeletionConfirmation = false
     @State private var isShowingHistoryDeletionConfirmation = false
+    let choiceRecordImageTransition: Namespace.ID
 
     var body: some View {
         List {
@@ -35,7 +36,11 @@ struct DecisionOptionsContent: View {
                 Section("历史记录") {
                     ForEach(viewModel.choiceRecords.prefix(10)) { record in
                         NavigationLink(value: DecisionChoiceRecordRoute(id: record.id)) {
-                            DecisionChoiceRecordRow(record: record, showsCollectionTitle: false)
+                            DecisionChoiceRecordRow(
+                                record: record,
+                                showsCollectionTitle: false,
+                                choiceRecordImageTransition: choiceRecordImageTransition
+                            )
                         }
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
@@ -92,21 +97,13 @@ struct DecisionOptionsContent: View {
                 DecisionOptionFormView(option: option, viewModel: viewModel)
             }
         }
-        .confirmationDialog(
-            deletionTitle,
-            isPresented: $isShowingDeletionConfirmation,
-            titleVisibility: .visible
-        ) {
+        .alert(deletionTitle, isPresented: $isShowingDeletionConfirmation) {
             Button("删除", role: .destructive, action: confirmDelete)
             Button("取消", role: .cancel, action: clearPendingDeletion)
         } message: {
             Text("删除后该候选项会从当前集合中移除。")
         }
-        .confirmationDialog(
-            historyDeletionTitle,
-            isPresented: $isShowingHistoryDeletionConfirmation,
-            titleVisibility: .visible
-        ) {
+        .alert(historyDeletionTitle, isPresented: $isShowingHistoryDeletionConfirmation) {
             Button("删除", role: .destructive, action: confirmDeleteHistory)
             Button("取消", role: .cancel, action: clearPendingHistoryDeletion)
         } message: {

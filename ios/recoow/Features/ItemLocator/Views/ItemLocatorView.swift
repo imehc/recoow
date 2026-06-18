@@ -3,11 +3,12 @@ import SwiftUI
 struct ItemLocatorView: View {
     @Environment(AppContainer.self) private var container
     @State private var viewModel: ItemLocatorViewModel?
+    @Namespace private var itemImageTransition
 
     var body: some View {
         Group {
             if let viewModel {
-                ItemLocatorContent(viewModel: viewModel)
+                ItemLocatorContent(viewModel: viewModel, itemImageTransition: itemImageTransition)
             } else {
                 ProgressView("正在加载")
             }
@@ -15,7 +16,11 @@ struct ItemLocatorView: View {
         .navigationTitle("在哪里")
         .navigationDestination(for: StoredItemRoute.self) { route in
             if let viewModel {
-                StoredItemDetailView(viewModel: viewModel, itemID: route.id)
+                StoredItemDetailView(
+                    viewModel: viewModel,
+                    itemID: route.id,
+                    itemImageTransition: itemImageTransition
+                )
             }
         }
         .task {

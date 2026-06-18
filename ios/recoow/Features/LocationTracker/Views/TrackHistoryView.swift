@@ -4,6 +4,7 @@ struct TrackHistoryView: View {
     @Environment(AppContainer.self) private var container
     @State private var trackViewModel: TrackHistoryViewModel?
     @State private var decisionHistoryViewModel: DecisionChoiceHistoryViewModel?
+    @Namespace private var choiceRecordImageTransition
 
     var body: some View {
         Group {
@@ -11,6 +12,7 @@ struct TrackHistoryView: View {
                 TrackHistoryContent(
                     viewModel: trackViewModel,
                     decisionHistoryViewModel: decisionHistoryViewModel,
+                    choiceRecordImageTransition: choiceRecordImageTransition,
                     activeTrackID: container.locationTrackerViewModel.currentTrackID,
                     activeElapsedSeconds: container.locationTrackerViewModel.elapsedSeconds,
                     activePointCount: container.locationTrackerViewModel.pointCount,
@@ -26,7 +28,10 @@ struct TrackHistoryView: View {
             TrackDetailView(trackID: route.id)
         }
         .navigationDestination(for: DecisionChoiceRecordRoute.self) { route in
-            DecisionChoiceRecordDetailView(recordID: route.id)
+            DecisionChoiceRecordDetailView(
+                recordID: route.id,
+                choiceRecordImageTransition: imageTransition(for: route)
+            )
         }
         .task {
             if trackViewModel == nil {
@@ -48,6 +53,16 @@ struct TrackHistoryView: View {
             }
         }
     }
+
+    private func imageTransition(for route: DecisionChoiceRecordRoute) -> Namespace.ID? {
+        guard decisionHistoryViewModel?.records.contains(where: { record in
+            record.id == route.id && record.optionImageData != nil
+        }) == true else {
+            return nil
+        }
+
+        return choiceRecordImageTransition
+    }
 }
 
 private struct TrackHistoryContent: View {
@@ -57,6 +72,7 @@ private struct TrackHistoryContent: View {
     @State private var selectedEntryIDs = Set<String>()
     @State private var deletionConfirmation: HistoryDeletionConfirmation?
 
+    let choiceRecordImageTransition: Namespace.ID
     let activeTrackID: String?
     let activeElapsedSeconds: Int64
     let activePointCount: Int
@@ -91,6 +107,7 @@ private struct TrackHistoryContent: View {
                                     entry: entry,
                                     pointCount: pointCount(for: track),
                                     isActiveTrack: isActive(track),
+                                    choiceRecordImageTransition: choiceRecordImageTransition,
                                     activeElapsedSeconds: activeElapsedSeconds,
                                     activeDistanceMeters: activeDistanceMeters
                                 )
@@ -113,6 +130,7 @@ private struct TrackHistoryContent: View {
                                     entry: entry,
                                     pointCount: 0,
                                     isActiveTrack: false,
+                                    choiceRecordImageTransition: choiceRecordImageTransition,
                                     activeElapsedSeconds: activeElapsedSeconds,
                                     activeDistanceMeters: activeDistanceMeters
                                 )
