@@ -35,7 +35,8 @@ struct StatisticsView: View {
                 decisionRepository: container.decisionRepository,
                 itemLocatorRepository: container.itemLocatorRepository,
                 reminderRepository: container.reminderRepository,
-                billRepository: container.billRepository
+                billRepository: container.billRepository,
+                anniversaryRepository: container.anniversaryRepository
             )
             model.startObserving()
             viewModel = model

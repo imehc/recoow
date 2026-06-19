@@ -4,6 +4,7 @@ import SwiftUI
 struct HomeView: View {
     @Environment(AppContainer.self) private var container
     @State private var remindersViewModel: RemindersViewModel?
+    @State private var anniversariesViewModel: AnniversariesViewModel?
     @State private var currentDate = Date()
 
     let openSettings: () -> Void
@@ -67,15 +68,25 @@ struct HomeView: View {
             ToolDestinationView(route: route)
         }
         .task {
-            guard remindersViewModel == nil else { return }
+            if remindersViewModel == nil {
+                let model = RemindersViewModel(
+                    repository: container.reminderRepository,
+                    notificationService: container.reminderNotificationService,
+                    syncEngine: container.syncEngine
+                )
+                model.startObserving()
+                remindersViewModel = model
+            }
 
-            let model = RemindersViewModel(
-                repository: container.reminderRepository,
-                notificationService: container.reminderNotificationService,
-                syncEngine: container.syncEngine
-            )
-            model.startObserving()
-            remindersViewModel = model
+            if anniversariesViewModel == nil {
+                let model = AnniversariesViewModel(
+                    repository: container.anniversaryRepository,
+                    notificationService: container.anniversaryNotificationService,
+                    syncEngine: container.syncEngine
+                )
+                model.startObserving()
+                anniversariesViewModel = model
+            }
         }
         .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { date in
             currentDate = date
@@ -94,11 +105,15 @@ struct HomeView: View {
         remindersViewModel?.todayCheckIns(on: currentDate) ?? []
     }
 
+    private var homeAnniversaries: [AnniversaryRecord] {
+        anniversariesViewModel?.homeAnniversaries(on: currentDate) ?? []
+    }
+
     private func isActive(_ route: ToolRoute) -> Bool {
         switch route {
         case .locationTracker:
             locationTracker.isRecording
-        case .decisionMaker, .itemLocator, .reminders, .bills:
+        case .decisionMaker, .itemLocator, .reminders, .bills, .anniversaries:
             false
         }
     }
@@ -107,6 +122,8 @@ struct HomeView: View {
         switch route {
         case .reminders where todayCheckIns.isEmpty == false:
             "\(todayCheckIns.count) 个待打卡"
+        case .anniversaries where homeAnniversaries.isEmpty == false:
+            anniversaryStatusTitle
         default:
             nil
         }
@@ -116,6 +133,8 @@ struct HomeView: View {
         switch route {
         case .reminders where todayCheckIns.isEmpty == false:
             "checkmark.circle"
+        case .anniversaries where homeAnniversaries.isEmpty == false:
+            "calendar"
         default:
             nil
         }
@@ -125,8 +144,23 @@ struct HomeView: View {
         switch route {
         case .reminders where todayCheckIns.isEmpty == false:
             .purple
+        case .anniversaries where homeAnniversaries.isEmpty == false:
+            .pink
         default:
             .green
         }
+    }
+
+    private var anniversaryStatusTitle: String {
+        guard let first = homeAnniversaries.first,
+              let days = first.daysUntilNext(from: currentDate) else {
+            return homeAnniversaries.count == 1 ? "近期" : "\(homeAnniversaries.count) 个近期"
+        }
+
+        if days == 0 {
+            return homeAnniversaries.count == 1 ? "今天" : "\(homeAnniversaries.count) 个今日"
+        }
+
+        return "\(days) 天后"
     }
 }

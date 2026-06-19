@@ -16,6 +16,8 @@ struct ToolDestinationView: View {
                 RemindersView()
             case .bills:
                 BillsView()
+            case .anniversaries:
+                AnniversariesView()
             }
         }
         .toolbar(.hidden, for: .tabBar)

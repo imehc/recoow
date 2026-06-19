@@ -34,6 +34,10 @@ final class HistoryRepository: @unchecked Sendable {
                 entries += try fetchBills(db: db, request: request, limit: sourceLimit).map(HistoryEntry.bill)
             }
 
+            if shouldInclude(.anniversaries, route: request.route) {
+                entries += try fetchAnniversaries(db: db, request: request, limit: sourceLimit).map(HistoryEntry.anniversary)
+            }
+
             let sortedEntries = entries
                 .filter { isAfterCursor($0, cursor: request.cursor) }
                 .sorted(by: sortEntries)
@@ -89,6 +93,13 @@ final class HistoryRepository: @unchecked Sendable {
                 start: start,
                 end: end
             )
+            + fetchTimestamps(
+                db: db,
+                table: AnniversaryRecord.databaseTableName,
+                timestampColumn: "occurred_at",
+                start: start,
+                end: end
+            )
 
             return timestamps.reduce(into: [:]) { counts, timestamp in
                 let date = Date(timeIntervalSince1970: Double(timestamp) / 1000)
@@ -104,6 +115,7 @@ final class HistoryRepository: @unchecked Sendable {
             || StoredItem.filter(Column("deleted_at") == nil).fetchCount(db) > 0
             || ReminderRecord.filter(Column("deleted_at") == nil).fetchCount(db) > 0
             || BillRecord.filter(Column("deleted_at") == nil).fetchCount(db) > 0
+            || AnniversaryRecord.filter(Column("deleted_at") == nil).fetchCount(db) > 0
         }
     }
 
@@ -210,6 +222,24 @@ final class HistoryRepository: @unchecked Sendable {
         query = applySearchFilter(
             query,
             columns: ["title", "note", "transaction_type", "category", "payment_method"],
+            searchText: request.searchText
+        )
+
+        return try query
+            .order(Column("occurred_at").desc, Column("id").desc)
+            .limit(limit)
+            .fetchAll(db)
+    }
+
+    private func fetchAnniversaries(db: Database, request: HistoryPageRequest, limit: Int) throws -> [AnniversaryRecord] {
+        var query = AnniversaryRecord
+            .filter(Column("deleted_at") == nil)
+
+        query = applyDateFilter(query, timestampColumn: "occurred_at", interval: request.dateInterval)
+        query = applyCursorFilter(query, timestampColumn: "occurred_at", cursor: request.cursor)
+        query = applySearchFilter(
+            query,
+            columns: ["title", "note", "category"],
             searchText: request.searchText
         )
 

@@ -9,12 +9,14 @@ final class StatisticsViewModel {
     var items: [StoredItem] = []
     var reminders: [ReminderRecord] = []
     var bills: [BillRecord] = []
+    var anniversaries: [AnniversaryRecord] = []
 
     @ObservationIgnored private let trackRepository: TrackRepository
     @ObservationIgnored private let decisionRepository: DecisionRepository
     @ObservationIgnored private let itemLocatorRepository: ItemLocatorRepository
     @ObservationIgnored private let reminderRepository: ReminderRepository
     @ObservationIgnored private let billRepository: BillRepository
+    @ObservationIgnored private let anniversaryRepository: AnniversaryRepository
     @ObservationIgnored private var observationTasks: [Task<Void, Never>] = []
 
     private var errorMessagesBySource: [String: String] = [:]
@@ -25,13 +27,15 @@ final class StatisticsViewModel {
         decisionRepository: DecisionRepository,
         itemLocatorRepository: ItemLocatorRepository,
         reminderRepository: ReminderRepository,
-        billRepository: BillRepository
+        billRepository: BillRepository,
+        anniversaryRepository: AnniversaryRepository
     ) {
         self.trackRepository = trackRepository
         self.decisionRepository = decisionRepository
         self.itemLocatorRepository = itemLocatorRepository
         self.reminderRepository = reminderRepository
         self.billRepository = billRepository
+        self.anniversaryRepository = anniversaryRepository
     }
 
     deinit {
@@ -39,7 +43,7 @@ final class StatisticsViewModel {
     }
 
     var totalRecordCount: Int {
-        tracks.count + decisionRecords.count + items.count + reminders.count + bills.count
+        tracks.count + decisionRecords.count + items.count + reminders.count + bills.count + anniversaries.count
     }
 
     var todayRecordCount: Int {
@@ -64,7 +68,8 @@ final class StatisticsViewModel {
             makeSummary(route: .decisionMaker, dates: decisionRecords.map { date(milliseconds: $0.selectedAt) }),
             makeSummary(route: .itemLocator, dates: items.map { date(milliseconds: $0.updatedAt) }),
             makeSummary(route: .reminders, dates: reminders.map { date(milliseconds: $0.scheduledAt) }),
-            makeSummary(route: .bills, dates: bills.map(\.occurredDate))
+            makeSummary(route: .bills, dates: bills.map(\.occurredDate)),
+            makeSummary(route: .anniversaries, dates: anniversaries.map(\.occurredDate))
         ]
     }
 
@@ -119,6 +124,7 @@ final class StatisticsViewModel {
         observeItems()
         observeReminders()
         observeBills()
+        observeAnniversaries()
     }
 
     func billPoints(for period: StatisticsBillPeriod) -> [StatisticsBillChartPoint] {
@@ -207,6 +213,7 @@ final class StatisticsViewModel {
         + items.map { date(milliseconds: $0.updatedAt) }
         + reminders.map { date(milliseconds: $0.scheduledAt) }
         + bills.map(\.occurredDate)
+        + anniversaries.map(\.occurredDate)
     }
 
     private func observeTracks() {
@@ -284,6 +291,22 @@ final class StatisticsViewModel {
                     self.removeError(prefix: "bills")
                 case .failure(let error):
                     self.setError(error.localizedDescription, prefix: "bills")
+                }
+            }
+        })
+    }
+
+    private func observeAnniversaries() {
+        observationTasks.append(Task { [weak self] in
+            guard let self else { return }
+
+            for await result in anniversaryRepository.observeAnniversaries() {
+                switch result {
+                case .success(let anniversaries):
+                    self.anniversaries = anniversaries
+                    self.removeError(prefix: "anniversaries")
+                case .failure(let error):
+                    self.setError(error.localizedDescription, prefix: "anniversaries")
                 }
             }
         })

@@ -13,6 +13,7 @@ enum AppMigrator {
         V7CheckInsSchema.register(in: &migrator)
         V8CheckInImportedProgressSchema.register(in: &migrator)
         V9CheckInOccurrenceCompletionSchema.register(in: &migrator)
+        V10AnniversariesSchema.register(in: &migrator)
         return migrator
     }
 

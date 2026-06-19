@@ -6,6 +6,7 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
     case storedItem(StoredItem)
     case reminder(ReminderRecord)
     case bill(BillRecord)
+    case anniversary(AnniversaryRecord)
 
     var id: String {
         switch self {
@@ -19,6 +20,8 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
             "reminder:\(reminder.id)"
         case .bill(let bill):
             "bill:\(bill.id)"
+        case .anniversary(let anniversary):
+            "anniversary:\(anniversary.id)"
         }
     }
 
@@ -34,6 +37,8 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
             reminder.scheduledAt
         case .bill(let bill):
             bill.occurredAt
+        case .anniversary(let anniversary):
+            anniversary.occurredAt
         }
     }
 
@@ -49,6 +54,8 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
             .reminders
         case .bill:
             .bills
+        case .anniversary:
+            .anniversaries
         }
     }
 

@@ -14,9 +14,11 @@ final class AppContainer {
     @ObservationIgnored let itemLocatorRepository: ItemLocatorRepository
     @ObservationIgnored let reminderRepository: ReminderRepository
     @ObservationIgnored let billRepository: BillRepository
+    @ObservationIgnored let anniversaryRepository: AnniversaryRepository
     @ObservationIgnored let historyRepository: HistoryRepository
     @ObservationIgnored let notificationScheduler: any AppNotificationScheduling
     @ObservationIgnored let reminderNotificationService: ReminderNotificationService
+    @ObservationIgnored let anniversaryNotificationService: AnniversaryNotificationService
     @ObservationIgnored let locationTrackerViewModel: LocationTrackerViewModel
     @ObservationIgnored let featureVisibilitySettings: FeatureVisibilitySettings
     let appPreferences: AppPreferences
@@ -32,9 +34,11 @@ final class AppContainer {
         itemLocatorRepository: ItemLocatorRepository,
         reminderRepository: ReminderRepository,
         billRepository: BillRepository,
+        anniversaryRepository: AnniversaryRepository,
         historyRepository: HistoryRepository,
         notificationScheduler: any AppNotificationScheduling,
         reminderNotificationService: ReminderNotificationService,
+        anniversaryNotificationService: AnniversaryNotificationService,
         locationTrackerViewModel: LocationTrackerViewModel,
         featureVisibilitySettings: FeatureVisibilitySettings,
         appPreferences: AppPreferences
@@ -48,9 +52,11 @@ final class AppContainer {
         self.itemLocatorRepository = itemLocatorRepository
         self.reminderRepository = reminderRepository
         self.billRepository = billRepository
+        self.anniversaryRepository = anniversaryRepository
         self.historyRepository = historyRepository
         self.notificationScheduler = notificationScheduler
         self.reminderNotificationService = reminderNotificationService
+        self.anniversaryNotificationService = anniversaryNotificationService
         self.locationTrackerViewModel = locationTrackerViewModel
         self.featureVisibilitySettings = featureVisibilitySettings
         self.appPreferences = appPreferences
@@ -88,9 +94,15 @@ final class AppContainer {
                 changeLogRepository: changeLogRepository,
                 deviceIdentifier: deviceIdentifier
             )
+            let anniversaryRepository = AnniversaryRepository(
+                database: database,
+                changeLogRepository: changeLogRepository,
+                deviceIdentifier: deviceIdentifier
+            )
             let historyRepository = HistoryRepository(database: database)
             let notificationScheduler = LocalNotificationScheduler()
             let reminderNotificationService = ReminderNotificationService(scheduler: notificationScheduler)
+            let anniversaryNotificationService = AnniversaryNotificationService(scheduler: notificationScheduler)
             let locationService = LocationService()
             let locationTrackerViewModel = LocationTrackerViewModel(
                 repository: trackRepository,
@@ -108,9 +120,11 @@ final class AppContainer {
                 itemLocatorRepository: itemLocatorRepository,
                 reminderRepository: reminderRepository,
                 billRepository: billRepository,
+                anniversaryRepository: anniversaryRepository,
                 historyRepository: historyRepository,
                 notificationScheduler: notificationScheduler,
                 reminderNotificationService: reminderNotificationService,
+                anniversaryNotificationService: anniversaryNotificationService,
                 locationTrackerViewModel: locationTrackerViewModel,
                 featureVisibilitySettings: FeatureVisibilitySettings(),
                 appPreferences: AppPreferences()
@@ -152,9 +166,15 @@ final class AppContainer {
                 changeLogRepository: changeLogRepository,
                 deviceIdentifier: deviceIdentifier
             )
+            let anniversaryRepository = AnniversaryRepository(
+                database: database,
+                changeLogRepository: changeLogRepository,
+                deviceIdentifier: deviceIdentifier
+            )
             let historyRepository = HistoryRepository(database: database)
             let notificationScheduler = LocalNotificationScheduler()
             let reminderNotificationService = ReminderNotificationService(scheduler: notificationScheduler)
+            let anniversaryNotificationService = AnniversaryNotificationService(scheduler: notificationScheduler)
             let locationService = LocationService()
             let locationTrackerViewModel = LocationTrackerViewModel(
                 repository: trackRepository,
@@ -172,9 +192,11 @@ final class AppContainer {
                 itemLocatorRepository: itemLocatorRepository,
                 reminderRepository: reminderRepository,
                 billRepository: billRepository,
+                anniversaryRepository: anniversaryRepository,
                 historyRepository: historyRepository,
                 notificationScheduler: notificationScheduler,
                 reminderNotificationService: reminderNotificationService,
+                anniversaryNotificationService: anniversaryNotificationService,
                 locationTrackerViewModel: locationTrackerViewModel,
                 featureVisibilitySettings: FeatureVisibilitySettings(defaults: nil),
                 appPreferences: AppPreferences(defaults: nil)

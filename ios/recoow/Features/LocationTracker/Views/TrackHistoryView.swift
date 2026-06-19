@@ -8,6 +8,7 @@ struct TrackHistoryView: View {
     @State private var itemLocatorViewModel: ItemLocatorViewModel?
     @State private var remindersViewModel: RemindersViewModel?
     @State private var billsViewModel: BillsViewModel?
+    @State private var anniversariesViewModel: AnniversariesViewModel?
     @Namespace private var choiceRecordImageTransition
     @Namespace private var itemImageTransition
     @Namespace private var reminderImageTransition
@@ -20,7 +21,8 @@ struct TrackHistoryView: View {
                let decisionHistoryViewModel,
                let itemLocatorViewModel,
                let remindersViewModel,
-               let billsViewModel {
+               let billsViewModel,
+               let anniversariesViewModel {
                 TrackHistoryContent(
                     historyViewModel: historyViewModel,
                     viewModel: trackViewModel,
@@ -28,6 +30,7 @@ struct TrackHistoryView: View {
                     itemLocatorViewModel: itemLocatorViewModel,
                     remindersViewModel: remindersViewModel,
                     billsViewModel: billsViewModel,
+                    anniversariesViewModel: anniversariesViewModel,
                     choiceRecordImageTransition: choiceRecordImageTransition,
                     itemImageTransition: itemImageTransition,
                     reminderImageTransition: reminderImageTransition,
@@ -88,6 +91,15 @@ struct TrackHistoryView: View {
                 .toolbar(.hidden, for: .tabBar)
             }
         }
+        .navigationDestination(for: AnniversaryRoute.self) { route in
+            if let anniversariesViewModel {
+                AnniversaryDetailView(
+                    viewModel: anniversariesViewModel,
+                    anniversaryID: route.id
+                )
+                .toolbar(.hidden, for: .tabBar)
+            }
+        }
         .task {
             if historyViewModel == nil {
                 historyViewModel = HistoryViewModel(repository: container.historyRepository)
@@ -133,6 +145,15 @@ struct TrackHistoryView: View {
                 )
                 billsViewModel = model
             }
+
+            if anniversariesViewModel == nil {
+                let model = AnniversariesViewModel(
+                    repository: container.anniversaryRepository,
+                    notificationService: container.anniversaryNotificationService,
+                    syncEngine: container.syncEngine
+                )
+                anniversariesViewModel = model
+            }
         }
     }
 
@@ -172,6 +193,7 @@ private struct TrackHistoryContent: View {
     @Bindable var itemLocatorViewModel: ItemLocatorViewModel
     @Bindable var remindersViewModel: RemindersViewModel
     @Bindable var billsViewModel: BillsViewModel
+    @Bindable var anniversariesViewModel: AnniversariesViewModel
     @State private var selectedEntryIDs = Set<String>()
     @State private var deletionConfirmation: HistoryDeletionConfirmation?
     @State private var selectedDate = Date()
@@ -239,7 +261,21 @@ private struct TrackHistoryContent: View {
                     }
                 }
 
+                if let errorMessage = anniversariesViewModel.errorMessage {
+                    Section {
+                        Label(errorMessage, systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.red)
+                    }
+                }
+
                 if let notificationMessage = remindersViewModel.notificationMessage {
+                    Section {
+                        Label(notificationMessage, systemImage: "bell.slash")
+                            .foregroundStyle(.orange)
+                    }
+                }
+
+                if let notificationMessage = anniversariesViewModel.notificationMessage {
                     Section {
                         Label(notificationMessage, systemImage: "bell.slash")
                             .foregroundStyle(.orange)
@@ -408,6 +444,33 @@ private struct TrackHistoryContent: View {
                                 }
                                 .tint(.red)
                             }
+                        case .anniversary(let anniversary):
+                            NavigationLink(value: AnniversaryRoute(id: anniversary.id)) {
+                                HistoryEntryRow(
+                                    entry: entry,
+                                    pointCount: 0,
+                                    isActiveTrack: false,
+                                    choiceRecordImageTransition: choiceRecordImageTransition,
+                                    itemImageTransition: itemImageTransition,
+                                    reminderImageTransition: reminderImageTransition,
+                                    billImageTransition: billImageTransition,
+                                    itemCategoryName: "",
+                                    activeElapsedSeconds: activeElapsedSeconds,
+                                    activeDistanceMeters: activeDistanceMeters
+                                )
+                            }
+                            .tag(entry.id)
+                            .task {
+                                await historyViewModel.loadMoreIfNeeded(currentEntry: entry)
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button {
+                                    requestDeleteEntries([entry])
+                                } label: {
+                                    Label("删除", systemImage: "trash")
+                                }
+                                .tint(.red)
+                            }
                         }
                     }
 
@@ -532,7 +595,7 @@ private struct TrackHistoryContent: View {
             switch entry {
             case .track(let track):
                 isActive(track) == false
-            case .decisionChoice, .storedItem, .reminder, .bill:
+            case .decisionChoice, .storedItem, .reminder, .bill, .anniversary:
                 true
             }
         }
@@ -547,7 +610,7 @@ private struct TrackHistoryContent: View {
             switch entry {
             case .track(let track):
                 isActive(track) == false
-            case .decisionChoice, .storedItem, .reminder, .bill:
+            case .decisionChoice, .storedItem, .reminder, .bill, .anniversary:
                 true
             }
         }
@@ -599,6 +662,8 @@ private struct TrackHistoryContent: View {
             reminder.title
         case .bill(let bill):
             bill.title
+        case .anniversary(let anniversary):
+            anniversary.title
         }
     }
 
@@ -635,6 +700,12 @@ private struct TrackHistoryContent: View {
             }
             return nil
         }
+        let anniversaryIDs = entries.compactMap { entry in
+            if case .anniversary(let anniversary) = entry {
+                return anniversary.id
+            }
+            return nil
+        }
 
         Task {
             await viewModel.deleteTracks(ids: trackIDs)
@@ -644,6 +715,7 @@ private struct TrackHistoryContent: View {
             }
             await remindersViewModel.deleteReminders(ids: reminderIDs)
             await billsViewModel.deleteBills(ids: billIDs)
+            await anniversariesViewModel.deleteAnniversaries(ids: anniversaryIDs)
             historyViewModel.removeEntries(ids: entries.map(\.id))
             await reloadHistoryEntries()
             await refreshHistoryCounts()
@@ -769,6 +841,15 @@ private struct TrackHistoryContent: View {
                 bill.billType == .expense ? bill.billCategory.localizedTitle : bill.billIncomeCategory.localizedTitle,
                 bill.billPaymentMethod.localizedTitle,
                 AppFormatters.money(cents: bill.finalAmountCents),
+                AppLocalization.string(entry.route.title)
+            ]
+        case .anniversary(let anniversary):
+            [
+                anniversary.title,
+                anniversary.note,
+                anniversary.category.title,
+                anniversary.isYearly ? "每年" : "不重复",
+                anniversary.leadTime.localizedTitle,
                 AppLocalization.string(entry.route.title)
             ]
         }
