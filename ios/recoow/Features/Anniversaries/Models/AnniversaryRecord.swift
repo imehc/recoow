@@ -17,6 +17,7 @@ struct AnniversaryRecord: Identifiable, Codable, Hashable, Sendable, FetchableRe
     var note: String?
     var categoryRawValue: String
     var occurredAt: Int64
+    var dateCalendarRawValue: String
     var isYearly: Bool
     var leadTimeMinutes: Int
     var isEnabled: Bool
@@ -34,6 +35,7 @@ struct AnniversaryRecord: Identifiable, Codable, Hashable, Sendable, FetchableRe
         case note
         case categoryRawValue = "category"
         case occurredAt = "occurred_at"
+        case dateCalendarRawValue = "date_calendar"
         case isYearly = "is_yearly"
         case leadTimeMinutes = "lead_time_minutes"
         case isEnabled = "is_enabled"
@@ -46,6 +48,14 @@ struct AnniversaryRecord: Identifiable, Codable, Hashable, Sendable, FetchableRe
 
     var category: AnniversaryCategory {
         AnniversaryCategory(rawValue: categoryRawValue) ?? .other
+    }
+
+    var dateCalendar: AnniversaryDateCalendar {
+        AnniversaryDateCalendar(rawValue: dateCalendarRawValue) ?? .gregorian
+    }
+
+    var occurrenceCalendar: Calendar {
+        dateCalendar.calendar
     }
 
     var leadTime: ReminderLeadTime {
@@ -65,10 +75,11 @@ struct AnniversaryRecord: Identifiable, Codable, Hashable, Sendable, FetchableRe
     }
 
     var yearsSince: Int {
-        max(0, Calendar.current.dateComponents([.year], from: occurredDate, to: Date()).year ?? 0)
+        max(0, occurrenceCalendar.dateComponents([.year], from: occurredDate, to: Date()).year ?? 0)
     }
 
     func nextOccurrenceDate(from referenceDate: Date, calendar: Calendar = .current) -> Date? {
+        let occurrenceCalendar = occurrenceCalendar
         let baseOccurrenceDate = dateByApplyingReminderTime(to: occurredDate, calendar: calendar)
 
         guard isYearly else {
@@ -79,14 +90,14 @@ struct AnniversaryRecord: Identifiable, Codable, Hashable, Sendable, FetchableRe
             return baseOccurrenceDate
         }
 
-        let referenceYear = calendar.component(.year, from: referenceDate)
-        let currentYearOccurrence = occurrenceDate(in: referenceYear, calendar: calendar)
+        let currentYearOccurrence = occurrenceDate(matchingYearOf: referenceDate, calendar: occurrenceCalendar)
 
         if currentYearOccurrence >= referenceDate {
             return currentYearOccurrence
         }
 
-        return occurrenceDate(in: referenceYear + 1, calendar: calendar)
+        return occurrenceCalendar.date(byAdding: .year, value: 1, to: currentYearOccurrence)
+            ?? currentYearOccurrence
     }
 
     func occurrenceDate(on date: Date, calendar: Calendar = .current) -> Date? {
@@ -94,8 +105,7 @@ struct AnniversaryRecord: Identifiable, Codable, Hashable, Sendable, FetchableRe
         guard targetDay >= calendar.startOfDay(for: occurredDate) else { return nil }
 
         if isYearly {
-            let targetYear = calendar.component(.year, from: targetDay)
-            let occurrence = occurrenceDate(in: targetYear, calendar: calendar)
+            let occurrence = occurrenceDate(matchingYearOf: targetDay, calendar: occurrenceCalendar)
             return calendar.isDate(occurrence, inSameDayAs: targetDay) ? occurrence : nil
         }
 
@@ -109,9 +119,69 @@ struct AnniversaryRecord: Identifiable, Codable, Hashable, Sendable, FetchableRe
     }
 
     func occurrenceYears(on date: Date = Date(), calendar: Calendar = .current) -> Int {
-        let targetYear = calendar.component(.year, from: date)
-        let startYear = calendar.component(.year, from: occurredDate)
+        let occurrenceCalendar = occurrenceCalendar
+        let targetYear = occurrenceCalendar.component(.year, from: date)
+        let startYear = occurrenceCalendar.component(.year, from: occurredDate)
         return max(0, targetYear - startYear)
+    }
+
+    func formattedDate(_ date: Date, locale: Locale = AppLocalization.currentLocale) -> String {
+        let dateText = formattedDate(date, locale: locale, calendar: occurrenceCalendar)
+        let primaryText = AppLocalization.format("%@ %@", dateCalendar.localizedTitle, dateText)
+        let counterpartCalendar = counterpartDateCalendar
+
+        return formattedDateWithCounterpart(
+            primaryText: primaryText,
+            counterpartTitle: counterpartCalendar.localizedTitle,
+            counterpartValue: formattedDate(date, locale: locale, calendar: counterpartCalendar.calendar)
+        )
+    }
+
+    func formattedDateTime(_ date: Date, locale: Locale = AppLocalization.currentLocale) -> String {
+        let dateText = formattedDateTime(date, locale: locale, calendar: occurrenceCalendar)
+        let primaryText = AppLocalization.format("%@ %@", dateCalendar.localizedTitle, dateText)
+        let counterpartCalendar = counterpartDateCalendar
+
+        return formattedDateWithCounterpart(
+            primaryText: primaryText,
+            counterpartTitle: counterpartCalendar.localizedTitle,
+            counterpartValue: formattedDateTime(date, locale: locale, calendar: counterpartCalendar.calendar)
+        )
+    }
+
+    private var counterpartDateCalendar: AnniversaryDateCalendar {
+        dateCalendar == .gregorian ? .chinese : .gregorian
+    }
+
+    private func formattedDateWithCounterpart(
+        primaryText: String,
+        counterpartTitle: String,
+        counterpartValue: String
+    ) -> String {
+        AppLocalization.format(
+            "%@（%@ %@）",
+            primaryText,
+            counterpartTitle,
+            counterpartValue
+        )
+    }
+
+    private func formattedDate(_ date: Date, locale: Locale, calendar: Calendar) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = locale
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+
+    private func formattedDateTime(_ date: Date, locale: Locale, calendar: Calendar) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = locale
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 
     static func makeNew(
@@ -119,6 +189,7 @@ struct AnniversaryRecord: Identifiable, Codable, Hashable, Sendable, FetchableRe
         note: String?,
         category: AnniversaryCategory,
         occurredAt: Int64,
+        dateCalendar: AnniversaryDateCalendar,
         isYearly: Bool,
         leadTime: ReminderLeadTime,
         isEnabled: Bool,
@@ -138,6 +209,7 @@ struct AnniversaryRecord: Identifiable, Codable, Hashable, Sendable, FetchableRe
             note: note,
             categoryRawValue: category.rawValue,
             occurredAt: occurredAt,
+            dateCalendarRawValue: dateCalendar.rawValue,
             isYearly: isYearly,
             leadTimeMinutes: leadTime.rawValue,
             isEnabled: isEnabled,
@@ -150,18 +222,32 @@ struct AnniversaryRecord: Identifiable, Codable, Hashable, Sendable, FetchableRe
         return (components.hour ?? 0) * 60 + (components.minute ?? 0)
     }
 
-    private func occurrenceDate(in year: Int, calendar: Calendar) -> Date {
-        let components = calendar.dateComponents([.month, .day], from: occurredDate)
+    private func occurrenceDate(matchingYearOf date: Date, calendar: Calendar) -> Date {
+        let yearComponents = calendar.dateComponents([.era, .year], from: date)
+        return occurrenceDate(era: yearComponents.era, year: yearComponents.year ?? 1, calendar: calendar)
+    }
+
+    private func occurrenceDate(era: Int?, year: Int, calendar: Calendar) -> Date {
+        let components = calendar.dateComponents([.month, .day, .isLeapMonth], from: occurredDate)
         let month = components.month ?? 1
         let day = components.day ?? 1
         let hour = reminderTimeMinutes / 60
         let minute = reminderTimeMinutes % 60
 
-        if let date = calendar.date(from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute)) {
+        var dateComponents = DateComponents(era: era, year: year, month: month, day: day, hour: hour, minute: minute)
+        dateComponents.calendar = calendar
+        dateComponents.isLeapMonth = components.isLeapMonth
+
+        if let date = calendar.date(from: dateComponents) {
             return date
         }
 
-        return calendar.date(from: DateComponents(year: year, month: month, day: 28, hour: hour, minute: minute))
+        dateComponents.isLeapMonth = nil
+        if let date = calendar.date(from: dateComponents) {
+            return date
+        }
+
+        return calendar.date(from: DateComponents(calendar: calendar, era: era, year: year, month: month, day: 28, hour: hour, minute: minute))
             ?? dateByApplyingReminderTime(to: occurredDate, calendar: calendar)
     }
 

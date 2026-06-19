@@ -345,6 +345,7 @@
 "%d 天" = "%d days";
 "今日 %d 条" = "%d today";
 "最近 %@" = "Latest %@";
+"%@（%@ %@）" = "%@ (%@ %@)";
 
 "列表分隔符" = ", ";
 "完成于 %@" = "Completed at %@";
@@ -372,6 +373,9 @@
 "已过" = "Past";
 "已过去" = "Past";
 "距离下次" = "Until Next";
+"日期类型" = "Calendar";
+"公历" = "Gregorian";
+"农历" = "Lunar";
 "原始日期" = "Original Date";
 "周年" = "Anniversary";
 "重复" = "Repeat";

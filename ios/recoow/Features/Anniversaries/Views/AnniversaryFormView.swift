@@ -6,6 +6,7 @@ struct AnniversaryFormView: View {
     @State private var note: String
     @State private var category: AnniversaryCategory
     @State private var occurredDate: Date
+    @State private var dateCalendar: AnniversaryDateCalendar
     @State private var reminderTime: Date
     @State private var isYearly: Bool
     @State private var leadTime: ReminderLeadTime
@@ -22,6 +23,7 @@ struct AnniversaryFormView: View {
         _note = State(initialValue: anniversary?.note ?? "")
         _category = State(initialValue: anniversary?.category ?? .other)
         _occurredDate = State(initialValue: anniversary?.occurredDate ?? Date())
+        _dateCalendar = State(initialValue: anniversary?.dateCalendar ?? .gregorian)
         _reminderTime = State(initialValue: Self.initialReminderTime(for: anniversary))
         _isYearly = State(initialValue: anniversary?.isYearly ?? true)
         _leadTime = State(initialValue: anniversary?.leadTime ?? .none)
@@ -56,7 +58,17 @@ struct AnniversaryFormView: View {
             }
 
             Section("日期") {
+                Picker("日期类型", selection: $dateCalendar) {
+                    ForEach(AnniversaryDateCalendar.allCases) { calendar in
+                        Text(calendar.titleKey).tag(calendar)
+                    }
+                }
+                .pickerStyle(.segmented)
+
                 DatePicker("日期", selection: $occurredDate, displayedComponents: .date)
+                    .id(dateCalendar)
+                    .environment(\.calendar, dateCalendar.calendar)
+
                 Toggle("每年重复", isOn: $isYearly)
             }
 
@@ -119,6 +131,7 @@ struct AnniversaryFormView: View {
             note: normalizedNote,
             category: category,
             occurredDate: occurredDate,
+            dateCalendar: dateCalendar,
             isYearly: isYearly,
             leadTime: leadTime,
             isEnabled: isEnabled,
@@ -129,6 +142,7 @@ struct AnniversaryFormView: View {
         record.note = normalizedNote
         record.categoryRawValue = category.rawValue
         record.occurredAt = AnniversariesViewModel.milliseconds(for: occurredDate)
+        record.dateCalendarRawValue = dateCalendar.rawValue
         record.isYearly = isYearly
         record.leadTimeMinutes = leadTime.rawValue
         record.isEnabled = isEnabled

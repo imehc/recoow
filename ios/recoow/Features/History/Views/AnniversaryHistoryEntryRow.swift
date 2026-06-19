@@ -20,12 +20,13 @@ struct AnniversaryHistoryEntryRow: View {
                     HistoryTypeTag(route: .anniversaries)
                 }
 
-                Text(AppFormatters.date(milliseconds: anniversary.occurredAt, locale: locale))
+                Text(anniversary.formattedDate(anniversary.occurredDate, locale: locale))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
                 MetadataLineView {
                     MetadataItemView(titleKey: anniversary.category.titleKey, systemImage: anniversary.category.systemImage)
+                    MetadataItemView(titleKey: anniversary.dateCalendar.titleKey, systemImage: "calendar")
 
                     if anniversary.isYearly {
                         MetadataItemView(title: AppLocalization.string("每年"), systemImage: "repeat")

@@ -29,6 +29,7 @@ struct AnniversaryRow: View {
 
                 MetadataLineView {
                     MetadataItemView(titleKey: anniversary.category.titleKey, systemImage: anniversary.category.systemImage)
+                    MetadataItemView(titleKey: anniversary.dateCalendar.titleKey, systemImage: "calendar")
 
                     if anniversary.isYearly {
                         MetadataItemView(title: yearlyText, systemImage: "repeat")
@@ -66,13 +67,13 @@ struct AnniversaryRow: View {
         if let nextDate = anniversary.nextOccurrenceDate(from: referenceDate) {
             return AppLocalization.format(
                 "下次 %@",
-                AppFormatters.date(milliseconds: AnniversariesViewModel.milliseconds(for: nextDate), locale: locale)
+                anniversary.formattedDate(nextDate, locale: locale)
             )
         }
 
         return AppLocalization.format(
             "发生于 %@",
-            AppFormatters.date(milliseconds: anniversary.occurredAt, locale: locale)
+            anniversary.formattedDate(anniversary.occurredDate, locale: locale)
         )
     }
 

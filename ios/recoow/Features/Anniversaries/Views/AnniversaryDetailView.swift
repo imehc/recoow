@@ -34,7 +34,8 @@ struct AnniversaryDetailView: View {
             Section("概览") {
                 LabeledContent("标题", value: anniversary.title)
                 LabeledContent("分类", value: anniversary.category.localizedTitle)
-                LabeledContent("原始日期", value: AppFormatters.date(milliseconds: anniversary.occurredAt, locale: locale))
+                LabeledContent("日期类型", value: anniversary.dateCalendar.localizedTitle)
+                LabeledContent("原始日期", value: anniversary.formattedDate(anniversary.occurredDate, locale: locale))
 
                 if let days = anniversary.daysUntilNext() {
                     LabeledContent(
@@ -60,10 +61,7 @@ struct AnniversaryDetailView: View {
                 if let nextDate = anniversary.nextOccurrenceDate {
                     LabeledContent(
                         "下次提醒",
-                        value: AppFormatters.dateTime(
-                            milliseconds: AnniversariesViewModel.milliseconds(for: nextDate),
-                            locale: locale
-                        )
+                        value: anniversary.formattedDateTime(nextDate, locale: locale)
                     )
                 }
             }
