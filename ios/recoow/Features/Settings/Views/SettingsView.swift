@@ -8,9 +8,9 @@ struct SettingsView: View {
             AppPreferencesSection(preferences: container.appPreferences)
 
             Section {
-                ForEach(ToolRoute.allCases) { route in
+                ForEach(ToolRegistry.modules) { module in
                     FeatureVisibilityToggleRow(
-                        route: route,
+                        route: module.route,
                         settings: container.featureVisibilitySettings
                     )
                 }

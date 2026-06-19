@@ -1,21 +1,19 @@
 import SwiftUI
 
 struct FeatureEntryTile: View {
-    let route: ToolRoute
+    let module: ToolModule
     let isActive: Bool
-    var statusTitle: String?
-    var statusSystemImage: String?
-    var statusTint: Color = .green
+    var status: ToolHomeStatus?
 
     var body: some View {
         HStack(spacing: 12) {
-            FeatureIconView(route: route)
+            FeatureIconView(route: module.route)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(route.titleKey)
+                Text(module.titleKey)
                     .font(.headline)
 
-                Text(route.subtitleKey)
+                Text(module.subtitleKey)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
@@ -23,20 +21,20 @@ struct FeatureEntryTile: View {
 
             Spacer(minLength: 8)
 
-            if let statusTitle {
-                if let statusSystemImage {
-                    MetadataItemView(title: statusTitle, systemImage: statusSystemImage)
+            if let status {
+                if let systemImage = status.systemImage {
+                    MetadataItemView(title: status.title, systemImage: systemImage)
                         .font(.footnote)
-                        .foregroundStyle(statusTint)
+                        .foregroundStyle(status.tint)
                 } else {
-                    Text(statusTitle)
+                    Text(status.title)
                         .font(.footnote)
-                        .foregroundStyle(statusTint)
+                        .foregroundStyle(status.tint)
                 }
             } else if isActive {
                 MetadataItemView(titleKey: "进行中", systemImage: "dot.radiowaves.left.and.right")
                     .font(.footnote)
-                    .foregroundStyle(statusTint)
+                    .foregroundStyle(.green)
             }
         }
         .padding(.vertical, 4)

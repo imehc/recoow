@@ -43,14 +43,14 @@ struct HomeView: View {
                                 Button("打开设置", systemImage: "slider.horizontal.3", action: openSettings)
                             }
                         } else {
-                            ForEach(visibleTools) { route in
-                                NavigationLink(value: route) {
+                            ForEach(visibleModules) { module in
+                                let homeState = module.homeState(in: homeStateContext)
+
+                                NavigationLink(value: module.route) {
                                     FeatureEntryTile(
-                                        route: route,
-                                        isActive: isActive(route),
-                                        statusTitle: statusTitle(for: route),
-                                        statusSystemImage: statusSystemImage(for: route),
-                                        statusTint: statusTint(for: route)
+                                        module: module,
+                                        isActive: homeState.isActive,
+                                        status: homeState.status
                                     )
                                 }
                             }
@@ -69,21 +69,13 @@ struct HomeView: View {
         }
         .task {
             if remindersViewModel == nil {
-                let model = RemindersViewModel(
-                    repository: container.reminderRepository,
-                    notificationService: container.reminderNotificationService,
-                    syncEngine: container.syncEngine
-                )
+                let model = container.makeRemindersViewModel()
                 model.startObserving()
                 remindersViewModel = model
             }
 
             if anniversariesViewModel == nil {
-                let model = AnniversariesViewModel(
-                    repository: container.anniversaryRepository,
-                    notificationService: container.anniversaryNotificationService,
-                    syncEngine: container.syncEngine
-                )
+                let model = container.makeAnniversariesViewModel()
                 model.startObserving()
                 anniversariesViewModel = model
             }
@@ -95,6 +87,10 @@ struct HomeView: View {
 
     private var visibleTools: [ToolRoute] {
         container.featureVisibilitySettings.visibleTools
+    }
+
+    private var visibleModules: [ToolModule] {
+        visibleTools.map(ToolModule.init)
     }
 
     private var locationTracker: LocationTrackerViewModel {
@@ -109,46 +105,12 @@ struct HomeView: View {
         anniversariesViewModel?.homeAnniversaries(on: currentDate) ?? []
     }
 
-    private func isActive(_ route: ToolRoute) -> Bool {
-        switch route {
-        case .locationTracker:
-            locationTracker.isRecording
-        case .decisionMaker, .itemLocator, .reminders, .bills, .anniversaries:
-            false
-        }
-    }
-
-    private func statusTitle(for route: ToolRoute) -> String? {
-        switch route {
-        case .reminders where todayCheckIns.isEmpty == false:
-            AppLocalization.format("%d 个待打卡", todayCheckIns.count)
-        case .anniversaries where homeAnniversaries.isEmpty == false:
-            anniversaryStatusTitle
-        default:
-            nil
-        }
-    }
-
-    private func statusSystemImage(for route: ToolRoute) -> String? {
-        switch route {
-        case .reminders where todayCheckIns.isEmpty == false:
-            "checkmark.circle"
-        case .anniversaries where homeAnniversaries.isEmpty == false:
-            "calendar"
-        default:
-            nil
-        }
-    }
-
-    private func statusTint(for route: ToolRoute) -> Color {
-        switch route {
-        case .reminders where todayCheckIns.isEmpty == false:
-            .purple
-        case .anniversaries where homeAnniversaries.isEmpty == false:
-            .pink
-        default:
-            .green
-        }
+    private var homeStateContext: ToolHomeStateContext {
+        ToolHomeStateContext(
+            isLocationRecording: locationTracker.isRecording,
+            todayCheckInCount: todayCheckIns.count,
+            anniversaryStatusTitle: homeAnniversaries.isEmpty ? nil : anniversaryStatusTitle
+        )
     }
 
     private var anniversaryStatusTitle: String {

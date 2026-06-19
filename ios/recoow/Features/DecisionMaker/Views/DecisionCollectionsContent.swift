@@ -2,10 +2,23 @@ import SwiftUI
 
 struct DecisionCollectionsContent: View {
     @Bindable var viewModel: DecisionCollectionsViewModel
-    @State private var isShowingNewCollection = false
-    @State private var editingCollection: DecisionCollection?
+    @State private var presentedSheet: Sheet?
     @State private var pendingDeletionCollection: DecisionCollection?
     @State private var isShowingDeletionConfirmation = false
+
+    private enum Sheet: Identifiable {
+        case newCollection
+        case editCollection(DecisionCollection)
+
+        var id: String {
+            switch self {
+            case .newCollection:
+                "newCollection"
+            case .editCollection(let collection):
+                "editCollection-\(collection.id)"
+            }
+        }
+    }
 
     var body: some View {
         List {
@@ -38,7 +51,7 @@ struct DecisionCollectionsContent: View {
                             }
 
                             Button {
-                                editingCollection = collection
+                                presentedSheet = .editCollection(collection)
                             } label: {
                                 Label("编辑", systemImage: "pencil")
                             }
@@ -52,14 +65,14 @@ struct DecisionCollectionsContent: View {
         .toolbar {
             Button("添加集合", systemImage: "plus", action: showNewCollection)
         }
-        .sheet(isPresented: $isShowingNewCollection) {
+        .sheet(item: $presentedSheet) { sheet in
             NavigationStack {
-                DecisionCollectionFormView(collection: nil, viewModel: viewModel)
-            }
-        }
-        .sheet(item: $editingCollection) { collection in
-            NavigationStack {
-                DecisionCollectionFormView(collection: collection, viewModel: viewModel)
+                switch sheet {
+                case .newCollection:
+                    DecisionCollectionFormView(collection: nil, viewModel: viewModel)
+                case .editCollection(let collection):
+                    DecisionCollectionFormView(collection: collection, viewModel: viewModel)
+                }
             }
         }
         .alert(deletionTitle, isPresented: $isShowingDeletionConfirmation) {
@@ -79,7 +92,7 @@ struct DecisionCollectionsContent: View {
     }
 
     private func showNewCollection() {
-        isShowingNewCollection = true
+        presentedSheet = .newCollection
     }
 
     private func requestDelete(_ collection: DecisionCollection) {

@@ -14,10 +14,23 @@ struct ItemCategoriesView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Bindable var viewModel: ItemLocatorViewModel
-    @State private var isShowingNewCategory = false
-    @State private var editingCategory: ItemCategory?
+    @State private var presentedSheet: Sheet?
     @State private var pendingDeletionCategory: ItemCategory?
     @State private var isShowingDeletionConfirmation = false
+
+    private enum Sheet: Identifiable {
+        case newCategory
+        case editCategory(ItemCategory)
+
+        var id: String {
+            switch self {
+            case .newCategory:
+                "newCategory"
+            case .editCategory(let category):
+                "editCategory-\(category.id)"
+            }
+        }
+    }
 
     var body: some View {
         List {
@@ -55,7 +68,7 @@ struct ItemCategoriesView: View {
                         }
 
                         Button {
-                            editingCategory = category
+                            presentedSheet = .editCategory(category)
                         } label: {
                             Label("编辑", systemImage: "pencil")
                         }
@@ -76,16 +89,14 @@ struct ItemCategoriesView: View {
                 Button("添加分类", systemImage: "plus", action: showNewCategory)
             }
         }
-        .sheet(isPresented: $isShowingNewCategory) {
+        .sheet(item: $presentedSheet) { sheet in
             NavigationStack {
-                ItemCategoryFormView(category: nil, viewModel: viewModel)
-            }
-            .presentationDetents([.height(ItemCategoryFormView.preferredPresentationHeight)])
-            .presentationDragIndicator(.visible)
-        }
-        .sheet(item: $editingCategory) { category in
-            NavigationStack {
-                ItemCategoryFormView(category: category, viewModel: viewModel)
+                switch sheet {
+                case .newCategory:
+                    ItemCategoryFormView(category: nil, viewModel: viewModel)
+                case .editCategory(let category):
+                    ItemCategoryFormView(category: category, viewModel: viewModel)
+                }
             }
             .presentationDetents([.height(ItemCategoryFormView.preferredPresentationHeight)])
             .presentationDragIndicator(.visible)
@@ -111,7 +122,7 @@ struct ItemCategoriesView: View {
     }
 
     private func showNewCategory() {
-        isShowingNewCategory = true
+        presentedSheet = .newCategory
     }
 
     private func requestDelete(_ category: ItemCategory) {

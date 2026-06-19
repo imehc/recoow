@@ -88,17 +88,19 @@ struct BillDetailView: View {
                 }
             }
         }
-        .alert(item: $billPendingDeletion) { bill in
-            Alert(
-                title: Text(AppLocalization.format("删除“%@”？", bill.title)),
-                message: Text(AppLocalization.string("删除后该记录会从历史中移除。")),
-                primaryButton: .destructive(Text("删除")) {
-                    deleteBill(id: bill.id)
-                },
-                secondaryButton: .cancel(Text("取消")) {
-                    billPendingDeletion = nil
-                }
-            )
+        .alert(
+            billPendingDeletion.map { AppLocalization.format("删除“%@”？", $0.title) } ?? "",
+            isPresented: .isPresent($billPendingDeletion),
+            presenting: billPendingDeletion
+        ) { bill in
+            Button("删除", role: .destructive) {
+                deleteBill(id: bill.id)
+            }
+            Button("取消", role: .cancel) {
+                billPendingDeletion = nil
+            }
+        } message: { _ in
+            Text(AppLocalization.string("删除后该记录会从历史中移除。"))
         }
     }
 

@@ -50,144 +50,122 @@ struct TrackHistoryView: View {
             }
         }
         .navigationTitle("历史")
-        .navigationDestination(for: TrackDetailRoute.self) { route in
-            TrackDetailView(trackID: route.id)
+        .navigationDestination(for: HistoryDetailRoute.self) { route in
+            historyDestination(for: route)
                 .toolbar(.hidden, for: .tabBar)
-        }
-        .navigationDestination(for: DecisionChoiceRecordRoute.self) { route in
-            DecisionChoiceRecordDetailView(
-                recordID: route.id,
-                choiceRecordImageTransition: imageTransition(for: route)
-            )
-            .toolbar(.hidden, for: .tabBar)
-        }
-        .navigationDestination(for: StoredItemRoute.self) { route in
-            if let itemLocatorViewModel {
-                StoredItemDetailView(
-                    viewModel: itemLocatorViewModel,
-                    itemID: route.id,
-                    itemImageTransition: itemImageTransition
-                )
-                .toolbar(.hidden, for: .tabBar)
-            }
-        }
-        .navigationDestination(for: ReminderRoute.self) { route in
-            if let remindersViewModel {
-                ReminderDetailView(
-                    viewModel: remindersViewModel,
-                    reminderID: route.id,
-                    reminderImageTransition: imageTransition(for: route)
-                )
-                .toolbar(.hidden, for: .tabBar)
-            }
-        }
-        .navigationDestination(for: BillRoute.self) { route in
-            if let billsViewModel {
-                BillDetailView(
-                    viewModel: billsViewModel,
-                    billID: route.id,
-                    billImageTransition: imageTransition(for: route)
-                )
-                .toolbar(.hidden, for: .tabBar)
-            }
-        }
-        .navigationDestination(for: AnniversaryRoute.self) { route in
-            if let anniversariesViewModel {
-                AnniversaryDetailView(
-                    viewModel: anniversariesViewModel,
-                    anniversaryID: route.id
-                )
-                .toolbar(.hidden, for: .tabBar)
-            }
         }
         .task {
             if historyViewModel == nil {
-                historyViewModel = HistoryViewModel(repository: container.historyRepository)
+                historyViewModel = container.makeHistoryViewModel()
             }
 
             if trackViewModel == nil {
-                let model = TrackHistoryViewModel(
-                    repository: container.trackRepository,
-                    syncEngine: container.syncEngine
-                )
+                let model = container.makeTrackHistoryViewModel()
                 trackViewModel = model
             }
 
             if decisionHistoryViewModel == nil {
-                let model = DecisionChoiceHistoryViewModel(
-                    repository: container.decisionRepository,
-                    syncEngine: container.syncEngine
-                )
+                let model = container.makeDecisionChoiceHistoryViewModel()
                 decisionHistoryViewModel = model
             }
 
             if itemLocatorViewModel == nil {
-                let model = ItemLocatorViewModel(
-                    repository: container.itemLocatorRepository,
-                    syncEngine: container.syncEngine
-                )
+                let model = container.makeItemLocatorViewModel()
                 itemLocatorViewModel = model
             }
 
             if remindersViewModel == nil {
-                let model = RemindersViewModel(
-                    repository: container.reminderRepository,
-                    notificationService: container.reminderNotificationService,
-                    syncEngine: container.syncEngine
-                )
+                let model = container.makeRemindersViewModel()
                 remindersViewModel = model
             }
 
             if billsViewModel == nil {
-                let model = BillsViewModel(
-                    repository: container.billRepository,
-                    syncEngine: container.syncEngine
-                )
+                let model = container.makeBillsViewModel()
                 billsViewModel = model
             }
 
             if anniversariesViewModel == nil {
-                let model = AnniversariesViewModel(
-                    repository: container.anniversaryRepository,
-                    notificationService: container.anniversaryNotificationService,
-                    syncEngine: container.syncEngine
-                )
+                let model = container.makeAnniversariesViewModel()
                 anniversariesViewModel = model
             }
         }
     }
 
-    private func imageTransition(for route: DecisionChoiceRecordRoute) -> Namespace.ID? {
-        guard case .decisionChoice(let record) = historyViewModel?.entry(id: "decisionChoice:\(route.id)"),
-              record.optionImageData != nil else {
-            return nil
+    @ViewBuilder
+    private func historyDestination(for route: HistoryDetailRoute) -> some View {
+        switch route {
+        case .track(let id):
+            TrackDetailView(trackID: id)
+        case .decisionChoice(let id):
+            DecisionChoiceRecordDetailView(
+                recordID: id,
+                choiceRecordImageTransition: imageTransition(for: route)
+            )
+        case .storedItem(let id):
+            if let itemLocatorViewModel {
+                StoredItemDetailView(
+                    viewModel: itemLocatorViewModel,
+                    itemID: id,
+                    itemImageTransition: itemImageTransition
+                )
+            }
+        case .reminder(let id):
+            if let remindersViewModel {
+                ReminderDetailView(
+                    viewModel: remindersViewModel,
+                    reminderID: id,
+                    reminderImageTransition: imageTransition(for: route)
+                )
+            }
+        case .bill(let id):
+            if let billsViewModel {
+                BillDetailView(
+                    viewModel: billsViewModel,
+                    billID: id,
+                    billImageTransition: imageTransition(for: route)
+                )
+            }
+        case .anniversary(let id):
+            if let anniversariesViewModel {
+                AnniversaryDetailView(
+                    viewModel: anniversariesViewModel,
+                    anniversaryID: id
+                )
+            }
         }
-
-        return choiceRecordImageTransition
     }
 
-    private func imageTransition(for route: ReminderRoute) -> Namespace.ID? {
-        guard case .reminder(let reminder) = historyViewModel?.entry(id: "reminder:\(route.id)"),
-              reminder.imageData != nil else {
+    private func imageTransition(for route: HistoryDetailRoute) -> Namespace.ID? {
+        switch route {
+        case .decisionChoice(let id):
+            guard case .decisionChoice(let record) = historyViewModel?.entry(id: "decisionChoice:\(id)"),
+                  record.optionImageData != nil else {
+                return nil
+            }
+            return choiceRecordImageTransition
+
+        case .reminder(let id):
+            guard case .reminder(let reminder) = historyViewModel?.entry(id: "reminder:\(id)"),
+                  reminder.imageData != nil else {
+                return nil
+            }
+            return reminderImageTransition
+
+        case .bill(let id):
+            guard case .bill(let bill) = historyViewModel?.entry(id: "bill:\(id)"),
+                  bill.imageData != nil else {
+                return nil
+            }
+            return billImageTransition
+
+        case .track, .storedItem, .anniversary:
             return nil
         }
-
-        return reminderImageTransition
-    }
-
-    private func imageTransition(for route: BillRoute) -> Namespace.ID? {
-        guard case .bill(let bill) = historyViewModel?.entry(id: "bill:\(route.id)"),
-              bill.imageData != nil else {
-            return nil
-        }
-
-        return billImageTransition
     }
 }
 
 private struct TrackHistoryContent: View {
     @Environment(\.editMode) private var editMode
-    @Environment(\.locale) private var locale
     @Bindable var historyViewModel: HistoryViewModel
     @Bindable var viewModel: TrackHistoryViewModel
     @Bindable var decisionHistoryViewModel: DecisionChoiceHistoryViewModel
@@ -303,168 +281,26 @@ private struct TrackHistoryContent: View {
                     ContentUnavailableView(emptyHistoryTitle, systemImage: emptyHistorySystemImage)
                 } else {
                     ForEach(historyViewModel.entries) { entry in
-                        switch entry {
-                        case .track(let track):
-                            NavigationLink(value: TrackDetailRoute(id: track.id)) {
-                                HistoryEntryRow(
-                                    entry: entry,
-                                    pointCount: pointCount(for: track),
-                                    isActiveTrack: isActive(track),
-                                    choiceRecordImageTransition: choiceRecordImageTransition,
-                                    itemImageTransition: itemImageTransition,
-                                    reminderImageTransition: reminderImageTransition,
-                                    billImageTransition: billImageTransition,
-                                    itemCategoryName: "",
-                                    activeElapsedSeconds: activeElapsedSeconds,
-                                    activeDistanceMeters: activeDistanceMeters
-                                )
-                            }
-                            .tag(entry.id)
-                            .task {
-                                await historyViewModel.loadMoreIfNeeded(currentEntry: entry)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                if isActive(track) == false {
-                                    Button {
-                                        requestDeleteEntries([entry])
-                                    } label: {
-                                        Label("删除", systemImage: "trash")
-                                    }
-                                    .tint(.red)
-                                }
-                            }
-
-                        case .decisionChoice(let record):
-                            NavigationLink(value: DecisionChoiceRecordRoute(id: record.id)) {
-                                HistoryEntryRow(
-                                    entry: entry,
-                                    pointCount: 0,
-                                    isActiveTrack: false,
-                                    choiceRecordImageTransition: choiceRecordImageTransition,
-                                    itemImageTransition: itemImageTransition,
-                                    reminderImageTransition: reminderImageTransition,
-                                    billImageTransition: billImageTransition,
-                                    itemCategoryName: "",
-                                    activeElapsedSeconds: activeElapsedSeconds,
-                                    activeDistanceMeters: activeDistanceMeters
-                                )
-                            }
-                            .tag(entry.id)
-                            .task {
-                                await historyViewModel.loadMoreIfNeeded(currentEntry: entry)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button {
-                                    requestDeleteEntries([entry])
-                                } label: {
-                                    Label("删除", systemImage: "trash")
-                                }
-                                .tint(.red)
-                            }
-
-                        case .storedItem(let item):
-                            NavigationLink(value: StoredItemRoute(id: item.id)) {
-                                HistoryEntryRow(
-                                    entry: entry,
-                                    pointCount: 0,
-                                    isActiveTrack: false,
-                                    choiceRecordImageTransition: choiceRecordImageTransition,
-                                    itemImageTransition: itemImageTransition,
-                                    reminderImageTransition: reminderImageTransition,
-                                    billImageTransition: billImageTransition,
-                                    itemCategoryName: historyViewModel.itemCategoryName(for: item),
-                                    activeElapsedSeconds: activeElapsedSeconds,
-                                    activeDistanceMeters: activeDistanceMeters
-                                )
-                            }
-                            .tag(entry.id)
-                            .task {
-                                await historyViewModel.loadMoreIfNeeded(currentEntry: entry)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button {
-                                    requestDeleteEntries([entry])
-                                } label: {
-                                    Label("删除", systemImage: "trash")
-                                }
-                                .tint(.red)
-                            }
-
-                        case .reminder(let reminder):
-                            NavigationLink(value: ReminderRoute(id: reminder.id)) {
-                                HistoryEntryRow(
-                                    entry: entry,
-                                    pointCount: 0,
-                                    isActiveTrack: false,
-                                    choiceRecordImageTransition: choiceRecordImageTransition,
-                                    itemImageTransition: itemImageTransition,
-                                    reminderImageTransition: reminderImageTransition,
-                                    billImageTransition: billImageTransition,
-                                    itemCategoryName: "",
-                                    activeElapsedSeconds: activeElapsedSeconds,
-                                    activeDistanceMeters: activeDistanceMeters
-                                )
-                            }
-                            .tag(entry.id)
-                            .task {
-                                await historyViewModel.loadMoreIfNeeded(currentEntry: entry)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button {
-                                    requestDeleteEntries([entry])
-                                } label: {
-                                    Label("删除", systemImage: "trash")
-                                }
-                                .tint(.red)
-                            }
-
-                        case .bill(let bill):
-                            NavigationLink(value: BillRoute(id: bill.id)) {
-                                HistoryEntryRow(
-                                    entry: entry,
-                                    pointCount: 0,
-                                    isActiveTrack: false,
-                                    choiceRecordImageTransition: choiceRecordImageTransition,
-                                    itemImageTransition: itemImageTransition,
-                                    reminderImageTransition: reminderImageTransition,
-                                    billImageTransition: billImageTransition,
-                                    itemCategoryName: "",
-                                    activeElapsedSeconds: activeElapsedSeconds,
-                                    activeDistanceMeters: activeDistanceMeters
-                                )
-                            }
-                            .tag(entry.id)
-                            .task {
-                                await historyViewModel.loadMoreIfNeeded(currentEntry: entry)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button {
-                                    requestDeleteEntries([entry])
-                                } label: {
-                                    Label("删除", systemImage: "trash")
-                                }
-                                .tint(.red)
-                            }
-                        case .anniversary(let anniversary):
-                            NavigationLink(value: AnniversaryRoute(id: anniversary.id)) {
-                                HistoryEntryRow(
-                                    entry: entry,
-                                    pointCount: 0,
-                                    isActiveTrack: false,
-                                    choiceRecordImageTransition: choiceRecordImageTransition,
-                                    itemImageTransition: itemImageTransition,
-                                    reminderImageTransition: reminderImageTransition,
-                                    billImageTransition: billImageTransition,
-                                    itemCategoryName: "",
-                                    activeElapsedSeconds: activeElapsedSeconds,
-                                    activeDistanceMeters: activeDistanceMeters
-                                )
-                            }
-                            .tag(entry.id)
-                            .task {
-                                await historyViewModel.loadMoreIfNeeded(currentEntry: entry)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        NavigationLink(value: entry.detailRoute) {
+                            HistoryEntryRow(
+                                entry: entry,
+                                pointCount: pointCount(for: entry),
+                                isActiveTrack: isActive(entry),
+                                choiceRecordImageTransition: choiceRecordImageTransition,
+                                itemImageTransition: itemImageTransition,
+                                reminderImageTransition: reminderImageTransition,
+                                billImageTransition: billImageTransition,
+                                itemCategoryName: itemCategoryName(for: entry),
+                                activeElapsedSeconds: activeElapsedSeconds,
+                                activeDistanceMeters: activeDistanceMeters
+                            )
+                        }
+                        .tag(entry.id)
+                        .task {
+                            await historyViewModel.loadMoreIfNeeded(currentEntry: entry)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            if canDelete(entry) {
                                 Button {
                                     requestDeleteEntries([entry])
                                 } label: {
@@ -509,15 +345,17 @@ private struct TrackHistoryContent: View {
                 }
             }
         }
-        .alert(item: $deletionConfirmation) { confirmation in
-            Alert(
-                title: Text(deletionConfirmationTitle(for: confirmation)),
-                message: Text(deletionConfirmationMessage(for: confirmation)),
-                primaryButton: .destructive(Text(deletionConfirmationButtonTitle(for: confirmation))) {
-                    confirmDeleteEntries(confirmation.entries)
-                },
-                secondaryButton: .cancel(Text("取消"), action: clearPendingDeletion)
-            )
+        .alert(
+            deletionConfirmation.map(deletionConfirmationTitle) ?? "",
+            isPresented: .isPresent($deletionConfirmation),
+            presenting: deletionConfirmation
+        ) { confirmation in
+            Button(deletionConfirmationButtonTitle(for: confirmation), role: .destructive) {
+                confirmDeleteEntries(confirmation.entries)
+            }
+            Button("取消", role: .cancel, action: clearPendingDeletion)
+        } message: { confirmation in
+            Text(deletionConfirmationMessage(for: confirmation))
         }
         .onChange(of: isEditing) { _, newValue in
             if newValue == false {
@@ -571,16 +409,28 @@ private struct TrackHistoryContent: View {
         activeFilter != nil || selectedRouteFilter != nil
     }
 
-    private func isActive(_ track: Track) -> Bool {
-        isRecording && activeTrackID == track.id
+    private func isActive(_ entry: HistoryEntry) -> Bool {
+        guard case .track(let track) = entry else { return false }
+        return isRecording && activeTrackID == track.id
     }
 
-    private func pointCount(for track: Track) -> Int {
-        if isActive(track) {
+    private func pointCount(for entry: HistoryEntry) -> Int {
+        guard case .track(let track) = entry else { return 0 }
+
+        if isActive(entry) {
             return max(activePointCount, historyViewModel.pointCount(for: track.id))
         }
 
         return historyViewModel.pointCount(for: track.id)
+    }
+
+    private func itemCategoryName(for entry: HistoryEntry) -> String {
+        guard case .storedItem(let item) = entry else { return "" }
+        return historyViewModel.itemCategoryName(for: item)
+    }
+
+    private func canDelete(_ entry: HistoryEntry) -> Bool {
+        isActive(entry) == false
     }
 
     private var isEditing: Bool {
@@ -592,14 +442,7 @@ private struct TrackHistoryContent: View {
     }
 
     private var selectedDeletableEntries: [HistoryEntry] {
-        selectedEntries.filter { entry in
-            switch entry {
-            case .track(let track):
-                isActive(track) == false
-            case .decisionChoice, .storedItem, .reminder, .bill, .anniversary:
-                true
-            }
-        }
+        selectedEntries.filter(canDelete)
     }
 
     private func requestDeleteSelectedEntries() {
@@ -607,14 +450,7 @@ private struct TrackHistoryContent: View {
     }
 
     private func requestDeleteEntries(_ selectedEntries: [HistoryEntry]) {
-        let deletableEntries = selectedEntries.filter { entry in
-            switch entry {
-            case .track(let track):
-                isActive(track) == false
-            case .decisionChoice, .storedItem, .reminder, .bill, .anniversary:
-                true
-            }
-        }
+        let deletableEntries = selectedEntries.filter(canDelete)
 
         if deletableEntries.count != selectedEntries.count {
             viewModel.reportCannotDeleteActiveTrack()
@@ -627,7 +463,7 @@ private struct TrackHistoryContent: View {
 
     private func deletionConfirmationTitle(for confirmation: HistoryDeletionConfirmation) -> String {
         guard confirmation.entries.count != 1 else {
-            return AppLocalization.format("删除“%@”？", entryTitle(confirmation.entries[0]))
+            return AppLocalization.format("删除“%@”？", confirmation.entries[0].title)
         }
 
         return AppLocalization.format("删除 %d 条历史记录？", confirmation.entries.count)
@@ -642,7 +478,7 @@ private struct TrackHistoryContent: View {
     }
 
     private func deletionConfirmationMessage(for confirmation: HistoryDeletionConfirmation) -> String {
-        let names = confirmation.entries.map(entryTitle)
+        let names = confirmation.entries.map(\.title)
 
         if names.count <= 1 {
             return AppLocalization.string("删除后该记录会从历史中移除。")
@@ -654,77 +490,24 @@ private struct TrackHistoryContent: View {
         )
     }
 
-    private func entryTitle(_ entry: HistoryEntry) -> String {
-        switch entry {
-        case .track(let track):
-            track.name
-        case .decisionChoice(let record):
-            record.optionTitle
-        case .storedItem(let item):
-            item.title
-        case .reminder(let reminder):
-            reminder.title
-        case .bill(let bill):
-            bill.title
-        case .anniversary(let anniversary):
-            anniversary.title
-        }
-    }
-
     private func confirmDeleteEntries(_ entries: [HistoryEntry]) {
         clearPendingDeletion()
-
-        let trackIDs = entries.compactMap { entry in
-            if case .track(let track) = entry {
-                return track.id
-            }
-            return nil
-        }
-        let decisionRecordIDs = entries.compactMap { entry in
-            if case .decisionChoice(let record) = entry {
-                return record.id
-            }
-            return nil
-        }
-        let itemIDs = entries.compactMap { entry in
-            if case .storedItem(let item) = entry {
-                return item.id
-            }
-            return nil
-        }
-        let reminderIDs = entries.compactMap { entry in
-            if case .reminder(let reminder) = entry {
-                return reminder.id
-            }
-            return nil
-        }
-        let billIDs = entries.compactMap { entry in
-            if case .bill(let bill) = entry {
-                return bill.id
-            }
-            return nil
-        }
-        let anniversaryIDs = entries.compactMap { entry in
-            if case .anniversary(let anniversary) = entry {
-                return anniversary.id
-            }
-            return nil
-        }
+        let plan = HistoryDeletionPlan(entries: entries)
 
         Task {
-            await viewModel.deleteTracks(ids: trackIDs)
-            await decisionHistoryViewModel.deleteRecords(ids: decisionRecordIDs)
-            for itemID in itemIDs {
+            await viewModel.deleteTracks(ids: plan.trackIDs)
+            await decisionHistoryViewModel.deleteRecords(ids: plan.decisionRecordIDs)
+            for itemID in plan.itemIDs {
                 await itemLocatorViewModel.deleteItem(id: itemID)
             }
-            await remindersViewModel.deleteReminders(ids: reminderIDs)
-            await billsViewModel.deleteBills(ids: billIDs)
-            await anniversariesViewModel.deleteAnniversaries(ids: anniversaryIDs)
-            historyViewModel.removeEntries(ids: entries.map(\.id))
+            await remindersViewModel.deleteReminders(ids: plan.reminderIDs)
+            await billsViewModel.deleteBills(ids: plan.billIDs)
+            await anniversariesViewModel.deleteAnniversaries(ids: plan.anniversaryIDs)
+            historyViewModel.removeEntries(ids: plan.entryIDs)
             await reloadHistoryEntries()
             await refreshHistoryCounts()
         }
-        selectedEntryIDs.subtract(entries.map(\.id))
+        selectedEntryIDs.subtract(plan.entryIDs)
     }
 
     private func clearPendingDeletion() {
@@ -772,93 +555,8 @@ private struct TrackHistoryContent: View {
         await historyViewModel.refreshCounts(weekAnchorDate: weekAnchorDate)
     }
 
-    private func matches(_ entry: HistoryEntry, filter: HistoryFilter) -> Bool {
-        if let route = filter.route, entry.route != route {
-            return false
-        }
-
-        if let dateInterval = filter.dateInterval {
-            return dateInterval.contains(entry.date)
-        }
-
-        return true
-    }
-
-    private func matchesRouteFilter(_ entry: HistoryEntry) -> Bool {
-        guard let selectedRouteFilter else { return true }
-        return entry.route == selectedRouteFilter
-    }
-
-    private func matchesSearch(_ entry: HistoryEntry) -> Bool {
-        let query = normalizedSearchText
-        guard query.isEmpty == false else { return true }
-
-        return searchableText(for: entry)
-            .localizedCaseInsensitiveContains(query)
-    }
-
     private var normalizedSearchText: String {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private func searchableText(for entry: HistoryEntry) -> String {
-        let values: [String?] = switch entry {
-        case .track(let track):
-            [
-                track.name,
-                track.note,
-                AppLocalization.string(entry.route.title)
-            ]
-        case .decisionChoice(let record):
-            [
-                record.collectionTitle,
-                record.optionTitle,
-                record.optionDetail,
-                record.optionCustomInfo,
-                AppLocalization.string(entry.route.title)
-            ]
-        case .storedItem(let item):
-            [
-                item.title,
-                item.location,
-                item.note,
-                item.tags,
-                item.searchKeywords,
-                itemLocatorViewModel.categoryName(for: item),
-                AppLocalization.string(entry.route.title)
-            ]
-        case .reminder(let reminder):
-            [
-                reminder.title,
-                reminder.note,
-                reminder.memoryIcon,
-                AppLocalization.string(reminder.scheduleKind.title),
-                reminder.scheduleTitle(locale: locale),
-                AppLocalization.string(reminder.isCompleted ? "已完成" : reminder.isTodayCompleted ? "今日已打卡" : "待打卡"),
-                AppLocalization.string(entry.route.title)
-            ]
-        case .bill(let bill):
-            [
-                bill.title,
-                bill.note,
-                bill.billType.localizedTitle,
-                bill.billType == .expense ? bill.billCategory.localizedTitle : bill.billIncomeCategory.localizedTitle,
-                bill.billPaymentMethod.localizedTitle,
-                AppFormatters.money(cents: bill.finalAmountCents),
-                AppLocalization.string(entry.route.title)
-            ]
-        case .anniversary(let anniversary):
-            [
-                anniversary.title,
-                anniversary.note,
-                anniversary.category.localizedTitle,
-                AppLocalization.string(anniversary.isYearly ? "每年" : "不重复"),
-                anniversary.leadTime.localizedTitle,
-                AppLocalization.string(entry.route.title)
-            ]
-        }
-
-        return values.compactMap(\.self).joined(separator: " ")
     }
 }
 

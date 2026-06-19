@@ -63,14 +63,18 @@ final class StatisticsViewModel {
     }
 
     var featureSummaries: [StatisticsFeatureSummary] {
-        [
-            makeSummary(route: .locationTracker, dates: tracks.map { date(milliseconds: $0.startedAt) }),
-            makeSummary(route: .decisionMaker, dates: decisionRecords.map { date(milliseconds: $0.selectedAt) }),
-            makeSummary(route: .itemLocator, dates: items.map { date(milliseconds: $0.updatedAt) }),
-            makeSummary(route: .reminders, dates: reminders.map { date(milliseconds: $0.scheduledAt) }),
-            makeSummary(route: .bills, dates: bills.map(\.occurredDate)),
-            makeSummary(route: .anniversaries, dates: anniversaries.map(\.occurredDate))
-        ]
+        let snapshot = ToolStatisticsSnapshot(
+            tracks: tracks,
+            decisionRecords: decisionRecords,
+            items: items,
+            reminders: reminders,
+            bills: bills,
+            anniversaries: anniversaries
+        )
+
+        return ToolRegistry.modules.map { module in
+            makeSummary(route: module.route, dates: module.statisticsDates(in: snapshot))
+        }
     }
 
     func recentUsagePoints(locale: Locale) -> [StatisticsUsageChartPoint] {

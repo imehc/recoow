@@ -134,6 +134,65 @@ final class AppContainer {
         }
     }
 
+    func makeHistoryViewModel() -> HistoryViewModel {
+        HistoryViewModel(repository: historyRepository)
+    }
+
+    func makeTrackHistoryViewModel() -> TrackHistoryViewModel {
+        TrackHistoryViewModel(
+            repository: trackRepository,
+            syncEngine: syncEngine
+        )
+    }
+
+    func makeDecisionChoiceHistoryViewModel() -> DecisionChoiceHistoryViewModel {
+        DecisionChoiceHistoryViewModel(
+            repository: decisionRepository,
+            syncEngine: syncEngine
+        )
+    }
+
+    func makeItemLocatorViewModel() -> ItemLocatorViewModel {
+        ItemLocatorViewModel(
+            repository: itemLocatorRepository,
+            syncEngine: syncEngine
+        )
+    }
+
+    func makeRemindersViewModel() -> RemindersViewModel {
+        RemindersViewModel(
+            repository: reminderRepository,
+            notificationService: reminderNotificationService,
+            syncEngine: syncEngine
+        )
+    }
+
+    func makeBillsViewModel() -> BillsViewModel {
+        BillsViewModel(
+            repository: billRepository,
+            syncEngine: syncEngine
+        )
+    }
+
+    func makeAnniversariesViewModel() -> AnniversariesViewModel {
+        AnniversariesViewModel(
+            repository: anniversaryRepository,
+            notificationService: anniversaryNotificationService,
+            syncEngine: syncEngine
+        )
+    }
+
+    func makeStatisticsViewModel() -> StatisticsViewModel {
+        StatisticsViewModel(
+            trackRepository: trackRepository,
+            decisionRepository: decisionRepository,
+            itemLocatorRepository: itemLocatorRepository,
+            reminderRepository: reminderRepository,
+            billRepository: billRepository,
+            anniversaryRepository: anniversaryRepository
+        )
+    }
+
     /// 预览环境使用临时内存数据库，避免污染真实数据文件。
     static var preview: AppContainer {
         do {

@@ -23,11 +23,7 @@ struct AnniversariesView: View {
         .task {
             guard viewModel == nil else { return }
 
-            let model = AnniversariesViewModel(
-                repository: container.anniversaryRepository,
-                notificationService: container.anniversaryNotificationService,
-                syncEngine: container.syncEngine
-            )
+            let model = container.makeAnniversariesViewModel()
             model.startObserving()
             viewModel = model
         }
@@ -118,17 +114,19 @@ private struct AnniversariesContent: View {
                 AnniversaryFormView(anniversary: nil, viewModel: viewModel)
             }
         }
-        .alert(item: $anniversaryPendingDeletion) { anniversary in
-            Alert(
-                title: Text(AppLocalization.format("删除“%@”？", anniversary.title)),
-                message: Text(AppLocalization.string("删除后该记录会从历史中移除。")),
-                primaryButton: .destructive(Text("删除")) {
-                    confirmDeleteAnniversary(anniversary)
-                },
-                secondaryButton: .cancel(Text("取消")) {
-                    anniversaryPendingDeletion = nil
-                }
-            )
+        .alert(
+            anniversaryPendingDeletion.map { AppLocalization.format("删除“%@”？", $0.title) } ?? "",
+            isPresented: .isPresent($anniversaryPendingDeletion),
+            presenting: anniversaryPendingDeletion
+        ) { anniversary in
+            Button("删除", role: .destructive) {
+                confirmDeleteAnniversary(anniversary)
+            }
+            Button("取消", role: .cancel) {
+                anniversaryPendingDeletion = nil
+            }
+        } message: { _ in
+            Text(AppLocalization.string("删除后该记录会从历史中移除。"))
         }
     }
 

@@ -29,10 +29,7 @@ struct BillsView: View {
         .task {
             guard viewModel == nil else { return }
 
-            let model = BillsViewModel(
-                repository: container.billRepository,
-                syncEngine: container.syncEngine
-            )
+            let model = container.makeBillsViewModel()
             model.startObserving()
             viewModel = model
         }
@@ -51,11 +48,24 @@ struct BillsView: View {
 
 private struct BillsContent: View {
     @Bindable var viewModel: BillsViewModel
-    @State private var isShowingAddBill = false
-    @State private var isShowingFilterSheet = false
+    @State private var presentedSheet: Sheet?
     @State private var billPendingDeletion: BillRecord?
 
     let billImageTransition: Namespace.ID
+
+    private enum Sheet: Identifiable {
+        case addBill
+        case filters
+
+        var id: String {
+            switch self {
+            case .addBill:
+                "addBill"
+            case .filters:
+                "filters"
+            }
+        }
+    }
 
     var body: some View {
         List {
@@ -120,28 +130,32 @@ private struct BillsContent: View {
                 Button("记一笔", systemImage: "plus", action: showAddBill)
             }
         }
-        .sheet(isPresented: $isShowingAddBill) {
-            NavigationStack {
-                BillFormView(bill: nil, viewModel: viewModel)
-            }
-        }
-        .sheet(isPresented: $isShowingFilterSheet) {
-            NavigationStack {
-                BillFilterSheetView(viewModel: viewModel)
-            }
-            .presentationDetents([.medium])
-        }
-        .alert(item: $billPendingDeletion) { bill in
-            Alert(
-                title: Text(AppLocalization.format("删除“%@”？", bill.title)),
-                message: Text(AppLocalization.string("删除后该记录会从历史中移除。")),
-                primaryButton: .destructive(Text("删除")) {
-                    confirmDeleteBill(bill)
-                },
-                secondaryButton: .cancel(Text("取消")) {
-                    billPendingDeletion = nil
+        .sheet(item: $presentedSheet) { sheet in
+            switch sheet {
+            case .addBill:
+                NavigationStack {
+                    BillFormView(bill: nil, viewModel: viewModel)
                 }
-            )
+            case .filters:
+                NavigationStack {
+                    BillFilterSheetView(viewModel: viewModel)
+                }
+                .presentationDetents([.medium])
+            }
+        }
+        .alert(
+            billPendingDeletion.map { AppLocalization.format("删除“%@”？", $0.title) } ?? "",
+            isPresented: .isPresent($billPendingDeletion),
+            presenting: billPendingDeletion
+        ) { bill in
+            Button("删除", role: .destructive) {
+                confirmDeleteBill(bill)
+            }
+            Button("取消", role: .cancel) {
+                billPendingDeletion = nil
+            }
+        } message: { _ in
+            Text(AppLocalization.string("删除后该记录会从历史中移除。"))
         }
     }
 
@@ -156,11 +170,11 @@ private struct BillsContent: View {
     }
 
     private func showAddBill() {
-        isShowingAddBill = true
+        presentedSheet = .addBill
     }
 
     private func showFilterSheet() {
-        isShowingFilterSheet = true
+        presentedSheet = .filters
     }
 
     private func requestDeleteBill(_ bill: BillRecord) {

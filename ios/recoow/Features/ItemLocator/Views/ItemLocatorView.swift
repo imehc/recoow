@@ -25,10 +25,7 @@ struct ItemLocatorView: View {
         }
         .task {
             if viewModel == nil {
-                let model = ItemLocatorViewModel(
-                    repository: container.itemLocatorRepository,
-                    syncEngine: container.syncEngine
-                )
+                let model = container.makeItemLocatorViewModel()
                 model.startObserving()
                 viewModel = model
             }

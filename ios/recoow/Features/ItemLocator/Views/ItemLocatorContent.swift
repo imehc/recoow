@@ -2,12 +2,27 @@ import SwiftUI
 
 struct ItemLocatorContent: View {
     @Bindable var viewModel: ItemLocatorViewModel
-    @State private var isShowingNewItem = false
-    @State private var isShowingCategories = false
-    @State private var editingItem: StoredItem?
+    @State private var presentedSheet: Sheet?
     @State private var pendingDeletionItem: StoredItem?
     @State private var isShowingDeletionConfirmation = false
     let itemImageTransition: Namespace.ID
+
+    private enum Sheet: Identifiable {
+        case newItem
+        case editItem(StoredItem)
+        case categories
+
+        var id: String {
+            switch self {
+            case .newItem:
+                "newItem"
+            case .editItem(let item):
+                "editItem-\(item.id)"
+            case .categories:
+                "categories"
+            }
+        }
+    }
 
     var body: some View {
         List {
@@ -56,7 +71,7 @@ struct ItemLocatorContent: View {
                             }
 
                             Button {
-                                editingItem = item
+                                presentedSheet = .editItem(item)
                             } label: {
                                 Label("编辑", systemImage: "pencil")
                             }
@@ -77,22 +92,23 @@ struct ItemLocatorContent: View {
                 Button("添加物品", systemImage: "plus", action: showNewItem)
             }
         }
-        .sheet(isPresented: $isShowingNewItem) {
-            NavigationStack {
-                StoredItemFormView(item: nil, viewModel: viewModel)
+        .sheet(item: $presentedSheet) { sheet in
+            switch sheet {
+            case .newItem:
+                NavigationStack {
+                    StoredItemFormView(item: nil, viewModel: viewModel)
+                }
+            case .editItem(let item):
+                NavigationStack {
+                    StoredItemFormView(item: item, viewModel: viewModel)
+                }
+            case .categories:
+                NavigationStack {
+                    ItemCategoriesView(viewModel: viewModel)
+                }
+                .presentationDetents([.height(categorySheetHeight)])
+                .presentationDragIndicator(.visible)
             }
-        }
-        .sheet(item: $editingItem) { item in
-            NavigationStack {
-                StoredItemFormView(item: item, viewModel: viewModel)
-            }
-        }
-        .sheet(isPresented: $isShowingCategories) {
-            NavigationStack {
-                ItemCategoriesView(viewModel: viewModel)
-            }
-            .presentationDetents([.height(categorySheetHeight)])
-            .presentationDragIndicator(.visible)
         }
         .alert(deletionTitle, isPresented: $isShowingDeletionConfirmation) {
             Button("删除", role: .destructive, action: confirmDelete)
@@ -115,11 +131,11 @@ struct ItemLocatorContent: View {
     }
 
     private func showNewItem() {
-        isShowingNewItem = true
+        presentedSheet = .newItem
     }
 
     private func showCategories() {
-        isShowingCategories = true
+        presentedSheet = .categories
     }
 
     private func requestDelete(_ item: StoredItem) {

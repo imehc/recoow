@@ -105,17 +105,19 @@ struct ReminderDetailView: View {
                 }
             }
         }
-        .alert(item: $reminderPendingDeletion) { reminder in
-            Alert(
-                title: Text(AppLocalization.format("删除“%@”？", reminder.title)),
-                message: Text(AppLocalization.string("删除后该记录会从历史中移除。")),
-                primaryButton: .destructive(Text("删除")) {
-                    deleteReminder(id: reminder.id)
-                },
-                secondaryButton: .cancel(Text("取消")) {
-                    reminderPendingDeletion = nil
-                }
-            )
+        .alert(
+            reminderPendingDeletion.map { AppLocalization.format("删除“%@”？", $0.title) } ?? "",
+            isPresented: .isPresent($reminderPendingDeletion),
+            presenting: reminderPendingDeletion
+        ) { reminder in
+            Button("删除", role: .destructive) {
+                deleteReminder(id: reminder.id)
+            }
+            Button("取消", role: .cancel) {
+                reminderPendingDeletion = nil
+            }
+        } message: { _ in
+            Text(AppLocalization.string("删除后该记录会从历史中移除。"))
         }
     }
 

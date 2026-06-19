@@ -29,11 +29,7 @@ struct RemindersView: View {
         .task {
             guard viewModel == nil else { return }
 
-            let model = RemindersViewModel(
-                repository: container.reminderRepository,
-                notificationService: container.reminderNotificationService,
-                syncEngine: container.syncEngine
-            )
+            let model = container.makeRemindersViewModel()
             model.startObserving()
             viewModel = model
         }
@@ -148,17 +144,19 @@ private struct RemindersContent: View {
                 ReminderFormView(reminder: nil, viewModel: viewModel)
             }
         }
-        .alert(item: $reminderPendingDeletion) { reminder in
-            Alert(
-                title: Text(AppLocalization.format("删除“%@”？", reminder.title)),
-                message: Text(AppLocalization.string("删除后该记录会从历史中移除。")),
-                primaryButton: .destructive(Text("删除")) {
-                    confirmDeleteReminder(reminder)
-                },
-                secondaryButton: .cancel(Text("取消")) {
-                    reminderPendingDeletion = nil
-                }
-            )
+        .alert(
+            reminderPendingDeletion.map { AppLocalization.format("删除“%@”？", $0.title) } ?? "",
+            isPresented: .isPresent($reminderPendingDeletion),
+            presenting: reminderPendingDeletion
+        ) { reminder in
+            Button("删除", role: .destructive) {
+                confirmDeleteReminder(reminder)
+            }
+            Button("取消", role: .cancel) {
+                reminderPendingDeletion = nil
+            }
+        } message: { _ in
+            Text(AppLocalization.string("删除后该记录会从历史中移除。"))
         }
     }
 

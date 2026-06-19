@@ -2,13 +2,26 @@ import SwiftUI
 
 struct DecisionOptionsContent: View {
     @Bindable var viewModel: DecisionOptionsViewModel
-    @State private var isShowingNewOption = false
-    @State private var editingOption: DecisionOption?
+    @State private var presentedSheet: Sheet?
     @State private var pendingDeletionOption: DecisionOption?
     @State private var pendingDeletionRecord: DecisionChoiceRecord?
     @State private var isShowingDeletionConfirmation = false
     @State private var isShowingHistoryDeletionConfirmation = false
     let choiceRecordImageTransition: Namespace.ID
+
+    private enum Sheet: Identifiable {
+        case newOption
+        case editOption(DecisionOption)
+
+        var id: String {
+            switch self {
+            case .newOption:
+                "newOption"
+            case .editOption(let option):
+                "editOption-\(option.id)"
+            }
+        }
+    }
 
     var body: some View {
         List {
@@ -73,7 +86,7 @@ struct DecisionOptionsContent: View {
                                 }
 
                                 Button {
-                                    editingOption = option
+                                    presentedSheet = .editOption(option)
                                 } label: {
                                     Label("编辑", systemImage: "pencil")
                                 }
@@ -87,14 +100,14 @@ struct DecisionOptionsContent: View {
         .toolbar {
             Button("添加选项", systemImage: "plus", action: showNewOption)
         }
-        .sheet(isPresented: $isShowingNewOption) {
+        .sheet(item: $presentedSheet) { sheet in
             NavigationStack {
-                DecisionOptionFormView(option: nil, viewModel: viewModel)
-            }
-        }
-        .sheet(item: $editingOption) { option in
-            NavigationStack {
-                DecisionOptionFormView(option: option, viewModel: viewModel)
+                switch sheet {
+                case .newOption:
+                    DecisionOptionFormView(option: nil, viewModel: viewModel)
+                case .editOption(let option):
+                    DecisionOptionFormView(option: option, viewModel: viewModel)
+                }
             }
         }
         .alert(deletionTitle, isPresented: $isShowingDeletionConfirmation) {
@@ -120,7 +133,7 @@ struct DecisionOptionsContent: View {
     }
 
     private func showNewOption() {
-        isShowingNewOption = true
+        presentedSheet = .newOption
     }
 
     private func chooseRandom() {

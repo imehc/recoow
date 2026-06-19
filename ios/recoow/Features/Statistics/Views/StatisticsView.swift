@@ -23,21 +23,11 @@ struct StatisticsView: View {
         .task {
             guard viewModel == nil else { return }
 
-            let billsModel = BillsViewModel(
-                repository: container.billRepository,
-                syncEngine: container.syncEngine
-            )
+            let billsModel = container.makeBillsViewModel()
             billsModel.startObserving()
             billsViewModel = billsModel
 
-            let model = StatisticsViewModel(
-                trackRepository: container.trackRepository,
-                decisionRepository: container.decisionRepository,
-                itemLocatorRepository: container.itemLocatorRepository,
-                reminderRepository: container.reminderRepository,
-                billRepository: container.billRepository,
-                anniversaryRepository: container.anniversaryRepository
-            )
+            let model = container.makeStatisticsViewModel()
             model.startObserving()
             viewModel = model
         }
