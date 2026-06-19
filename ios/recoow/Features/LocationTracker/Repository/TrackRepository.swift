@@ -84,6 +84,50 @@ final class TrackRepository: @unchecked Sendable {
         }
     }
 
+    func finishInterruptedTracks() throws -> [Track] {
+        try database.writer.write { db in
+            let tracks = try Track
+                .filter(Column("deleted_at") == nil)
+                .filter(Column("ended_at") == nil)
+                .filter(Column("device_id") == deviceID)
+                .order(Column("started_at").desc)
+                .fetchAll(db)
+            var finishedTracks: [Track] = []
+
+            for var track in tracks {
+                let points = try TrackPoint
+                    .filter(Column("track_id") == track.id)
+                    .filter(Column("deleted_at") == nil)
+                    .order(Column("timestamp_ms").asc)
+                    .fetchAll(db)
+                let metrics = Self.metrics(for: points)
+                let endedAt = max(track.startedAt, points.last?.timestampMilliseconds ?? track.updatedAt)
+                let duration = max(1, (endedAt - track.startedAt) / 1000)
+
+                track.endedAt = endedAt
+                track.updatedAt = SyncableTimestamp.nowMilliseconds()
+                track.distanceMeters = metrics.distanceMeters
+                track.durationSeconds = duration
+                track.averageSpeedMetersPerSecond = metrics.distanceMeters > 0 ? metrics.distanceMeters / Double(duration) : nil
+                track.maxSpeedMetersPerSecond = metrics.maxSpeedMetersPerSecond
+                track.syncStatus = .pending
+
+                try track.update(db)
+                try changeLogRepository.append(
+                    db: db,
+                    table: Track.databaseTableName,
+                    entityID: track.id,
+                    operation: .update,
+                    payload: track,
+                    clientTimestampMilliseconds: track.updatedAt
+                )
+                finishedTracks.append(track)
+            }
+
+            return finishedTracks
+        }
+    }
+
     func updateTrackDetails(id: String, name: String, note: String?) throws -> Track? {
         try database.writer.write { db in
             guard var track = try Track.fetchOne(db, key: id), track.deletedAt == nil else {
@@ -220,5 +264,34 @@ final class TrackRepository: @unchecked Sendable {
                 clientTimestampMilliseconds: point.updatedAt
             )
         }
+    }
+
+    private static func metrics(for points: [TrackPoint]) -> (distanceMeters: Double, maxSpeedMetersPerSecond: Double?) {
+        let distance = zip(points, points.dropFirst()).reduce(0) { partialResult, pair in
+            partialResult + distanceMeters(from: pair.0, to: pair.1)
+        }
+
+        return (
+            distanceMeters: distance,
+            maxSpeedMetersPerSecond: points.compactMap(\.speedMetersPerSecond).max()
+        )
+    }
+
+    private static func distanceMeters(from start: TrackPoint, to end: TrackPoint) -> Double {
+        let earthRadius = 6_371_000.0
+        let startLatitude = radians(from: start.latitude)
+        let endLatitude = radians(from: end.latitude)
+        let latitudeDelta = radians(from: end.latitude - start.latitude)
+        let longitudeDelta = radians(from: end.longitude - start.longitude)
+        let a = sin(latitudeDelta / 2) * sin(latitudeDelta / 2)
+            + cos(startLatitude) * cos(endLatitude)
+            * sin(longitudeDelta / 2) * sin(longitudeDelta / 2)
+        let c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+        return earthRadius * c
+    }
+
+    private static func radians(from degrees: Double) -> Double {
+        degrees * .pi / 180
     }
 }

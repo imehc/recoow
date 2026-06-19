@@ -4,23 +4,22 @@ struct BillFilterSection: View {
     @Bindable var viewModel: BillsViewModel
 
     var body: some View {
-        Section("筛选") {
-            Picker("分类", selection: $viewModel.selectedCategory) {
-                Text("全部分类").tag(nil as BillCategory?)
+        Section {
+            Picker("类型", selection: $viewModel.selectedBillType) {
+                Text("全部").tag(nil as BillType?)
 
-                ForEach(BillCategory.allCases) { category in
-                    Label(category.titleKey, systemImage: category.systemImage)
-                        .tag(Optional(category))
+                ForEach(BillType.allCases) { type in
+                    Text(type.titleKey)
+                        .tag(Optional(type))
                 }
             }
-
-            Picker("支付方式", selection: $viewModel.selectedPaymentMethod) {
-                Text("全部方式").tag(nil as BillPaymentMethod?)
-
-                ForEach(BillPaymentMethod.allCases) { method in
-                    Label(method.titleKey, systemImage: method.systemImage)
-                        .tag(Optional(method))
-                }
+            .pickerStyle(.segmented)
+        }
+        .onChange(of: viewModel.selectedBillType) {
+            if viewModel.selectedBillType == .income {
+                viewModel.selectedCategory = nil
+            } else {
+                viewModel.selectedIncomeCategory = nil
             }
         }
     }

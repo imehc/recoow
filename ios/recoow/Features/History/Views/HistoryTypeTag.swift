@@ -4,9 +4,8 @@ struct HistoryTypeTag: View {
     let route: ToolRoute
 
     var body: some View {
-        Label(route.titleKey, systemImage: route.systemImage)
+        MetadataItemView(titleKey: route.titleKey, systemImage: route.systemImage)
             .font(.footnote)
             .foregroundStyle(route.tint)
-            .labelStyle(.titleAndIcon)
     }
 }

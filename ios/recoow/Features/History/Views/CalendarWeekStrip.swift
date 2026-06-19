@@ -16,7 +16,7 @@ struct CalendarWeekStrip: View {
                     .labelStyle(.iconOnly)
 
                 Button(action: showDateSelection) {
-                    Label(weekRangeTitle, systemImage: "calendar.badge.clock")
+                    MetadataItemView(title: weekRangeTitle, systemImage: "calendar.badge.clock")
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .lineLimit(1)

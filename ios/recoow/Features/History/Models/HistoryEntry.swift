@@ -1,6 +1,6 @@
 import Foundation
 
-enum HistoryEntry: Identifiable, Hashable {
+enum HistoryEntry: Identifiable, Hashable, Sendable {
     case track(Track)
     case decisionChoice(DecisionChoiceRecord)
     case storedItem(StoredItem)

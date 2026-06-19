@@ -17,7 +17,7 @@ struct TrackHistoryRow: View {
                 Spacer(minLength: 8)
 
                 if isActive {
-                    Label("记录中", systemImage: "dot.radiowaves.left.and.right")
+                    MetadataItemView(titleKey: "记录中", systemImage: "dot.radiowaves.left.and.right")
                         .font(.footnote)
                         .foregroundStyle(.green)
                 }
@@ -30,14 +30,17 @@ struct TrackHistoryRow: View {
                     .lineLimit(1)
             }
 
-            HStack(spacing: 12) {
-                Label(AppFormatters.distance(displayDistance), systemImage: "point.topleft.down.curvedto.point.bottomright.up")
-                Label(AppFormatters.duration(displayDuration), systemImage: "timer")
-                Label("\(pointCount)", systemImage: "number")
+            MetadataLineView {
+                MetadataItemView(
+                    title: AppFormatters.distance(displayDistance),
+                    systemImage: "point.topleft.down.curvedto.point.bottomright.up"
+                )
+                MetadataItemView(
+                    title: AppFormatters.duration(displayDuration),
+                    systemImage: "timer"
+                )
+                MetadataItemView(title: "\(pointCount)", systemImage: "number")
             }
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
         }
         .padding(.vertical, 6)
     }

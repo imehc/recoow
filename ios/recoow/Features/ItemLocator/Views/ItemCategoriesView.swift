@@ -1,6 +1,17 @@
 import SwiftUI
 
 struct ItemCategoriesView: View {
+    static func preferredPresentationHeight(categoryCount: Int) -> CGFloat {
+        if categoryCount == 0 {
+            return 360
+        }
+
+        let chromeHeight: CGFloat = 150
+        let rowHeight: CGFloat = 58
+        let contentHeight = chromeHeight + CGFloat(categoryCount) * rowHeight
+        return min(max(contentHeight, 300), 540)
+    }
+
     @Environment(\.dismiss) private var dismiss
     @Bindable var viewModel: ItemLocatorViewModel
     @State private var isShowingNewCategory = false
@@ -69,11 +80,15 @@ struct ItemCategoriesView: View {
             NavigationStack {
                 ItemCategoryFormView(category: nil, viewModel: viewModel)
             }
+            .presentationDetents([.height(ItemCategoryFormView.preferredPresentationHeight)])
+            .presentationDragIndicator(.visible)
         }
         .sheet(item: $editingCategory) { category in
             NavigationStack {
                 ItemCategoryFormView(category: category, viewModel: viewModel)
             }
+            .presentationDetents([.height(ItemCategoryFormView.preferredPresentationHeight)])
+            .presentationDragIndicator(.visible)
         }
         .alert(deletionTitle, isPresented: $isShowingDeletionConfirmation) {
             Button("删除", role: .destructive, action: confirmDelete)

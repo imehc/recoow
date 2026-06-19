@@ -22,6 +22,10 @@ struct StoredItemDetailView: View {
                 StoredItemFormView(item: item, viewModel: viewModel)
             }
         }
+        .task(id: itemID) {
+            await viewModel.loadCategoriesIfNeeded()
+            await viewModel.loadItemIfNeeded(id: itemID)
+        }
     }
 
     @ViewBuilder

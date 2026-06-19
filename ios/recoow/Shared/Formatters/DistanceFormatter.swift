@@ -42,6 +42,14 @@ enum AppFormatters {
         )
     }
 
+    static func date(milliseconds: Int64) -> String {
+        let date = Date(timeIntervalSince1970: Double(milliseconds) / 1000)
+        return date.formatted(
+            Date.FormatStyle(date: .abbreviated, time: .omitted)
+                .locale(AppLocalization.currentLocale)
+        )
+    }
+
     static func money(cents: Int64) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency

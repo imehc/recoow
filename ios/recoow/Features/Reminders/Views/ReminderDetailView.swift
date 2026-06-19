@@ -14,19 +14,18 @@ struct ReminderDetailView: View {
             if let reminder = viewModel.reminder(id: reminderID) {
                 content(for: reminder)
             } else {
-                ContentUnavailableView("提醒不存在", systemImage: "bell.slash")
+                ContentUnavailableView("打卡不存在", systemImage: "checkmark.circle")
             }
         }
-        .navigationTitle("提醒详情")
+        .navigationTitle("打卡详情")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $reminderForEditing) { reminder in
             NavigationStack {
-                if reminder.isUpcoming {
-                    ReminderFormView(reminder: reminder, viewModel: viewModel)
-                } else {
-                    ContentUnavailableView("提醒已到期", systemImage: "bell.slash")
-                }
+                ReminderFormView(reminder: reminder, viewModel: viewModel)
             }
+        }
+        .task(id: reminderID) {
+            await viewModel.loadReminderIfNeeded(id: reminderID)
         }
     }
 
@@ -48,11 +47,18 @@ struct ReminderDetailView: View {
                 }
             }
 
-            Section("提醒") {
+            Section("打卡") {
                 LabeledContent("标题", value: reminder.title)
-                LabeledContent("时间", value: AppFormatters.dateTime(milliseconds: reminder.scheduledAt))
+                LabeledContent("规则", value: reminder.scheduleKind.title)
+                LabeledContent("计划", value: reminder.scheduleTitle)
+                if let nextOccurrenceDate = reminder.nextOccurrenceDate {
+                    LabeledContent("下次提醒", value: AppFormatters.dateTime(milliseconds: RemindersViewModel.milliseconds(for: nextOccurrenceDate)))
+                }
                 LabeledContent("提前提醒", value: reminder.leadTime.localizedTitle)
                 LabeledContent("状态", value: statusText(for: reminder))
+                if let progressText = reminder.progressText {
+                    LabeledContent("进度", value: progressText)
+                }
             }
 
             if reminder.imageData == nil || reminder.note != nil {
@@ -76,12 +82,19 @@ struct ReminderDetailView: View {
                 Button("编辑", systemImage: "pencil") {
                     reminderForEditing = reminder
                 }
-                .disabled(reminder.isUpcoming == false)
             }
 
             ToolbarItem(placement: .bottomBar) {
-                Button("删除", systemImage: "trash", role: .destructive) {
-                    reminderPendingDeletion = reminder
+                HStack {
+                    Button(reminder.isCompleted ? "恢复" : "完成", systemImage: reminder.isCompleted ? "arrow.uturn.backward" : "checkmark.circle") {
+                        setCompleted(reminder, isCompleted: reminder.isCompleted == false)
+                    }
+
+                    Spacer()
+
+                    Button("删除", systemImage: "trash", role: .destructive) {
+                        reminderPendingDeletion = reminder
+                    }
                 }
             }
         }
@@ -100,15 +113,23 @@ struct ReminderDetailView: View {
     }
 
     private func statusText(for reminder: ReminderRecord) -> String {
+        if reminder.isCompleted {
+            return AppLocalization.string("已完成")
+        }
+
+        if reminder.isTodayCompleted {
+            return AppLocalization.string("今日已打卡")
+        }
+
+        if reminder.isEnabled == false {
+            return AppLocalization.string("已关闭")
+        }
+
         if reminder.isUpcoming {
-            return AppLocalization.string("待提醒")
+            return AppLocalization.string("待打卡")
         }
 
-        if reminder.isEnabled {
-            return AppLocalization.string("已到期")
-        }
-
-        return AppLocalization.string("已关闭")
+        return AppLocalization.string("已结束")
     }
 
     private func deleteReminder(id: String) {
@@ -117,6 +138,12 @@ struct ReminderDetailView: View {
         Task {
             await viewModel.deleteReminder(id: id)
             dismiss()
+        }
+    }
+
+    private func setCompleted(_ reminder: ReminderRecord, isCompleted: Bool) {
+        Task {
+            await viewModel.setCompleted(reminder, isCompleted: isCompleted)
         }
     }
 }

@@ -8,7 +8,7 @@ struct MetricTile: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label(title, systemImage: systemImage)
+            MetadataItemView(title: title, systemImage: systemImage)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 

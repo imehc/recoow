@@ -104,24 +104,56 @@ final class LocationTrackerViewModel {
         await locationService.stop()
 
         do {
-            try flushPendingPoints()
-            let endedAt = SyncableTimestamp.nowMilliseconds()
-            let duration = max(1, (endedAt - track.startedAt) / 1000)
-            let averageSpeed = currentDistanceMeters > 0 ? currentDistanceMeters / Double(duration) : nil
-            let finished = try repository.finishTrack(
-                id: track.id,
-                endedAt: endedAt,
-                distanceMeters: currentDistanceMeters,
-                durationSeconds: duration,
-                averageSpeedMetersPerSecond: averageSpeed,
-                maxSpeedMetersPerSecond: currentMaxSpeedMetersPerSecond
-            )
+            let finished = try finishCurrentTrack(track)
             currentTrack = finished
             finishedTrackID = finished?.id
             state = .stopped
             await syncEngine.enqueueScan()
         } catch {
             state = .failed("保存轨迹失败: \(error.localizedDescription)")
+        }
+    }
+
+    func prepareForSuspension() {
+        guard currentTrack != nil else { return }
+
+        do {
+            try flushPendingPoints()
+        } catch {
+            state = .failed("写入采样点失败: \(error.localizedDescription)")
+        }
+    }
+
+    func finishForAppTermination() {
+        guard let track = currentTrack else { return }
+
+        recordingTask?.cancel()
+        recordingTask = nil
+        elapsedTask?.cancel()
+        elapsedTask = nil
+
+        do {
+            let finished = try finishCurrentTrack(track)
+            currentTrack = finished
+            finishedTrackID = finished?.id
+            state = .stopped
+        } catch {
+            state = .failed("保存轨迹失败: \(error.localizedDescription)")
+        }
+    }
+
+    func finishInterruptedRecordingIfNeeded() async {
+        guard currentTrack == nil, isRecording == false else { return }
+
+        do {
+            let finishedTracks = try repository.finishInterruptedTracks()
+            guard finishedTracks.isEmpty == false else { return }
+
+            finishedTrackID = finishedTracks.first?.id
+            state = .stopped
+            await syncEngine.enqueueScan()
+        } catch {
+            state = .failed("恢复轨迹失败: \(error.localizedDescription)")
         }
     }
 
@@ -176,6 +208,22 @@ final class LocationTrackerViewModel {
         pendingPoints.removeAll(keepingCapacity: true)
         try repository.appendPoints(points)
         lastFlushDate = Date()
+    }
+
+    private func finishCurrentTrack(_ track: Track) throws -> Track? {
+        try flushPendingPoints()
+        let endedAt = SyncableTimestamp.nowMilliseconds()
+        let duration = max(1, (endedAt - track.startedAt) / 1000)
+        let averageSpeed = currentDistanceMeters > 0 ? currentDistanceMeters / Double(duration) : nil
+
+        return try repository.finishTrack(
+            id: track.id,
+            endedAt: endedAt,
+            distanceMeters: currentDistanceMeters,
+            durationSeconds: duration,
+            averageSpeedMetersPerSecond: averageSpeed,
+            maxSpeedMetersPerSecond: currentMaxSpeedMetersPerSecond
+        )
     }
 
     private func startElapsedTimer(startedAt: Int64) {

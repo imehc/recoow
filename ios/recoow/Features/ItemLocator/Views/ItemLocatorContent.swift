@@ -91,6 +91,8 @@ struct ItemLocatorContent: View {
             NavigationStack {
                 ItemCategoriesView(viewModel: viewModel)
             }
+            .presentationDetents([.height(categorySheetHeight)])
+            .presentationDragIndicator(.visible)
         }
         .alert(deletionTitle, isPresented: $isShowingDeletionConfirmation) {
             Button("删除", role: .destructive, action: confirmDelete)
@@ -106,6 +108,10 @@ struct ItemLocatorContent: View {
         }
 
         return "删除“\(item.title)”？"
+    }
+
+    private var categorySheetHeight: CGFloat {
+        ItemCategoriesView.preferredPresentationHeight(categoryCount: viewModel.categories.count)
     }
 
     private func showNewItem() {

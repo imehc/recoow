@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum ToolRoute: String, CaseIterable, Identifiable, Hashable {
+enum ToolRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case locationTracker
     case decisionMaker
     case itemLocator
@@ -22,7 +22,7 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable {
         case .itemLocator:
             "在哪里"
         case .reminders:
-            "提提醒"
+            "打卡"
         case .bills:
             "记一笔"
         }
@@ -41,7 +41,7 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable {
         case .itemLocator:
             "记录物品放在哪里"
         case .reminders:
-            "指定时间提醒与提前提醒"
+            "打卡、日期规则与定时提醒"
         case .bills:
             "记录价格、优惠与备注"
         }
@@ -56,7 +56,7 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable {
         case .itemLocator:
             "shippingbox.fill"
         case .reminders:
-            "bell.badge.fill"
+            "checkmark.circle.fill"
         case .bills:
             "receipt.fill"
         }

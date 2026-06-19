@@ -18,7 +18,7 @@ enum ReminderMemoryIcon: String, CaseIterable, Identifiable, Sendable {
     var title: String {
         switch self {
         case .bell:
-            "提醒"
+            "打卡"
         case .calendar:
             "日程"
         case .pin:

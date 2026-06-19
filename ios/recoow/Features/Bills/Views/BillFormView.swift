@@ -6,7 +6,9 @@ struct BillFormView: View {
     @State private var originalAmountText: String
     @State private var discountAmountText: String
     @State private var finalAmountText: String
+    @State private var billType: BillType
     @State private var category: BillCategory
+    @State private var incomeCategory: BillIncomeCategory
     @State private var paymentMethod: BillPaymentMethod
     @State private var note: String
     @State private var occurredDate: Date
@@ -26,7 +28,9 @@ struct BillFormView: View {
         _originalAmountText = State(initialValue: bill.map { AppFormatters.amountInput(cents: $0.originalAmountCents) } ?? "")
         _discountAmountText = State(initialValue: bill.map { AppFormatters.amountInput(cents: $0.discountAmountCents) } ?? "")
         _finalAmountText = State(initialValue: bill.map { AppFormatters.amountInput(cents: $0.finalAmountCents) } ?? "")
+        _billType = State(initialValue: bill?.billType ?? .expense)
         _category = State(initialValue: bill?.billCategory ?? .dining)
+        _incomeCategory = State(initialValue: bill?.billIncomeCategory ?? .salary)
         _paymentMethod = State(initialValue: bill?.billPaymentMethod ?? .wechat)
         _note = State(initialValue: bill?.note ?? "")
         _occurredDate = State(initialValue: bill?.occurredDate ?? Date())
@@ -36,6 +40,14 @@ struct BillFormView: View {
     var body: some View {
         Form {
             Section("基础信息") {
+                Picker("类型", selection: $billType) {
+                    ForEach(BillType.allCases) { type in
+                        Label(type.titleKey, systemImage: type.systemImage)
+                            .tag(type)
+                    }
+                }
+                .pickerStyle(.segmented)
+
                 LabeledContent("标题") {
                     TextField("请输入标题", text: $title)
                         .multilineTextAlignment(.trailing)
@@ -50,22 +62,24 @@ struct BillFormView: View {
             }
 
             Section("金额") {
-                LabeledContent("原价") {
-                    TextField("请输入原价", text: $originalAmountText)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
-                        .focused($focusedField, equals: "originalAmount")
+                if billType == .expense {
+                    LabeledContent("原价") {
+                        TextField("请输入原价", text: $originalAmountText)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .focused($focusedField, equals: "originalAmount")
+                    }
+
+                    LabeledContent("优惠") {
+                        TextField("请输入优惠", text: $discountAmountText)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .focused($focusedField, equals: "discountAmount")
+                    }
                 }
 
-                LabeledContent("优惠") {
-                    TextField("请输入优惠", text: $discountAmountText)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
-                        .focused($focusedField, equals: "discountAmount")
-                }
-
-                LabeledContent("实付") {
-                    TextField("请输入实付金额", text: $finalAmountText)
+                LabeledContent(billType == .expense ? "实付" : "金额") {
+                    TextField(billType == .expense ? "请输入实付金额" : "请输入金额", text: $finalAmountText)
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
                         .focused($focusedField, equals: "finalAmount")
@@ -73,14 +87,23 @@ struct BillFormView: View {
             }
 
             Section("分类") {
-                Picker("分类", selection: $category) {
-                    ForEach(BillCategory.allCases) { category in
-                        Label(category.title, systemImage: category.systemImage)
+                if billType == .expense {
+                    Picker("分类", selection: $category) {
+                        ForEach(BillCategory.allCases) { category in
+                            Label(category.title, systemImage: category.systemImage)
                             .tag(category)
+                        }
+                    }
+                } else {
+                    Picker("收入类型", selection: $incomeCategory) {
+                        ForEach(BillIncomeCategory.allCases) { category in
+                            Label(category.title, systemImage: category.systemImage)
+                                .tag(category)
+                        }
                     }
                 }
 
-                Picker("支付方式", selection: $paymentMethod) {
+                Picker(billType == .expense ? "支付方式" : "收入渠道", selection: $paymentMethod) {
                     ForEach(BillPaymentMethod.allCases) { method in
                         Label(method.title, systemImage: method.systemImage)
                             .tag(method)
@@ -132,6 +155,9 @@ struct BillFormView: View {
         .onChange(of: finalAmountText) {
             handleFinalAmountChange()
         }
+        .onChange(of: billType) {
+            handleBillTypeChange()
+        }
     }
 
     private var trimmedTitle: String {
@@ -159,16 +185,31 @@ struct BillFormView: View {
         AppFormatters.cents(from: finalAmountText)
     }
 
-    private var isSaveDisabled: Bool {
-        guard trimmedTitle.isEmpty == false,
-              let originalAmountCents,
-              let discountAmountCents,
-              let finalAmountCents
-        else {
-            return true
-        }
+    private var normalizedAmountValues: (original: Int64, discount: Int64, final: Int64)? {
+        switch billType {
+        case .expense:
+            guard let originalAmountCents,
+                  let discountAmountCents,
+                  let finalAmountCents,
+                  originalAmountCents > 0,
+                  discountAmountCents <= originalAmountCents,
+                  finalAmountCents >= 0
+            else {
+                return nil
+            }
 
-        return originalAmountCents <= 0 || discountAmountCents > originalAmountCents || finalAmountCents < 0
+            return (originalAmountCents, discountAmountCents, finalAmountCents)
+        case .income:
+            guard let finalAmountCents, finalAmountCents > 0 else {
+                return nil
+            }
+
+            return (finalAmountCents, 0, finalAmountCents)
+        }
+    }
+
+    private var isSaveDisabled: Bool {
+        trimmedTitle.isEmpty || normalizedAmountValues == nil
     }
 
     private func cancel() {
@@ -196,20 +237,33 @@ struct BillFormView: View {
         }
     }
 
+    private func handleBillTypeChange() {
+        switch billType {
+        case .expense:
+            if originalAmountText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                originalAmountText = finalAmountText
+            }
+            updateFinalAmountIfNeeded()
+        case .income:
+            if finalAmountText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                finalAmountText = originalAmountText
+            }
+            discountAmountText = ""
+        }
+    }
+
     private func save() {
-        guard let originalAmountCents,
-              let discountAmountCents,
-              let finalAmountCents
-        else {
+        guard let amountValues = normalizedAmountValues else {
             return
         }
 
         var record = bill ?? viewModel.makeBill(
             title: trimmedTitle,
-            originalAmountCents: originalAmountCents,
-            discountAmountCents: discountAmountCents,
-            finalAmountCents: finalAmountCents,
-            category: category,
+            originalAmountCents: amountValues.original,
+            discountAmountCents: amountValues.discount,
+            finalAmountCents: amountValues.final,
+            billType: billType,
+            categoryRawValue: categoryRawValue,
             paymentMethod: paymentMethod,
             note: normalizedNote,
             occurredDate: occurredDate,
@@ -217,10 +271,11 @@ struct BillFormView: View {
         )
 
         record.title = trimmedTitle
-        record.originalAmountCents = originalAmountCents
-        record.discountAmountCents = discountAmountCents
-        record.finalAmountCents = finalAmountCents
-        record.category = category.rawValue
+        record.originalAmountCents = amountValues.original
+        record.discountAmountCents = amountValues.discount
+        record.finalAmountCents = amountValues.final
+        record.transactionType = billType.rawValue
+        record.category = categoryRawValue
         record.paymentMethod = paymentMethod.rawValue
         record.note = normalizedNote
         record.occurredAt = BillsViewModel.milliseconds(for: occurredDate)
@@ -229,6 +284,15 @@ struct BillFormView: View {
         Task {
             await viewModel.save(record)
             dismiss()
+        }
+    }
+
+    private var categoryRawValue: String {
+        switch billType {
+        case .expense:
+            category.rawValue
+        case .income:
+            incomeCategory.rawValue
         }
     }
 }

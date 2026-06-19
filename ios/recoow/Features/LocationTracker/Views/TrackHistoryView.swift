@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TrackHistoryView: View {
     @Environment(AppContainer.self) private var container
+    @State private var historyViewModel: HistoryViewModel?
     @State private var trackViewModel: TrackHistoryViewModel?
     @State private var decisionHistoryViewModel: DecisionChoiceHistoryViewModel?
     @State private var itemLocatorViewModel: ItemLocatorViewModel?
@@ -14,8 +15,14 @@ struct TrackHistoryView: View {
 
     var body: some View {
         Group {
-            if let trackViewModel, let decisionHistoryViewModel, let itemLocatorViewModel, let remindersViewModel, let billsViewModel {
+            if let historyViewModel,
+               let trackViewModel,
+               let decisionHistoryViewModel,
+               let itemLocatorViewModel,
+               let remindersViewModel,
+               let billsViewModel {
                 TrackHistoryContent(
+                    historyViewModel: historyViewModel,
                     viewModel: trackViewModel,
                     decisionHistoryViewModel: decisionHistoryViewModel,
                     itemLocatorViewModel: itemLocatorViewModel,
@@ -82,12 +89,15 @@ struct TrackHistoryView: View {
             }
         }
         .task {
+            if historyViewModel == nil {
+                historyViewModel = HistoryViewModel(repository: container.historyRepository)
+            }
+
             if trackViewModel == nil {
                 let model = TrackHistoryViewModel(
                     repository: container.trackRepository,
                     syncEngine: container.syncEngine
                 )
-                model.startObserving()
                 trackViewModel = model
             }
 
@@ -96,7 +106,6 @@ struct TrackHistoryView: View {
                     repository: container.decisionRepository,
                     syncEngine: container.syncEngine
                 )
-                model.startObserving()
                 decisionHistoryViewModel = model
             }
 
@@ -105,7 +114,6 @@ struct TrackHistoryView: View {
                     repository: container.itemLocatorRepository,
                     syncEngine: container.syncEngine
                 )
-                model.startObserving()
                 itemLocatorViewModel = model
             }
 
@@ -115,7 +123,6 @@ struct TrackHistoryView: View {
                     notificationService: container.reminderNotificationService,
                     syncEngine: container.syncEngine
                 )
-                model.startObserving()
                 remindersViewModel = model
             }
 
@@ -124,16 +131,14 @@ struct TrackHistoryView: View {
                     repository: container.billRepository,
                     syncEngine: container.syncEngine
                 )
-                model.startObserving()
                 billsViewModel = model
             }
         }
     }
 
     private func imageTransition(for route: DecisionChoiceRecordRoute) -> Namespace.ID? {
-        guard decisionHistoryViewModel?.records.contains(where: { record in
-            record.id == route.id && record.optionImageData != nil
-        }) == true else {
+        guard case .decisionChoice(let record) = historyViewModel?.entry(id: "decisionChoice:\(route.id)"),
+              record.optionImageData != nil else {
             return nil
         }
 
@@ -141,9 +146,8 @@ struct TrackHistoryView: View {
     }
 
     private func imageTransition(for route: ReminderRoute) -> Namespace.ID? {
-        guard remindersViewModel?.reminders.contains(where: { reminder in
-            reminder.id == route.id && reminder.imageData != nil
-        }) == true else {
+        guard case .reminder(let reminder) = historyViewModel?.entry(id: "reminder:\(route.id)"),
+              reminder.imageData != nil else {
             return nil
         }
 
@@ -151,9 +155,8 @@ struct TrackHistoryView: View {
     }
 
     private func imageTransition(for route: BillRoute) -> Namespace.ID? {
-        guard billsViewModel?.bills.contains(where: { bill in
-            bill.id == route.id && bill.imageData != nil
-        }) == true else {
+        guard case .bill(let bill) = historyViewModel?.entry(id: "bill:\(route.id)"),
+              bill.imageData != nil else {
             return nil
         }
 
@@ -163,6 +166,7 @@ struct TrackHistoryView: View {
 
 private struct TrackHistoryContent: View {
     @Environment(\.editMode) private var editMode
+    @Bindable var historyViewModel: HistoryViewModel
     @Bindable var viewModel: TrackHistoryViewModel
     @Bindable var decisionHistoryViewModel: DecisionChoiceHistoryViewModel
     @Bindable var itemLocatorViewModel: ItemLocatorViewModel
@@ -193,6 +197,13 @@ private struct TrackHistoryContent: View {
     var body: some View {
         ZStack {
             List(selection: isEditing ? $selectedEntryIDs : nil) {
+                if let errorMessage = historyViewModel.errorMessage {
+                    Section {
+                        Label(errorMessage, systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.red)
+                    }
+                }
+
                 if let errorMessage = viewModel.errorMessage {
                     Section {
                         Label(errorMessage, systemImage: "exclamationmark.triangle")
@@ -239,14 +250,22 @@ private struct TrackHistoryContent: View {
                     CalendarWeekStrip(
                         selectedDate: $selectedDate,
                         weekAnchorDate: $weekAnchorDate,
-                        entryCountsByDay: entryCountsByDay
+                        entryCountsByDay: historyViewModel.entryCountsByDay
                     )
                 }
 
-                if historyEntries.isEmpty {
+                if historyViewModel.isLoading {
+                    Section {
+                        HStack {
+                            Spacer()
+                            ProgressView()
+                            Spacer()
+                        }
+                    }
+                } else if historyViewModel.entries.isEmpty {
                     ContentUnavailableView(emptyHistoryTitle, systemImage: emptyHistorySystemImage)
                 } else {
-                    ForEach(historyEntries) { entry in
+                    ForEach(historyViewModel.entries) { entry in
                         switch entry {
                         case .track(let track):
                             NavigationLink(value: TrackDetailRoute(id: track.id)) {
@@ -264,6 +283,9 @@ private struct TrackHistoryContent: View {
                                 )
                             }
                             .tag(entry.id)
+                            .task {
+                                await historyViewModel.loadMoreIfNeeded(currentEntry: entry)
+                            }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 if isActive(track) == false {
                                     Button {
@@ -291,6 +313,9 @@ private struct TrackHistoryContent: View {
                                 )
                             }
                             .tag(entry.id)
+                            .task {
+                                await historyViewModel.loadMoreIfNeeded(currentEntry: entry)
+                            }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button {
                                     requestDeleteEntries([entry])
@@ -310,12 +335,15 @@ private struct TrackHistoryContent: View {
                                     itemImageTransition: itemImageTransition,
                                     reminderImageTransition: reminderImageTransition,
                                     billImageTransition: billImageTransition,
-                                    itemCategoryName: itemLocatorViewModel.categoryName(for: item),
+                                    itemCategoryName: historyViewModel.itemCategoryName(for: item),
                                     activeElapsedSeconds: activeElapsedSeconds,
                                     activeDistanceMeters: activeDistanceMeters
                                 )
                             }
                             .tag(entry.id)
+                            .task {
+                                await historyViewModel.loadMoreIfNeeded(currentEntry: entry)
+                            }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button {
                                     requestDeleteEntries([entry])
@@ -341,6 +369,9 @@ private struct TrackHistoryContent: View {
                                 )
                             }
                             .tag(entry.id)
+                            .task {
+                                await historyViewModel.loadMoreIfNeeded(currentEntry: entry)
+                            }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button {
                                     requestDeleteEntries([entry])
@@ -366,6 +397,9 @@ private struct TrackHistoryContent: View {
                                 )
                             }
                             .tag(entry.id)
+                            .task {
+                                await historyViewModel.loadMoreIfNeeded(currentEntry: entry)
+                            }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button {
                                     requestDeleteEntries([entry])
@@ -374,6 +408,14 @@ private struct TrackHistoryContent: View {
                                 }
                                 .tint(.red)
                             }
+                        }
+                    }
+
+                    if historyViewModel.isLoadingMore {
+                        HStack {
+                            Spacer()
+                            ProgressView()
+                            Spacer()
                         }
                     }
                 }
@@ -397,7 +439,7 @@ private struct TrackHistoryContent: View {
                 }
             }
 
-            if historyEntries.isEmpty == false {
+            if historyViewModel.entries.isEmpty == false {
                 ToolbarItem(placement: .topBarTrailing) {
                     EditButton()
                 }
@@ -420,56 +462,33 @@ private struct TrackHistoryContent: View {
         }
         .onChange(of: selectedDate) {
             selectedEntryIDs = []
+            scheduleReloadHistory()
         }
         .onChange(of: searchText) {
             selectedEntryIDs = []
+            scheduleReloadHistory()
         }
         .onChange(of: selectedRouteFilter) {
             selectedEntryIDs = []
+            scheduleReloadHistory()
+        }
+        .onChange(of: weekAnchorDate) {
+            scheduleRefreshHistoryCounts()
         }
         .onAppear {
             applyFilterRequest(filterRequest)
+            scheduleReloadHistory()
+            scheduleRefreshHistoryCounts()
         }
         .onChange(of: filterRequest) { _, newValue in
             applyFilterRequest(newValue)
-        }
-    }
-
-    private var allHistoryEntries: [HistoryEntry] {
-        let trackEntries = viewModel.tracks.map(HistoryEntry.track)
-        let decisionEntries = decisionHistoryViewModel.records.map(HistoryEntry.decisionChoice)
-        let itemEntries = itemLocatorViewModel.items.map(HistoryEntry.storedItem)
-        let reminderEntries = remindersViewModel.reminders.map(HistoryEntry.reminder)
-        let billEntries = billsViewModel.bills.map(HistoryEntry.bill)
-        return (trackEntries + decisionEntries + itemEntries + reminderEntries + billEntries).sorted { $0.timestamp > $1.timestamp }
-    }
-
-    private var historyEntries: [HistoryEntry] {
-        let scopedEntries: [HistoryEntry]
-
-        if let activeFilter {
-            scopedEntries = allHistoryEntries.filter { entry in
-                matches(entry, filter: activeFilter)
-            }
-        } else {
-            scopedEntries = allHistoryEntries.filter { entry in
-                entry.isOnSameDay(as: selectedDate, calendar: calendar)
-            }
-        }
-
-        return scopedEntries.filter { entry in
-            matchesRouteFilter(entry) && matchesSearch(entry)
-        }
-    }
-
-    private var entryCountsByDay: [Date: Int] {
-        allHistoryEntries.reduce(into: [:]) { counts, entry in
-            counts[calendar.startOfDay(for: entry.date), default: 0] += 1
+            scheduleReloadHistory()
+            scheduleRefreshHistoryCounts()
         }
     }
 
     private var emptyHistoryTitle: String {
-        if allHistoryEntries.isEmpty {
+        if historyViewModel.hasAnyEntries == false {
             return AppLocalization.string("暂无历史记录")
         }
 
@@ -481,7 +500,7 @@ private struct TrackHistoryContent: View {
     }
 
     private var emptyHistorySystemImage: String {
-        allHistoryEntries.isEmpty ? "clock" : "calendar"
+        historyViewModel.hasAnyEntries ? "calendar" : "clock"
     }
 
     private var isFiltering: Bool {
@@ -494,10 +513,10 @@ private struct TrackHistoryContent: View {
 
     private func pointCount(for track: Track) -> Int {
         if isActive(track) {
-            return max(activePointCount, viewModel.pointCount(for: track.id))
+            return max(activePointCount, historyViewModel.pointCount(for: track.id))
         }
 
-        return viewModel.pointCount(for: track.id)
+        return historyViewModel.pointCount(for: track.id)
     }
 
     private var isEditing: Bool {
@@ -505,7 +524,7 @@ private struct TrackHistoryContent: View {
     }
 
     private var selectedEntries: [HistoryEntry] {
-        historyEntries.filter { selectedEntryIDs.contains($0.id) }
+        historyViewModel.entries.filter { selectedEntryIDs.contains($0.id) }
     }
 
     private var selectedDeletableEntries: [HistoryEntry] {
@@ -625,6 +644,9 @@ private struct TrackHistoryContent: View {
             }
             await remindersViewModel.deleteReminders(ids: reminderIDs)
             await billsViewModel.deleteBills(ids: billIDs)
+            historyViewModel.removeEntries(ids: entries.map(\.id))
+            await reloadHistoryEntries()
+            await refreshHistoryCounts()
         }
         selectedEntryIDs.subtract(entries.map(\.id))
     }
@@ -647,6 +669,31 @@ private struct TrackHistoryContent: View {
     private func clearActiveFilter() {
         activeFilter = nil
         clearFilter()
+    }
+
+    private func scheduleReloadHistory() {
+        Task {
+            await reloadHistoryEntries()
+        }
+    }
+
+    private func scheduleRefreshHistoryCounts() {
+        Task {
+            await refreshHistoryCounts()
+        }
+    }
+
+    private func reloadHistoryEntries() async {
+        await historyViewModel.reload(
+            selectedDate: selectedDate,
+            activeFilter: activeFilter,
+            selectedRouteFilter: selectedRouteFilter,
+            searchText: searchText
+        )
+    }
+
+    private func refreshHistoryCounts() async {
+        await historyViewModel.refreshCounts(weekAnchorDate: weekAnchorDate)
     }
 
     private func matches(_ entry: HistoryEntry, filter: HistoryFilter) -> Bool {
@@ -709,13 +756,17 @@ private struct TrackHistoryContent: View {
                 reminder.title,
                 reminder.note,
                 reminder.memoryIcon,
+                reminder.scheduleKind.title,
+                reminder.scheduleTitle,
+                reminder.isCompleted ? "已完成" : reminder.isTodayCompleted ? "今日已打卡" : "待打卡",
                 AppLocalization.string(entry.route.title)
             ]
         case .bill(let bill):
             [
                 bill.title,
                 bill.note,
-                bill.billCategory.localizedTitle,
+                bill.billType.localizedTitle,
+                bill.billType == .expense ? bill.billCategory.localizedTitle : bill.billIncomeCategory.localizedTitle,
                 bill.billPaymentMethod.localizedTitle,
                 AppFormatters.money(cents: bill.finalAmountCents),
                 AppLocalization.string(entry.route.title)

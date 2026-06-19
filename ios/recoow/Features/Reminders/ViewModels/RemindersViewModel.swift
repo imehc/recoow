@@ -29,14 +29,28 @@ final class RemindersViewModel {
 
     var upcomingReminders: [ReminderRecord] {
         reminders
-            .filter(\.isUpcoming)
-            .sorted { $0.scheduledAt < $1.scheduledAt }
+            .filter { $0.isCompleted == false }
+            .sorted {
+                ($0.nextOccurrenceDate ?? $0.scheduledDate) < ($1.nextOccurrenceDate ?? $1.scheduledDate)
+            }
     }
 
     var pastReminders: [ReminderRecord] {
         reminders
-            .filter { $0.isUpcoming == false }
-            .sorted { $0.scheduledAt > $1.scheduledAt }
+            .filter(\.isCompleted)
+            .sorted { ($0.completedAt ?? $0.updatedAt) > ($1.completedAt ?? $1.updatedAt) }
+    }
+
+    var todayCheckIns: [ReminderRecord] {
+        todayCheckIns(on: Date())
+    }
+
+    func todayCheckIns(on date: Date) -> [ReminderRecord] {
+        reminders
+            .filter { $0.needsCheckIn(on: date) }
+            .sorted {
+                ($0.occurrenceDate(on: date) ?? $0.scheduledDate) < ($1.occurrenceDate(on: date) ?? $1.scheduledDate)
+            }
     }
 
     func startObserving() {
@@ -61,6 +75,19 @@ final class RemindersViewModel {
         reminders.first { $0.id == id }
     }
 
+    func loadReminderIfNeeded(id: String) async {
+        guard reminder(id: id) == nil else { return }
+
+        do {
+            if let reminder = try repository.fetchReminder(id: id) {
+                upsertReminder(reminder)
+            }
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func makeReminder(
         title: String,
         note: String?,
@@ -83,6 +110,33 @@ final class RemindersViewModel {
     func save(_ reminder: ReminderRecord) async {
         do {
             let savedReminder = try repository.saveReminder(reminder)
+            upsertReminder(savedReminder)
+            errorMessage = nil
+            await syncEngine.enqueueScan()
+
+            do {
+                try await notificationService.reschedule(savedReminder)
+                notificationMessage = nil
+            } catch {
+                notificationMessage = error.localizedDescription
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func setCompleted(_ reminder: ReminderRecord, isCompleted: Bool) async {
+        var record = reminder
+
+        if isCompleted {
+            record.markOccurrenceCompleted()
+        } else {
+            record.clearCompletion()
+        }
+
+        do {
+            let savedReminder = try repository.saveReminder(record)
+            upsertReminder(savedReminder)
             errorMessage = nil
             await syncEngine.enqueueScan()
 
@@ -109,6 +163,7 @@ final class RemindersViewModel {
             for id in ids {
                 notificationService.cancel(reminderID: id)
             }
+            reminders.removeAll { ids.contains($0.id) }
             errorMessage = nil
             await syncEngine.enqueueScan()
         } catch {
@@ -118,5 +173,13 @@ final class RemindersViewModel {
 
     static func milliseconds(for date: Date) -> Int64 {
         Int64(date.timeIntervalSince1970 * 1000)
+    }
+
+    private func upsertReminder(_ reminder: ReminderRecord) {
+        if let index = reminders.firstIndex(where: { $0.id == reminder.id }) {
+            reminders[index] = reminder
+        } else {
+            reminders.insert(reminder, at: 0)
+        }
     }
 }

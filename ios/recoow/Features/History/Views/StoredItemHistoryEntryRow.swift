@@ -28,10 +28,9 @@ struct StoredItemHistoryEntryRow: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
 
-                Label(categoryName, systemImage: "folder")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                MetadataLineView {
+                    MetadataItemView(title: categoryName, systemImage: "folder")
+                }
 
                 Text(AppFormatters.dateTime(milliseconds: item.updatedAt))
                     .font(.footnote)

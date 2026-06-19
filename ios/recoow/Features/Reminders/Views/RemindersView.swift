@@ -16,7 +16,7 @@ struct RemindersView: View {
                 ProgressView("正在加载")
             }
         }
-        .navigationTitle("提提醒")
+        .navigationTitle("打卡")
         .navigationDestination(for: ReminderRoute.self) { route in
             if let viewModel {
                 ReminderDetailView(
@@ -75,15 +75,15 @@ private struct RemindersContent: View {
 
             if viewModel.reminders.isEmpty {
                 ContentUnavailableView {
-                    Label("暂无提醒", systemImage: "bell")
+                    Label("暂无打卡", systemImage: "checkmark.circle")
                 } description: {
-                    Text("添加一个指定时间提醒")
+                    Text("添加一个带日期和提醒规则的打卡")
                 } actions: {
-                    Button("添加提醒", systemImage: "plus", action: showAddReminder)
+                    Button("添加打卡", systemImage: "plus", action: showAddReminder)
                 }
             } else {
                 if viewModel.upcomingReminders.isEmpty == false {
-                    Section("即将提醒") {
+                    Section("待打卡") {
                         ForEach(viewModel.upcomingReminders) { reminder in
                             NavigationLink(value: ReminderRoute(id: reminder.id)) {
                                 ReminderRow(
@@ -92,6 +92,13 @@ private struct RemindersContent: View {
                                 )
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button {
+                                    completeReminder(reminder)
+                                } label: {
+                                    Label("完成", systemImage: "checkmark.circle")
+                                }
+                                .tint(.green)
+
                                 Button {
                                     requestDeleteReminder(reminder)
                                 } label: {
@@ -104,7 +111,7 @@ private struct RemindersContent: View {
                 }
 
                 if viewModel.pastReminders.isEmpty == false {
-                    Section("历史记录") {
+                    Section("已完成") {
                         ForEach(viewModel.pastReminders) { reminder in
                             NavigationLink(value: ReminderRoute(id: reminder.id)) {
                                 ReminderRow(
@@ -113,6 +120,13 @@ private struct RemindersContent: View {
                                 )
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button {
+                                    reopenReminder(reminder)
+                                } label: {
+                                    Label("恢复", systemImage: "arrow.uturn.backward")
+                                }
+                                .tint(.blue)
+
                                 Button {
                                     requestDeleteReminder(reminder)
                                 } label: {
@@ -127,7 +141,7 @@ private struct RemindersContent: View {
         }
         .listStyle(.insetGrouped)
         .toolbar {
-            Button("添加提醒", systemImage: "plus", action: showAddReminder)
+            Button("添加打卡", systemImage: "plus", action: showAddReminder)
         }
         .sheet(isPresented: $isShowingAddReminder) {
             NavigationStack {
@@ -161,6 +175,18 @@ private struct RemindersContent: View {
 
         Task {
             await viewModel.deleteReminder(id: reminder.id)
+        }
+    }
+
+    private func completeReminder(_ reminder: ReminderRecord) {
+        Task {
+            await viewModel.setCompleted(reminder, isCompleted: true)
+        }
+    }
+
+    private func reopenReminder(_ reminder: ReminderRecord) {
+        Task {
+            await viewModel.setCompleted(reminder, isCompleted: false)
         }
     }
 }

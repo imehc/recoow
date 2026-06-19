@@ -24,6 +24,9 @@ struct BillDetailView: View {
                 BillFormView(bill: bill, viewModel: viewModel)
             }
         }
+        .task(id: billID) {
+            await viewModel.loadBillIfNeeded(id: billID)
+        }
     }
 
     @ViewBuilder
@@ -45,16 +48,27 @@ struct BillDetailView: View {
             }
 
             Section("金额") {
-                LabeledContent("原价", value: AppFormatters.money(cents: bill.originalAmountCents))
-                LabeledContent("优惠", value: AppFormatters.money(cents: bill.discountAmountCents))
-                LabeledContent("实付", value: AppFormatters.money(cents: bill.finalAmountCents))
+                if bill.billType == .expense {
+                    LabeledContent("原价", value: AppFormatters.money(cents: bill.originalAmountCents))
+                    LabeledContent("优惠", value: AppFormatters.money(cents: bill.discountAmountCents))
+                    LabeledContent("实付", value: AppFormatters.money(cents: bill.finalAmountCents))
+                } else {
+                    LabeledContent("金额", value: AppFormatters.money(cents: bill.finalAmountCents))
+                }
             }
 
             Section("账单") {
                 LabeledContent("标题", value: bill.title)
+                LabeledContent("类型", value: bill.billType.localizedTitle)
                 LabeledContent("日期", value: AppFormatters.dateTime(milliseconds: bill.occurredAt))
-                LabeledContent("分类", value: bill.billCategory.localizedTitle)
-                LabeledContent("支付方式", value: bill.billPaymentMethod.localizedTitle)
+
+                if bill.billType == .expense {
+                    LabeledContent("分类", value: bill.billCategory.localizedTitle)
+                    LabeledContent("支付方式", value: bill.billPaymentMethod.localizedTitle)
+                } else {
+                    LabeledContent("收入类型", value: bill.billIncomeCategory.localizedTitle)
+                    LabeledContent("收入渠道", value: bill.billPaymentMethod.localizedTitle)
+                }
 
                 if let note = bill.note {
                     LabeledContent("备注", value: note)

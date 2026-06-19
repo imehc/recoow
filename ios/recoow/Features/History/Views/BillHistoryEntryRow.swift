@@ -10,7 +10,7 @@ struct BillHistoryEntryRow: View {
                 PhotoThumbnailView(imageData: bill.imageData, systemImage: "receipt.fill", size: 64)
                     .matchedTransitionSource(id: bill.id, in: billImageTransition)
             } else {
-                BillCategoryIconView(category: bill.billCategory, size: 64)
+                BillIconView(bill: bill, size: 64)
             }
 
             VStack(alignment: .leading, spacing: 6) {
@@ -28,16 +28,12 @@ struct BillHistoryEntryRow: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                HStack(spacing: 8) {
-                    Label(bill.billCategory.titleKey, systemImage: bill.billCategory.systemImage)
-                    Text(bill.billPaymentMethod.titleKey)
-                }
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+                BillMetadataLineView(bill: bill)
 
-                Text(AppFormatters.money(cents: bill.finalAmountCents))
+                Text(bill.displayAmount)
                     .font(.footnote)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(bill.billType.amountTint)
+
             }
         }
         .padding(.vertical, 4)

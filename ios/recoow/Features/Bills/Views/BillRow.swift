@@ -10,7 +10,7 @@ struct BillRow: View {
                 PhotoThumbnailView(imageData: bill.imageData, systemImage: "receipt.fill", size: 56)
                     .matchedTransitionSource(id: bill.id, in: billImageTransition)
             } else {
-                BillCategoryIconView(category: bill.billCategory, size: 56)
+                BillIconView(bill: bill, size: 56)
             }
 
             VStack(alignment: .leading, spacing: 6) {
@@ -21,28 +21,17 @@ struct BillRow: View {
 
                     Spacer(minLength: 8)
 
-                    Text(AppFormatters.money(cents: bill.finalAmountCents))
+                    Text(bill.displayAmount)
                         .font(.headline)
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(bill.billType.amountTint)
                 }
 
-                HStack(spacing: 8) {
-                    Label(bill.billCategory.titleKey, systemImage: bill.billCategory.systemImage)
-
-                    Text(bill.billPaymentMethod.titleKey)
-                }
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+                BillMetadataLineView(bill: bill)
 
                 Text(AppFormatters.dateTime(milliseconds: bill.occurredAt))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
 
-                if bill.hasDiscount {
-                    Text(AppLocalization.format("bill.discount.amount", AppFormatters.money(cents: bill.discountAmountCents)))
-                        .font(.footnote)
-                        .foregroundStyle(.green)
-                }
             }
         }
         .padding(.vertical, 4)

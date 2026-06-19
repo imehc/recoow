@@ -26,7 +26,10 @@ struct DecisionOptionRow: View {
                         .lineLimit(2)
                 }
 
-                Label(AppLocalization.format("option.weight.value", option.weight), systemImage: "dial.low")
+                MetadataItemView(
+                    title: AppLocalization.format("option.weight.value", option.weight),
+                    systemImage: "dial.low"
+                )
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }

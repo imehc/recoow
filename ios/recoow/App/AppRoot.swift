@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 /// 应用根导航。后续新增工具时，在 ToolRoute 中追加入口即可继承主页、设置和详情隐藏 Tab 的规则。
@@ -43,12 +44,25 @@ struct AppRoot: View {
         .preferredColorScheme(container.appPreferences.colorScheme)
         .task {
             await container.notificationScheduler.clearBadge()
+            await container.locationTrackerViewModel.finishInterruptedRecordingIfNeeded()
         }
         .onChange(of: scenePhase) { _, newPhase in
-            guard newPhase == .active else { return }
-            Task {
-                await container.notificationScheduler.clearBadge()
+            switch newPhase {
+            case .active:
+                Task {
+                    await container.notificationScheduler.clearBadge()
+                    await container.locationTrackerViewModel.finishInterruptedRecordingIfNeeded()
+                }
+            case .background:
+                container.locationTrackerViewModel.prepareForSuspension()
+            case .inactive:
+                break
+            @unknown default:
+                break
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willTerminateNotification)) { _ in
+            container.locationTrackerViewModel.finishForAppTermination()
         }
     }
 }

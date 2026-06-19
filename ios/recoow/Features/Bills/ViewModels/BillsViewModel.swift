@@ -6,7 +6,9 @@ import Observation
 final class BillsViewModel {
     var bills: [BillRecord] = []
     var searchText = ""
+    var selectedBillType: BillType?
     var selectedCategory: BillCategory?
+    var selectedIncomeCategory: BillIncomeCategory?
     var selectedPaymentMethod: BillPaymentMethod?
     var errorMessage: String?
 
@@ -25,9 +27,11 @@ final class BillsViewModel {
 
     var filteredBills: [BillRecord] {
         bills.filter { bill in
-            let matchesCategory = selectedCategory == nil || bill.billCategory == selectedCategory
+            let matchesType = selectedBillType == nil || bill.billType == selectedBillType
+            let matchesCategory = selectedCategory == nil || (bill.billType == .expense && bill.billCategory == selectedCategory)
+            let matchesIncomeCategory = selectedIncomeCategory == nil || (bill.billType == .income && bill.billIncomeCategory == selectedIncomeCategory)
             let matchesPaymentMethod = selectedPaymentMethod == nil || bill.billPaymentMethod == selectedPaymentMethod
-            guard matchesCategory && matchesPaymentMethod else { return false }
+            guard matchesType && matchesCategory && matchesIncomeCategory && matchesPaymentMethod else { return false }
 
             let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
             guard query.isEmpty == false else { return true }
@@ -42,17 +46,37 @@ final class BillsViewModel {
         }
     }
 
+    var currentMonthExpenseBills: [BillRecord] {
+        currentMonthBills.filter { $0.billType == .expense }
+    }
+
+    var currentMonthIncomeBills: [BillRecord] {
+        currentMonthBills.filter { $0.billType == .income }
+    }
+
     var currentMonthTotalCents: Int64 {
-        currentMonthBills.reduce(0) { $0 + $1.finalAmountCents }
+        currentMonthExpenseBills.reduce(0) { $0 + $1.finalAmountCents }
+    }
+
+    var currentMonthIncomeCents: Int64 {
+        currentMonthIncomeBills.reduce(0) { $0 + $1.finalAmountCents }
     }
 
     var currentMonthDiscountCents: Int64 {
-        currentMonthBills.reduce(0) { $0 + $1.discountAmountCents }
+        currentMonthExpenseBills.reduce(0) { $0 + $1.discountAmountCents }
     }
 
     var todayTotalCents: Int64 {
         bills
             .filter { Calendar.current.isDateInToday($0.occurredDate) }
+            .filter { $0.billType == .expense }
+            .reduce(0) { $0 + $1.finalAmountCents }
+    }
+
+    var todayIncomeCents: Int64 {
+        bills
+            .filter { Calendar.current.isDateInToday($0.occurredDate) }
+            .filter { $0.billType == .income }
             .reduce(0) { $0 + $1.finalAmountCents }
     }
 
@@ -78,12 +102,26 @@ final class BillsViewModel {
         bills.first { $0.id == id }
     }
 
+    func loadBillIfNeeded(id: String) async {
+        guard bill(id: id) == nil else { return }
+
+        do {
+            if let bill = try repository.fetchBill(id: id) {
+                upsertBill(bill)
+            }
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func makeBill(
         title: String,
         originalAmountCents: Int64,
         discountAmountCents: Int64,
         finalAmountCents: Int64,
-        category: BillCategory,
+        billType: BillType,
+        categoryRawValue: String,
         paymentMethod: BillPaymentMethod,
         note: String?,
         occurredDate: Date,
@@ -94,7 +132,8 @@ final class BillsViewModel {
             originalAmountCents: originalAmountCents,
             discountAmountCents: discountAmountCents,
             finalAmountCents: finalAmountCents,
-            category: category,
+            billType: billType,
+            categoryRawValue: categoryRawValue,
             paymentMethod: paymentMethod,
             note: note,
             occurredAt: Self.milliseconds(for: occurredDate),
@@ -105,7 +144,8 @@ final class BillsViewModel {
 
     func save(_ bill: BillRecord) async {
         do {
-            _ = try repository.saveBill(bill)
+            let savedBill = try repository.saveBill(bill)
+            upsertBill(savedBill)
             errorMessage = nil
             await syncEngine.enqueueScan()
         } catch {
@@ -122,6 +162,7 @@ final class BillsViewModel {
 
         do {
             try repository.deleteBills(ids: ids)
+            bills.removeAll { ids.contains($0.id) }
             errorMessage = nil
             await syncEngine.enqueueScan()
         } catch {
@@ -136,11 +177,20 @@ final class BillsViewModel {
     private func searchableText(for bill: BillRecord) -> String {
         [
             bill.title,
-            bill.billCategory.localizedTitle,
+            bill.billType.localizedTitle,
+            bill.billType == .expense ? bill.billCategory.localizedTitle : bill.billIncomeCategory.localizedTitle,
             bill.billPaymentMethod.localizedTitle,
             bill.note
         ]
         .compactMap(\.self)
         .joined(separator: " ")
+    }
+
+    private func upsertBill(_ bill: BillRecord) {
+        if let index = bills.firstIndex(where: { $0.id == bill.id }) {
+            bills[index] = bill
+        } else {
+            bills.insert(bill, at: 0)
+        }
     }
 }

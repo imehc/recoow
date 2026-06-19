@@ -8,9 +8,9 @@ enum AppNotificationError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .permissionDenied:
-            "系统通知权限未开启，记录已保存但不会弹出提醒。"
+            "系统通知权限未开启，记录已保存但不会弹出打卡提醒。"
         case .scheduleDateInPast:
-            "提醒时间已过，无法安排系统通知。"
+            "打卡提醒时间已过，无法安排系统通知。"
         case .attachmentDirectoryUnavailable:
             "无法准备通知图片附件。"
         }

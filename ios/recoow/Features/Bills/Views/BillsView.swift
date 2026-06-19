@@ -52,6 +52,7 @@ struct BillsView: View {
 private struct BillsContent: View {
     @Bindable var viewModel: BillsViewModel
     @State private var isShowingAddBill = false
+    @State private var isShowingFilterSheet = false
     @State private var billPendingDeletion: BillRecord?
 
     let billImageTransition: Namespace.ID
@@ -68,7 +69,9 @@ private struct BillsContent: View {
             BillSummarySection(
                 hasBills: viewModel.bills.isEmpty == false,
                 todayTotalCents: viewModel.todayTotalCents,
+                todayIncomeCents: viewModel.todayIncomeCents,
                 monthTotalCents: viewModel.currentMonthTotalCents,
+                monthIncomeCents: viewModel.currentMonthIncomeCents,
                 monthDiscountCents: viewModel.currentMonthDiscountCents
             )
 
@@ -80,7 +83,7 @@ private struct BillsContent: View {
                 ContentUnavailableView {
                     Label("暂无账单", systemImage: "receipt")
                 } description: {
-                    Text("添加一条支出记录")
+                    Text("添加一条收支记录")
                 } actions: {
                     Button("记一笔", systemImage: "plus", action: showAddBill)
                 }
@@ -110,12 +113,23 @@ private struct BillsContent: View {
         .listStyle(.insetGrouped)
         .searchable(text: $viewModel.searchText, prompt: "搜索账单")
         .toolbar {
-            Button("记一笔", systemImage: "plus", action: showAddBill)
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button("筛选", systemImage: filterButtonImage, action: showFilterSheet)
+                    .disabled(viewModel.bills.isEmpty)
+
+                Button("记一笔", systemImage: "plus", action: showAddBill)
+            }
         }
         .sheet(isPresented: $isShowingAddBill) {
             NavigationStack {
                 BillFormView(bill: nil, viewModel: viewModel)
             }
+        }
+        .sheet(isPresented: $isShowingFilterSheet) {
+            NavigationStack {
+                BillFilterSheetView(viewModel: viewModel)
+            }
+            .presentationDetents([.medium])
         }
         .alert(item: $billPendingDeletion) { bill in
             Alert(
@@ -131,8 +145,22 @@ private struct BillsContent: View {
         }
     }
 
+    private var filterButtonImage: String {
+        hasAdditionalFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle"
+    }
+
+    private var hasAdditionalFilters: Bool {
+        viewModel.selectedCategory != nil
+        || viewModel.selectedIncomeCategory != nil
+        || viewModel.selectedPaymentMethod != nil
+    }
+
     private func showAddBill() {
         isShowingAddBill = true
+    }
+
+    private func showFilterSheet() {
+        isShowingFilterSheet = true
     }
 
     private func requestDeleteBill(_ bill: BillRecord) {

@@ -24,14 +24,26 @@ struct ReminderRow: View {
                     ReminderStatusTag(reminder: reminder)
                 }
 
-                Text(AppFormatters.dateTime(milliseconds: reminder.scheduledAt))
+                Text(nextTimeText)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                if reminder.leadTime != .none {
-                    Label(reminder.leadTime.titleKey, systemImage: "clock.badge")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                MetadataLineView {
+                    MetadataItemView(titleKey: reminder.scheduleKind.titleKey, systemImage: reminder.scheduleKind.systemImage)
+
+                    if reminder.leadTime != .none {
+                        MetadataItemView(titleKey: reminder.leadTime.titleKey, systemImage: "clock.badge")
+                    }
+                }
+
+                if let progressText = reminder.progressText,
+                   let progressFraction = reminder.progressFraction {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ProgressView(value: progressFraction)
+                        Text("进度 \(progressText)")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 if let note = reminder.note {
@@ -43,5 +55,18 @@ struct ReminderRow: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    private var nextTimeText: String {
+        if reminder.isCompleted {
+            return reminder.completedAt.map { "完成于 \(AppFormatters.dateTime(milliseconds: $0))" } ?? "已完成"
+        }
+
+        if let nextOccurrenceDate = reminder.nextOccurrenceDate {
+            let milliseconds = RemindersViewModel.milliseconds(for: nextOccurrenceDate)
+            return "下次 \(AppFormatters.dateTime(milliseconds: milliseconds))"
+        }
+
+        return reminder.scheduleTitle
     }
 }

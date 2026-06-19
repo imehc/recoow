@@ -18,7 +18,8 @@ struct StatisticsBillDetailSheet: View {
             List {
                 Section("概览") {
                     LabeledContent("账单数量", value: AppLocalization.format("records.count", context.bills.count))
-                    LabeledContent("金额", value: AppFormatters.money(cents: totalCents))
+                    LabeledContent("支出", value: AppFormatters.money(cents: expenseTotalCents))
+                    LabeledContent("收入", value: AppFormatters.money(cents: incomeTotalCents))
                     LabeledContent("优惠", value: AppFormatters.money(cents: discountCents))
                 }
 
@@ -57,11 +58,21 @@ struct StatisticsBillDetailSheet: View {
         .presentationDetents([.medium, .large])
     }
 
-    private var totalCents: Int64 {
-        context.bills.reduce(0) { $0 + $1.finalAmountCents }
+    private var expenseTotalCents: Int64 {
+        context.bills
+            .filter { $0.billType == .expense }
+            .reduce(0) { $0 + $1.finalAmountCents }
+    }
+
+    private var incomeTotalCents: Int64 {
+        context.bills
+            .filter { $0.billType == .income }
+            .reduce(0) { $0 + $1.finalAmountCents }
     }
 
     private var discountCents: Int64 {
-        context.bills.reduce(0) { $0 + $1.discountAmountCents }
+        context.bills
+            .filter { $0.billType == .expense }
+            .reduce(0) { $0 + $1.discountAmountCents }
     }
 }

@@ -46,6 +46,30 @@ final class ItemLocatorViewModel {
         items.first { $0.id == id }
     }
 
+    func loadItemIfNeeded(id: String) async {
+        guard item(id: id) == nil else { return }
+
+        do {
+            if let item = try repository.fetchItem(id: id) {
+                upsertItem(item)
+            }
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func loadCategoriesIfNeeded() async {
+        guard categories.isEmpty else { return }
+
+        do {
+            categories = try repository.fetchCategories()
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func category(id: String?) -> ItemCategory? {
         guard let id else { return nil }
         return categories.first { $0.id == id }
@@ -82,7 +106,8 @@ final class ItemLocatorViewModel {
 
     func save(_ item: StoredItem) async {
         do {
-            _ = try repository.saveItem(item)
+            let savedItem = try repository.saveItem(item)
+            upsertItem(savedItem)
             errorMessage = nil
             await syncEngine.enqueueScan()
         } catch {
@@ -93,6 +118,7 @@ final class ItemLocatorViewModel {
     func deleteItem(id: String) async {
         do {
             try repository.deleteItem(id: id)
+            items.removeAll { $0.id == id }
             errorMessage = nil
             await syncEngine.enqueueScan()
         } catch {
@@ -102,7 +128,8 @@ final class ItemLocatorViewModel {
 
     func save(_ category: ItemCategory) async {
         do {
-            _ = try repository.saveCategory(category)
+            let savedCategory = try repository.saveCategory(category)
+            upsertCategory(savedCategory)
             errorMessage = nil
             await syncEngine.enqueueScan()
         } catch {
@@ -116,10 +143,28 @@ final class ItemLocatorViewModel {
             if selectedCategoryID == id {
                 selectedCategoryID = nil
             }
+            categories.removeAll { $0.id == id }
             errorMessage = nil
             await syncEngine.enqueueScan()
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func upsertItem(_ item: StoredItem) {
+        if let index = items.firstIndex(where: { $0.id == item.id }) {
+            items[index] = item
+        } else {
+            items.insert(item, at: 0)
+        }
+    }
+
+    private func upsertCategory(_ category: ItemCategory) {
+        if let index = categories.firstIndex(where: { $0.id == category.id }) {
+            categories[index] = category
+        } else {
+            categories.append(category)
+            categories.sort { $0.name < $1.name }
         }
     }
 

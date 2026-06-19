@@ -3,6 +3,7 @@ import Foundation
 struct StatisticsBillChartPoint: Identifiable, Hashable {
     let id: String
     let label: String
-    let totalCents: Int64
+    let expenseCents: Int64
+    let incomeCents: Int64
     let count: Int
 }

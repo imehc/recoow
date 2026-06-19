@@ -3,6 +3,9 @@ import SwiftUI
 struct FeatureEntryTile: View {
     let route: ToolRoute
     let isActive: Bool
+    var statusTitle: String?
+    var statusSystemImage: String?
+    var statusTint: Color = .green
 
     var body: some View {
         HStack(spacing: 12) {
@@ -20,10 +23,20 @@ struct FeatureEntryTile: View {
 
             Spacer(minLength: 8)
 
-            if isActive {
-                Label("进行中", systemImage: "dot.radiowaves.left.and.right")
+            if let statusTitle {
+                if let statusSystemImage {
+                    MetadataItemView(title: statusTitle, systemImage: statusSystemImage)
+                        .font(.footnote)
+                        .foregroundStyle(statusTint)
+                } else {
+                    Text(statusTitle)
+                        .font(.footnote)
+                        .foregroundStyle(statusTint)
+                }
+            } else if isActive {
+                MetadataItemView(titleKey: "进行中", systemImage: "dot.radiowaves.left.and.right")
                     .font(.footnote)
-                    .foregroundStyle(.green)
+                    .foregroundStyle(statusTint)
             }
         }
         .padding(.vertical, 4)

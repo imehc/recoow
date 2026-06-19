@@ -10,11 +10,10 @@ struct ActiveFeatureBanner: View {
             FeatureIconView(route: route)
 
             VStack(alignment: .leading, spacing: 4) {
-                Label {
-                    Text(route.titleKey) + Text("进行中")
-                } icon: {
-                    Image(systemName: "dot.radiowaves.left.and.right")
-                }
+                MetadataItemView(
+                    title: Text(route.titleKey) + Text("进行中"),
+                    systemImage: "dot.radiowaves.left.and.right"
+                )
                 .font(.headline)
                 .foregroundStyle(.green)
 

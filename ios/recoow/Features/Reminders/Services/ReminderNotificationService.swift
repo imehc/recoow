@@ -1,6 +1,8 @@
 import Foundation
 
 final class ReminderNotificationService: @unchecked Sendable {
+    private let maxScheduledOccurrences = 32
+    private let maxIdentifierSlots = 64
     private let scheduler: any AppNotificationScheduling
 
     init(scheduler: any AppNotificationScheduling) {
@@ -10,7 +12,7 @@ final class ReminderNotificationService: @unchecked Sendable {
     func reschedule(_ reminder: ReminderRecord) async throws {
         cancel(reminderID: reminder.id)
 
-        guard reminder.isEnabled else { return }
+        guard reminder.isEnabled, reminder.isCompleted == false else { return }
 
         let requests = notificationRequests(for: reminder)
         guard requests.isEmpty == false else { return }
@@ -23,32 +25,35 @@ final class ReminderNotificationService: @unchecked Sendable {
 
     private func notificationRequests(for reminder: ReminderRecord) -> [AppNotificationRequest] {
         var requests: [AppNotificationRequest] = []
+        let occurrenceDates = reminder.occurrenceDates(maxCount: maxScheduledOccurrences)
 
-        if reminder.scheduledDate > Date() {
+        for (index, scheduledDate) in occurrenceDates.enumerated() {
             requests.append(
                 AppNotificationRequest(
-                    identifier: mainIdentifier(for: reminder.id),
+                    identifier: mainIdentifier(for: reminder.id, index: index),
                     title: notificationTitle(for: reminder),
                     body: reminder.note,
-                    scheduledDate: reminder.scheduledDate,
+                    scheduledDate: scheduledDate,
                     attachmentData: reminder.imageData,
-                    userInfo: notificationUserInfo(for: reminder, kind: "main")
+                    userInfo: notificationUserInfo(for: reminder, kind: "main", occurrenceIndex: index)
                 )
             )
-        }
 
-        if reminder.leadTimeMinutes > 0 {
-            let leadDate = reminder.scheduledDate.addingTimeInterval(Double(-reminder.leadTimeMinutes * 60))
-            if leadDate > Date() {
+            if reminder.leadTimeMinutes > 0 {
+                let leadDate = scheduledDate.addingTimeInterval(Double(-reminder.leadTimeMinutes * 60))
+                if leadDate <= Date() {
+                    continue
+                }
+
                 requests.append(
                     AppNotificationRequest(
-                        identifier: leadIdentifier(for: reminder.id),
+                        identifier: leadIdentifier(for: reminder.id, index: index),
                         title: notificationTitle(for: reminder),
                         subtitle: reminder.leadTime.notificationSubtitle,
                         body: reminder.note,
                         scheduledDate: leadDate,
                         attachmentData: reminder.imageData,
-                        userInfo: notificationUserInfo(for: reminder, kind: "lead")
+                        userInfo: notificationUserInfo(for: reminder, kind: "lead", occurrenceIndex: index)
                     )
                 )
             }
@@ -65,23 +70,39 @@ final class ReminderNotificationService: @unchecked Sendable {
         return "\(reminder.memoryIcon) \(reminder.title)"
     }
 
-    private func notificationUserInfo(for reminder: ReminderRecord, kind: String) -> [String: String] {
+    private func notificationUserInfo(for reminder: ReminderRecord, kind: String, occurrenceIndex: Int) -> [String: String] {
         [
             "feature": "reminders",
             "reminderID": reminder.id,
-            "kind": kind
+            "kind": kind,
+            "occurrenceIndex": "\(occurrenceIndex)"
         ]
     }
 
     private func notificationIdentifiers(for reminderID: String) -> [String] {
-        [mainIdentifier(for: reminderID), leadIdentifier(for: reminderID)]
+        var identifiers = [legacyMainIdentifier(for: reminderID), legacyLeadIdentifier(for: reminderID)]
+
+        for index in 0..<maxIdentifierSlots {
+            identifiers.append(mainIdentifier(for: reminderID, index: index))
+            identifiers.append(leadIdentifier(for: reminderID, index: index))
+        }
+
+        return identifiers
     }
 
-    private func mainIdentifier(for reminderID: String) -> String {
+    private func legacyMainIdentifier(for reminderID: String) -> String {
         "reminder.\(reminderID).main"
     }
 
-    private func leadIdentifier(for reminderID: String) -> String {
+    private func legacyLeadIdentifier(for reminderID: String) -> String {
         "reminder.\(reminderID).lead"
+    }
+
+    private func mainIdentifier(for reminderID: String, index: Int) -> String {
+        "reminder.\(reminderID).main.\(index)"
+    }
+
+    private func leadIdentifier(for reminderID: String, index: Int) -> String {
+        "reminder.\(reminderID).lead.\(index)"
     }
 }

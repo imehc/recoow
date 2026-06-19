@@ -22,9 +22,9 @@ struct StoredItemRow: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
 
-                Label(categoryName, systemImage: "folder")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                MetadataLineView {
+                    MetadataItemView(title: categoryName, systemImage: "folder")
+                }
             }
         }
         .padding(.vertical, 4)

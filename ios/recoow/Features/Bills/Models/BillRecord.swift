@@ -17,6 +17,7 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
     var originalAmountCents: Int64
     var discountAmountCents: Int64
     var finalAmountCents: Int64
+    var transactionType: String
     var category: String
     var paymentMethod: String
     var note: String?
@@ -35,6 +36,7 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         case originalAmountCents = "original_amount_cents"
         case discountAmountCents = "discount_amount_cents"
         case finalAmountCents = "final_amount_cents"
+        case transactionType = "transaction_type"
         case category
         case paymentMethod = "payment_method"
         case note
@@ -50,12 +52,29 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         BillCategory(rawValue: category) ?? .other
     }
 
+    var billIncomeCategory: BillIncomeCategory {
+        BillIncomeCategory(rawValue: category) ?? .other
+    }
+
+    var billType: BillType {
+        BillType(rawValue: transactionType) ?? .expense
+    }
+
     var billPaymentMethod: BillPaymentMethod {
         BillPaymentMethod(rawValue: paymentMethod) ?? .other
     }
 
     var hasDiscount: Bool {
-        discountAmountCents > 0
+        billType == .expense && discountAmountCents > 0
+    }
+
+    var displayAmount: String {
+        switch billType {
+        case .expense:
+            "-\(AppFormatters.money(cents: finalAmountCents))"
+        case .income:
+            "+\(AppFormatters.money(cents: finalAmountCents))"
+        }
     }
 
     static func makeNew(
@@ -63,7 +82,8 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         originalAmountCents: Int64,
         discountAmountCents: Int64,
         finalAmountCents: Int64,
-        category: BillCategory,
+        billType: BillType,
+        categoryRawValue: String,
         paymentMethod: BillPaymentMethod,
         note: String?,
         occurredAt: Int64,
@@ -83,7 +103,8 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
             originalAmountCents: originalAmountCents,
             discountAmountCents: discountAmountCents,
             finalAmountCents: finalAmountCents,
-            category: category.rawValue,
+            transactionType: billType.rawValue,
+            category: categoryRawValue,
             paymentMethod: paymentMethod.rawValue,
             note: note,
             occurredAt: occurredAt,

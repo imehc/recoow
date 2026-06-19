@@ -81,6 +81,37 @@ final class StatisticsViewModel {
         }
     }
 
+    var continuousCheckInProgresses: [StatisticsCheckInProgress] {
+        reminders.compactMap { reminder in
+            guard reminder.scheduleKind == .continuousDays,
+                  let totalDays = reminder.progressTotalDays,
+                  totalDays > 1,
+                  let progressFraction = reminder.progressFraction else {
+                return nil
+            }
+
+            return StatisticsCheckInProgress(
+                id: reminder.id,
+                title: reminder.title,
+                completedDays: reminder.progressCompletedDays,
+                totalDays: totalDays,
+                progressFraction: progressFraction,
+                isCompleted: reminder.isCompleted
+            )
+        }
+        .sorted { lhs, rhs in
+            if lhs.isCompleted != rhs.isCompleted {
+                return lhs.isCompleted == false
+            }
+
+            if lhs.progressFraction == rhs.progressFraction {
+                return lhs.title < rhs.title
+            }
+
+            return lhs.progressFraction > rhs.progressFraction
+        }
+    }
+
     func startObserving() {
         guard observationTasks.isEmpty else { return }
         observeTracks()
@@ -102,9 +133,27 @@ final class StatisticsViewModel {
     }
 
     func billCategoryPoints(for period: StatisticsBillPeriod) -> [StatisticsBillCategoryPoint] {
-        let groupedBills = Dictionary(grouping: bills(in: period), by: \.billCategory)
+        let groupedBills = Dictionary(grouping: expenseBills(in: period), by: \.billCategory)
         return groupedBills.map { category, bills in
             StatisticsBillCategoryPoint(
+                category: category,
+                totalCents: bills.reduce(0) { $0 + $1.finalAmountCents },
+                count: bills.count
+            )
+        }
+        .sorted { lhs, rhs in
+            if lhs.totalCents == rhs.totalCents {
+                return lhs.category.localizedTitle < rhs.category.localizedTitle
+            }
+
+            return lhs.totalCents > rhs.totalCents
+        }
+    }
+
+    func billIncomeCategoryPoints(for period: StatisticsBillPeriod) -> [StatisticsBillIncomeCategoryPoint] {
+        let groupedBills = Dictionary(grouping: incomeBills(in: period), by: \.billIncomeCategory)
+        return groupedBills.map { category, bills in
+            StatisticsBillIncomeCategoryPoint(
                 category: category,
                 totalCents: bills.reduce(0) { $0 + $1.finalAmountCents },
                 count: bills.count
@@ -127,18 +176,16 @@ final class StatisticsViewModel {
         bills(in: period).sorted { $0.occurredAt > $1.occurredAt }
     }
 
-    func billTotalCents(for period: StatisticsBillPeriod) -> Int64 {
-        bills(in: period).reduce(0) { $0 + $1.finalAmountCents }
+    func billExpenseTotalCents(for period: StatisticsBillPeriod) -> Int64 {
+        expenseBills(in: period).reduce(0) { $0 + $1.finalAmountCents }
+    }
+
+    func billIncomeTotalCents(for period: StatisticsBillPeriod) -> Int64 {
+        incomeBills(in: period).reduce(0) { $0 + $1.finalAmountCents }
     }
 
     func billDiscountTotalCents(for period: StatisticsBillPeriod) -> Int64 {
-        bills(in: period).reduce(0) { $0 + $1.discountAmountCents }
-    }
-
-    func billAverageCents(for period: StatisticsBillPeriod) -> Int64 {
-        let periodBills = bills(in: period)
-        guard periodBills.isEmpty == false else { return 0 }
-        return periodBills.reduce(0) { $0 + $1.finalAmountCents } / Int64(periodBills.count)
+        expenseBills(in: period).reduce(0) { $0 + $1.discountAmountCents }
     }
 
     func billDateInterval(for period: StatisticsBillPeriod) -> DateInterval? {
@@ -266,7 +313,12 @@ final class StatisticsViewModel {
                 StatisticsBillChartPoint(
                     id: day.ISO8601Format(),
                     label: format(day, template: labelTemplate),
-                    totalCents: dayBills.reduce(0) { $0 + $1.finalAmountCents },
+                    expenseCents: dayBills
+                        .filter { $0.billType == .expense }
+                        .reduce(0) { $0 + $1.finalAmountCents },
+                    incomeCents: dayBills
+                        .filter { $0.billType == .income }
+                        .reduce(0) { $0 + $1.finalAmountCents },
                     count: dayBills.count
                 )
             )
@@ -291,7 +343,12 @@ final class StatisticsViewModel {
                 StatisticsBillChartPoint(
                     id: month.ISO8601Format(),
                     label: format(month, template: "MMM"),
-                    totalCents: monthBills.reduce(0) { $0 + $1.finalAmountCents },
+                    expenseCents: monthBills
+                        .filter { $0.billType == .expense }
+                        .reduce(0) { $0 + $1.finalAmountCents },
+                    incomeCents: monthBills
+                        .filter { $0.billType == .income }
+                        .reduce(0) { $0 + $1.finalAmountCents },
                     count: monthBills.count
                 )
             )
@@ -304,6 +361,14 @@ final class StatisticsViewModel {
     private func bills(in period: StatisticsBillPeriod) -> [BillRecord] {
         guard let interval = billDateInterval(for: period) else { return [] }
         return bills.filter { interval.contains($0.occurredDate) }
+    }
+
+    private func expenseBills(in period: StatisticsBillPeriod) -> [BillRecord] {
+        bills(in: period).filter { $0.billType == .expense }
+    }
+
+    private func incomeBills(in period: StatisticsBillPeriod) -> [BillRecord] {
+        bills(in: period).filter { $0.billType == .income }
     }
 
     private func date(milliseconds: Int64) -> Date {

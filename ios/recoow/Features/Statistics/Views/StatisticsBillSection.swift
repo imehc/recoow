@@ -6,11 +6,12 @@ struct StatisticsBillSection: View {
 
     let hasBills: Bool
     let periodBillCount: Int
-    let totalCents: Int64
+    let expenseTotalCents: Int64
+    let incomeTotalCents: Int64
     let discountCents: Int64
-    let averageCents: Int64
     let points: [StatisticsBillChartPoint]
     let categoryPoints: [StatisticsBillCategoryPoint]
+    let incomeCategoryPoints: [StatisticsBillIncomeCategoryPoint]
     let viewBills: () -> Void
 
     var body: some View {
@@ -27,10 +28,17 @@ struct StatisticsBillSection: View {
             } else {
                 LazyVGrid(columns: columns, spacing: 12) {
                     StatisticsMetricTile(
-                        title: periodTotalTitle,
-                        value: moneyOrPlaceholder(totalCents),
-                        systemImage: "creditcard.fill",
-                        tint: .teal
+                        title: AppLocalization.string("支出"),
+                        value: moneyOrPlaceholder(expenseTotalCents),
+                        systemImage: "arrow.up.right.circle.fill",
+                        tint: .red
+                    )
+
+                    StatisticsMetricTile(
+                        title: AppLocalization.string("收入"),
+                        value: moneyOrPlaceholder(incomeTotalCents),
+                        systemImage: "arrow.down.left.circle.fill",
+                        tint: .green
                     )
 
                     Button(action: viewBills) {
@@ -46,35 +54,41 @@ struct StatisticsBillSection: View {
                     .accessibilityHint(AppLocalization.string("查看这些账单"))
 
                     StatisticsMetricTile(
-                        title: AppLocalization.string("平均每笔"),
-                        value: moneyOrPlaceholder(averageCents),
-                        systemImage: "divide.circle.fill",
-                        tint: .orange
-                    )
-
-                    StatisticsMetricTile(
                         title: AppLocalization.string("优惠"),
                         value: moneyOrPlaceholder(discountCents),
                         systemImage: "tag.fill",
-                        tint: .green
+                        tint: .orange
                     )
                 }
                 .padding(.vertical, 2)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(AppLocalization.string("支出趋势"))
+                    Text(AppLocalization.string("收支趋势"))
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(.secondary)
 
                     Chart(points) { point in
                         BarMark(
                             x: .value(AppLocalization.string("日期"), point.label),
-                            y: .value(AppLocalization.string("金额"), Double(point.totalCents) / 100)
+                            y: .value(AppLocalization.string("金额"), Double(point.expenseCents) / 100)
                         )
-                        .foregroundStyle(.teal.gradient)
+                        .foregroundStyle(by: .value(AppLocalization.string("类型"), AppLocalization.string("支出")))
+                        .position(by: .value(AppLocalization.string("类型"), AppLocalization.string("支出")))
+                        .clipShape(.rect(cornerRadius: 4))
+
+                        BarMark(
+                            x: .value(AppLocalization.string("日期"), point.label),
+                            y: .value(AppLocalization.string("金额"), Double(point.incomeCents) / 100)
+                        )
+                        .foregroundStyle(by: .value(AppLocalization.string("类型"), AppLocalization.string("收入")))
+                        .position(by: .value(AppLocalization.string("类型"), AppLocalization.string("收入")))
                         .clipShape(.rect(cornerRadius: 4))
                     }
                     .frame(height: 132)
+                    .chartForegroundStyleScale([
+                        AppLocalization.string("支出"): Color.red,
+                        AppLocalization.string("收入"): Color.green
+                    ])
                     .chartYAxis {
                         AxisMarks(position: .leading)
                     }
@@ -82,23 +96,15 @@ struct StatisticsBillSection: View {
                 }
                 .padding(.vertical, 2)
 
-                if categoryPoints.isEmpty == false && totalCents > 0 {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(AppLocalization.string("分类占比"))
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(.secondary)
-
-                        Chart(categoryPoints) { point in
-                            SectorMark(
-                                angle: .value(AppLocalization.string("金额"), Double(point.totalCents) / 100),
-                                innerRadius: .ratio(0.6),
-                                angularInset: 1.5
-                            )
-                            .foregroundStyle(by: .value(AppLocalization.string("分类"), point.category.localizedTitle))
+                if hasExpenseShare || hasIncomeShare {
+                    LazyVGrid(columns: shareColumns, spacing: 12) {
+                        if hasExpenseShare {
+                            StatisticsBillExpenseShareChart(points: categoryPoints)
                         }
-                        .frame(height: 164)
-                        .chartLegend(position: .bottom, alignment: .center, spacing: 6)
-                        .accessibilityLabel(AppLocalization.string("分类占比"))
+
+                        if hasIncomeShare {
+                            StatisticsBillIncomeShareChart(points: incomeCategoryPoints)
+                        }
                     }
                     .padding(.vertical, 2)
                 }
@@ -113,15 +119,20 @@ struct StatisticsBillSection: View {
         ]
     }
 
-    private var periodTotalTitle: String {
-        switch selectedPeriod {
-        case .week:
-            AppLocalization.string("本周支出")
-        case .month:
-            AppLocalization.string("本月支出")
-        case .year:
-            AppLocalization.string("本年支出")
-        }
+    private var shareColumns: [GridItem] {
+        let count = [hasExpenseShare, hasIncomeShare].filter { $0 }.count
+        return Array(
+            repeating: GridItem(.flexible(), spacing: 12),
+            count: max(1, count)
+        )
+    }
+
+    private var hasExpenseShare: Bool {
+        categoryPoints.isEmpty == false && expenseTotalCents > 0
+    }
+
+    private var hasIncomeShare: Bool {
+        incomeCategoryPoints.isEmpty == false && incomeTotalCents > 0
     }
 
     private func moneyOrPlaceholder(_ cents: Int64) -> String {

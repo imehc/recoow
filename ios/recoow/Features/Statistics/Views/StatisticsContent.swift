@@ -31,15 +31,20 @@ struct StatisticsContent: View {
                 points: viewModel.recentUsagePoints
             )
 
+            if viewModel.continuousCheckInProgresses.isEmpty == false {
+                StatisticsCheckInProgressSection(progresses: viewModel.continuousCheckInProgresses)
+            }
+
             StatisticsBillSection(
                 selectedPeriod: $selectedBillPeriod,
-                hasBills: viewModel.bills.isEmpty == false,
+                hasBills: viewModel.billCount(for: selectedBillPeriod) > 0,
                 periodBillCount: viewModel.billCount(for: selectedBillPeriod),
-                totalCents: viewModel.billTotalCents(for: selectedBillPeriod),
+                expenseTotalCents: viewModel.billExpenseTotalCents(for: selectedBillPeriod),
+                incomeTotalCents: viewModel.billIncomeTotalCents(for: selectedBillPeriod),
                 discountCents: viewModel.billDiscountTotalCents(for: selectedBillPeriod),
-                averageCents: viewModel.billAverageCents(for: selectedBillPeriod),
                 points: viewModel.billPoints(for: selectedBillPeriod),
                 categoryPoints: viewModel.billCategoryPoints(for: selectedBillPeriod),
+                incomeCategoryPoints: viewModel.billIncomeCategoryPoints(for: selectedBillPeriod),
                 viewBills: viewBills
             )
 

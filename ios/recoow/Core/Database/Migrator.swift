@@ -9,6 +9,10 @@ enum AppMigrator {
         V3DecisionChoiceHistorySchema.register(in: &migrator)
         V4RemindersSchema.register(in: &migrator)
         V5BillsSchema.register(in: &migrator)
+        V6BillTransactionTypeSchema.register(in: &migrator)
+        V7CheckInsSchema.register(in: &migrator)
+        V8CheckInImportedProgressSchema.register(in: &migrator)
+        V9CheckInOccurrenceCompletionSchema.register(in: &migrator)
         return migrator
     }
 

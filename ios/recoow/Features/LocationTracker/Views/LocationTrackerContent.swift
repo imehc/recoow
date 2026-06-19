@@ -17,11 +17,10 @@ struct LocationTrackerContent: View {
                             .foregroundStyle(.secondary)
                     }
                 } label: {
-                    Label {
-                        Text(LocalizedStringKey(viewModel.state.title))
-                    } icon: {
-                        Image(systemName: statusSystemImage)
-                    }
+                    MetadataItemView(
+                        titleKey: LocalizedStringKey(viewModel.state.title),
+                        systemImage: statusSystemImage
+                    )
                     .foregroundStyle(statusColor)
                 }
 

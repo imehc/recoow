@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ItemCategoryFormView: View {
+    static let preferredPresentationHeight: CGFloat = 330
+
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
     @State private var note: String

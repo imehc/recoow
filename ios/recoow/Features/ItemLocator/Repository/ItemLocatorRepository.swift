@@ -98,6 +98,15 @@ final class ItemLocatorRepository: @unchecked Sendable {
         }
     }
 
+    func fetchCategories() throws -> [ItemCategory] {
+        try database.reader.read { db in
+            try ItemCategory
+                .filter(Column("deleted_at") == nil)
+                .order(Column("name").asc)
+                .fetchAll(db)
+        }
+    }
+
     func observeCategories() -> AsyncStream<Result<[ItemCategory], Error>> {
         AsyncStream { continuation in
             let observation = ValueObservation.tracking { db in

@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-/// “提提醒”的数据访问层，记录优先保存在本地，再按需安排系统通知。
+/// “打卡”的数据访问层，记录优先保存在本地，再按需安排系统通知。
 final class ReminderRepository: @unchecked Sendable {
     private let database: AppDatabase
     private let changeLogRepository: ChangeLogRepository
