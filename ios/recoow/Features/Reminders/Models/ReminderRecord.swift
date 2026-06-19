@@ -122,19 +122,26 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
     }
 
     var scheduleTitle: String {
+        scheduleTitle(locale: AppLocalization.currentLocale)
+    }
+
+    func scheduleTitle(locale: Locale) -> String {
         switch scheduleKind {
         case .single:
-            return AppFormatters.dateTime(milliseconds: scheduledAt)
+            return AppFormatters.dateTime(milliseconds: scheduledAt, locale: locale)
         case .dateRange:
             guard let endAt else { return scheduleKind.title }
-            return "\(AppFormatters.date(milliseconds: scheduledAt)) - \(AppFormatters.date(milliseconds: endAt))"
+            return "\(AppFormatters.date(milliseconds: scheduledAt, locale: locale)) - \(AppFormatters.date(milliseconds: endAt, locale: locale))"
         case .weekdays:
-            return "工作日"
+            return AppLocalization.string("工作日")
         case .weekly:
-            let titles = selectedWeekdays.map(Self.weekdayTitle).joined(separator: "、")
-            return titles.isEmpty ? "每周几" : titles
+            let titles = selectedWeekdays
+                .map { weekday in Self.weekdayTitle(weekday) }
+                .map(AppLocalization.string)
+                .joined(separator: AppLocalization.string("列表分隔符"))
+            return titles.isEmpty ? AppLocalization.string("每周几") : titles
         case .continuousDays:
-            return "连续 \(max(1, continuousDays)) 天"
+            return AppLocalization.format("连续 %d 天", max(1, continuousDays))
         }
     }
 
@@ -143,7 +150,7 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
             return nil
         }
 
-        return "\(progressCompletedDays)/\(progressTotalDays) 天"
+        return AppLocalization.format("%d/%d 天", progressCompletedDays, progressTotalDays)
     }
 
     var progressFraction: Double? {

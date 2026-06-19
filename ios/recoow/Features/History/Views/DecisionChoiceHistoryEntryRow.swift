@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct DecisionChoiceHistoryEntryRow: View {
+    @Environment(\.locale) private var locale
+
     let record: DecisionChoiceRecord
     let choiceRecordImageTransition: Namespace.ID
 
@@ -27,7 +29,7 @@ struct DecisionChoiceHistoryEntryRow: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
 
-                Text(AppFormatters.dateTime(milliseconds: record.selectedAt))
+                Text(AppFormatters.dateTime(milliseconds: record.selectedAt, locale: locale))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

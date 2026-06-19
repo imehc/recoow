@@ -4,29 +4,29 @@ struct ReminderStatusTag: View {
     let reminder: ReminderRecord
 
     var body: some View {
-        MetadataItemView(titleKey: LocalizedStringKey(title), systemImage: systemImage)
+        MetadataItemView(title: title, systemImage: systemImage)
             .font(.footnote)
             .foregroundStyle(tint)
     }
 
     private var title: String {
         if reminder.isCompleted {
-            return "已完成"
+            return AppLocalization.string("已完成")
         }
 
         if reminder.isTodayCompleted {
-            return "今日已打卡"
+            return AppLocalization.string("今日已打卡")
         }
 
         if reminder.isEnabled == false {
-            return "已关闭"
+            return AppLocalization.string("已关闭")
         }
 
         if reminder.isUpcoming {
-            return "待打卡"
+            return AppLocalization.string("待打卡")
         }
 
-        return "已结束"
+        return AppLocalization.string("已结束")
     }
 
     private var systemImage: String {

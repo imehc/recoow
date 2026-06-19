@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct CalendarWeekStrip: View {
+    @Environment(\.locale) private var locale
     @Binding var selectedDate: Date
     @Binding var weekAnchorDate: Date
     @State private var isShowingDateSelection = false
@@ -75,13 +76,13 @@ struct CalendarWeekStrip: View {
             Date.FormatStyle()
                 .month(.abbreviated)
                 .day(.defaultDigits)
-                .locale(AppLocalization.currentLocale)
+                .locale(locale)
         )
         let last = lastDate.formatted(
             Date.FormatStyle()
                 .month(.abbreviated)
                 .day(.defaultDigits)
-                .locale(AppLocalization.currentLocale)
+                .locale(locale)
         )
 
         return "\(first) - \(last)"

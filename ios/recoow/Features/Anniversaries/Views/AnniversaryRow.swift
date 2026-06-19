@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct AnniversaryRow: View {
+    @Environment(\.locale) private var locale
+
     let anniversary: AnniversaryRecord
     var referenceDate = Date()
 
@@ -50,26 +52,32 @@ struct AnniversaryRow: View {
 
     private var countdownText: String {
         guard let days = anniversary.daysUntilNext(from: referenceDate) else {
-            return "已过"
+            return AppLocalization.string("已过")
         }
 
         if days == 0 {
-            return "今天"
+            return AppLocalization.string("今天")
         }
 
-        return "\(days) 天"
+        return AppLocalization.format("%d 天", days)
     }
 
     private var dateText: String {
         if let nextDate = anniversary.nextOccurrenceDate(from: referenceDate) {
-            return "下次 \(AppFormatters.date(milliseconds: AnniversariesViewModel.milliseconds(for: nextDate)))"
+            return AppLocalization.format(
+                "下次 %@",
+                AppFormatters.date(milliseconds: AnniversariesViewModel.milliseconds(for: nextDate), locale: locale)
+            )
         }
 
-        return "发生于 \(AppFormatters.date(milliseconds: anniversary.occurredAt))"
+        return AppLocalization.format(
+            "发生于 %@",
+            AppFormatters.date(milliseconds: anniversary.occurredAt, locale: locale)
+        )
     }
 
     private var yearlyText: String {
         let years = anniversary.occurrenceYears(on: anniversary.nextOccurrenceDate(from: referenceDate) ?? referenceDate)
-        return years > 0 ? "第 \(years) 年" : "每年"
+        return years > 0 ? AppLocalization.format("第 %d 年", years) : AppLocalization.string("每年")
     }
 }

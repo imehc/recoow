@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct BillHistoryEntryRow: View {
+    @Environment(\.locale) private var locale
+
     let bill: BillRecord
     let billImageTransition: Namespace.ID
 
@@ -24,7 +26,7 @@ struct BillHistoryEntryRow: View {
                     HistoryTypeTag(route: .bills)
                 }
 
-                Text(AppFormatters.dateTime(milliseconds: bill.occurredAt))
+                Text(AppFormatters.dateTime(milliseconds: bill.occurredAt, locale: locale))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 

@@ -44,7 +44,7 @@ struct StatisticsBillSection: View {
                     Button(action: viewBills) {
                         StatisticsMetricTile(
                             title: AppLocalization.string("账单数量"),
-                            value: AppLocalization.format("records.count", periodBillCount),
+                            value: AppLocalization.format("%d 条", periodBillCount),
                             systemImage: "number",
                             tint: .blue
                         )

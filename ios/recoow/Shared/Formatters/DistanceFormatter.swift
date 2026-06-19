@@ -15,14 +15,14 @@ enum AppFormatters {
         let remainingSeconds = seconds % 60
 
         if hours > 0 {
-            return AppLocalization.format("duration.hours.minutes", hours, minutes)
+            return AppLocalization.format("%lld小时 %lld分钟", hours, minutes)
         }
 
         if minutes > 0 {
-            return AppLocalization.format("duration.minutes.seconds", minutes, remainingSeconds)
+            return AppLocalization.format("%lld分钟 %lld秒", minutes, remainingSeconds)
         }
 
-        return AppLocalization.format("duration.seconds", remainingSeconds)
+        return AppLocalization.format("%lld秒", remainingSeconds)
     }
 
     static func speed(_ metersPerSecond: Double?) -> String {
@@ -34,19 +34,19 @@ enum AppFormatters {
         String(format: "%.6f, %.6f", latitude, longitude)
     }
 
-    static func dateTime(milliseconds: Int64) -> String {
+    static func dateTime(milliseconds: Int64, locale: Locale = AppLocalization.currentLocale) -> String {
         let date = Date(timeIntervalSince1970: Double(milliseconds) / 1000)
         return date.formatted(
             Date.FormatStyle(date: .abbreviated, time: .shortened)
-                .locale(AppLocalization.currentLocale)
+                .locale(locale)
         )
     }
 
-    static func date(milliseconds: Int64) -> String {
+    static func date(milliseconds: Int64, locale: Locale = AppLocalization.currentLocale) -> String {
         let date = Date(timeIntervalSince1970: Double(milliseconds) / 1000)
         return date.formatted(
             Date.FormatStyle(date: .abbreviated, time: .omitted)
-                .locale(AppLocalization.currentLocale)
+                .locale(locale)
         )
     }
 
@@ -87,6 +87,6 @@ enum AppFormatters {
     }
 
     static func sampleCount(_ count: Int) -> String {
-        AppLocalization.format("sample.count", count)
+        AppLocalization.format("%d 个采样点", count)
     }
 }

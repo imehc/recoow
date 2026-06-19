@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ReminderRow: View {
+    @Environment(\.locale) private var locale
+
     let reminder: ReminderRecord
     let reminderImageTransition: Namespace.ID
 
@@ -40,7 +42,7 @@ struct ReminderRow: View {
                    let progressFraction = reminder.progressFraction {
                     VStack(alignment: .leading, spacing: 4) {
                         ProgressView(value: progressFraction)
-                        Text("进度 \(progressText)")
+                        Text(AppLocalization.format("进度 %@", progressText))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -59,14 +61,16 @@ struct ReminderRow: View {
 
     private var nextTimeText: String {
         if reminder.isCompleted {
-            return reminder.completedAt.map { "完成于 \(AppFormatters.dateTime(milliseconds: $0))" } ?? "已完成"
+            return reminder.completedAt.map {
+                AppLocalization.format("完成于 %@", AppFormatters.dateTime(milliseconds: $0, locale: locale))
+            } ?? AppLocalization.string("已完成")
         }
 
         if let nextOccurrenceDate = reminder.nextOccurrenceDate {
             let milliseconds = RemindersViewModel.milliseconds(for: nextOccurrenceDate)
-            return "下次 \(AppFormatters.dateTime(milliseconds: milliseconds))"
+            return AppLocalization.format("下次 %@", AppFormatters.dateTime(milliseconds: milliseconds, locale: locale))
         }
 
-        return reminder.scheduleTitle
+        return reminder.scheduleTitle(locale: locale)
     }
 }

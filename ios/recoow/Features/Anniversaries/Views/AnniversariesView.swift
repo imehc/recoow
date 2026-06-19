@@ -120,7 +120,7 @@ private struct AnniversariesContent: View {
         }
         .alert(item: $anniversaryPendingDeletion) { anniversary in
             Alert(
-                title: Text(AppLocalization.format("delete.record.title", anniversary.title)),
+                title: Text(AppLocalization.format("删除“%@”？", anniversary.title)),
                 message: Text(AppLocalization.string("删除后该记录会从历史中移除。")),
                 primaryButton: .destructive(Text("删除")) {
                     confirmDeleteAnniversary(anniversary)

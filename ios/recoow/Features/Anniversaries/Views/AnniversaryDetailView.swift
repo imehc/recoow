@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AnniversaryDetailView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.locale) private var locale
     @Bindable var viewModel: AnniversariesViewModel
     @State private var anniversaryForEditing: AnniversaryRecord?
     @State private var anniversaryPendingDeletion: AnniversaryRecord?
@@ -32,29 +33,38 @@ struct AnniversaryDetailView: View {
         List {
             Section("概览") {
                 LabeledContent("标题", value: anniversary.title)
-                LabeledContent("分类", value: anniversary.category.title)
-                LabeledContent("原始日期", value: AppFormatters.date(milliseconds: anniversary.occurredAt))
+                LabeledContent("分类", value: anniversary.category.localizedTitle)
+                LabeledContent("原始日期", value: AppFormatters.date(milliseconds: anniversary.occurredAt, locale: locale))
 
                 if let days = anniversary.daysUntilNext() {
-                    LabeledContent(days == 0 ? "状态" : "距离下次", value: days == 0 ? "今天" : "\(days) 天")
+                    LabeledContent(
+                        days == 0 ? "状态" : "距离下次",
+                        value: days == 0 ? AppLocalization.string("今天") : AppLocalization.format("%d 天", days)
+                    )
                 } else {
-                    LabeledContent("状态", value: "已过去")
+                    LabeledContent("状态", value: AppLocalization.string("已过去"))
                 }
 
-                LabeledContent("已过去", value: "\(max(0, anniversary.daysSince)) 天")
+                LabeledContent("已过去", value: AppLocalization.format("%d 天", max(0, anniversary.daysSince)))
 
                 if anniversary.isYearly, anniversary.yearsSince > 0 {
-                    LabeledContent("周年", value: "\(anniversary.yearsSince) 年")
+                    LabeledContent("周年", value: AppLocalization.format("%d 年", anniversary.yearsSince))
                 }
             }
 
             Section("提醒") {
-                LabeledContent("重复", value: anniversary.isYearly ? "每年" : "不重复")
+                LabeledContent("重复", value: AppLocalization.string(anniversary.isYearly ? "每年" : "不重复"))
                 LabeledContent("提前提醒", value: anniversary.leadTime.localizedTitle)
-                LabeledContent("通知", value: anniversary.isEnabled ? "已开启" : "已关闭")
+                LabeledContent("通知", value: AppLocalization.string(anniversary.isEnabled ? "已开启" : "已关闭"))
 
                 if let nextDate = anniversary.nextOccurrenceDate {
-                    LabeledContent("下次提醒", value: AppFormatters.dateTime(milliseconds: AnniversariesViewModel.milliseconds(for: nextDate)))
+                    LabeledContent(
+                        "下次提醒",
+                        value: AppFormatters.dateTime(
+                            milliseconds: AnniversariesViewModel.milliseconds(for: nextDate),
+                            locale: locale
+                        )
+                    )
                 }
             }
 
@@ -79,7 +89,7 @@ struct AnniversaryDetailView: View {
         }
         .alert(item: $anniversaryPendingDeletion) { anniversary in
             Alert(
-                title: Text(AppLocalization.format("delete.record.title", anniversary.title)),
+                title: Text(AppLocalization.format("删除“%@”？", anniversary.title)),
                 message: Text(AppLocalization.string("删除后该记录会从历史中移除。")),
                 primaryButton: .destructive(Text("删除")) {
                     deleteAnniversary(id: anniversary.id)

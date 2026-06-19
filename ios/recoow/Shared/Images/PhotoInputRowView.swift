@@ -16,14 +16,14 @@ struct PhotoInputRowView: View {
                     PhotoThumbnailView(imageData: imageData, systemImage: systemImage, size: 88)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("预览图片")
+                .accessibilityLabel(AppLocalization.string("预览图片"))
                 .disabled(isPreparingPhoto)
             }
 
             Button(action: onSourceRequest) {
                 HStack(spacing: 14) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(imageData == nil ? "选择照片" : "更换照片")
+                        Text(AppLocalization.string(imageData == nil ? "选择照片" : "更换照片"))
                             .foregroundStyle(.primary)
 
                         Text(statusText)
@@ -45,8 +45,8 @@ struct PhotoInputRowView: View {
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(imageData == nil ? "添加图片" : "更换图片")
-            .accessibilityHint("选择照片或拍照")
+            .accessibilityLabel(AppLocalization.string(imageData == nil ? "添加图片" : "更换图片"))
+            .accessibilityHint(AppLocalization.string("选择照片或拍照"))
             .disabled(isPreparingPhoto)
         }
         .padding(.vertical, 6)
@@ -54,11 +54,11 @@ struct PhotoInputRowView: View {
 
     private var statusText: String {
         if isPreparingPhoto {
-            "正在准备编辑"
+            AppLocalization.string("正在准备编辑")
         } else if imageData == nil {
-            "轻点右侧选择照片或拍照"
+            AppLocalization.string("轻点右侧选择照片或拍照")
         } else {
-            "左侧预览，右侧更换"
+            AppLocalization.string("左侧预览，右侧更换")
         }
     }
 }

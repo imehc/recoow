@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct StatisticsOverviewSection: View {
+    @Environment(\.locale) private var locale
+
     let totalRecordCount: Int
     let todayRecordCount: Int
     let activeDayCount: Int
@@ -11,21 +13,21 @@ struct StatisticsOverviewSection: View {
             LazyVGrid(columns: columns, spacing: 12) {
                 StatisticsMetricTile(
                     title: AppLocalization.string("总记录"),
-                    value: AppLocalization.format("records.count", totalRecordCount),
+                    value: AppLocalization.format("%d 条", totalRecordCount),
                     systemImage: "tray.full.fill",
                     tint: .blue
                 )
 
                 StatisticsMetricTile(
                     title: AppLocalization.string("今日记录"),
-                    value: AppLocalization.format("records.count", todayRecordCount),
+                    value: AppLocalization.format("%d 条", todayRecordCount),
                     systemImage: "calendar",
                     tint: .green
                 )
 
                 StatisticsMetricTile(
                     title: AppLocalization.string("有记录天数"),
-                    value: AppLocalization.format("days.count", activeDayCount),
+                    value: AppLocalization.format("%d 天", activeDayCount),
                     systemImage: "calendar.badge.clock",
                     tint: .orange
                 )
@@ -52,7 +54,7 @@ struct StatisticsOverviewSection: View {
         guard let latestRecordDate else { return "--" }
 
         let formatter = DateFormatter()
-        formatter.locale = AppLocalization.currentLocale
+        formatter.locale = locale
         formatter.setLocalizedDateFormatFromTemplate("MdHm")
         return formatter.string(from: latestRecordDate)
     }

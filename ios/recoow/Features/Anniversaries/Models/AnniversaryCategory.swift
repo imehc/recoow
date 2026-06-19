@@ -31,6 +31,10 @@ enum AnniversaryCategory: String, CaseIterable, Identifiable, Codable, Sendable 
         LocalizedStringKey(title)
     }
 
+    var localizedTitle: String {
+        AppLocalization.string(title)
+    }
+
     var systemImage: String {
         switch self {
         case .birthday:

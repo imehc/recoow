@@ -1,16 +1,16 @@
 import Foundation
 
 enum AppLocalization {
-    static var currentLanguage: AppLanguagePreference {
+    nonisolated static var currentLanguage: AppLanguagePreference {
         let storedLanguage = UserDefaults.standard.string(forKey: AppPreferenceStorageKeys.language)
         return storedLanguage.flatMap(AppLanguagePreference.init(rawValue:)) ?? .system
     }
 
-    static var currentLocale: Locale {
+    nonisolated static var currentLocale: Locale {
         currentLanguage.locale
     }
 
-    static func string(_ key: String) -> String {
+    nonisolated static func string(_ key: String) -> String {
         if let resourceIdentifier = currentLanguage.resourceIdentifier,
            let path = Bundle.main.path(forResource: resourceIdentifier, ofType: "lproj"),
            let bundle = Bundle(path: path) {
@@ -20,7 +20,7 @@ enum AppLocalization {
         return NSLocalizedString(key, comment: "")
     }
 
-    static func format(_ key: String, _ arguments: CVarArg...) -> String {
+    nonisolated static func format(_ key: String, _ arguments: CVarArg...) -> String {
         String(format: string(key), locale: currentLocale, arguments: arguments)
     }
 }

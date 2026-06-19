@@ -108,7 +108,7 @@ struct ReminderFormView: View {
                         }
 
                         Stepper(value: $continuousDays, in: 1...9999) {
-                            LabeledContent("连续天数", value: "\(continuousDays) 天")
+                            LabeledContent("连续天数", value: AppLocalization.format("%d 天", continuousDays))
                         }
                     }
 
@@ -143,7 +143,7 @@ struct ReminderFormView: View {
             )
         }
         .dismissesKeyboardOnTap(focusedField: $focusedField)
-        .navigationTitle(reminder == nil ? "添加打卡" : "编辑打卡")
+        .navigationTitle(AppLocalization.string(reminder == nil ? "添加打卡" : "编辑打卡"))
         .navigationBarTitleDisplayMode(.inline)
         .editablePhotoInputPresentation(
             coordinator: photoInputCoordinator,

@@ -73,7 +73,7 @@ struct AnniversaryFormView: View {
             }
         }
         .dismissesKeyboardOnTap(focusedField: $focusedField)
-        .navigationTitle(anniversary == nil ? "添加纪念日" : "编辑纪念日")
+        .navigationTitle(AppLocalization.string(anniversary == nil ? "添加纪念日" : "编辑纪念日"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {

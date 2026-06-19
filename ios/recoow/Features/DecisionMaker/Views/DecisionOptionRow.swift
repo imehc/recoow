@@ -27,7 +27,7 @@ struct DecisionOptionRow: View {
                 }
 
                 MetadataItemView(
-                    title: AppLocalization.format("option.weight.value", option.weight),
+                    title: AppLocalization.format("权重 %d", option.weight),
                     systemImage: "dial.low"
                 )
                     .font(.subheadline)

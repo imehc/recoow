@@ -77,7 +77,7 @@ struct PhotoEditorView: View {
 
                         Slider(value: $rotationDegrees, in: -180...180)
 
-                        Text("\(Int(rotationDegrees.rounded()))度")
+                        Text(AppLocalization.format("%d度", Int(rotationDegrees.rounded())))
                             .font(.footnote.monospacedDigit())
                             .foregroundStyle(.secondary)
                             .frame(width: 52, alignment: .trailing)

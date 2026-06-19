@@ -6,9 +6,9 @@ enum AppLanguagePreference: String, CaseIterable, Identifiable {
     case english
     case simplifiedChinese
 
-    var id: String { rawValue }
+    nonisolated var id: String { rawValue }
 
-    var title: LocalizedStringKey {
+    nonisolated var title: LocalizedStringKey {
         switch self {
         case .system:
             "跟随系统"
@@ -19,7 +19,7 @@ enum AppLanguagePreference: String, CaseIterable, Identifiable {
         }
     }
 
-    var localeIdentifier: String? {
+    nonisolated var localeIdentifier: String? {
         switch self {
         case .system:
             nil
@@ -30,7 +30,7 @@ enum AppLanguagePreference: String, CaseIterable, Identifiable {
         }
     }
 
-    var resourceIdentifier: String? {
+    nonisolated var resourceIdentifier: String? {
         switch self {
         case .system:
             nil
@@ -41,12 +41,12 @@ enum AppLanguagePreference: String, CaseIterable, Identifiable {
         }
     }
 
-    var locale: Locale {
+    nonisolated var locale: Locale {
         guard let localeIdentifier else { return .autoupdatingCurrent }
         return Locale(identifier: localeIdentifier)
     }
 
-    var appleLanguagesValue: [String]? {
+    nonisolated var appleLanguagesValue: [String]? {
         guard let localeIdentifier else { return nil }
         return [localeIdentifier]
     }

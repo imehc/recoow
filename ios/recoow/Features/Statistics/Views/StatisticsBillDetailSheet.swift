@@ -17,7 +17,7 @@ struct StatisticsBillDetailSheet: View {
         NavigationStack {
             List {
                 Section("概览") {
-                    LabeledContent("账单数量", value: AppLocalization.format("records.count", context.bills.count))
+                    LabeledContent("账单数量", value: AppLocalization.format("%d 条", context.bills.count))
                     LabeledContent("支出", value: AppFormatters.money(cents: expenseTotalCents))
                     LabeledContent("收入", value: AppFormatters.money(cents: incomeTotalCents))
                     LabeledContent("优惠", value: AppFormatters.money(cents: discountCents))

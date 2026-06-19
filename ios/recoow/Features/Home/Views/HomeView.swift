@@ -121,7 +121,7 @@ struct HomeView: View {
     private func statusTitle(for route: ToolRoute) -> String? {
         switch route {
         case .reminders where todayCheckIns.isEmpty == false:
-            "\(todayCheckIns.count) 个待打卡"
+            AppLocalization.format("%d 个待打卡", todayCheckIns.count)
         case .anniversaries where homeAnniversaries.isEmpty == false:
             anniversaryStatusTitle
         default:
@@ -154,13 +154,17 @@ struct HomeView: View {
     private var anniversaryStatusTitle: String {
         guard let first = homeAnniversaries.first,
               let days = first.daysUntilNext(from: currentDate) else {
-            return homeAnniversaries.count == 1 ? "近期" : "\(homeAnniversaries.count) 个近期"
+            return homeAnniversaries.count == 1
+                ? AppLocalization.string("近期")
+                : AppLocalization.format("%d 个近期", homeAnniversaries.count)
         }
 
         if days == 0 {
-            return homeAnniversaries.count == 1 ? "今天" : "\(homeAnniversaries.count) 个今日"
+            return homeAnniversaries.count == 1
+                ? AppLocalization.string("今天")
+                : AppLocalization.format("%d 个今日", homeAnniversaries.count)
         }
 
-        return "\(days) 天后"
+        return AppLocalization.format("%d 天后", days)
     }
 }

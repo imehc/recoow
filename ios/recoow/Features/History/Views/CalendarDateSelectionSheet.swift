@@ -4,6 +4,7 @@ struct CalendarDateSelectionSheet: View {
     static let preferredPresentationHeight: CGFloat = 430
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.locale) private var locale
     @State private var draftDate: Date
 
     let selectDate: (Date) -> Void
@@ -33,7 +34,7 @@ struct CalendarDateSelectionSheet: View {
                 }
             }
         }
-        .environment(\.locale, AppLocalization.currentLocale)
+        .environment(\.locale, locale)
     }
 
     private func confirmDate() {

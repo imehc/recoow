@@ -187,6 +187,7 @@ struct TrackHistoryView: View {
 
 private struct TrackHistoryContent: View {
     @Environment(\.editMode) private var editMode
+    @Environment(\.locale) private var locale
     @Bindable var historyViewModel: HistoryViewModel
     @Bindable var viewModel: TrackHistoryViewModel
     @Bindable var decisionHistoryViewModel: DecisionChoiceHistoryViewModel
@@ -626,28 +627,31 @@ private struct TrackHistoryContent: View {
 
     private func deletionConfirmationTitle(for confirmation: HistoryDeletionConfirmation) -> String {
         guard confirmation.entries.count != 1 else {
-            return "删除“\(entryTitle(confirmation.entries[0]))”？"
+            return AppLocalization.format("删除“%@”？", entryTitle(confirmation.entries[0]))
         }
 
-        return "删除 \(confirmation.entries.count) 条历史记录？"
+        return AppLocalization.format("删除 %d 条历史记录？", confirmation.entries.count)
     }
 
     private func deletionConfirmationButtonTitle(for confirmation: HistoryDeletionConfirmation) -> String {
         if confirmation.entries.count > 1 {
-            return "删除 \(confirmation.entries.count) 条"
+            return AppLocalization.format("删除 %d 条", confirmation.entries.count)
         }
 
-        return "删除"
+        return AppLocalization.string("删除")
     }
 
     private func deletionConfirmationMessage(for confirmation: HistoryDeletionConfirmation) -> String {
         let names = confirmation.entries.map(entryTitle)
 
         if names.count <= 1 {
-            return "删除后该记录会从历史中移除。"
+            return AppLocalization.string("删除后该记录会从历史中移除。")
         }
 
-        return "将删除：\(names.joined(separator: "、"))。删除后这些记录会从历史中移除。"
+        return AppLocalization.format(
+            "将删除：%@。删除后这些记录会从历史中移除。",
+            names.joined(separator: AppLocalization.string("列表分隔符"))
+        )
     }
 
     private func entryTitle(_ entry: HistoryEntry) -> String {
@@ -828,9 +832,9 @@ private struct TrackHistoryContent: View {
                 reminder.title,
                 reminder.note,
                 reminder.memoryIcon,
-                reminder.scheduleKind.title,
-                reminder.scheduleTitle,
-                reminder.isCompleted ? "已完成" : reminder.isTodayCompleted ? "今日已打卡" : "待打卡",
+                AppLocalization.string(reminder.scheduleKind.title),
+                reminder.scheduleTitle(locale: locale),
+                AppLocalization.string(reminder.isCompleted ? "已完成" : reminder.isTodayCompleted ? "今日已打卡" : "待打卡"),
                 AppLocalization.string(entry.route.title)
             ]
         case .bill(let bill):
@@ -847,8 +851,8 @@ private struct TrackHistoryContent: View {
             [
                 anniversary.title,
                 anniversary.note,
-                anniversary.category.title,
-                anniversary.isYearly ? "每年" : "不重复",
+                anniversary.category.localizedTitle,
+                AppLocalization.string(anniversary.isYearly ? "每年" : "不重复"),
                 anniversary.leadTime.localizedTitle,
                 AppLocalization.string(entry.route.title)
             ]

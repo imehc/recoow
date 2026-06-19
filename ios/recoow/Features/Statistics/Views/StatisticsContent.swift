@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct StatisticsContent: View {
+    @Environment(\.locale) private var locale
     @Bindable var viewModel: StatisticsViewModel
     @State private var selectedBillPeriod: StatisticsBillPeriod = .week
     @State private var billDetailContext: StatisticsBillDetailSheet.Context?
@@ -28,7 +29,7 @@ struct StatisticsContent: View {
 
             StatisticsRecentUsageChartSection(
                 totalRecordCount: viewModel.totalRecordCount,
-                points: viewModel.recentUsagePoints
+                points: viewModel.recentUsagePoints(locale: locale)
             )
 
             if viewModel.continuousCheckInProgresses.isEmpty == false {
@@ -42,7 +43,7 @@ struct StatisticsContent: View {
                 expenseTotalCents: viewModel.billExpenseTotalCents(for: selectedBillPeriod),
                 incomeTotalCents: viewModel.billIncomeTotalCents(for: selectedBillPeriod),
                 discountCents: viewModel.billDiscountTotalCents(for: selectedBillPeriod),
-                points: viewModel.billPoints(for: selectedBillPeriod),
+                points: viewModel.billPoints(for: selectedBillPeriod, locale: locale),
                 categoryPoints: viewModel.billCategoryPoints(for: selectedBillPeriod),
                 incomeCategoryPoints: viewModel.billIncomeCategoryPoints(for: selectedBillPeriod),
                 viewBills: viewBills
@@ -54,6 +55,7 @@ struct StatisticsContent: View {
                 }
             }
         }
+        .id(locale.identifier)
         .listStyle(.insetGrouped)
         .sheet(item: $billDetailContext) { context in
             if let billsViewModel {

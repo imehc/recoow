@@ -53,7 +53,7 @@ final class AnniversaryNotificationService: @unchecked Sendable {
     }
 
     private func notificationTitle(for anniversary: AnniversaryRecord) -> String {
-        "\(anniversary.category.title) · \(anniversary.title)"
+        "\(anniversary.category.localizedTitle) · \(anniversary.title)"
     }
 
     private func notificationUserInfo(for anniversary: AnniversaryRecord, kind: String) -> [String: String] {

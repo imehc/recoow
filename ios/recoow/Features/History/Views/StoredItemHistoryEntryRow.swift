@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct StoredItemHistoryEntryRow: View {
+    @Environment(\.locale) private var locale
+
     let item: StoredItem
     let categoryName: String
     let itemImageTransition: Namespace.ID
@@ -32,7 +34,7 @@ struct StoredItemHistoryEntryRow: View {
                     MetadataItemView(title: categoryName, systemImage: "folder")
                 }
 
-                Text(AppFormatters.dateTime(milliseconds: item.updatedAt))
+                Text(AppFormatters.dateTime(milliseconds: item.updatedAt, locale: locale))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

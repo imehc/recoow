@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct CalendarWeekDayButton: View {
+    @Environment(\.locale) private var locale
+
     let date: Date
     let count: Int
     let isSelected: Bool
@@ -47,7 +49,7 @@ struct CalendarWeekDayButton: View {
         date.formatted(
             Date.FormatStyle()
                 .weekday(.narrow)
-                .locale(AppLocalization.currentLocale)
+                .locale(locale)
         )
     }
 
@@ -55,7 +57,7 @@ struct CalendarWeekDayButton: View {
         date.formatted(
             Date.FormatStyle()
                 .day(.defaultDigits)
-                .locale(AppLocalization.currentLocale)
+                .locale(locale)
         )
     }
 
@@ -122,13 +124,13 @@ struct CalendarWeekDayButton: View {
     private var accessibilityLabel: String {
         let dateTitle = date.formatted(
             Date.FormatStyle(date: .complete, time: .omitted)
-                .locale(AppLocalization.currentLocale)
+                .locale(locale)
         )
 
         guard count > 0 else {
-            return "\(dateTitle)，无记录"
+            return AppLocalization.format("%@，无记录", dateTitle)
         }
 
-        return "\(dateTitle)，\(count) 条记录"
+        return AppLocalization.format("%@，%d 条记录", dateTitle, count)
     }
 }

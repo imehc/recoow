@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ReminderHistoryEntryRow: View {
+    @Environment(\.locale) private var locale
+
     let reminder: ReminderRecord
     let reminderImageTransition: Namespace.ID
 
@@ -30,7 +32,7 @@ struct ReminderHistoryEntryRow: View {
 
                 MetadataLineView {
                     MetadataItemView(titleKey: reminder.scheduleKind.titleKey, systemImage: reminder.scheduleKind.systemImage)
-                    MetadataItemView(titleKey: LocalizedStringKey(statusText), systemImage: statusSystemImage)
+                    MetadataItemView(title: statusText, systemImage: statusSystemImage)
                 }
 
                 if let note = reminder.note {
@@ -46,34 +48,37 @@ struct ReminderHistoryEntryRow: View {
 
     private var timeText: String {
         if let completedAt = reminder.completedAt {
-            return "完成于 \(AppFormatters.dateTime(milliseconds: completedAt))"
+            return AppLocalization.format("完成于 %@", AppFormatters.dateTime(milliseconds: completedAt, locale: locale))
         }
 
         if let nextOccurrenceDate = reminder.nextOccurrenceDate {
-            return "下次 \(AppFormatters.dateTime(milliseconds: RemindersViewModel.milliseconds(for: nextOccurrenceDate)))"
+            return AppLocalization.format(
+                "下次 %@",
+                AppFormatters.dateTime(milliseconds: RemindersViewModel.milliseconds(for: nextOccurrenceDate), locale: locale)
+            )
         }
 
-        return reminder.scheduleTitle
+        return reminder.scheduleTitle(locale: locale)
     }
 
     private var statusText: String {
         if reminder.isCompleted {
-            return "已完成"
+            return AppLocalization.string("已完成")
         }
 
         if reminder.isTodayCompleted {
-            return "今日已打卡"
+            return AppLocalization.string("今日已打卡")
         }
 
         if reminder.isEnabled == false {
-            return "已关闭"
+            return AppLocalization.string("已关闭")
         }
 
         if reminder.isUpcoming {
-            return "待打卡"
+            return AppLocalization.string("待打卡")
         }
 
-        return "已结束"
+        return AppLocalization.string("已结束")
     }
 
     private var statusSystemImage: String {

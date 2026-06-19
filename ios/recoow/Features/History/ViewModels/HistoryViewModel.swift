@@ -104,8 +104,8 @@ final class HistoryViewModel {
     }
 
     func itemCategoryName(for item: StoredItem) -> String {
-        guard let categoryID = item.categoryID else { return "未分类" }
-        return itemCategoryNames[categoryID, default: "未分类"]
+        guard let categoryID = item.categoryID else { return AppLocalization.string("未分类") }
+        return itemCategoryNames[categoryID, default: AppLocalization.string("未分类")]
     }
 
     func entry(id: String) -> HistoryEntry? {

@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct StatisticsFeatureUsageRow: View {
+    @Environment(\.locale) private var locale
+
     let summary: StatisticsFeatureSummary
 
     var body: some View {
@@ -23,10 +25,10 @@ struct StatisticsFeatureUsageRow: View {
             Spacer(minLength: 12)
 
             VStack(alignment: .trailing, spacing: 4) {
-                Text(AppLocalization.format("records.count", summary.count))
+                Text(AppLocalization.format("%d 条", summary.count))
                     .font(.headline)
 
-                Text(AppLocalization.format("today.records.count", summary.todayCount))
+                Text(AppLocalization.format("今日 %d 条", summary.todayCount))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -41,8 +43,8 @@ struct StatisticsFeatureUsageRow: View {
 
         let formattedDate = latestDate.formatted(
             Date.FormatStyle(date: .abbreviated, time: .shortened)
-                .locale(AppLocalization.currentLocale)
+                .locale(locale)
         )
-        return AppLocalization.format("latest.record.date", formattedDate)
+        return AppLocalization.format("最近 %@", formattedDate)
     }
 }

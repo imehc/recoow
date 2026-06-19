@@ -44,12 +44,10 @@
 "删除" = "Delete";
 "取消" = "Cancel";
 "编辑" = "Edit";
-"完成" = "Done";
 "保存" = "Save";
 "正在加载" = "Loading";
 "记录中" = "Recording";
 
-"状态" = "Status";
 "准备开始新的轨迹" = "Ready to start a new route";
 "时长" = "Duration";
 "采样点" = "Samples";
@@ -67,7 +65,6 @@
 "平均速度" = "Average Speed";
 "轨迹详情" = "Route Details";
 "未结束" = "Not Finished";
-"已完成" = "Completed";
 "暂无采样点" = "No Samples";
 "起点" = "Start";
 "终点" = "End";
@@ -108,7 +105,6 @@
 "记录不存在" = "Record Not Found";
 "请先添加至少一个启用的选项" = "Add at least one enabled option first";
 
-"分类" = "Categories";
 "还没有分类" = "No Categories";
 "添加分类后，可以按类别筛选物品。" = "Add categories to filter items by type.";
 "添加分类" = "Add Category";
@@ -116,7 +112,6 @@
 "删除分类？" = "Delete category?";
 "编辑分类" = "Edit Category";
 "物品" = "Items";
-"筛选" = "Filter";
 "全部" = "All";
 "还没有物品记录" = "No Items";
 "添加物品的位置、照片和备注，之后可以快速找回。" = "Add an item's location, photo, and notes so you can find it later.";
@@ -143,11 +138,11 @@
 "定位权限未开启" = "Location access is not enabled";
 "记录中的轨迹不能删除" = "A route currently being recorded cannot be deleted";
 
-"duration.hours.minutes" = "%lld hr %lld min";
-"duration.minutes.seconds" = "%lld min %lld sec";
-"duration.seconds" = "%lld sec";
-"sample.count" = "%d samples";
-"option.weight.value" = "Weight %d";
+"%lld小时 %lld分钟" = "%lld hr %lld min";
+"%lld分钟 %lld秒" = "%lld min %lld sec";
+"%lld秒" = "%lld sec";
+"%d 个采样点" = "%d samples";
+"权重 %d" = "Weight %d";
 
 "提提醒" = "Check-ins";
 "记一笔" = "Bill Log";
@@ -295,7 +290,10 @@
 "其他收入" = "Other Income";
 
 "删除后该记录会从历史中移除。" = "Deleting removes this record from history.";
-"delete.record.title" = "Delete \"%@\"?";
+"删除“%@”？" = "Delete \"%@\"?";
+"删除 %d 条历史记录？" = "Delete %d history records?";
+"删除 %d 条" = "Delete %d";
+"将删除：%@。删除后这些记录会从历史中移除。" = "This will delete %@. These records will be removed from history.";
 
 "上一周" = "Previous Week";
 "下一周" = "Next Week";
@@ -343,7 +341,79 @@
 "查看历史记录" = "View History";
 "暂无记录" = "No Records";
 "搜索历史记录" = "Search history";
-"records.count" = "%d records";
-"days.count" = "%d days";
-"today.records.count" = "%d today";
-"latest.record.date" = "Latest %@";
+"%d 条" = "%d records";
+"%d 天" = "%d days";
+"今日 %d 条" = "%d today";
+"最近 %@" = "Latest %@";
+
+"列表分隔符" = ", ";
+"完成于 %@" = "Completed at %@";
+"下次 %@" = "Next %@";
+"发生于 %@" = "Occurred on %@";
+"进度 %@" = "Progress %@";
+"%d/%d 天" = "%d/%d days";
+"连续 %d 天" = "%d consecutive days";
+"%d 个待打卡" = "%d check-ins";
+"%d 个近期" = "%d upcoming";
+"%d 个今日" = "%d today";
+"%d 天后" = "In %d days";
+"%d 年" = "%d years";
+
+"纪念日" = "Anniversaries";
+"倒计时、周年与日期提醒" = "Countdowns, anniversaries, and date reminders";
+"暂无纪念日" = "No Anniversaries";
+"添加一个重要日期，查看倒计时和提醒" = "Add an important date to track countdowns and reminders";
+"添加纪念日" = "Add Anniversary";
+"编辑纪念日" = "Edit Anniversary";
+"纪念日详情" = "Anniversary Details";
+"纪念日不存在" = "Anniversary Not Found";
+"即将到来" = "Upcoming";
+"近期" = "Upcoming";
+"已过" = "Past";
+"已过去" = "Past";
+"距离下次" = "Until Next";
+"原始日期" = "Original Date";
+"周年" = "Anniversary";
+"重复" = "Repeat";
+"通知" = "Notification";
+"已开启" = "Enabled";
+"每年" = "Yearly";
+"每年重复" = "Repeat Yearly";
+"不重复" = "Does Not Repeat";
+"第 %d 年" = "Year %d";
+"生日" = "Birthday";
+"恋爱/婚姻" = "Relationship";
+"家庭" = "Family";
+"工作/学习" = "Work/Study";
+"个人目标" = "Personal Goal";
+
+"系统通知权限未开启，记录已保存但不会弹出打卡提醒。" = "Notification permission is off. The record was saved, but no check-in reminder will be shown.";
+"打卡提醒时间已过，无法安排系统通知。" = "The check-in reminder time has passed, so a notification cannot be scheduled.";
+"无法准备通知图片附件。" = "Unable to prepare the notification image attachment.";
+"无法准备照片，请重试" = "Unable to prepare the photo. Try again.";
+"无法编辑当前图片，请重试" = "Unable to edit the current image. Try again.";
+"无法编辑图片" = "Unable to Edit Image";
+"预览图片" = "Image Preview";
+"选择照片" = "Choose Photo";
+"更换照片" = "Change Photo";
+"选择照片或拍照" = "Choose a photo or take one";
+"正在准备编辑" = "Preparing edit";
+"轻点右侧选择照片或拍照" = "Tap the right side to choose or take a photo";
+"左侧预览，右侧更换" = "Preview on the left, change on the right";
+"图片来源" = "Image Source";
+"照片" = "Photos";
+"周日" = "Sun";
+"周一" = "Mon";
+"周二" = "Tue";
+"周三" = "Wed";
+"周四" = "Thu";
+"周五" = "Fri";
+"周六" = "Sat";
+"调整" = "Adjust";
+"重置" = "Reset";
+"编辑图片" = "Edit Image";
+"无法预览图片" = "Unable to Preview Image";
+"图片预览" = "Image Preview";
+"%d度" = "%d°";
+"%@，无记录" = "%@, no records";
+"%@，%d 条记录" = "%@, %d records";

@@ -73,14 +73,14 @@ final class StatisticsViewModel {
         ]
     }
 
-    var recentUsagePoints: [StatisticsUsageChartPoint] {
+    func recentUsagePoints(locale: Locale) -> [StatisticsUsageChartPoint] {
         let today = calendar.startOfDay(for: Date())
         return (0..<7).reversed().compactMap { offset in
             guard let day = calendar.date(byAdding: .day, value: -offset, to: today) else { return nil }
             let count = allEntryDates.filter { calendar.isDate($0, inSameDayAs: day) }.count
             return StatisticsUsageChartPoint(
                 id: day.ISO8601Format(),
-                label: format(day, template: "EEE"),
+                label: format(day, template: "EEE", locale: locale),
                 count: count
             )
         }
@@ -127,14 +127,14 @@ final class StatisticsViewModel {
         observeAnniversaries()
     }
 
-    func billPoints(for period: StatisticsBillPeriod) -> [StatisticsBillChartPoint] {
+    func billPoints(for period: StatisticsBillPeriod, locale: Locale) -> [StatisticsBillChartPoint] {
         switch period {
         case .week:
-            return dailyBillPoints(for: .weekOfYear, labelTemplate: "EEE")
+            return dailyBillPoints(for: .weekOfYear, labelTemplate: "EEE", locale: locale)
         case .month:
-            return dailyBillPoints(for: .month, labelTemplate: "d")
+            return dailyBillPoints(for: .month, labelTemplate: "d", locale: locale)
         case .year:
-            return monthlyBillPoints()
+            return monthlyBillPoints(locale: locale)
         }
     }
 
@@ -321,7 +321,7 @@ final class StatisticsViewModel {
         )
     }
 
-    private func dailyBillPoints(for component: Calendar.Component, labelTemplate: String) -> [StatisticsBillChartPoint] {
+    private func dailyBillPoints(for component: Calendar.Component, labelTemplate: String, locale: Locale) -> [StatisticsBillChartPoint] {
         guard let interval = calendar.dateInterval(of: component, for: Date()) else { return [] }
 
         var points: [StatisticsBillChartPoint] = []
@@ -335,7 +335,7 @@ final class StatisticsViewModel {
             points.append(
                 StatisticsBillChartPoint(
                     id: day.ISO8601Format(),
-                    label: format(day, template: labelTemplate),
+                    label: format(day, template: labelTemplate, locale: locale),
                     expenseCents: dayBills
                         .filter { $0.billType == .expense }
                         .reduce(0) { $0 + $1.finalAmountCents },
@@ -351,7 +351,7 @@ final class StatisticsViewModel {
         return points
     }
 
-    private func monthlyBillPoints() -> [StatisticsBillChartPoint] {
+    private func monthlyBillPoints(locale: Locale) -> [StatisticsBillChartPoint] {
         guard let interval = calendar.dateInterval(of: .year, for: Date()) else { return [] }
 
         var points: [StatisticsBillChartPoint] = []
@@ -365,7 +365,7 @@ final class StatisticsViewModel {
             points.append(
                 StatisticsBillChartPoint(
                     id: month.ISO8601Format(),
-                    label: format(month, template: "MMM"),
+                    label: format(month, template: "MMM", locale: locale),
                     expenseCents: monthBills
                         .filter { $0.billType == .expense }
                         .reduce(0) { $0 + $1.finalAmountCents },
@@ -398,9 +398,9 @@ final class StatisticsViewModel {
         Date(timeIntervalSince1970: Double(milliseconds) / 1000)
     }
 
-    private func format(_ date: Date, template: String) -> String {
+    private func format(_ date: Date, template: String, locale: Locale) -> String {
         let formatter = DateFormatter()
-        formatter.locale = AppLocalization.currentLocale
+        formatter.locale = locale
         formatter.setLocalizedDateFormatFromTemplate(template)
         return formatter.string(from: date)
     }

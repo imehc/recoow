@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ReminderDetailView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.locale) private var locale
     @Bindable var viewModel: RemindersViewModel
     @State private var reminderForEditing: ReminderRecord?
     @State private var reminderPendingDeletion: ReminderRecord?
@@ -49,10 +50,16 @@ struct ReminderDetailView: View {
 
             Section("打卡") {
                 LabeledContent("标题", value: reminder.title)
-                LabeledContent("规则", value: reminder.scheduleKind.title)
-                LabeledContent("计划", value: reminder.scheduleTitle)
+                LabeledContent("规则", value: AppLocalization.string(reminder.scheduleKind.title))
+                LabeledContent("计划", value: reminder.scheduleTitle(locale: locale))
                 if let nextOccurrenceDate = reminder.nextOccurrenceDate {
-                    LabeledContent("下次提醒", value: AppFormatters.dateTime(milliseconds: RemindersViewModel.milliseconds(for: nextOccurrenceDate)))
+                    LabeledContent(
+                        "下次提醒",
+                        value: AppFormatters.dateTime(
+                            milliseconds: RemindersViewModel.milliseconds(for: nextOccurrenceDate),
+                            locale: locale
+                        )
+                    )
                 }
                 LabeledContent("提前提醒", value: reminder.leadTime.localizedTitle)
                 LabeledContent("状态", value: statusText(for: reminder))
@@ -100,7 +107,7 @@ struct ReminderDetailView: View {
         }
         .alert(item: $reminderPendingDeletion) { reminder in
             Alert(
-                title: Text(AppLocalization.format("delete.record.title", reminder.title)),
+                title: Text(AppLocalization.format("删除“%@”？", reminder.title)),
                 message: Text(AppLocalization.string("删除后该记录会从历史中移除。")),
                 primaryButton: .destructive(Text("删除")) {
                     deleteReminder(id: reminder.id)

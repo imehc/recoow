@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct AnniversaryHistoryEntryRow: View {
+    @Environment(\.locale) private var locale
+
     let anniversary: AnniversaryRecord
 
     var body: some View {
@@ -18,7 +20,7 @@ struct AnniversaryHistoryEntryRow: View {
                     HistoryTypeTag(route: .anniversaries)
                 }
 
-                Text(AppFormatters.date(milliseconds: anniversary.occurredAt))
+                Text(AppFormatters.date(milliseconds: anniversary.occurredAt, locale: locale))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
@@ -26,13 +28,13 @@ struct AnniversaryHistoryEntryRow: View {
                     MetadataItemView(titleKey: anniversary.category.titleKey, systemImage: anniversary.category.systemImage)
 
                     if anniversary.isYearly {
-                        MetadataItemView(title: "每年", systemImage: "repeat")
+                        MetadataItemView(title: AppLocalization.string("每年"), systemImage: "repeat")
                     }
 
                     if let days = anniversary.daysUntilNext() {
-                        MetadataItemView(title: days == 0 ? "今天" : "\(days) 天", systemImage: "calendar")
+                        MetadataItemView(title: days == 0 ? AppLocalization.string("今天") : AppLocalization.format("%d 天", days), systemImage: "calendar")
                     } else {
-                        MetadataItemView(title: "已过去", systemImage: "clock.badge.exclamationmark")
+                        MetadataItemView(title: AppLocalization.string("已过去"), systemImage: "clock.badge.exclamationmark")
                     }
                 }
 

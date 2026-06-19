@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct TrackHistoryEntryRow: View {
+    @Environment(\.locale) private var locale
+
     let track: Track
     let pointCount: Int
     let isActive: Bool
@@ -26,7 +28,7 @@ struct TrackHistoryEntryRow: View {
                     .lineLimit(1)
             }
 
-            Text(AppFormatters.dateTime(milliseconds: track.startedAt))
+            Text(AppFormatters.dateTime(milliseconds: track.startedAt, locale: locale))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 

@@ -26,7 +26,7 @@ final class EditablePhotoInputCoordinator {
             defer { isPreparingPhoto = false }
 
             guard let photo = await PhotoImagePreparer.editablePhoto(from: data) else {
-                imageErrorMessage = "无法准备照片，请重试"
+                imageErrorMessage = AppLocalization.string("无法准备照片，请重试")
                 return
             }
 
@@ -58,7 +58,7 @@ final class EditablePhotoInputCoordinator {
             defer { isPreparingPhoto = false }
 
             guard let photo = await PhotoImagePreparer.editablePhoto(from: imageData) else {
-                imageErrorMessage = "无法编辑当前图片，请重试"
+                imageErrorMessage = AppLocalization.string("无法编辑当前图片，请重试")
                 return
             }
 
