@@ -6,6 +6,7 @@ struct ReminderDetailView: View {
     @Bindable var viewModel: RemindersViewModel
     @State private var reminderForEditing: ReminderRecord?
     @State private var reminderPendingDeletion: ReminderRecord?
+    @State private var makeUpRequest: ReminderMakeUpRequest?
 
     let reminderID: String
     let reminderImageTransition: Namespace.ID?
@@ -18,11 +19,16 @@ struct ReminderDetailView: View {
                 ContentUnavailableView("打卡不存在", systemImage: "checkmark.circle")
             }
         }
-        .navigationTitle("打卡详情")
+        .navigationTitle("打卡任务详情")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $reminderForEditing) { reminder in
             NavigationStack {
                 ReminderFormView(reminder: reminder, viewModel: viewModel)
+            }
+        }
+        .sheet(item: $makeUpRequest) { request in
+            NavigationStack {
+                ReminderMakeUpSheet(request: request, viewModel: viewModel)
             }
         }
         .task(id: reminderID) {
@@ -50,7 +56,7 @@ struct ReminderDetailView: View {
 
             Section("打卡") {
                 LabeledContent("标题", value: reminder.title)
-                LabeledContent("规则", value: AppLocalization.string(reminder.scheduleKind.title))
+                LabeledContent("类型", value: AppLocalization.string(reminder.scheduleKind.title))
                 LabeledContent("计划", value: reminder.scheduleTitle(locale: locale))
                 if let nextOccurrenceDate = reminder.nextOccurrenceDate {
                     LabeledContent(
@@ -65,6 +71,28 @@ struct ReminderDetailView: View {
                 LabeledContent("状态", value: statusText(for: reminder))
                 if let progressText = reminder.progressText {
                     LabeledContent("进度", value: progressText)
+                }
+                if let progressRemainingDays = reminder.progressRemainingDays {
+                    LabeledContent("剩余", value: AppLocalization.format("%d 天", progressRemainingDays))
+                }
+            }
+
+            if reminder.scheduleKind == .dailyGoal {
+                Section("坚持统计") {
+                    if let progressTotalDays = reminder.progressTotalDays {
+                        LabeledContent("目标总天数", value: AppLocalization.format("%d 天", progressTotalDays))
+                    }
+                    LabeledContent("累计打卡", value: AppLocalization.format("%d 天", reminder.totalCheckInDays))
+                    LabeledContent("当前连续", value: AppLocalization.format("%d 天", reminder.currentStreakDays()))
+                    LabeledContent("最长连续", value: AppLocalization.format("%d 天", reminder.longestStreakDays()))
+                }
+            }
+
+            if reminder.completionRecords.isEmpty == false {
+                Section("打卡记录") {
+                    ForEach(reminder.completionRecords.reversed()) { completion in
+                        ReminderCompletionRecordRow(completion: completion)
+                    }
                 }
             }
 
@@ -93,8 +121,18 @@ struct ReminderDetailView: View {
 
             ToolbarItem(placement: .bottomBar) {
                 HStack {
-                    Button(reminder.isCompleted ? "恢复" : "完成", systemImage: reminder.isCompleted ? "arrow.uturn.backward" : "checkmark.circle") {
-                        setCompleted(reminder, isCompleted: reminder.isCompleted == false)
+                    if reminder.isCompleted {
+                        Button("恢复", systemImage: "arrow.uturn.backward") {
+                            setCompleted(reminder, isCompleted: false)
+                        }
+                    } else if reminder.canCheckIn() {
+                        Button("打卡", systemImage: "checkmark.circle") {
+                            setCompleted(reminder, isCompleted: true)
+                        }
+                    } else if let missedDate = reminder.firstMissedCheckInDate() {
+                        Button("补签", systemImage: "calendar.badge.plus") {
+                            makeUpRequest = ReminderMakeUpRequest(reminder: reminder, date: missedDate)
+                        }
                     }
 
                     Spacer()
@@ -122,23 +160,7 @@ struct ReminderDetailView: View {
     }
 
     private func statusText(for reminder: ReminderRecord) -> String {
-        if reminder.isCompleted {
-            return AppLocalization.string("已完成")
-        }
-
-        if reminder.isTodayCompleted {
-            return AppLocalization.string("今日已打卡")
-        }
-
-        if reminder.isEnabled == false {
-            return AppLocalization.string("已关闭")
-        }
-
-        if reminder.isUpcoming {
-            return AppLocalization.string("待打卡")
-        }
-
-        return AppLocalization.string("已结束")
+        AppLocalization.string(reminder.checkInStatus().title)
     }
 
     private func deleteReminder(id: String) {
@@ -154,5 +176,110 @@ struct ReminderDetailView: View {
         Task {
             await viewModel.setCompleted(reminder, isCompleted: isCompleted)
         }
+    }
+}
+
+struct ReminderMakeUpRequest: Identifiable {
+    let reminder: ReminderRecord
+    let date: Date
+
+    var id: String {
+        "\(reminder.id)-\(ReminderRecord.dateKey(for: date))"
+    }
+}
+
+struct ReminderMakeUpSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.locale) private var locale
+    @State private var note = ""
+
+    let request: ReminderMakeUpRequest
+    let viewModel: RemindersViewModel
+
+    var body: some View {
+        Form {
+            Section("补签") {
+                LabeledContent(
+                    "日期",
+                    value: AppFormatters.date(
+                        milliseconds: RemindersViewModel.milliseconds(for: request.date),
+                        locale: locale
+                    )
+                )
+
+                TextField("补签备注", text: $note, axis: .vertical)
+                    .lineLimit(3...)
+            }
+        }
+        .navigationTitle("补签")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("取消") {
+                    dismiss()
+                }
+            }
+
+            ToolbarItem(placement: .confirmationAction) {
+                Button("保存") {
+                    save()
+                }
+            }
+        }
+    }
+
+    private func save() {
+        let normalizedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        Task {
+            await viewModel.makeUp(
+                request.reminder,
+                date: request.date,
+                note: normalizedNote.isEmpty ? nil : normalizedNote
+            )
+            dismiss()
+        }
+    }
+}
+
+private struct ReminderCompletionRecordRow: View {
+    @Environment(\.locale) private var locale
+
+    let completion: ReminderCheckInCompletion
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Label(
+                    AppLocalization.string(completion.kind.title),
+                    systemImage: completion.kind.systemImage
+                )
+                .font(.subheadline.weight(.semibold))
+
+                Spacer(minLength: 12)
+
+                Text(dateText)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let note = completion.note {
+                Text(note)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    private var dateText: String {
+        guard let date = ReminderRecord.date(fromDateKey: completion.dateKey) else {
+            return completion.dateKey
+        }
+
+        return AppFormatters.date(
+            milliseconds: RemindersViewModel.milliseconds(for: date),
+            locale: locale
+        )
     }
 }

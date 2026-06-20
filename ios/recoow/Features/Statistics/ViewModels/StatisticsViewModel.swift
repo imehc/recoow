@@ -92,11 +92,22 @@ final class StatisticsViewModel {
 
     var continuousCheckInProgresses: [StatisticsCheckInProgress] {
         reminders.compactMap { reminder in
-            guard reminder.scheduleKind == .continuousDays,
-                  let totalDays = reminder.progressTotalDays,
+            guard let totalDays = reminder.progressTotalDays,
                   totalDays > 1,
                   let progressFraction = reminder.progressFraction else {
                 return nil
+            }
+
+            let detailText = if reminder.scheduleKind == .dailyGoal {
+                AppLocalization.format(
+                    "当前连续 %d 天，最长连续 %d 天",
+                    reminder.currentStreakDays(),
+                    reminder.longestStreakDays()
+                )
+            } else if let remainingDays = reminder.progressRemainingDays {
+                AppLocalization.format("剩余 %d 天", remainingDays)
+            } else {
+                AppLocalization.string(reminder.checkInStatus().title)
             }
 
             return StatisticsCheckInProgress(
@@ -105,6 +116,7 @@ final class StatisticsViewModel {
                 completedDays: reminder.progressCompletedDays,
                 totalDays: totalDays,
                 progressFraction: progressFraction,
+                detailText: detailText,
                 isCompleted: reminder.isCompleted
             )
         }
@@ -113,11 +125,14 @@ final class StatisticsViewModel {
                 return lhs.isCompleted == false
             }
 
-            if lhs.progressFraction == rhs.progressFraction {
+            let lhsProgress = lhs.progressFraction ?? 0
+            let rhsProgress = rhs.progressFraction ?? 0
+
+            if lhsProgress == rhsProgress {
                 return lhs.title < rhs.title
             }
 
-            return lhs.progressFraction > rhs.progressFraction
+            return lhsProgress > rhsProgress
         }
     }
 

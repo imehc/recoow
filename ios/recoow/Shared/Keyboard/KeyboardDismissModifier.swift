@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct KeyboardDismissModifier<Field: Hashable>: ViewModifier {
     var focusedField: FocusState<Field?>.Binding
@@ -9,6 +10,7 @@ struct KeyboardDismissModifier<Field: Hashable>: ViewModifier {
             .background {
                 KeyboardDismissObserver {
                     focusedField.wrappedValue = nil
+                    dismissKeyboard()
                 }
             }
             .toolbar {
@@ -17,9 +19,19 @@ struct KeyboardDismissModifier<Field: Hashable>: ViewModifier {
 
                     Button("完成") {
                         focusedField.wrappedValue = nil
+                        dismissKeyboard()
                     }
                 }
             }
+    }
+
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
     }
 }
 

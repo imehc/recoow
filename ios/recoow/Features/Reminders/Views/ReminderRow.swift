@@ -48,6 +48,12 @@ struct ReminderRow: View {
                     }
                 }
 
+                if let goalSummaryText = reminder.goalSummaryText {
+                    Text(goalSummaryText)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
                 if let note = reminder.note {
                     Text(note)
                         .font(.footnote)
@@ -64,6 +70,13 @@ struct ReminderRow: View {
             return reminder.completedAt.map {
                 AppLocalization.format("完成于 %@", AppFormatters.dateTime(milliseconds: $0, locale: locale))
             } ?? AppLocalization.string("已完成")
+        }
+
+        if let missedDate = reminder.firstMissedCheckInDate() {
+            return AppLocalization.format(
+                "需补签 %@",
+                AppFormatters.date(milliseconds: RemindersViewModel.milliseconds(for: missedDate), locale: locale)
+            )
         }
 
         if let nextOccurrenceDate = reminder.nextOccurrenceDate {

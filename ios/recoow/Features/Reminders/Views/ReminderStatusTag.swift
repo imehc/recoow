@@ -10,62 +10,31 @@ struct ReminderStatusTag: View {
     }
 
     private var title: String {
-        if reminder.isCompleted {
-            return AppLocalization.string("已完成")
-        }
-
-        if reminder.isTodayCompleted {
-            return AppLocalization.string("今日已打卡")
-        }
-
-        if reminder.isEnabled == false {
-            return AppLocalization.string("已关闭")
-        }
-
-        if reminder.isUpcoming {
-            return AppLocalization.string("待打卡")
-        }
-
-        return AppLocalization.string("已结束")
+        AppLocalization.string(status.title)
     }
 
     private var systemImage: String {
-        if reminder.isCompleted {
-            return "checkmark.circle.fill"
-        }
-
-        if reminder.isTodayCompleted {
-            return "checkmark.circle"
-        }
-
-        if reminder.isEnabled == false {
-            return "bell.slash"
-        }
-
-        if reminder.isUpcoming {
-            return "circle"
-        }
-
-        return "clock.badge.exclamationmark"
+        status.systemImage
     }
 
     private var tint: Color {
-        if reminder.isCompleted {
+        switch status {
+        case .completed, .checkedInToday:
             return .green
-        }
-
-        if reminder.isTodayCompleted {
-            return .green
-        }
-
-        if reminder.isEnabled == false {
-            return .secondary
-        }
-
-        if reminder.isUpcoming {
+        case .ready:
             return .purple
+        case .broken:
+            return .red
+        case .disabled:
+            return .secondary
+        case .upcoming:
+            return .blue
+        case .ended:
+            return .orange
         }
+    }
 
-        return .orange
+    private var status: ReminderCheckInStatus {
+        reminder.checkInStatus()
     }
 }

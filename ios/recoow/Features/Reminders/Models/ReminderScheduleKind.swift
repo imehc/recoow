@@ -7,21 +7,24 @@ enum ReminderScheduleKind: String, CaseIterable, Identifiable, Codable, Sendable
     case weekdays
     case weekly
     case continuousDays
+    case dailyGoal
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .single:
-            "单次"
+            "单次打卡"
         case .dateRange:
-            "时间段"
+            "阶段打卡"
         case .weekdays:
-            "工作日"
+            "工作日打卡"
         case .weekly:
-            "每周几"
+            "每周打卡"
         case .continuousDays:
-            "连续天数"
+            "连续挑战"
+        case .dailyGoal:
+            "坚持目标"
         }
     }
 
@@ -41,6 +44,8 @@ enum ReminderScheduleKind: String, CaseIterable, Identifiable, Codable, Sendable
             "calendar.day.timeline.left"
         case .continuousDays:
             "flame"
+        case .dailyGoal:
+            "target"
         }
     }
 }

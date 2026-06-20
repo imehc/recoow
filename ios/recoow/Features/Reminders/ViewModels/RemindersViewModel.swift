@@ -31,7 +31,13 @@ final class RemindersViewModel {
         reminders
             .filter { $0.isCompleted == false }
             .sorted {
-                ($0.nextOccurrenceDate ?? $0.scheduledDate) < ($1.nextOccurrenceDate ?? $1.scheduledDate)
+                let lhsPriority = statusPriority(for: $0)
+                let rhsPriority = statusPriority(for: $1)
+                if lhsPriority != rhsPriority {
+                    return lhsPriority < rhsPriority
+                }
+
+                return ($0.nextOccurrenceDate ?? $0.scheduledDate) < ($1.nextOccurrenceDate ?? $1.scheduledDate)
             }
     }
 
@@ -129,26 +135,29 @@ final class RemindersViewModel {
         var record = reminder
 
         if isCompleted {
-            record.markOccurrenceCompleted()
+            guard record.canCheckIn() else {
+                errorMessage = AppLocalization.string("当前不能打卡")
+                return
+            }
+
+            record.markOccurrenceCompleted(kind: .checkIn)
         } else {
             record.clearCompletion()
         }
 
-        do {
-            let savedReminder = try repository.saveReminder(record)
-            upsertReminder(savedReminder)
-            errorMessage = nil
-            await syncEngine.enqueueScan()
+        await persist(record)
+    }
 
-            do {
-                try await notificationService.reschedule(savedReminder)
-                notificationMessage = nil
-            } catch {
-                notificationMessage = error.localizedDescription
-            }
-        } catch {
-            errorMessage = error.localizedDescription
+    func makeUp(_ reminder: ReminderRecord, date: Date, note: String?) async {
+        var record = reminder
+        guard let missedDate = record.firstMissedCheckInDate(),
+              Calendar.current.isDate(missedDate, inSameDayAs: date) else {
+            errorMessage = AppLocalization.string("请先补签最早断签日期")
+            return
         }
+
+        record.markOccurrenceCompleted(on: date, kind: .makeUp, note: note)
+        await persist(record)
     }
 
     func deleteReminder(id: String) async {
@@ -180,6 +189,43 @@ final class RemindersViewModel {
             reminders[index] = reminder
         } else {
             reminders.insert(reminder, at: 0)
+        }
+    }
+
+    private func persist(_ reminder: ReminderRecord) async {
+        do {
+            let savedReminder = try repository.saveReminder(reminder)
+            upsertReminder(savedReminder)
+            errorMessage = nil
+            await syncEngine.enqueueScan()
+
+            do {
+                try await notificationService.reschedule(savedReminder)
+                notificationMessage = nil
+            } catch {
+                notificationMessage = error.localizedDescription
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func statusPriority(for reminder: ReminderRecord) -> Int {
+        switch reminder.checkInStatus() {
+        case .ready:
+            0
+        case .broken:
+            1
+        case .checkedInToday:
+            2
+        case .upcoming:
+            3
+        case .disabled:
+            4
+        case .ended:
+            5
+        case .completed:
+            6
         }
     }
 }

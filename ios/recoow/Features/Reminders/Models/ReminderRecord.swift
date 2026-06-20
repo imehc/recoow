@@ -28,6 +28,7 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
     var completedAt: Int64?
     var importedCompletedDays: Int
     var completedDateKeysRawValue: String?
+    var completionRecordsRawValue: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -52,6 +53,7 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         case completedAt = "completed_at"
         case importedCompletedDays = "imported_completed_days"
         case completedDateKeysRawValue = "completed_date_keys"
+        case completionRecordsRawValue = "completion_records"
     }
 
     var scheduledDate: Date {
@@ -78,7 +80,38 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
             .sorted() ?? []
     }
 
+    var completionRecords: [ReminderCheckInCompletion] {
+        var decodedRecords: [ReminderCheckInCompletion] = {
+            guard let completionRecordsRawValue,
+                  let data = completionRecordsRawValue.data(using: .utf8),
+                  let records = try? JSONDecoder().decode([ReminderCheckInCompletion].self, from: data) else {
+                return []
+            }
+
+            return records
+        }()
+
+        let decodedDateKeys = Set(decodedRecords.map(\.dateKey))
+        let legacyRecords = legacyCompletedDateKeys
+            .subtracting(decodedDateKeys)
+            .map { dateKey in
+                ReminderCheckInCompletion.make(
+                    dateKey: dateKey,
+                    completedAt: updatedAt,
+                    kind: .checkIn,
+                    note: nil
+                )
+            }
+
+        decodedRecords.append(contentsOf: legacyRecords)
+        return decodedRecords.sorted { $0.dateKey < $1.dateKey }
+    }
+
     var completedDateKeys: Set<String> {
+        Set(completionRecords.map(\.dateKey))
+    }
+
+    private var legacyCompletedDateKeys: Set<String> {
         Set(
             completedDateKeysRawValue?
                 .split(separator: ",")
@@ -91,7 +124,8 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
     }
 
     var isUpcoming: Bool {
-        isEnabled && isCompleted == false && deletedAt == nil && nextOccurrenceDate != nil
+        let status = checkInStatus()
+        return status == .ready || status == .upcoming
     }
 
     var nextOccurrenceDate: Date? {
@@ -107,18 +141,11 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
     }
 
     func needsCheckIn(on date: Date, calendar: Calendar = .current) -> Bool {
-        guard isCompleted == false,
-              let occurrenceDate = occurrenceDate(on: date, calendar: calendar),
-              occurrenceDate > date else {
-            return false
-        }
-
-        return isOccurrenceCompleted(on: occurrenceDate, calendar: calendar) == false
+        canCheckIn(on: date, calendar: calendar)
     }
 
     var isTodayCompleted: Bool {
-        guard let todayOccurrenceDate else { return false }
-        return isOccurrenceCompleted(on: todayOccurrenceDate)
+        isOccurrenceCompleted(on: Date())
     }
 
     var scheduleTitle: String {
@@ -141,7 +168,9 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
                 .joined(separator: AppLocalization.string("列表分隔符"))
             return titles.isEmpty ? AppLocalization.string("每周几") : titles
         case .continuousDays:
-            return AppLocalization.format("连续 %d 天", max(1, continuousDays))
+            return AppLocalization.format("连续挑战 %d 天", max(1, continuousDays))
+        case .dailyGoal:
+            return AppLocalization.string("每天坚持")
         }
     }
 
@@ -166,21 +195,173 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         case .dateRange:
             guard let endDate else { return nil }
             return numberOfDays(from: scheduledDate, through: endDate)
-        case .continuousDays:
+        case .weekdays, .weekly, .continuousDays, .dailyGoal:
             return max(1, continuousDays)
-        case .single, .weekdays, .weekly:
-            return nil
+        case .single:
+            return 1
         }
     }
 
     var progressCompletedDays: Int {
         guard let progressTotalDays else { return 0 }
-        return min(progressTotalDays, max(0, importedCompletedDays + completedDateKeys.count))
+        return min(progressTotalDays, totalCheckInDays)
+    }
+
+    var progressRemainingDays: Int? {
+        guard let progressTotalDays else { return nil }
+        return max(0, progressTotalDays - progressCompletedDays)
     }
 
     var isProgressFullyCompleted: Bool {
         guard let progressTotalDays else { return false }
         return progressCompletedDays >= progressTotalDays
+    }
+
+    var totalCheckInDays: Int {
+        max(0, importedCompletedDays + completedDateKeys.count)
+    }
+
+    var goalSummaryText: String? {
+        guard scheduleKind == .dailyGoal else { return nil }
+        guard let progressTotalDays, let progressRemainingDays else {
+            return AppLocalization.format("已坚持 %d 天，累计打卡 %d 天", elapsedGoalDays(), totalCheckInDays)
+        }
+
+        return AppLocalization.format(
+            "目标 %d 天，剩余 %d 天",
+            progressTotalDays,
+            progressRemainingDays
+        )
+    }
+
+    func checkInStatus(on date: Date = Date(), calendar: Calendar = .current) -> ReminderCheckInStatus {
+        if isCompleted {
+            return .completed
+        }
+
+        if isEnabled == false {
+            return .disabled
+        }
+
+        if isOccurrenceCompleted(on: date, calendar: calendar) {
+            return .checkedInToday
+        }
+
+        if isBroken(on: date, calendar: calendar) {
+            return .broken
+        }
+
+        if canCheckIn(on: date, calendar: calendar) {
+            return .ready
+        }
+
+        if occurrenceDates(maxCount: 1, from: date, calendar: calendar).isEmpty == false {
+            return .upcoming
+        }
+
+        return .ended
+    }
+
+    func canCheckIn(on date: Date = Date(), calendar: Calendar = .current) -> Bool {
+        guard isEnabled,
+              isCompleted == false,
+              occurrenceDate(on: date, calendar: calendar) != nil,
+              isOccurrenceCompleted(on: date, calendar: calendar) == false else {
+            return false
+        }
+
+        if scheduleKind == .continuousDays {
+            return firstMissedCheckInDate(before: date, calendar: calendar) == nil
+        }
+
+        return true
+    }
+
+    func isBroken(on date: Date = Date(), calendar: Calendar = .current) -> Bool {
+        firstMissedCheckInDate(before: date, calendar: calendar) != nil
+    }
+
+    func firstMissedCheckInDate(before date: Date = Date(), calendar: Calendar = .current) -> Date? {
+        guard scheduleKind == .continuousDays, isCompleted == false else { return nil }
+
+        let startDay = calendar.startOfDay(for: scheduledDate)
+        let today = calendar.startOfDay(for: date)
+        guard let yesterday = calendar.date(byAdding: .day, value: -1, to: today) else { return nil }
+
+        let endDay = continuousEndDay(calendar: calendar)
+        let lastDayToCheck = min(yesterday, endDay)
+        guard lastDayToCheck >= startDay else { return nil }
+
+        var currentDay = startDay
+        while currentDay <= lastDayToCheck {
+            if isOccurrenceCompleted(on: currentDay, calendar: calendar) == false {
+                return currentDay
+            }
+
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: currentDay) else {
+                break
+            }
+            currentDay = nextDay
+        }
+
+        return nil
+    }
+
+    func currentStreakDays(on date: Date = Date(), calendar: Calendar = .current) -> Int {
+        let startDay = calendar.startOfDay(for: scheduledDate)
+        var currentDay = calendar.startOfDay(for: date)
+
+        if isOccurrenceCompleted(on: currentDay, calendar: calendar) == false {
+            guard let previousDay = calendar.date(byAdding: .day, value: -1, to: currentDay) else {
+                return 0
+            }
+            currentDay = previousDay
+        }
+
+        var count = 0
+        while currentDay >= startDay {
+            guard isOccurrenceCompleted(on: currentDay, calendar: calendar) else {
+                break
+            }
+
+            count += 1
+            guard let previousDay = calendar.date(byAdding: .day, value: -1, to: currentDay) else {
+                break
+            }
+            currentDay = previousDay
+        }
+
+        return count
+    }
+
+    func longestStreakDays(calendar: Calendar = .current) -> Int {
+        let days = completedDateKeys
+            .compactMap { Self.date(fromDateKey: $0, calendar: calendar) }
+            .sorted()
+
+        guard days.isEmpty == false else { return 0 }
+
+        var longest = 1
+        var current = 1
+
+        for index in days.indices.dropFirst() {
+            let previousDay = days[days.index(before: index)]
+            let day = days[index]
+            let distance = calendar.dateComponents([.day], from: previousDay, to: day).day ?? 0
+
+            if distance == 1 {
+                current += 1
+            } else if distance > 1 {
+                longest = max(longest, current)
+                current = 1
+            }
+        }
+
+        return max(longest, current)
+    }
+
+    func elapsedGoalDays(on date: Date = Date(), calendar: Calendar = .current) -> Int {
+        numberOfDays(from: scheduledDate, through: max(date, scheduledDate), calendar: calendar)
     }
 
     func occurrenceDates(
@@ -228,6 +409,15 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
                 endDate: endDate,
                 maxCount: maxCount,
                 from: referenceDate,
+                calendar: calendar,
+                requiresContinuousChain: true
+            )
+        case .dailyGoal:
+            return recurringDates(
+                allowedWeekdays: nil,
+                endDate: nil,
+                maxCount: maxCount,
+                from: referenceDate,
                 calendar: calendar
             )
         }
@@ -258,23 +448,38 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
             scheduledAt: scheduledAt,
             leadTimeMinutes: leadTimeMinutes,
             isEnabled: true,
-            scheduleKindRawValue: ReminderScheduleKind.single.rawValue,
+            scheduleKindRawValue: ReminderScheduleKind.dailyGoal.rawValue,
             endAt: nil,
             reminderTimeMinutes: minutesSinceStartOfDay(for: Date(timeIntervalSince1970: Double(scheduledAt) / 1000)),
             weekdaysRawValue: nil,
             continuousDays: 30,
             completedAt: nil,
             importedCompletedDays: 0,
-            completedDateKeysRawValue: nil
+            completedDateKeysRawValue: nil,
+            completionRecordsRawValue: nil
         )
     }
 
-    mutating func markOccurrenceCompleted(on date: Date = Date(), calendar: Calendar = .current) {
+    mutating func markOccurrenceCompleted(
+        on date: Date = Date(),
+        calendar: Calendar = .current,
+        kind: ReminderCheckInCompletionKind = .checkIn,
+        note: String? = nil
+    ) {
         guard let occurrenceDate = occurrenceDate(on: date, calendar: calendar) else { return }
 
-        var keys = completedDateKeys
-        keys.insert(Self.dateKey(for: occurrenceDate, calendar: calendar))
-        completedDateKeysRawValue = Self.rawValue(for: keys)
+        let dateKey = Self.dateKey(for: occurrenceDate, calendar: calendar)
+        let normalizedNote = note?.trimmingCharacters(in: .whitespacesAndNewlines)
+        var records = completionRecords.filter { $0.dateKey != dateKey }
+        records.append(
+            ReminderCheckInCompletion.make(
+                dateKey: dateKey,
+                kind: kind,
+                note: normalizedNote?.isEmpty == true ? nil : normalizedNote
+            )
+        )
+        completionRecordsRawValue = Self.rawValue(for: records)
+        completedDateKeysRawValue = Self.rawValue(for: Set(records.map(\.dateKey)))
 
         if scheduleKind == .single || isProgressFullyCompleted {
             completedAt = SyncableTimestamp.nowMilliseconds()
@@ -284,6 +489,7 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
     mutating func clearCompletion() {
         completedAt = nil
         completedDateKeysRawValue = nil
+        completionRecordsRawValue = nil
     }
 
     nonisolated static func weekdayTitle(_ weekday: Int) -> String {
@@ -320,9 +526,33 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         return String(format: "%04d-%02d-%02d", year, month, day)
     }
 
+    nonisolated static func date(fromDateKey dateKey: String, calendar: Calendar = .current) -> Date? {
+        let components = dateKey.split(separator: "-").compactMap { Int($0) }
+        guard components.count == 3 else { return nil }
+
+        return calendar.date(
+            from: DateComponents(
+                calendar: calendar,
+                year: components[0],
+                month: components[1],
+                day: components[2]
+            )
+        )
+    }
+
     private nonisolated static func rawValue(for dateKeys: Set<String>) -> String? {
         let value = dateKeys.sorted().joined(separator: ",")
         return value.isEmpty ? nil : value
+    }
+
+    private nonisolated static func rawValue(for completionRecords: [ReminderCheckInCompletion]) -> String? {
+        let sortedRecords = completionRecords.sorted { $0.dateKey < $1.dateKey }
+        guard sortedRecords.isEmpty == false,
+              let data = try? JSONEncoder().encode(sortedRecords) else {
+            return nil
+        }
+
+        return String(data: data, encoding: .utf8)
     }
 
     func occurrenceDate(on date: Date, calendar: Calendar = .current) -> Date? {
@@ -340,11 +570,9 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         case .weekdays, .weekly:
             effectiveEndDay = endDate.map { calendar.startOfDay(for: $0) }
         case .continuousDays:
-            effectiveEndDay = calendar.date(
-                byAdding: .day,
-                value: max(1, continuousDays) - 1,
-                to: startDay
-            )
+            effectiveEndDay = continuousEndDay(calendar: calendar)
+        case .dailyGoal:
+            effectiveEndDay = nil
         }
 
         if let effectiveEndDay, targetDay > effectiveEndDay {
@@ -357,7 +585,7 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
             guard (2...6).contains(weekday) else { return nil }
         case .weekly:
             guard selectedWeekdays.contains(weekday) else { return nil }
-        case .single, .dateRange, .continuousDays:
+        case .single, .dateRange, .continuousDays, .dailyGoal:
             break
         }
 
@@ -369,7 +597,8 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         endDate: Date?,
         maxCount: Int,
         from referenceDate: Date,
-        calendar: Calendar
+        calendar: Calendar,
+        requiresContinuousChain: Bool = false
     ) -> [Date] {
         var dates: [Date] = []
         let startDay = calendar.startOfDay(for: scheduledDate)
@@ -387,6 +616,7 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
             let weekdayMatches = allowedWeekdays?.contains(weekday) ?? true
 
             if weekdayMatches,
+               (requiresContinuousChain == false || isContinuityReady(for: currentDay, calendar: calendar)),
                let occurrence = dateByApplyingReminderTime(to: currentDay, calendar: calendar),
                isOccurrenceCompleted(on: occurrence, calendar: calendar) == false,
                occurrence > referenceDate {
@@ -428,5 +658,36 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
 
     private func isOccurrenceCompleted(on date: Date, calendar: Calendar = .current) -> Bool {
         completedDateKeys.contains(Self.dateKey(for: date, calendar: calendar))
+    }
+
+    private func continuousEndDay(calendar: Calendar) -> Date {
+        calendar.date(
+            byAdding: .day,
+            value: max(1, continuousDays) - 1,
+            to: calendar.startOfDay(for: scheduledDate)
+        ) ?? calendar.startOfDay(for: scheduledDate)
+    }
+
+    private func isContinuityReady(for targetDay: Date, calendar: Calendar) -> Bool {
+        guard scheduleKind == .continuousDays else { return true }
+
+        let startDay = calendar.startOfDay(for: scheduledDate)
+        let targetDay = calendar.startOfDay(for: targetDay)
+        guard targetDay > startDay else { return true }
+        guard let previousDay = calendar.date(byAdding: .day, value: -1, to: targetDay) else { return true }
+
+        var currentDay = startDay
+        while currentDay <= previousDay {
+            if isOccurrenceCompleted(on: currentDay, calendar: calendar) == false {
+                return false
+            }
+
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: currentDay) else {
+                break
+            }
+            currentDay = nextDay
+        }
+
+        return true
     }
 }

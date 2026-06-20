@@ -35,6 +35,13 @@ struct ReminderHistoryEntryRow: View {
                     MetadataItemView(title: statusText, systemImage: statusSystemImage)
                 }
 
+                if let goalSummaryText = reminder.goalSummaryText {
+                    Text(goalSummaryText)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+
                 if let note = reminder.note {
                     Text(note)
                         .font(.footnote)
@@ -51,6 +58,13 @@ struct ReminderHistoryEntryRow: View {
             return AppLocalization.format("完成于 %@", AppFormatters.dateTime(milliseconds: completedAt, locale: locale))
         }
 
+        if let missedDate = reminder.firstMissedCheckInDate() {
+            return AppLocalization.format(
+                "需补签 %@",
+                AppFormatters.date(milliseconds: RemindersViewModel.milliseconds(for: missedDate), locale: locale)
+            )
+        }
+
         if let nextOccurrenceDate = reminder.nextOccurrenceDate {
             return AppLocalization.format(
                 "下次 %@",
@@ -62,42 +76,14 @@ struct ReminderHistoryEntryRow: View {
     }
 
     private var statusText: String {
-        if reminder.isCompleted {
-            return AppLocalization.string("已完成")
-        }
-
-        if reminder.isTodayCompleted {
-            return AppLocalization.string("今日已打卡")
-        }
-
-        if reminder.isEnabled == false {
-            return AppLocalization.string("已关闭")
-        }
-
-        if reminder.isUpcoming {
-            return AppLocalization.string("待打卡")
-        }
-
-        return AppLocalization.string("已结束")
+        AppLocalization.string(status.title)
     }
 
     private var statusSystemImage: String {
-        if reminder.isCompleted {
-            return "checkmark.circle.fill"
-        }
+        status.systemImage
+    }
 
-        if reminder.isTodayCompleted {
-            return "checkmark.circle"
-        }
-
-        if reminder.isEnabled == false {
-            return "bell.slash"
-        }
-
-        if reminder.isUpcoming {
-            return "circle"
-        }
-
-        return "clock.badge.exclamationmark"
+    private var status: ReminderCheckInStatus {
+        reminder.checkInStatus()
     }
 }

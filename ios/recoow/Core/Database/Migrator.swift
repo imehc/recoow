@@ -15,6 +15,7 @@ enum AppMigrator {
         V9CheckInOccurrenceCompletionSchema.register(in: &migrator)
         V10AnniversariesSchema.register(in: &migrator)
         V11AnniversaryDateCalendarSchema.register(in: &migrator)
+        V12CheckInCompletionRecordsSchema.register(in: &migrator)
         return migrator
     }
 

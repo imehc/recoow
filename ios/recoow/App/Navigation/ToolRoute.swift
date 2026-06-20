@@ -23,7 +23,7 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .itemLocator:
             "在哪里"
         case .reminders:
-            "打卡"
+            "打卡任务"
         case .bills:
             "记一笔"
         case .anniversaries:
@@ -44,7 +44,7 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .itemLocator:
             "记录物品放在哪里"
         case .reminders:
-            "打卡、日期规则与定时提醒"
+            "连续挑战、坚持目标与提醒"
         case .bills:
             "记录价格、优惠与备注"
         case .anniversaries:

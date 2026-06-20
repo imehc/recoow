@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ReminderFormView: View {
     @Environment(\.dismiss) private var dismiss
@@ -31,7 +32,7 @@ struct ReminderFormView: View {
         _scheduledDate = State(initialValue: reminder?.scheduledDate ?? Date().addingTimeInterval(3600))
         _endDate = State(initialValue: reminder?.endDate ?? Calendar.current.date(byAdding: .day, value: 6, to: reminder?.scheduledDate ?? Date().addingTimeInterval(3600)) ?? Date().addingTimeInterval(6 * 86_400))
         _reminderTime = State(initialValue: reminder?.scheduledDate ?? Date().addingTimeInterval(3600))
-        _scheduleKind = State(initialValue: reminder?.scheduleKind ?? .single)
+        _scheduleKind = State(initialValue: reminder?.scheduleKind ?? .dailyGoal)
         _selectedWeekdays = State(initialValue: Set(Self.initialWeekdays(for: reminder)))
         _continuousDays = State(initialValue: max(1, reminder?.continuousDays ?? 30))
         _importedCompletedDays = State(initialValue: max(0, reminder?.importedCompletedDays ?? 0))
@@ -61,8 +62,8 @@ struct ReminderFormView: View {
                 }
             }
 
-            Section("打卡规则") {
-                Picker("规则", selection: $scheduleKind) {
+            Section("打卡类型") {
+                Picker("类型", selection: $scheduleKind) {
                     ForEach(ReminderScheduleKind.allCases) { kind in
                         Label(kind.titleKey, systemImage: kind.systemImage)
                             .tag(kind)
@@ -100,31 +101,27 @@ struct ReminderFormView: View {
                         }
                     }
 
-                    if scheduleKind == .continuousDays {
-                        LabeledContent("连续天数") {
-                            TextField("天数", value: $continuousDays, format: .number)
-                                .keyboardType(.numberPad)
-                                .multilineTextAlignment(.trailing)
-                        }
-
-                        Stepper(value: $continuousDays, in: 1...9999) {
-                            LabeledContent("连续天数", value: AppLocalization.format("%d 天", continuousDays))
-                        }
-                    }
-
-                    if supportsProgressImport {
-                        LabeledContent("已完成天数") {
-                            TextField("天数", value: $importedCompletedDays, format: .number)
-                                .keyboardType(.numberPad)
-                                .multilineTextAlignment(.trailing)
-                        }
-                    }
-
                     DatePicker(
                         "提醒时间",
                         selection: $reminderTime,
                         displayedComponents: [.hourAndMinute]
                     )
+                }
+
+                if supportsProgressImport {
+                    if supportsEditableTargetDays {
+                        LabeledContent("目标总天数") {
+                            dayNumberField(value: $continuousDays, range: 1...9999)
+                        }
+                    }
+
+                    LabeledContent("已打卡天数") {
+                        dayNumberField(value: $importedCompletedDays, range: 0...progressTotalDays)
+                    }
+
+                    Text(AppLocalization.format("剩余 %d 天", remainingProgressDays))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
 
                 Picker("提前提醒", selection: $leadTime) {
@@ -143,7 +140,7 @@ struct ReminderFormView: View {
             )
         }
         .dismissesKeyboardOnTap(focusedField: $focusedField)
-        .navigationTitle(AppLocalization.string(reminder == nil ? "添加打卡" : "编辑打卡"))
+        .navigationTitle(AppLocalization.string(reminder == nil ? "添加打卡任务" : "编辑打卡任务"))
         .navigationBarTitleDisplayMode(.inline)
         .editablePhotoInputPresentation(
             coordinator: photoInputCoordinator,
@@ -192,7 +189,7 @@ struct ReminderFormView: View {
             return true
         }
 
-        if scheduleKind == .continuousDays && continuousDays < 1 {
+        if supportsEditableTargetDays && continuousDays < 1 {
             return true
         }
 
@@ -200,15 +197,17 @@ struct ReminderFormView: View {
             return true
         }
 
-        if isEnabled && hasFutureOccurrence == false && reminder?.isCompleted != true {
+        let record = draftRecord()
+        if isEnabled && hasOpenOccurrence == false && record.isCompleted == false && scheduleKind != .continuousDays {
             return true
         }
 
         return false
     }
 
-    private var hasFutureOccurrence: Bool {
-        draftRecord().occurrenceDates(maxCount: 1).isEmpty == false
+    private var hasOpenOccurrence: Bool {
+        let record = draftRecord()
+        return record.canCheckIn() || record.occurrenceDates(maxCount: 1).isEmpty == false
     }
 
     private var calendar: Calendar {
@@ -216,18 +215,31 @@ struct ReminderFormView: View {
     }
 
     private var supportsProgressImport: Bool {
-        scheduleKind == .dateRange || scheduleKind == .continuousDays
+        progressTotalDays > 0
+    }
+
+    private var supportsEditableTargetDays: Bool {
+        switch scheduleKind {
+        case .weekdays, .weekly, .continuousDays, .dailyGoal:
+            return true
+        case .single, .dateRange:
+            return false
+        }
     }
 
     private var progressTotalDays: Int {
         switch scheduleKind {
         case .dateRange:
             return numberOfDays(from: scheduledDate, through: endDate)
-        case .continuousDays:
+        case .weekdays, .weekly, .continuousDays, .dailyGoal:
             return max(1, continuousDays)
-        case .single, .weekdays, .weekly:
-            return 0
+        case .single:
+            return 1
         }
+    }
+
+    private var remainingProgressDays: Int {
+        max(0, progressTotalDays - normalizedImportedCompletedDays)
     }
 
     private var weekdayPicker: some View {
@@ -244,6 +256,15 @@ struct ReminderFormView: View {
                 .tint(selectedWeekdays.contains(weekday) ? .purple : .secondary)
             }
         }
+    }
+
+    private func dayNumberField(value: Binding<Int>, range: ClosedRange<Int>) -> some View {
+        TrailingIntegerTextField(
+            value: value,
+            range: range,
+            placeholder: AppLocalization.string("天数")
+        )
+            .frame(width: 96, alignment: .trailing)
     }
 
     private func cancel() {
@@ -341,5 +362,157 @@ struct ReminderFormView: View {
         }
 
         return [Calendar.current.component(.weekday, from: reminder?.scheduledDate ?? Date())]
+    }
+}
+
+private struct TrailingIntegerTextField: UIViewRepresentable {
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+    let placeholder: String
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    func makeUIView(context: Context) -> UITextField {
+        let textField = TrailingCaretTextField()
+        textField.delegate = context.coordinator
+        textField.keyboardType = .numberPad
+        textField.textAlignment = .right
+        textField.font = .preferredFont(forTextStyle: .body)
+        textField.adjustsFontForContentSizeCategory = true
+        textField.placeholder = placeholder
+        textField.text = String(value)
+        textField.inputAccessoryView = context.coordinator.makeAccessoryView()
+        textField.addTarget(
+            context.coordinator,
+            action: #selector(Coordinator.textDidChange(_:)),
+            for: .editingChanged
+        )
+        return textField
+    }
+
+    func updateUIView(_ textField: UITextField, context: Context) {
+        context.coordinator.parent = self
+        textField.placeholder = placeholder
+
+        if context.coordinator.isEditing == false {
+            let text = String(value)
+            if textField.text != text {
+                textField.text = text
+            }
+        }
+    }
+
+    final class Coordinator: NSObject, UITextFieldDelegate {
+        var parent: TrailingIntegerTextField
+        var isEditing = false
+        private var isMovingCaret = false
+
+        init(parent: TrailingIntegerTextField) {
+            self.parent = parent
+        }
+
+        func makeAccessoryView() -> UIView {
+            let toolbar = UIToolbar()
+            toolbar.sizeToFit()
+            toolbar.items = [
+                UIBarButtonItem(systemItem: .flexibleSpace),
+                UIBarButtonItem(
+                    title: AppLocalization.string("完成"),
+                    style: .done,
+                    target: self,
+                    action: #selector(doneEditing)
+                )
+            ]
+            return toolbar
+        }
+
+        func textFieldDidBeginEditing(_ textField: UITextField) {
+            isEditing = true
+            moveCaretToEnd(textField)
+        }
+
+        func textFieldDidEndEditing(_ textField: UITextField) {
+            isEditing = false
+            let clampedValue = clampedValue(for: textField.text)
+            parent.value = clampedValue
+            textField.text = String(clampedValue)
+        }
+
+        func textFieldDidChangeSelection(_ textField: UITextField) {
+            guard isEditing, isMovingCaret == false else { return }
+
+            DispatchQueue.main.async { [weak self, weak textField] in
+                guard let self, let textField, self.isEditing else { return }
+                self.moveCaretToEnd(textField)
+            }
+        }
+
+        func textField(
+            _ textField: UITextField,
+            shouldChangeCharactersIn range: NSRange,
+            replacementString string: String
+        ) -> Bool {
+            if string.rangeOfCharacter(from: CharacterSet.decimalDigits.inverted) != nil {
+                return false
+            }
+
+            let currentText = textField.text ?? ""
+            guard let textRange = Range(range, in: currentText) else {
+                return false
+            }
+
+            let nextText = currentText.replacingCharacters(in: textRange, with: string)
+            guard nextText.isEmpty == false else {
+                return true
+            }
+
+            guard let nextValue = Int(nextText) else {
+                return false
+            }
+
+            return parent.range.contains(nextValue)
+        }
+
+        @objc func textDidChange(_ textField: UITextField) {
+            guard let text = textField.text, text.isEmpty == false else {
+                return
+            }
+
+            parent.value = clampedValue(for: text)
+            moveCaretToEnd(textField)
+        }
+
+        @objc private func doneEditing() {
+            UIApplication.shared.sendAction(
+                #selector(UIResponder.resignFirstResponder),
+                to: nil,
+                from: nil,
+                for: nil
+            )
+        }
+
+        private func clampedValue(for text: String?) -> Int {
+            let value = Int(text ?? "") ?? parent.range.lowerBound
+            return min(max(value, parent.range.lowerBound), parent.range.upperBound)
+        }
+
+        private func moveCaretToEnd(_ textField: UITextField) {
+            guard isMovingCaret == false else { return }
+
+            isMovingCaret = true
+            textField.selectedTextRange = textField.textRange(
+                from: textField.endOfDocument,
+                to: textField.endOfDocument
+            )
+            isMovingCaret = false
+        }
+    }
+}
+
+private final class TrailingCaretTextField: UITextField {
+    override func closestPosition(to point: CGPoint) -> UITextPosition? {
+        endOfDocument
     }
 }

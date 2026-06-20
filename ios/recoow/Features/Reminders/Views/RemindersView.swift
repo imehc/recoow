@@ -16,7 +16,7 @@ struct RemindersView: View {
                 ProgressView("正在加载")
             }
         }
-        .navigationTitle("打卡")
+        .navigationTitle("打卡任务")
         .navigationDestination(for: ReminderRoute.self) { route in
             if let viewModel {
                 ReminderDetailView(
@@ -50,6 +50,7 @@ private struct RemindersContent: View {
     @Bindable var viewModel: RemindersViewModel
     @State private var isShowingAddReminder = false
     @State private var reminderPendingDeletion: ReminderRecord?
+    @State private var makeUpRequest: ReminderMakeUpRequest?
 
     let reminderImageTransition: Namespace.ID
 
@@ -71,15 +72,15 @@ private struct RemindersContent: View {
 
             if viewModel.reminders.isEmpty {
                 ContentUnavailableView {
-                    Label("暂无打卡", systemImage: "checkmark.circle")
+                    Label("暂无打卡任务", systemImage: "checkmark.circle")
                 } description: {
-                    Text("添加一个带日期和提醒规则的打卡")
+                    Text("添加连续挑战、坚持目标或定时打卡")
                 } actions: {
-                    Button("添加打卡", systemImage: "plus", action: showAddReminder)
+                    Button("添加打卡任务", systemImage: "plus", action: showAddReminder)
                 }
             } else {
                 if viewModel.upcomingReminders.isEmpty == false {
-                    Section("待打卡") {
+                    Section("进行中") {
                         ForEach(viewModel.upcomingReminders) { reminder in
                             NavigationLink(value: ReminderRoute(id: reminder.id)) {
                                 ReminderRow(
@@ -88,12 +89,21 @@ private struct RemindersContent: View {
                                 )
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button {
-                                    completeReminder(reminder)
-                                } label: {
-                                    Label("完成", systemImage: "checkmark.circle")
+                                if reminder.canCheckIn() {
+                                    Button {
+                                        completeReminder(reminder)
+                                    } label: {
+                                        Label("打卡", systemImage: "checkmark.circle")
+                                    }
+                                    .tint(.green)
+                                } else if let missedDate = reminder.firstMissedCheckInDate() {
+                                    Button {
+                                        makeUpRequest = ReminderMakeUpRequest(reminder: reminder, date: missedDate)
+                                    } label: {
+                                        Label("补签", systemImage: "calendar.badge.plus")
+                                    }
+                                    .tint(.orange)
                                 }
-                                .tint(.green)
 
                                 Button {
                                     requestDeleteReminder(reminder)
@@ -137,11 +147,16 @@ private struct RemindersContent: View {
         }
         .listStyle(.insetGrouped)
         .toolbar {
-            Button("添加打卡", systemImage: "plus", action: showAddReminder)
+            Button("添加打卡任务", systemImage: "plus", action: showAddReminder)
         }
         .sheet(isPresented: $isShowingAddReminder) {
             NavigationStack {
                 ReminderFormView(reminder: nil, viewModel: viewModel)
+            }
+        }
+        .sheet(item: $makeUpRequest) { request in
+            NavigationStack {
+                ReminderMakeUpSheet(request: request, viewModel: viewModel)
             }
         }
         .alert(

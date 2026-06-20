@@ -17,13 +17,23 @@ struct StatisticsCheckInProgressRow: View {
                     .foregroundStyle(progress.isCompleted ? .green : .secondary)
             }
 
-            ProgressView(value: progress.progressFraction)
-                .tint(progress.isCompleted ? .green : .blue)
+            Text(progress.detailText)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            if let progressFraction = progress.progressFraction {
+                ProgressView(value: progressFraction)
+                    .tint(progress.isCompleted ? .green : .blue)
+            }
         }
         .padding(.vertical, 4)
     }
 
     private var progressText: String {
-        "\(progress.completedDays)/\(progress.totalDays) 天"
+        guard let totalDays = progress.totalDays else {
+            return AppLocalization.format("%d 天", progress.completedDays)
+        }
+
+        return "\(progress.completedDays)/\(totalDays) 天"
     }
 }
