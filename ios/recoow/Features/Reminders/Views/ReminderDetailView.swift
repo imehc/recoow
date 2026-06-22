@@ -102,7 +102,7 @@ struct ReminderDetailView: View {
                         HStack {
                             Text("图标")
                             Spacer()
-                            ReminderIconView(memoryIcon: reminder.memoryIcon, size: 36)
+                            ReminderIconView(memoryIcon: reminder.memoryIcon, size: AppDesign.formIconSize)
                         }
                     }
 
@@ -113,32 +113,22 @@ struct ReminderDetailView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("编辑", systemImage: "pencil") {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button("删除", systemImage: "trash", role: .destructive) {
+                    reminderPendingDeletion = reminder
+                }
+                .tint(.red)
+
+                Button("编辑", systemImage: "square.and.pencil") {
                     reminderForEditing = reminder
                 }
             }
 
-            ToolbarItem(placement: .bottomBar) {
-                HStack {
-                    if reminder.isCompleted {
-                        Button("恢复", systemImage: "arrow.uturn.backward") {
-                            setCompleted(reminder, isCompleted: false)
-                        }
-                    } else if reminder.canCheckIn() {
-                        Button("打卡", systemImage: "checkmark.circle") {
-                            setCompleted(reminder, isCompleted: true)
-                        }
-                    } else if let missedDate = reminder.firstMissedCheckInDate() {
-                        Button("补签", systemImage: "calendar.badge.plus") {
-                            makeUpRequest = ReminderMakeUpRequest(reminder: reminder, date: missedDate)
-                        }
-                    }
-
-                    Spacer()
-
-                    Button("删除", systemImage: "trash", role: .destructive) {
-                        reminderPendingDeletion = reminder
+            if hasFooterAction(for: reminder) {
+                ToolbarItem(placement: .bottomBar) {
+                    HStack {
+                        footerAction(for: reminder)
+                        Spacer()
                     }
                 }
             }
@@ -161,6 +151,27 @@ struct ReminderDetailView: View {
 
     private func statusText(for reminder: ReminderRecord) -> String {
         AppLocalization.string(reminder.checkInStatus().title)
+    }
+
+    private func hasFooterAction(for reminder: ReminderRecord) -> Bool {
+        reminder.isCompleted || reminder.canCheckIn() || reminder.firstMissedCheckInDate() != nil
+    }
+
+    @ViewBuilder
+    private func footerAction(for reminder: ReminderRecord) -> some View {
+        if reminder.isCompleted {
+            Button("恢复", systemImage: "arrow.uturn.backward") {
+                setCompleted(reminder, isCompleted: false)
+            }
+        } else if reminder.canCheckIn() {
+            Button("打卡", systemImage: "checkmark.circle") {
+                setCompleted(reminder, isCompleted: true)
+            }
+        } else if let missedDate = reminder.firstMissedCheckInDate() {
+            Button("补签", systemImage: "calendar.badge.plus") {
+                makeUpRequest = ReminderMakeUpRequest(reminder: reminder, date: missedDate)
+            }
+        }
     }
 
     private func deleteReminder(id: String) {

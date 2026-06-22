@@ -7,10 +7,10 @@ struct BillRow: View {
     var body: some View {
         HStack(spacing: 12) {
             if bill.imageData != nil {
-                PhotoThumbnailView(imageData: bill.imageData, systemImage: "receipt.fill", size: 56)
+                PhotoThumbnailView(imageData: bill.imageData, systemImage: "receipt.fill", size: AppDesign.listIconSize)
                     .matchedTransitionSource(id: bill.id, in: billImageTransition)
             } else {
-                BillIconView(bill: bill, size: 56)
+                BillIconView(bill: bill, size: AppDesign.listIconSize)
             }
 
             VStack(alignment: .leading, spacing: 6) {

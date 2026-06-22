@@ -45,9 +45,4 @@ enum AppLanguagePreference: String, CaseIterable, Identifiable {
         guard let localeIdentifier else { return .autoupdatingCurrent }
         return Locale(identifier: localeIdentifier)
     }
-
-    nonisolated var appleLanguagesValue: [String]? {
-        guard let localeIdentifier else { return nil }
-        return [localeIdentifier]
-    }
 }

@@ -7,7 +7,7 @@ struct ReminderIconPickerRow: View {
     var body: some View {
         HStack {
             Button(action: showIconSelection) {
-                ReminderIconView(memoryIcon: selection, size: 64)
+                ReminderIconView(memoryIcon: selection, size: AppDesign.historyIconSize)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("选择图标")

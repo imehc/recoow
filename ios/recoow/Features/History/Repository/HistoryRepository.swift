@@ -34,6 +34,10 @@ final class HistoryRepository: @unchecked Sendable {
                 entries += try fetchBills(db: db, request: request, limit: sourceLimit).map(HistoryEntry.bill)
             }
 
+            if shouldInclude(.diary, route: request.route) {
+                entries += try fetchDiaries(db: db, request: request, limit: sourceLimit).map(HistoryEntry.diary)
+            }
+
             if shouldInclude(.anniversaries, route: request.route) {
                 entries += try fetchAnniversaries(db: db, request: request, limit: sourceLimit).map(HistoryEntry.anniversary)
             }
@@ -95,6 +99,13 @@ final class HistoryRepository: @unchecked Sendable {
             )
             + fetchTimestamps(
                 db: db,
+                table: DiaryEntry.databaseTableName,
+                timestampColumn: "occurred_at",
+                start: start,
+                end: end
+            )
+            + fetchTimestamps(
+                db: db,
                 table: AnniversaryRecord.databaseTableName,
                 timestampColumn: "occurred_at",
                 start: start,
@@ -115,6 +126,7 @@ final class HistoryRepository: @unchecked Sendable {
             || StoredItem.filter(Column("deleted_at") == nil).fetchCount(db) > 0
             || ReminderRecord.filter(Column("deleted_at") == nil).fetchCount(db) > 0
             || BillRecord.filter(Column("deleted_at") == nil).fetchCount(db) > 0
+            || DiaryEntry.filter(Column("deleted_at") == nil).fetchCount(db) > 0
             || AnniversaryRecord.filter(Column("deleted_at") == nil).fetchCount(db) > 0
         }
     }
@@ -142,6 +154,15 @@ final class HistoryRepository: @unchecked Sendable {
                 .filter(Column("deleted_at") == nil)
                 .fetchAll(db)
             return Dictionary(uniqueKeysWithValues: categories.map { ($0.id, $0.name) })
+        }
+    }
+
+    func fetchDiaryTagNames() throws -> [String: String] {
+        try database.reader.read { db in
+            let tags = try DiaryTag
+                .filter(Column("deleted_at") == nil)
+                .fetchAll(db)
+            return Dictionary(uniqueKeysWithValues: tags.map { ($0.id, $0.name) })
         }
     }
 
@@ -222,6 +243,24 @@ final class HistoryRepository: @unchecked Sendable {
         query = applySearchFilter(
             query,
             columns: ["title", "note", "transaction_type", "category", "payment_method"],
+            searchText: request.searchText
+        )
+
+        return try query
+            .order(Column("occurred_at").desc, Column("id").desc)
+            .limit(limit)
+            .fetchAll(db)
+    }
+
+    private func fetchDiaries(db: Database, request: HistoryPageRequest, limit: Int) throws -> [DiaryEntry] {
+        var query = DiaryEntry
+            .filter(Column("deleted_at") == nil)
+
+        query = applyDateFilter(query, timestampColumn: "occurred_at", interval: request.dateInterval)
+        query = applyCursorFilter(query, timestampColumn: "occurred_at", cursor: request.cursor)
+        query = applySearchFilter(
+            query,
+            columns: ["title", "content", "mood", "tags_json"],
             searchText: request.searchText
         )
 

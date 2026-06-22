@@ -43,6 +43,8 @@ struct HistoryEntryRow: View {
                 bill: bill,
                 billImageTransition: billImageTransition
             )
+        case .diary(let diary):
+            DiaryHistoryEntryRow(entry: diary)
         case .anniversary(let anniversary):
             AnniversaryHistoryEntryRow(anniversary: anniversary)
         }

@@ -3,7 +3,7 @@ import SwiftUI
 struct DecisionChoiceRecordRow: View {
     let record: DecisionChoiceRecord
     var showsCollectionTitle = true
-    var thumbnailSize: CGFloat = 64
+    var thumbnailSize: CGFloat = AppDesign.historyIconSize
     var choiceRecordImageTransition: Namespace.ID? = nil
 
     var body: some View {

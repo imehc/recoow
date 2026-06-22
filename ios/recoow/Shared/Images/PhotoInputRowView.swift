@@ -4,16 +4,20 @@ struct PhotoInputRowView: View {
     let imageData: Data?
     let systemImage: String
     let isPreparingPhoto: Bool
+    var titleText: String?
+    var statusTextOverride: String?
+    var accessibilityLabelText: String?
+    var accessibilityHintText: String?
     let onPreviewPhoto: () -> Void
     let onSourceRequest: () -> Void
 
     var body: some View {
         HStack(spacing: 14) {
             if imageData == nil {
-                PhotoThumbnailView(imageData: imageData, systemImage: systemImage, size: 88)
+                PhotoThumbnailView(imageData: imageData, systemImage: systemImage, size: AppDesign.largeThumbnailSize)
             } else {
                 Button(action: onPreviewPhoto) {
-                    PhotoThumbnailView(imageData: imageData, systemImage: systemImage, size: 88)
+                    PhotoThumbnailView(imageData: imageData, systemImage: systemImage, size: AppDesign.largeThumbnailSize)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(AppLocalization.string("预览图片"))
@@ -23,7 +27,7 @@ struct PhotoInputRowView: View {
             Button(action: onSourceRequest) {
                 HStack(spacing: 14) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(AppLocalization.string(imageData == nil ? "选择照片" : "更换照片"))
+                        Text(AppLocalization.string(titleText ?? (imageData == nil ? "选择照片" : "更换照片")))
                             .foregroundStyle(.primary)
 
                         Text(statusText)
@@ -41,19 +45,21 @@ struct PhotoInputRowView: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
-                .frame(maxWidth: .infinity, minHeight: 88)
+                .frame(maxWidth: .infinity, minHeight: AppDesign.largeThumbnailSize)
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(AppLocalization.string(imageData == nil ? "添加图片" : "更换图片"))
-            .accessibilityHint(AppLocalization.string("选择照片或拍照"))
+            .accessibilityLabel(AppLocalization.string(accessibilityLabelText ?? (imageData == nil ? "添加图片" : "更换图片")))
+            .accessibilityHint(AppLocalization.string(accessibilityHintText ?? "选择照片或拍照"))
             .disabled(isPreparingPhoto)
         }
         .padding(.vertical, 6)
     }
 
     private var statusText: String {
-        if isPreparingPhoto {
+        if let statusTextOverride {
+            AppLocalization.string(statusTextOverride)
+        } else if isPreparingPhoto {
             AppLocalization.string("正在准备编辑")
         } else if imageData == nil {
             AppLocalization.string("轻点右侧选择照片或拍照")

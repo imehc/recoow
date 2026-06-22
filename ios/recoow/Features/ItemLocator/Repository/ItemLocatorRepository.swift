@@ -98,6 +98,16 @@ final class ItemLocatorRepository: @unchecked Sendable {
         }
     }
 
+    func fetchRecentItems(limit: Int = 50) throws -> [StoredItem] {
+        try database.reader.read { db in
+            try StoredItem
+                .filter(Column("deleted_at") == nil)
+                .order(Column("updated_at").desc)
+                .limit(limit)
+                .fetchAll(db)
+        }
+    }
+
     func fetchCategories() throws -> [ItemCategory] {
         try database.reader.read { db in
             try ItemCategory

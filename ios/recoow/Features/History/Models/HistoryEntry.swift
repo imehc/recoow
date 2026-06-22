@@ -6,6 +6,7 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
     case storedItem(StoredItem)
     case reminder(ReminderRecord)
     case bill(BillRecord)
+    case diary(DiaryEntry)
     case anniversary(AnniversaryRecord)
 
     var id: String {
@@ -20,6 +21,8 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
             "reminder:\(reminder.id)"
         case .bill(let bill):
             "bill:\(bill.id)"
+        case .diary(let diary):
+            "diary:\(diary.id)"
         case .anniversary(let anniversary):
             "anniversary:\(anniversary.id)"
         }
@@ -37,6 +40,8 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
             reminder.scheduledAt
         case .bill(let bill):
             bill.occurredAt
+        case .diary(let diary):
+            diary.occurredAt
         case .anniversary(let anniversary):
             anniversary.occurredAt
         }
@@ -54,6 +59,8 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
             .reminders
         case .bill:
             .bills
+        case .diary:
+            .diary
         case .anniversary:
             .anniversaries
         }
@@ -75,6 +82,8 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
             .reminder(reminder.id)
         case .bill(let bill):
             .bill(bill.id)
+        case .diary(let diary):
+            .diary(diary.id)
         case .anniversary(let anniversary):
             .anniversary(anniversary.id)
         }
@@ -92,6 +101,8 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
             reminder.title
         case .bill(let bill):
             bill.title
+        case .diary(let diary):
+            diary.title
         case .anniversary(let anniversary):
             anniversary.title
         }
@@ -120,6 +131,11 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
     var billID: String? {
         guard case .bill(let bill) = self else { return nil }
         return bill.id
+    }
+
+    var diaryID: String? {
+        guard case .diary(let diary) = self else { return nil }
+        return diary.id
     }
 
     var anniversaryID: String? {

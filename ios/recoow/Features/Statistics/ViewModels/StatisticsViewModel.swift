@@ -9,6 +9,7 @@ final class StatisticsViewModel {
     var items: [StoredItem] = []
     var reminders: [ReminderRecord] = []
     var bills: [BillRecord] = []
+    var diaries: [DiaryEntry] = []
     var anniversaries: [AnniversaryRecord] = []
 
     @ObservationIgnored private let trackRepository: TrackRepository
@@ -16,6 +17,7 @@ final class StatisticsViewModel {
     @ObservationIgnored private let itemLocatorRepository: ItemLocatorRepository
     @ObservationIgnored private let reminderRepository: ReminderRepository
     @ObservationIgnored private let billRepository: BillRepository
+    @ObservationIgnored private let diaryRepository: DiaryRepository
     @ObservationIgnored private let anniversaryRepository: AnniversaryRepository
     @ObservationIgnored private var observationTasks: [Task<Void, Never>] = []
 
@@ -28,6 +30,7 @@ final class StatisticsViewModel {
         itemLocatorRepository: ItemLocatorRepository,
         reminderRepository: ReminderRepository,
         billRepository: BillRepository,
+        diaryRepository: DiaryRepository,
         anniversaryRepository: AnniversaryRepository
     ) {
         self.trackRepository = trackRepository
@@ -35,6 +38,7 @@ final class StatisticsViewModel {
         self.itemLocatorRepository = itemLocatorRepository
         self.reminderRepository = reminderRepository
         self.billRepository = billRepository
+        self.diaryRepository = diaryRepository
         self.anniversaryRepository = anniversaryRepository
     }
 
@@ -43,7 +47,7 @@ final class StatisticsViewModel {
     }
 
     var totalRecordCount: Int {
-        tracks.count + decisionRecords.count + items.count + reminders.count + bills.count + anniversaries.count
+        tracks.count + decisionRecords.count + items.count + reminders.count + bills.count + diaries.count + anniversaries.count
     }
 
     var todayRecordCount: Int {
@@ -69,6 +73,7 @@ final class StatisticsViewModel {
             items: items,
             reminders: reminders,
             bills: bills,
+            diaries: diaries,
             anniversaries: anniversaries
         )
 
@@ -143,6 +148,7 @@ final class StatisticsViewModel {
         observeItems()
         observeReminders()
         observeBills()
+        observeDiaries()
         observeAnniversaries()
     }
 
@@ -232,6 +238,7 @@ final class StatisticsViewModel {
         + items.map { date(milliseconds: $0.updatedAt) }
         + reminders.map { date(milliseconds: $0.scheduledAt) }
         + bills.map(\.occurredDate)
+        + diaries.map(\.occurredDate)
         + anniversaries.map(\.occurredDate)
     }
 
@@ -310,6 +317,22 @@ final class StatisticsViewModel {
                     self.removeError(prefix: "bills")
                 case .failure(let error):
                     self.setError(error.localizedDescription, prefix: "bills")
+                }
+            }
+        })
+    }
+
+    private func observeDiaries() {
+        observationTasks.append(Task { [weak self] in
+            guard let self else { return }
+
+            for await result in diaryRepository.observeEntries() {
+                switch result {
+                case .success(let diaries):
+                    self.diaries = diaries
+                    self.removeError(prefix: "diaries")
+                case .failure(let error):
+                    self.setError(error.localizedDescription, prefix: "diaries")
                 }
             }
         })

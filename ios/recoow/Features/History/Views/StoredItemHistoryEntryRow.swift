@@ -10,7 +10,7 @@ struct StoredItemHistoryEntryRow: View {
     var body: some View {
         HStack(spacing: 12) {
             if item.imageData != nil {
-                PhotoThumbnailView(imageData: item.imageData, systemImage: "shippingbox")
+                PhotoThumbnailView(imageData: item.imageData, systemImage: "shippingbox", size: AppDesign.historyIconSize)
                     .matchedTransitionSource(id: item.id, in: itemImageTransition)
             }
 

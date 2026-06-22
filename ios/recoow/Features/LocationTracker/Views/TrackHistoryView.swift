@@ -8,6 +8,7 @@ struct TrackHistoryView: View {
     @State private var itemLocatorViewModel: ItemLocatorViewModel?
     @State private var remindersViewModel: RemindersViewModel?
     @State private var billsViewModel: BillsViewModel?
+    @State private var diaryViewModel: DiaryViewModel?
     @State private var anniversariesViewModel: AnniversariesViewModel?
     @Namespace private var choiceRecordImageTransition
     @Namespace private var itemImageTransition
@@ -22,6 +23,7 @@ struct TrackHistoryView: View {
                let itemLocatorViewModel,
                let remindersViewModel,
                let billsViewModel,
+               let diaryViewModel,
                let anniversariesViewModel {
                 TrackHistoryContent(
                     historyViewModel: historyViewModel,
@@ -30,6 +32,7 @@ struct TrackHistoryView: View {
                     itemLocatorViewModel: itemLocatorViewModel,
                     remindersViewModel: remindersViewModel,
                     billsViewModel: billsViewModel,
+                    diaryViewModel: diaryViewModel,
                     anniversariesViewModel: anniversariesViewModel,
                     choiceRecordImageTransition: choiceRecordImageTransition,
                     itemImageTransition: itemImageTransition,
@@ -71,6 +74,7 @@ struct TrackHistoryView: View {
 
             if itemLocatorViewModel == nil {
                 let model = container.makeItemLocatorViewModel()
+                model.startObserving()
                 itemLocatorViewModel = model
             }
 
@@ -82,6 +86,11 @@ struct TrackHistoryView: View {
             if billsViewModel == nil {
                 let model = container.makeBillsViewModel()
                 billsViewModel = model
+            }
+
+            if diaryViewModel == nil {
+                let model = container.makeDiaryViewModel()
+                diaryViewModel = model
             }
 
             if anniversariesViewModel == nil {
@@ -125,6 +134,13 @@ struct TrackHistoryView: View {
                     billImageTransition: imageTransition(for: route)
                 )
             }
+        case .diary(let id):
+            if let diaryViewModel {
+                DiaryDetailView(
+                    viewModel: diaryViewModel,
+                    diaryID: id
+                )
+            }
         case .anniversary(let id):
             if let anniversariesViewModel {
                 AnniversaryDetailView(
@@ -158,7 +174,7 @@ struct TrackHistoryView: View {
             }
             return billImageTransition
 
-        case .track, .storedItem, .anniversary:
+        case .track, .storedItem, .diary, .anniversary:
             return nil
         }
     }
@@ -172,6 +188,7 @@ private struct TrackHistoryContent: View {
     @Bindable var itemLocatorViewModel: ItemLocatorViewModel
     @Bindable var remindersViewModel: RemindersViewModel
     @Bindable var billsViewModel: BillsViewModel
+    @Bindable var diaryViewModel: DiaryViewModel
     @Bindable var anniversariesViewModel: AnniversariesViewModel
     @State private var selectedEntryIDs = Set<String>()
     @State private var deletionConfirmation: HistoryDeletionConfirmation?
@@ -234,6 +251,13 @@ private struct TrackHistoryContent: View {
                 }
 
                 if let errorMessage = billsViewModel.errorMessage {
+                    Section {
+                        Label(errorMessage, systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.red)
+                    }
+                }
+
+                if let errorMessage = diaryViewModel.errorMessage {
                     Section {
                         Label(errorMessage, systemImage: "exclamationmark.triangle")
                             .foregroundStyle(.red)
@@ -502,6 +526,7 @@ private struct TrackHistoryContent: View {
             }
             await remindersViewModel.deleteReminders(ids: plan.reminderIDs)
             await billsViewModel.deleteBills(ids: plan.billIDs)
+            await diaryViewModel.deleteEntries(ids: plan.diaryIDs)
             await anniversariesViewModel.deleteAnniversaries(ids: plan.anniversaryIDs)
             historyViewModel.removeEntries(ids: plan.entryIDs)
             await reloadHistoryEntries()

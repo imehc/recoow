@@ -7,11 +7,12 @@ struct StatisticsFeatureUsageRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: summary.route.systemImage)
-                .font(.headline)
-                .foregroundStyle(summary.route.tint)
-                .frame(width: 34, height: 34)
-                .background(summary.route.tint.opacity(0.12), in: .rect(cornerRadius: 8))
+            AppIconTileView(
+                systemImage: summary.route.systemImage,
+                tint: summary.route.tint,
+                size: AppDesign.compactIconSize,
+                backgroundOpacity: 0.12
+            )
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(summary.route.titleKey)

@@ -7,7 +7,7 @@ struct ReminderIconSelectionView: View {
     @FocusState private var focusedField: String?
 
     private let columns = [
-        GridItem(.adaptive(minimum: 56), spacing: 14)
+        GridItem(.adaptive(minimum: AppDesign.listIconSize), spacing: 14)
     ]
 
     var body: some View {
@@ -18,10 +18,10 @@ struct ReminderIconSelectionView: View {
                         Button {
                             select(icon.rawValue)
                         } label: {
-                            ReminderIconView(memoryIcon: icon.rawValue, size: 56)
+                            ReminderIconView(memoryIcon: icon.rawValue, size: AppDesign.listIconSize)
                                 .overlay {
                                     if selection == icon.rawValue {
-                                        RoundedRectangle(cornerRadius: AppDesign.cornerRadius)
+                                        RoundedRectangle(cornerRadius: AppDesign.iconCornerRadius)
                                             .stroke(.purple, lineWidth: 2)
                                     }
                                 }

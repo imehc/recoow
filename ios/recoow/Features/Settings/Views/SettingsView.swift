@@ -15,9 +15,9 @@ struct SettingsView: View {
                     )
                 }
             } header: {
-                Text("主页功能入口")
+                Text(AppLocalization.string("主页功能入口"))
             }
         }
-        .navigationTitle("设置")
+        .navigationTitle(AppLocalization.string("设置"))
     }
 }

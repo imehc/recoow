@@ -76,15 +76,14 @@ struct BillDetailView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("编辑", systemImage: "pencil") {
-                    billForEditing = bill
-                }
-            }
-
-            ToolbarItem(placement: .bottomBar) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 Button("删除", systemImage: "trash", role: .destructive) {
                     billPendingDeletion = bill
+                }
+                .tint(.red)
+
+                Button("编辑", systemImage: "square.and.pencil") {
+                    billForEditing = bill
                 }
             }
         }

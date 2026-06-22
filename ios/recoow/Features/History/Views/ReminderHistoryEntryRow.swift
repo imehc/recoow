@@ -9,10 +9,10 @@ struct ReminderHistoryEntryRow: View {
     var body: some View {
         HStack(spacing: 12) {
             if reminder.imageData != nil {
-                PhotoThumbnailView(imageData: reminder.imageData, systemImage: "bell.fill", size: 64)
+                PhotoThumbnailView(imageData: reminder.imageData, systemImage: "bell.fill", size: AppDesign.historyIconSize)
                     .matchedTransitionSource(id: reminder.id, in: reminderImageTransition)
             } else {
-                ReminderIconView(memoryIcon: reminder.memoryIcon, size: 64)
+                ReminderIconView(memoryIcon: reminder.memoryIcon, size: AppDesign.historyIconSize)
             }
 
             VStack(alignment: .leading, spacing: 6) {

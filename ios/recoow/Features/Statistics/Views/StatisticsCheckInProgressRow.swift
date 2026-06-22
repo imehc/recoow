@@ -34,6 +34,6 @@ struct StatisticsCheckInProgressRow: View {
             return AppLocalization.format("%d 天", progress.completedDays)
         }
 
-        return "\(progress.completedDays)/\(totalDays) 天"
+        return AppLocalization.format("%d/%d 天", progress.completedDays, totalDays)
     }
 }

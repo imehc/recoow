@@ -9,6 +9,7 @@ struct BillCategoryIconView: View {
             .font(.system(size: size * 0.42, weight: .semibold))
             .foregroundStyle(.white)
             .frame(width: size, height: size)
-            .background(.teal.gradient, in: RoundedRectangle(cornerRadius: 8))
+            .background(.teal.gradient, in: .rect(cornerRadius: AppDesign.iconCornerRadius))
+            .accessibilityHidden(true)
     }
 }

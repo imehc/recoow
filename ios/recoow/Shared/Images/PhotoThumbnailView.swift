@@ -4,7 +4,7 @@ import UIKit
 struct PhotoThumbnailView: View {
     let imageData: Data?
     let systemImage: String
-    var size: CGFloat = 64
+    var size: CGFloat = AppDesign.listIconSize
 
     var body: some View {
         Group {
@@ -21,7 +21,7 @@ struct PhotoThumbnailView: View {
             }
         }
         .frame(width: size, height: size)
-        .clipShape(.rect(cornerRadius: AppDesign.cornerRadius))
+        .clipShape(.rect(cornerRadius: AppDesign.iconCornerRadius))
         .accessibilityHidden(true)
     }
 }

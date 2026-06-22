@@ -7,10 +7,10 @@ import SwiftUI
 final class AppPreferences {
     @ObservationIgnored private let defaults: UserDefaults?
 
+    // 语言切换只更新应用内偏好和 SwiftUI locale，不在运行时写 AppleLanguages，避免系统本地化缓存与当前视图树状态不一致。
     var language: AppLanguagePreference {
         didSet {
             defaults?.set(language.rawValue, forKey: AppPreferenceStorageKeys.language)
-            updateAppleLanguages()
         }
     }
 
@@ -28,8 +28,6 @@ final class AppPreferences {
 
         let storedAppearance = defaults?.string(forKey: AppPreferenceStorageKeys.appearance)
         appearance = storedAppearance.flatMap(AppAppearancePreference.init(rawValue:)) ?? .system
-
-        updateAppleLanguages()
     }
 
     var locale: Locale {
@@ -38,15 +36,5 @@ final class AppPreferences {
 
     var colorScheme: ColorScheme? {
         appearance.colorScheme
-    }
-
-    private func updateAppleLanguages() {
-        guard let defaults else { return }
-
-        if let appleLanguagesValue = language.appleLanguagesValue {
-            defaults.set(appleLanguagesValue, forKey: "AppleLanguages")
-        } else {
-            defaults.removeObject(forKey: "AppleLanguages")
-        }
     }
 }

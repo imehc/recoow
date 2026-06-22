@@ -9,7 +9,7 @@ struct DecisionChoiceHistoryEntryRow: View {
     var body: some View {
         HStack(spacing: 12) {
             if let imageData = record.optionImageData {
-                PhotoThumbnailView(imageData: imageData, systemImage: "sparkles", size: 64)
+                PhotoThumbnailView(imageData: imageData, systemImage: "sparkles", size: AppDesign.historyIconSize)
                     .matchedTransitionSource(id: record.id, in: choiceRecordImageTransition)
             }
 

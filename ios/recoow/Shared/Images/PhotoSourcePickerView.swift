@@ -6,28 +6,37 @@ struct PhotoSourcePickerView: View {
     @State private var mode: PhotoSourcePickerMode = .library
 
     let onPhotoPicked: (Data) -> Void
+    var onClose: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 0) {
-            PhotoSourcePickerController(
-                mode: mode,
-                onSelect: selectPhoto,
-                onCancel: cancel
-            )
-            .id(mode)
-            .ignoresSafeArea(edges: [.top, .horizontal])
+            pickerContent
+                .id(mode)
+                .ignoresSafeArea(edges: [.top, .horizontal])
 
-            if isCameraAvailable {
-                bottomSourceSwitcher
+            if shouldShowBottomBar {
+                bottomBar
             }
         }
         .background(Color(.systemBackground))
     }
 
-    private var bottomSourceSwitcher: some View {
-        Picker("图片来源", selection: $mode) {
-            Label("照片", systemImage: "photo.on.rectangle").tag(PhotoSourcePickerMode.library)
-            Label("拍照", systemImage: "camera").tag(PhotoSourcePickerMode.camera)
+    @ViewBuilder
+    private var pickerContent: some View {
+        switch mode {
+        case .library, .camera:
+            PhotoSourcePickerController(
+                mode: mode,
+                onSelect: selectPhoto,
+                onCancel: cancel
+            )
+        }
+    }
+
+    private var bottomBar: some View {
+        Picker(AppLocalization.string("图片来源"), selection: $mode) {
+            Label(AppLocalization.string("照片"), systemImage: "photo.on.rectangle").tag(PhotoSourcePickerMode.library)
+            Label(AppLocalization.string("拍照"), systemImage: "camera").tag(PhotoSourcePickerMode.camera)
         }
         .pickerStyle(.segmented)
         .padding(.horizontal)
@@ -40,12 +49,24 @@ struct PhotoSourcePickerView: View {
         UIImagePickerController.isSourceTypeAvailable(.camera)
     }
 
+    private var shouldShowBottomBar: Bool {
+        isCameraAvailable
+    }
+
     private func selectPhoto(_ data: Data) {
         onPhotoPicked(data)
-        dismiss()
+        close()
     }
 
     private func cancel() {
-        dismiss()
+        close()
+    }
+
+    private func close() {
+        if let onClose {
+            onClose()
+        } else {
+            dismiss()
+        }
     }
 }

@@ -6,6 +6,7 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case itemLocator
     case reminders
     case bills
+    case diary
     case anniversaries
 
     var id: String { rawValue }
@@ -26,6 +27,8 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
             "打卡任务"
         case .bills:
             "记一笔"
+        case .diary:
+            "日记"
         case .anniversaries:
             "纪念日"
         }
@@ -47,6 +50,8 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
             "连续挑战、坚持目标与提醒"
         case .bills:
             "记录价格、优惠与备注"
+        case .diary:
+            "记录生活、心情与关联事件"
         case .anniversaries:
             "倒计时、周年与日期提醒"
         }
@@ -64,6 +69,8 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
             "checkmark.circle.fill"
         case .bills:
             "receipt.fill"
+        case .diary:
+            "book.closed.fill"
         case .anniversaries:
             "calendar"
         }
@@ -81,6 +88,8 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
             .purple
         case .bills:
             .teal
+        case .diary:
+            .mint
         case .anniversaries:
             .pink
         }

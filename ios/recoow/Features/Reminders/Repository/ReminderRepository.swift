@@ -70,6 +70,16 @@ final class ReminderRepository: @unchecked Sendable {
         }
     }
 
+    func fetchRecentReminders(limit: Int = 50) throws -> [ReminderRecord] {
+        try database.reader.read { db in
+            try ReminderRecord
+                .filter(Column("deleted_at") == nil)
+                .order(Column("scheduled_at").desc)
+                .limit(limit)
+                .fetchAll(db)
+        }
+    }
+
     func observeReminders() -> AsyncStream<Result<[ReminderRecord], Error>> {
         AsyncStream { continuation in
             let observation = ValueObservation.tracking { db in

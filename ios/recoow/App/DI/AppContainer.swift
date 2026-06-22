@@ -14,6 +14,8 @@ final class AppContainer {
     @ObservationIgnored let itemLocatorRepository: ItemLocatorRepository
     @ObservationIgnored let reminderRepository: ReminderRepository
     @ObservationIgnored let billRepository: BillRepository
+    @ObservationIgnored let mediaAttachmentRepository: MediaAttachmentRepository
+    @ObservationIgnored let diaryRepository: DiaryRepository
     @ObservationIgnored let anniversaryRepository: AnniversaryRepository
     @ObservationIgnored let historyRepository: HistoryRepository
     @ObservationIgnored let notificationScheduler: any AppNotificationScheduling
@@ -34,6 +36,8 @@ final class AppContainer {
         itemLocatorRepository: ItemLocatorRepository,
         reminderRepository: ReminderRepository,
         billRepository: BillRepository,
+        mediaAttachmentRepository: MediaAttachmentRepository,
+        diaryRepository: DiaryRepository,
         anniversaryRepository: AnniversaryRepository,
         historyRepository: HistoryRepository,
         notificationScheduler: any AppNotificationScheduling,
@@ -52,6 +56,8 @@ final class AppContainer {
         self.itemLocatorRepository = itemLocatorRepository
         self.reminderRepository = reminderRepository
         self.billRepository = billRepository
+        self.mediaAttachmentRepository = mediaAttachmentRepository
+        self.diaryRepository = diaryRepository
         self.anniversaryRepository = anniversaryRepository
         self.historyRepository = historyRepository
         self.notificationScheduler = notificationScheduler
@@ -94,6 +100,17 @@ final class AppContainer {
                 changeLogRepository: changeLogRepository,
                 deviceIdentifier: deviceIdentifier
             )
+            let mediaAttachmentRepository = MediaAttachmentRepository(
+                database: database,
+                changeLogRepository: changeLogRepository,
+                deviceIdentifier: deviceIdentifier
+            )
+            let diaryRepository = DiaryRepository(
+                database: database,
+                changeLogRepository: changeLogRepository,
+                mediaAttachmentRepository: mediaAttachmentRepository,
+                deviceIdentifier: deviceIdentifier
+            )
             let anniversaryRepository = AnniversaryRepository(
                 database: database,
                 changeLogRepository: changeLogRepository,
@@ -120,6 +137,8 @@ final class AppContainer {
                 itemLocatorRepository: itemLocatorRepository,
                 reminderRepository: reminderRepository,
                 billRepository: billRepository,
+                mediaAttachmentRepository: mediaAttachmentRepository,
+                diaryRepository: diaryRepository,
                 anniversaryRepository: anniversaryRepository,
                 historyRepository: historyRepository,
                 notificationScheduler: notificationScheduler,
@@ -174,6 +193,13 @@ final class AppContainer {
         )
     }
 
+    func makeDiaryViewModel() -> DiaryViewModel {
+        DiaryViewModel(
+            repository: diaryRepository,
+            syncEngine: syncEngine
+        )
+    }
+
     func makeAnniversariesViewModel() -> AnniversariesViewModel {
         AnniversariesViewModel(
             repository: anniversaryRepository,
@@ -189,6 +215,7 @@ final class AppContainer {
             itemLocatorRepository: itemLocatorRepository,
             reminderRepository: reminderRepository,
             billRepository: billRepository,
+            diaryRepository: diaryRepository,
             anniversaryRepository: anniversaryRepository
         )
     }
@@ -225,6 +252,17 @@ final class AppContainer {
                 changeLogRepository: changeLogRepository,
                 deviceIdentifier: deviceIdentifier
             )
+            let mediaAttachmentRepository = MediaAttachmentRepository(
+                database: database,
+                changeLogRepository: changeLogRepository,
+                deviceIdentifier: deviceIdentifier
+            )
+            let diaryRepository = DiaryRepository(
+                database: database,
+                changeLogRepository: changeLogRepository,
+                mediaAttachmentRepository: mediaAttachmentRepository,
+                deviceIdentifier: deviceIdentifier
+            )
             let anniversaryRepository = AnniversaryRepository(
                 database: database,
                 changeLogRepository: changeLogRepository,
@@ -251,6 +289,8 @@ final class AppContainer {
                 itemLocatorRepository: itemLocatorRepository,
                 reminderRepository: reminderRepository,
                 billRepository: billRepository,
+                mediaAttachmentRepository: mediaAttachmentRepository,
+                diaryRepository: diaryRepository,
                 anniversaryRepository: anniversaryRepository,
                 historyRepository: historyRepository,
                 notificationScheduler: notificationScheduler,

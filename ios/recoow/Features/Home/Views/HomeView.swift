@@ -13,16 +13,16 @@ struct HomeView: View {
         Group {
             if visibleTools.isEmpty, locationTracker.isRecording == false {
                 ContentUnavailableView {
-                    Label("未显示功能入口", systemImage: "square.grid.2x2")
+                    Label(AppLocalization.string("未显示功能入口"), systemImage: "square.grid.2x2")
                 } description: {
-                    Text("可在设置中开启")
+                    Text(AppLocalization.string("可在设置中开启"))
                 } actions: {
-                    Button("打开设置", systemImage: "slider.horizontal.3", action: openSettings)
+                    Button(AppLocalization.string("打开设置"), systemImage: "slider.horizontal.3", action: openSettings)
                 }
             } else {
                 List {
                     if locationTracker.isRecording {
-                        Section("正在进行") {
+                        Section(AppLocalization.string("正在进行")) {
                             NavigationLink(value: ToolRoute.locationTracker) {
                                 ActiveFeatureBanner(
                                     route: .locationTracker,
@@ -33,14 +33,14 @@ struct HomeView: View {
                         }
                     }
 
-                    Section("工具") {
+                    Section(AppLocalization.string("工具")) {
                         if visibleTools.isEmpty {
                             ContentUnavailableView {
-                                Label("未显示功能入口", systemImage: "square.grid.2x2")
+                                Label(AppLocalization.string("未显示功能入口"), systemImage: "square.grid.2x2")
                             } description: {
-                                Text("可在设置中开启")
+                                Text(AppLocalization.string("可在设置中开启"))
                             } actions: {
-                                Button("打开设置", systemImage: "slider.horizontal.3", action: openSettings)
+                                Button(AppLocalization.string("打开设置"), systemImage: "slider.horizontal.3", action: openSettings)
                             }
                         } else {
                             ForEach(visibleModules) { module in
@@ -60,9 +60,9 @@ struct HomeView: View {
                 .listStyle(.insetGrouped)
             }
         }
-        .navigationTitle("记刻")
+        .navigationTitle(AppLocalization.string("记刻"))
         .toolbar {
-            Button("设置", systemImage: "slider.horizontal.3", action: openSettings)
+            Button(AppLocalization.string("设置"), systemImage: "slider.horizontal.3", action: openSettings)
         }
         .navigationDestination(for: ToolRoute.self) { route in
             ToolDestinationView(route: route)

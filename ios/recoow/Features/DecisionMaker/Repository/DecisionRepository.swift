@@ -150,6 +150,16 @@ final class DecisionRepository: @unchecked Sendable {
         }
     }
 
+    func fetchRecentChoiceRecords(limit: Int = 50) throws -> [DecisionChoiceRecord] {
+        try database.reader.read { db in
+            try DecisionChoiceRecord
+                .filter(Column("deleted_at") == nil)
+                .order(Column("selected_at").desc)
+                .limit(limit)
+                .fetchAll(db)
+        }
+    }
+
     func observeCollections() -> AsyncStream<Result<[DecisionCollection], Error>> {
         AsyncStream { continuation in
             let observation = ValueObservation.tracking { db in

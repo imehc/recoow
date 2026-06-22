@@ -23,6 +23,8 @@ struct ToolModule: Identifiable, Hashable {
             RemindersView()
         case .bills:
             BillsView()
+        case .diary:
+            DiaryView()
         case .anniversaries:
             AnniversariesView()
         }
@@ -46,7 +48,7 @@ struct ToolModule: Identifiable, Hashable {
                     ToolHomeStatus(title: $0, systemImage: "calendar", tint: .pink)
                 }
             )
-        case .decisionMaker, .itemLocator, .bills, .reminders:
+        case .decisionMaker, .itemLocator, .bills, .diary, .reminders:
             ToolHomeState()
         }
     }
@@ -63,6 +65,8 @@ struct ToolModule: Identifiable, Hashable {
             snapshot.reminders.map { date(milliseconds: $0.scheduledAt) }
         case .bills:
             snapshot.bills.map(\.occurredDate)
+        case .diary:
+            snapshot.diaries.map(\.occurredDate)
         case .anniversaries:
             snapshot.anniversaries.map(\.occurredDate)
         }
@@ -100,5 +104,6 @@ struct ToolStatisticsSnapshot {
     let items: [StoredItem]
     let reminders: [ReminderRecord]
     let bills: [BillRecord]
+    let diaries: [DiaryEntry]
     let anniversaries: [AnniversaryRecord]
 }

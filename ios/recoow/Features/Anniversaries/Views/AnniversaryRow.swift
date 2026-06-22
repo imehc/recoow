@@ -8,7 +8,7 @@ struct AnniversaryRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            AnniversaryIconView(category: anniversary.category, size: 56)
+            AnniversaryIconView(category: anniversary.category, size: AppDesign.listIconSize)
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {

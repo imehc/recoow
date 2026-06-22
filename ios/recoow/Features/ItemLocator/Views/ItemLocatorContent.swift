@@ -73,7 +73,7 @@ struct ItemLocatorContent: View {
                             Button {
                                 presentedSheet = .editItem(item)
                             } label: {
-                                Label("编辑", systemImage: "pencil")
+                                Label("编辑", systemImage: "square.and.pencil")
                             }
                             .tint(.blue)
                         }

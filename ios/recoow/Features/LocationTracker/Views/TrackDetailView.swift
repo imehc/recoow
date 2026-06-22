@@ -67,7 +67,7 @@ struct TrackDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 if let track {
-                    Button("编辑", systemImage: "pencil") {
+                    Button("编辑", systemImage: "square.and.pencil") {
                         editingTrack = track
                     }
                 }

@@ -171,6 +171,16 @@ final class TrackRepository: @unchecked Sendable {
         }
     }
 
+    func fetchRecentTracks(limit: Int = 50) throws -> [Track] {
+        try database.reader.read { db in
+            try Track
+                .filter(Column("deleted_at") == nil)
+                .order(Column("started_at").desc, Column("id").desc)
+                .limit(limit)
+                .fetchAll(db)
+        }
+    }
+
     func fetchPoints(trackID: String) throws -> [TrackPoint] {
         try database.reader.read { db in
             try TrackPoint

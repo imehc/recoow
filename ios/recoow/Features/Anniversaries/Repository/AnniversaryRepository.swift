@@ -75,6 +75,16 @@ final class AnniversaryRepository: @unchecked Sendable {
         }
     }
 
+    func fetchRecentAnniversaries(limit: Int = 50) throws -> [AnniversaryRecord] {
+        try database.reader.read { db in
+            try AnniversaryRecord
+                .filter(Column("deleted_at") == nil)
+                .order(Column("occurred_at").desc)
+                .limit(limit)
+                .fetchAll(db)
+        }
+    }
+
     func observeAnniversaries() -> AsyncStream<Result<[AnniversaryRecord], Error>> {
         AsyncStream { continuation in
             let observation = ValueObservation.tracking { db in

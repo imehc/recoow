@@ -9,7 +9,8 @@ struct BillIconView: View {
             .font(.system(size: size * 0.42, weight: .semibold))
             .foregroundStyle(.white)
             .frame(width: size, height: size)
-            .background(tint.gradient, in: RoundedRectangle(cornerRadius: 8))
+            .background(tint.gradient, in: .rect(cornerRadius: AppDesign.iconCornerRadius))
+            .accessibilityHidden(true)
     }
 
     private var systemImage: String {

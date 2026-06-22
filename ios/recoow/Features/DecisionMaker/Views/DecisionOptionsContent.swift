@@ -88,7 +88,7 @@ struct DecisionOptionsContent: View {
                                 Button {
                                     presentedSheet = .editOption(option)
                                 } label: {
-                                    Label("编辑", systemImage: "pencil")
+                                    Label("编辑", systemImage: "square.and.pencil")
                                 }
                                 .tint(.blue)
                             }

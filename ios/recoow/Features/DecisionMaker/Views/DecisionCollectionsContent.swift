@@ -53,7 +53,7 @@ struct DecisionCollectionsContent: View {
                             Button {
                                 presentedSheet = .editCollection(collection)
                             } label: {
-                                Label("编辑", systemImage: "pencil")
+                                Label("编辑", systemImage: "square.and.pencil")
                             }
                             .tint(.blue)
                         }

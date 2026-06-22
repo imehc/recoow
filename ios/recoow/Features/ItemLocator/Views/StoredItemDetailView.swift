@@ -1,8 +1,11 @@
 import SwiftUI
 
 struct StoredItemDetailView: View {
+    @Environment(\.dismiss) private var dismiss
     @Bindable var viewModel: ItemLocatorViewModel
     @State private var editingItem: StoredItem?
+    @State private var pendingDeletionItem: StoredItem?
+    @State private var isShowingDeletionConfirmation = false
 
     let itemID: String
     let itemImageTransition: Namespace.ID?
@@ -21,6 +24,12 @@ struct StoredItemDetailView: View {
             NavigationStack {
                 StoredItemFormView(item: item, viewModel: viewModel)
             }
+        }
+        .alert(deletionTitle, isPresented: $isShowingDeletionConfirmation) {
+            Button("删除", role: .destructive, action: confirmDelete)
+            Button("取消", role: .cancel, action: clearPendingDeletion)
+        } message: {
+            Text("删除后这条物品位置记录会从列表中移除。")
         }
         .task(id: itemID) {
             await viewModel.loadCategoriesIfNeeded()
@@ -70,9 +79,44 @@ struct StoredItemDetailView: View {
             }
         }
         .toolbar {
-            Button("编辑", systemImage: "pencil") {
-                editingItem = item
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button("删除", systemImage: "trash", role: .destructive) {
+                    requestDelete(item)
+                }
+                .tint(.red)
+
+                Button("编辑", systemImage: "square.and.pencil") {
+                    editingItem = item
+                }
             }
         }
+    }
+
+    private var deletionTitle: String {
+        guard let item = pendingDeletionItem else {
+            return "删除物品记录？"
+        }
+
+        return "删除“\(item.title)”？"
+    }
+
+    private func requestDelete(_ item: StoredItem) {
+        pendingDeletionItem = item
+        isShowingDeletionConfirmation = true
+    }
+
+    private func confirmDelete() {
+        guard let item = pendingDeletionItem else { return }
+        clearPendingDeletion()
+
+        Task {
+            await viewModel.deleteItem(id: item.id)
+            dismiss()
+        }
+    }
+
+    private func clearPendingDeletion() {
+        pendingDeletionItem = nil
+        isShowingDeletionConfirmation = false
     }
 }

@@ -1,6 +1,23 @@
 import CoreLocation
 import OSLog
 
+enum LocationServiceError: LocalizedError {
+    case authorizationDenied
+    case timedOut
+    case unavailable
+
+    var errorDescription: String? {
+        switch self {
+        case .authorizationDenied:
+            "定位权限未开启"
+        case .timedOut:
+            "获取当前位置超时"
+        case .unavailable:
+            "暂时无法获取当前位置"
+        }
+    }
+}
+
 /// 定位服务 actor。对外暴露异步流，内部持有后台定位 session 生命周期。
 actor LocationService {
     private let authorization = LocationAuthorization()
@@ -9,6 +26,41 @@ actor LocationService {
 
     func requestAuthorization() async -> CLAuthorizationStatus {
         await authorization.requestAlwaysAuthorization()
+    }
+
+    func currentLocation(accuracy: LocationAccuracy) async throws -> CLLocation {
+        let authorization = await requestAuthorization()
+
+        guard authorization == .authorizedAlways || authorization == .authorizedWhenInUse else {
+            throw LocationServiceError.authorizationDenied
+        }
+
+        return try await withThrowingTaskGroup(of: CLLocation.self) { group in
+            group.addTask {
+                for try await update in CLLocationUpdate.liveUpdates(accuracy.liveConfiguration) {
+                    guard let location = update.location else { continue }
+                    let requiredAccuracy = max(accuracy.desiredAccuracy, accuracy.distanceFilter * 2)
+                    if location.horizontalAccuracy >= 0,
+                       location.horizontalAccuracy <= requiredAccuracy {
+                        return location
+                    }
+                }
+
+                throw LocationServiceError.unavailable
+            }
+
+            group.addTask {
+                try await Task.sleep(for: .seconds(12))
+                throw LocationServiceError.timedOut
+            }
+
+            guard let location = try await group.next() else {
+                throw LocationServiceError.unavailable
+            }
+
+            group.cancelAll()
+            return location
+        }
     }
 
     func liveUpdates(accuracy: LocationAccuracy) -> AsyncStream<CLLocationUpdate> {

@@ -16,6 +16,10 @@ enum AppMigrator {
         V10AnniversariesSchema.register(in: &migrator)
         V11AnniversaryDateCalendarSchema.register(in: &migrator)
         V12CheckInCompletionRecordsSchema.register(in: &migrator)
+        V13DiarySchema.register(in: &migrator)
+        V14MediaAttachmentsSchema.register(in: &migrator)
+        V15MediaAttachmentSortOrderSchema.register(in: &migrator)
+        V16DiaryMediaSchemaReset.register(in: &migrator)
         return migrator
     }
 

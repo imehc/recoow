@@ -70,7 +70,7 @@ struct ItemCategoriesView: View {
                         Button {
                             presentedSheet = .editCategory(category)
                         } label: {
-                            Label("编辑", systemImage: "pencil")
+                            Label("编辑", systemImage: "square.and.pencil")
                         }
                         .tint(.blue)
                     }

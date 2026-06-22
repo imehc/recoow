@@ -8,8 +8,10 @@ struct AppRoot: View {
     @State private var selectedTab: AppTab = .home
 
     var body: some View {
+        let language = container.appPreferences.language
+
         TabView(selection: $selectedTab) {
-            Tab("首页", systemImage: "house", value: .home) {
+            Tab(AppLocalization.string("首页"), systemImage: "house", value: .home) {
                 NavigationStack {
                     HomeView {
                         selectedTab = .settings
@@ -17,13 +19,13 @@ struct AppRoot: View {
                 }
             }
 
-            Tab("历史", systemImage: "clock", value: .history) {
+            Tab(AppLocalization.string("历史"), systemImage: "clock", value: .history) {
                 NavigationStack {
                     TrackHistoryView()
                 }
             }
 
-            Tab("统计", systemImage: "chart.bar.xaxis", value: .statistics) {
+            Tab(AppLocalization.string("统计"), systemImage: "chart.bar.xaxis", value: .statistics) {
                 NavigationStack {
                     StatisticsView(
                         openHistory: {
@@ -34,13 +36,13 @@ struct AppRoot: View {
                 }
             }
 
-            Tab("设置", systemImage: "gearshape", value: .settings) {
+            Tab(AppLocalization.string("设置"), systemImage: "gearshape", value: .settings) {
                 NavigationStack {
                     SettingsView()
                 }
             }
         }
-        .environment(\.locale, container.appPreferences.locale)
+        .environment(\.locale, language.locale)
         .preferredColorScheme(container.appPreferences.colorScheme)
         .task {
             await container.notificationScheduler.clearBadge()

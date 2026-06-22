@@ -9,10 +9,10 @@ struct BillHistoryEntryRow: View {
     var body: some View {
         HStack(spacing: 12) {
             if bill.imageData != nil {
-                PhotoThumbnailView(imageData: bill.imageData, systemImage: "receipt.fill", size: 64)
+                PhotoThumbnailView(imageData: bill.imageData, systemImage: "receipt.fill", size: AppDesign.historyIconSize)
                     .matchedTransitionSource(id: bill.id, in: billImageTransition)
             } else {
-                BillIconView(bill: bill, size: 64)
+                BillIconView(bill: bill, size: AppDesign.historyIconSize)
             }
 
             VStack(alignment: .leading, spacing: 6) {

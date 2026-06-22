@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 import UIKit
 
@@ -6,6 +7,8 @@ struct PhotoSourcePickerController: UIViewControllerRepresentable {
     let onSelect: (Data) -> Void
     let onCancel: () -> Void
 
+    typealias UIViewControllerType = UIViewController
+
     func makeCoordinator() -> PhotoSourcePickerCoordinator {
         PhotoSourcePickerCoordinator(
             onSelect: onSelect,
@@ -13,18 +16,41 @@ struct PhotoSourcePickerController: UIViewControllerRepresentable {
         )
     }
 
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let controller = UIImagePickerController()
-        controller.sourceType = resolvedSourceType
+    func makeUIViewController(context: Context) -> UIViewController {
+        switch mode {
+        case .library:
+            makePhotoLibraryPicker(context: context)
+        case .camera:
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                makeImagePicker(sourceType: .camera, context: context)
+            } else {
+                makePhotoLibraryPicker(context: context)
+            }
+        }
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+    }
+
+    private func makePhotoLibraryPicker(context: Context) -> PHPickerViewController {
+        var configuration = PHPickerConfiguration(photoLibrary: .shared())
+        configuration.filter = .images
+        configuration.selectionLimit = 1
+        configuration.preferredAssetRepresentationMode = .compatible
+
+        let controller = PHPickerViewController(configuration: configuration)
         controller.delegate = context.coordinator
-        controller.allowsEditing = false
         return controller
     }
 
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {
-    }
-
-    private var resolvedSourceType: UIImagePickerController.SourceType {
-        UIImagePickerController.isSourceTypeAvailable(mode.sourceType) ? mode.sourceType : .photoLibrary
+    private func makeImagePicker(
+        sourceType: UIImagePickerController.SourceType,
+        context: Context
+    ) -> UIImagePickerController {
+        let controller = UIImagePickerController()
+        controller.sourceType = sourceType
+        controller.delegate = context.coordinator
+        controller.allowsEditing = false
+        return controller
     }
 }

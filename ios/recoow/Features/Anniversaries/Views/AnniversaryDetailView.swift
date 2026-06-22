@@ -73,15 +73,14 @@ struct AnniversaryDetailView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("编辑", systemImage: "pencil") {
-                    anniversaryForEditing = anniversary
-                }
-            }
-
-            ToolbarItem(placement: .bottomBar) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 Button("删除", systemImage: "trash", role: .destructive) {
                     anniversaryPendingDeletion = anniversary
+                }
+                .tint(.red)
+
+                Button("编辑", systemImage: "square.and.pencil") {
+                    anniversaryForEditing = anniversary
                 }
             }
         }
