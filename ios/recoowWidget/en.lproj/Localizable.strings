@@ -1,0 +1,17 @@
+"记刻" = "Recoow";
+"功能项" = "Tool";
+"功能入口" = "Tool Shortcut";
+"进入页面" = "Open Page";
+"选择小组件点击后打开的功能。" = "Choose the tool opened when tapping the widget.";
+"选择一个功能，点击小组件直接打开。" = "Choose one tool and open it directly from the widget.";
+"点击打开" = "Open";
+"请先选择入口" = "Choose a tool first";
+"选择入口" = "Choose Tool";
+
+"轨迹记录" = "Route Recording";
+"选什么" = "Pick One";
+"在哪里" = "Where Is It";
+"打卡任务" = "Check-in Tasks";
+"记一笔" = "Bill Log";
+"日记" = "Diary";
+"纪念日" = "Anniversaries";

@@ -6,13 +6,14 @@ struct AppRoot: View {
     @Environment(AppContainer.self) private var container
     @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: AppTab = .home
+    @State private var homePath = NavigationPath()
 
     var body: some View {
         let language = container.appPreferences.language
 
         TabView(selection: $selectedTab) {
             Tab(AppLocalization.string("首页", language: language), systemImage: "house", value: .home) {
-                NavigationStack {
+                NavigationStack(path: $homePath) {
                     HomeView {
                         selectedTab = .settings
                     }
@@ -44,6 +45,9 @@ struct AppRoot: View {
         }
         .environment(\.locale, language.locale)
         .preferredColorScheme(container.appPreferences.colorScheme)
+        .onOpenURL { url in
+            handleDeepLink(url)
+        }
         .task {
             await container.notificationScheduler.clearBadge()
             await container.locationTrackerViewModel.pauseInterruptedRecordingIfNeeded()
@@ -65,6 +69,19 @@ struct AppRoot: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willTerminateNotification)) { _ in
             container.locationTrackerViewModel.finishForAppTermination()
+        }
+    }
+
+    private func handleDeepLink(_ url: URL) {
+        guard let deepLink = AppDeepLink(url: url) else {
+            return
+        }
+
+        switch deepLink {
+        case .tool(let route):
+            selectedTab = .home
+            homePath = NavigationPath()
+            homePath.append(route)
         }
     }
 }

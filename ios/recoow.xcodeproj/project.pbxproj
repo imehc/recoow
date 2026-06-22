@@ -8,16 +8,70 @@
 
 /* Begin PBXBuildFile section */
 		3ABF80402FE16600003C5066 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 3ABF80412FE16600003C5066 /* GRDB */; };
+		3ABF805A2FE90000003C5066 /* recoowWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 3ABF80502FE90000003C5066 /* recoowWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		3ABF805B2FE90000003C5066 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3ABF80242FE1551D003C5066 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3ABF80552FE90000003C5066;
+			remoteInfo = recoowWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		3ABF80592FE90000003C5066 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				3ABF805A2FE90000003C5066 /* recoowWidget.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		3ABF802C2FE1551D003C5066 /* recoow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = recoow.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3ABF80502FE90000003C5066 /* recoowWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = recoowWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		3ABF805D2FE90000003C5066 /* Exceptions for "recoow" folder in "recoow" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 3ABF802B2FE1551D003C5066 /* recoow */;
+		};
+		3ABF805E2FE90000003C5066 /* Exceptions for "recoowWidget" folder in "recoowWidget" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 3ABF80552FE90000003C5066 /* recoowWidget */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3ABF802E2FE1551D003C5066 /* recoow */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				3ABF805D2FE90000003C5066 /* Exceptions for "recoow" folder in "recoow" target */,
+			);
 			path = recoow;
+			sourceTree = "<group>";
+		};
+		3ABF80512FE90000003C5066 /* recoowWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				3ABF805E2FE90000003C5066 /* Exceptions for "recoowWidget" folder in "recoowWidget" target */,
+			);
+			path = recoowWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -31,6 +85,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3ABF80522FE90000003C5066 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -38,6 +99,7 @@
 			isa = PBXGroup;
 			children = (
 				3ABF802E2FE1551D003C5066 /* recoow */,
+				3ABF80512FE90000003C5066 /* recoowWidget */,
 				3ABF802D2FE1551D003C5066 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -46,6 +108,7 @@
 			isa = PBXGroup;
 			children = (
 				3ABF802C2FE1551D003C5066 /* recoow.app */,
+				3ABF80502FE90000003C5066 /* recoowWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -60,10 +123,12 @@
 				3ABF80282FE1551D003C5066 /* Sources */,
 				3ABF80292FE1551D003C5066 /* Frameworks */,
 				3ABF802A2FE1551D003C5066 /* Resources */,
+				3ABF80592FE90000003C5066 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				3ABF805C2FE90000003C5066 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				3ABF802E2FE1551D003C5066 /* recoow */,
@@ -76,6 +141,28 @@
 			productReference = 3ABF802C2FE1551D003C5066 /* recoow.app */;
 			productType = "com.apple.product-type.application";
 		};
+		3ABF80552FE90000003C5066 /* recoowWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3ABF80562FE90000003C5066 /* Build configuration list for PBXNativeTarget "recoowWidget" */;
+			buildPhases = (
+				3ABF80532FE90000003C5066 /* Sources */,
+				3ABF80522FE90000003C5066 /* Frameworks */,
+				3ABF80542FE90000003C5066 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				3ABF80512FE90000003C5066 /* recoowWidget */,
+			);
+			name = recoowWidget;
+			packageProductDependencies = (
+			);
+			productName = recoowWidget;
+			productReference = 3ABF80502FE90000003C5066 /* recoowWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -87,6 +174,9 @@
 				LastUpgradeCheck = 2650;
 				TargetAttributes = {
 					3ABF802B2FE1551D003C5066 = {
+						CreatedOnToolsVersion = 26.5;
+					};
+					3ABF80552FE90000003C5066 = {
 						CreatedOnToolsVersion = 26.5;
 					};
 				};
@@ -110,12 +200,20 @@
 			projectRoot = "";
 			targets = (
 				3ABF802B2FE1551D003C5066 /* recoow */,
+				3ABF80552FE90000003C5066 /* recoowWidget */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		3ABF802A2FE1551D003C5066 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3ABF80542FE90000003C5066 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -132,7 +230,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3ABF80532FE90000003C5066 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		3ABF805C2FE90000003C5066 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3ABF80552FE90000003C5066 /* recoowWidget */;
+			targetProxy = 3ABF805B2FE90000003C5066 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		3ABF80352FE1551E003C5066 /* Debug */ = {
@@ -268,20 +381,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "记刻";
-				INFOPLIST_KEY_CFBundleLocalizations = "en zh-Hans";
-				INFOPLIST_KEY_NSCameraUsageDescription = "需要使用相机拍摄图片以帮助记录日记、选项或物品位置";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "需要后台持续记录定位以完成轨迹采样，也可为日记保存当前位置";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "需要在使用期间获取您的位置以记录轨迹或为日记保存当前位置";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "需要使用麦克风为日记录制语音附件";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "需要从照片图库选择图片以帮助记录日记、选项或物品位置";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UIBackgroundModes = location;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = recoow/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -312,20 +413,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "记刻";
-				INFOPLIST_KEY_CFBundleLocalizations = "en zh-Hans";
-				INFOPLIST_KEY_NSCameraUsageDescription = "需要使用相机拍摄图片以帮助记录日记、选项或物品位置";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "需要后台持续记录定位以完成轨迹采样，也可为日记保存当前位置";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "需要在使用期间获取您的位置以记录轨迹或为日记保存当前位置";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "需要使用麦克风为日记录制语音附件";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "需要从照片图库选择图片以帮助记录日记、选项或物品位置";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UIBackgroundModes = location;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = recoow/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -334,6 +423,76 @@
 				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = imehc.recoow;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		3ABF80572FE90000003C5066 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q4TGGJ5RKN;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = recoowWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = imehc.recoow.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		3ABF80582FE90000003C5066 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q4TGGJ5RKN;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = recoowWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = imehc.recoow.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -365,6 +524,15 @@
 			buildConfigurations = (
 				3ABF80382FE1551E003C5066 /* Debug */,
 				3ABF80392FE1551E003C5066 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3ABF80562FE90000003C5066 /* Build configuration list for PBXNativeTarget "recoowWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3ABF80572FE90000003C5066 /* Debug */,
+				3ABF80582FE90000003C5066 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
