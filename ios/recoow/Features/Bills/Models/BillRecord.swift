@@ -21,6 +21,8 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
     var category: String
     var paymentMethod: String
     var note: String?
+    var startLocation: String?
+    var endLocation: String?
     var occurredAt: Int64
     var imageData: Data?
 
@@ -40,6 +42,8 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         case category
         case paymentMethod = "payment_method"
         case note
+        case startLocation = "start_location"
+        case endLocation = "end_location"
         case occurredAt = "occurred_at"
         case imageData = "image_data"
     }
@@ -68,6 +72,14 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         billType == .expense && discountAmountCents > 0
     }
 
+    var normalizedStartLocation: String? {
+        normalizedLocation(startLocation)
+    }
+
+    var normalizedEndLocation: String? {
+        normalizedLocation(endLocation)
+    }
+
     var displayAmount: String {
         switch billType {
         case .expense:
@@ -86,6 +98,8 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         categoryRawValue: String,
         paymentMethod: BillPaymentMethod,
         note: String?,
+        startLocation: String?,
+        endLocation: String?,
         occurredAt: Int64,
         imageData: Data?,
         deviceID: String
@@ -107,8 +121,29 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
             category: categoryRawValue,
             paymentMethod: paymentMethod.rawValue,
             note: note,
+            startLocation: startLocation,
+            endLocation: endLocation,
             occurredAt: occurredAt,
             imageData: imageData
         )
+    }
+
+    func duplicated(occurredAt: Int64, deviceID: String) -> BillRecord {
+        let now = SyncableTimestamp.nowMilliseconds()
+        var copy = self
+        copy.id = UUID().uuidString
+        copy.createdAt = now
+        copy.updatedAt = now
+        copy.deletedAt = nil
+        copy.syncStatus = .pending
+        copy.deviceID = deviceID
+        copy.serverVersion = nil
+        copy.occurredAt = occurredAt
+        return copy
+    }
+
+    private func normalizedLocation(_ value: String?) -> String? {
+        let trimmedValue = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmedValue.isEmpty ? nil : trimmedValue
     }
 }

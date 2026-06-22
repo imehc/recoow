@@ -10,6 +10,8 @@ struct BillFormView: View {
     @State private var category: BillCategory
     @State private var incomeCategory: BillIncomeCategory
     @State private var paymentMethod: BillPaymentMethod
+    @State private var startLocation: String
+    @State private var endLocation: String
     @State private var note: String
     @State private var occurredDate: Date
     @State private var imageData: Data?
@@ -21,20 +23,24 @@ struct BillFormView: View {
     let bill: BillRecord?
     let viewModel: BillsViewModel
 
-    init(bill: BillRecord?, viewModel: BillsViewModel) {
+    init(bill: BillRecord?, viewModel: BillsViewModel, prefillBill: BillRecord? = nil) {
         self.bill = bill
         self.viewModel = viewModel
-        _title = State(initialValue: bill?.title ?? "")
-        _originalAmountText = State(initialValue: bill.map { AppFormatters.amountInput(cents: $0.originalAmountCents) } ?? "")
-        _discountAmountText = State(initialValue: bill.map { AppFormatters.amountInput(cents: $0.discountAmountCents) } ?? "")
-        _finalAmountText = State(initialValue: bill.map { AppFormatters.amountInput(cents: $0.finalAmountCents) } ?? "")
-        _billType = State(initialValue: bill?.billType ?? .expense)
-        _category = State(initialValue: bill?.billCategory ?? .dining)
-        _incomeCategory = State(initialValue: bill?.billIncomeCategory ?? .salary)
-        _paymentMethod = State(initialValue: bill?.billPaymentMethod ?? .wechat)
-        _note = State(initialValue: bill?.note ?? "")
-        _occurredDate = State(initialValue: bill?.occurredDate ?? Date())
-        _imageData = State(initialValue: bill?.imageData)
+
+        let initialBill = bill ?? prefillBill
+        _title = State(initialValue: initialBill?.title ?? "")
+        _originalAmountText = State(initialValue: initialBill.map { AppFormatters.amountInput(cents: $0.originalAmountCents) } ?? "")
+        _discountAmountText = State(initialValue: initialBill.map { AppFormatters.amountInput(cents: $0.discountAmountCents) } ?? "")
+        _finalAmountText = State(initialValue: initialBill.map { AppFormatters.amountInput(cents: $0.finalAmountCents) } ?? "")
+        _billType = State(initialValue: initialBill?.billType ?? .expense)
+        _category = State(initialValue: initialBill?.billCategory ?? .dining)
+        _incomeCategory = State(initialValue: initialBill?.billIncomeCategory ?? .salary)
+        _paymentMethod = State(initialValue: initialBill?.billPaymentMethod ?? .wechat)
+        _startLocation = State(initialValue: initialBill?.startLocation ?? "")
+        _endLocation = State(initialValue: initialBill?.endLocation ?? "")
+        _note = State(initialValue: initialBill?.note ?? "")
+        _occurredDate = State(initialValue: initialBill?.occurredDate ?? Date())
+        _imageData = State(initialValue: initialBill?.imageData)
     }
 
     var body: some View {
@@ -111,6 +117,24 @@ struct BillFormView: View {
                 }
             }
 
+            if showsTransportFields {
+                Section("出行信息") {
+                    LabeledContent("起点") {
+                        TextField("请输入起点", text: $startLocation)
+                            .multilineTextAlignment(.trailing)
+                            .textInputAutocapitalization(.never)
+                            .focused($focusedField, equals: "startLocation")
+                    }
+
+                    LabeledContent("终点") {
+                        TextField("请输入终点", text: $endLocation)
+                            .multilineTextAlignment(.trailing)
+                            .textInputAutocapitalization(.never)
+                            .focused($focusedField, equals: "endLocation")
+                    }
+                }
+            }
+
             EditablePhotoInputSection(
                 imageData: $imageData,
                 placeholderSystemImage: "receipt",
@@ -167,6 +191,24 @@ struct BillFormView: View {
     private var normalizedNote: String? {
         let value = note.trimmingCharacters(in: .whitespacesAndNewlines)
         return value.isEmpty ? nil : value
+    }
+
+    private var normalizedStartLocation: String? {
+        guard showsTransportFields else { return nil }
+
+        let value = startLocation.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
+    }
+
+    private var normalizedEndLocation: String? {
+        guard showsTransportFields else { return nil }
+
+        let value = endLocation.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
+    }
+
+    private var showsTransportFields: Bool {
+        billType == .expense && category == .transport
     }
 
     private var originalAmountCents: Int64? {
@@ -266,6 +308,8 @@ struct BillFormView: View {
             categoryRawValue: categoryRawValue,
             paymentMethod: paymentMethod,
             note: normalizedNote,
+            startLocation: normalizedStartLocation,
+            endLocation: normalizedEndLocation,
             occurredDate: occurredDate,
             imageData: imageData
         )
@@ -278,6 +322,8 @@ struct BillFormView: View {
         record.category = categoryRawValue
         record.paymentMethod = paymentMethod.rawValue
         record.note = normalizedNote
+        record.startLocation = normalizedStartLocation
+        record.endLocation = normalizedEndLocation
         record.occurredAt = BillsViewModel.milliseconds(for: occurredDate)
         record.imageData = imageData
 

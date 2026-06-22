@@ -41,7 +41,11 @@ struct DiaryLinkedRecord: Identifiable, Hashable, Sendable {
                 bill.displayAmount,
                 bill.billType.localizedTitle,
                 AppFormatters.date(milliseconds: bill.occurredAt)
-            ].joined(separator: " · "),
+            ]
+            .compactMap { value in
+                value?.isEmpty == false ? value : nil
+            }
+            .joined(separator: " · "),
             systemImage: DiaryLinkSourceType.bill.systemImage,
             occurredAt: bill.occurredAt,
             snapshotJSON: encodeSnapshot(DiaryBillLinkSnapshot(bill: bill))
@@ -161,6 +165,8 @@ private struct DiaryBillLinkSnapshot: Encodable {
     let transactionType: String
     let category: String
     let paymentMethod: String
+    let startLocation: String?
+    let endLocation: String?
     let occurredAt: Int64
     let note: String?
 
@@ -172,6 +178,8 @@ private struct DiaryBillLinkSnapshot: Encodable {
         transactionType = bill.transactionType
         category = bill.category
         paymentMethod = bill.paymentMethod
+        startLocation = bill.normalizedStartLocation
+        endLocation = bill.normalizedEndLocation
         occurredAt = bill.occurredAt
         note = bill.note
     }

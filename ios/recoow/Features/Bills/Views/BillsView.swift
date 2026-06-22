@@ -55,12 +55,15 @@ private struct BillsContent: View {
 
     private enum Sheet: Identifiable {
         case addBill
+        case copyBill(BillRecord)
         case filters
 
         var id: String {
             switch self {
             case .addBill:
                 "addBill"
+            case .copyBill(let bill):
+                "copyBill:\(bill.id)"
             case .filters:
                 "filters"
             }
@@ -110,6 +113,13 @@ private struct BillsContent: View {
                         }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button {
+                                duplicateBill(bill)
+                            } label: {
+                                Label("复制", systemImage: "doc.on.doc")
+                            }
+                            .tint(.blue)
+
+                            Button {
                                 requestDeleteBill(bill)
                             } label: {
                                 Label("删除", systemImage: "trash")
@@ -135,6 +145,10 @@ private struct BillsContent: View {
             case .addBill:
                 NavigationStack {
                     BillFormView(bill: nil, viewModel: viewModel)
+                }
+            case .copyBill(let bill):
+                NavigationStack {
+                    BillFormView(bill: nil, viewModel: viewModel, prefillBill: bill)
                 }
             case .filters:
                 NavigationStack {
@@ -187,6 +201,11 @@ private struct BillsContent: View {
         Task {
             await viewModel.deleteBill(id: bill.id)
         }
+    }
+
+    private func duplicateBill(_ bill: BillRecord) {
+        let draft = viewModel.makeDuplicateDraft(from: bill)
+        presentedSheet = .copyBill(draft)
     }
 }
 

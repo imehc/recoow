@@ -70,6 +70,16 @@ struct BillDetailView: View {
                     LabeledContent("收入渠道", value: bill.billPaymentMethod.localizedTitle)
                 }
 
+                if bill.billType == .expense, bill.billCategory == .transport {
+                    if let startLocation = bill.normalizedStartLocation {
+                        LabeledContent("起点", value: startLocation)
+                    }
+
+                    if let endLocation = bill.normalizedEndLocation {
+                        LabeledContent("终点", value: endLocation)
+                    }
+                }
+
                 if let note = bill.note {
                     LabeledContent("备注", value: note)
                 }

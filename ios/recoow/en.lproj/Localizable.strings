@@ -44,6 +44,7 @@
 "删除" = "Delete";
 "取消" = "Cancel";
 "编辑" = "Edit";
+"复制" = "Copy";
 "保存" = "Save";
 "正在加载" = "Loading";
 "记录中" = "Recording";
@@ -239,6 +240,7 @@
 "支付方式" = "Payment Method";
 "收入类型" = "Income Type";
 "收入渠道" = "Income Channel";
+"出行信息" = "Trip";
 "账单" = "Bills";
 "添加账单" = "Add Bill";
 "编辑账单" = "Edit Bill";
@@ -264,6 +266,8 @@
 "请输入优惠" = "Enter discount";
 "请输入实付金额" = "Enter paid amount";
 "请输入金额" = "Enter amount";
+"请输入起点" = "Enter start";
+"请输入终点" = "Enter end";
 "餐饮" = "Dining";
 "购物" = "Shopping";
 "交通" = "Transport";

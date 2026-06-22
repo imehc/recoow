@@ -124,6 +124,8 @@ final class BillsViewModel {
         categoryRawValue: String,
         paymentMethod: BillPaymentMethod,
         note: String?,
+        startLocation: String?,
+        endLocation: String?,
         occurredDate: Date,
         imageData: Data?
     ) -> BillRecord {
@@ -136,6 +138,8 @@ final class BillsViewModel {
             categoryRawValue: categoryRawValue,
             paymentMethod: paymentMethod,
             note: note,
+            startLocation: startLocation,
+            endLocation: endLocation,
             occurredAt: Self.milliseconds(for: occurredDate),
             imageData: imageData,
             deviceID: repository.deviceID
@@ -151,6 +155,13 @@ final class BillsViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func makeDuplicateDraft(from bill: BillRecord) -> BillRecord {
+        bill.duplicated(
+            occurredAt: Self.milliseconds(for: Date()),
+            deviceID: repository.deviceID
+        )
     }
 
     func deleteBill(id: String) async {
@@ -180,6 +191,8 @@ final class BillsViewModel {
             bill.billType.localizedTitle,
             bill.billType == .expense ? bill.billCategory.localizedTitle : bill.billIncomeCategory.localizedTitle,
             bill.billPaymentMethod.localizedTitle,
+            bill.startLocation,
+            bill.endLocation,
             bill.note
         ]
         .compactMap(\.self)

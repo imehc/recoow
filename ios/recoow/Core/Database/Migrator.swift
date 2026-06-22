@@ -20,6 +20,7 @@ enum AppMigrator {
         V14MediaAttachmentsSchema.register(in: &migrator)
         V15MediaAttachmentSortOrderSchema.register(in: &migrator)
         V16DiaryMediaSchemaReset.register(in: &migrator)
+        V17BillTransportLocationsSchema.register(in: &migrator)
         return migrator
     }
 
