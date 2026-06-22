@@ -201,6 +201,17 @@ final class DiaryRepository: @unchecked Sendable {
         }
     }
 
+    func fetchEntries(from startedAt: Int64, to endedAt: Int64) throws -> [DiaryEntry] {
+        try database.reader.read { db in
+            try DiaryEntry
+                .filter(Column("deleted_at") == nil)
+                .filter(Column("occurred_at") >= startedAt)
+                .filter(Column("occurred_at") <= endedAt)
+                .order(Column("occurred_at").asc, Column("id").asc)
+                .fetchAll(db)
+        }
+    }
+
     func observeEntries() -> AsyncStream<Result<[DiaryEntry], Error>> {
         AsyncStream { continuation in
             let observation = ValueObservation.tracking { db in

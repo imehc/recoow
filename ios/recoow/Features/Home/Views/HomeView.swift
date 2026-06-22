@@ -11,7 +11,7 @@ struct HomeView: View {
 
     var body: some View {
         Group {
-            if visibleTools.isEmpty, locationTracker.isRecording == false {
+            if visibleTools.isEmpty, isLocationActive == false {
                 ContentUnavailableView {
                     Label(AppLocalization.string("未显示功能入口"), systemImage: "square.grid.2x2")
                 } description: {
@@ -21,11 +21,14 @@ struct HomeView: View {
                 }
             } else {
                 List {
-                    if locationTracker.isRecording {
+                    if isLocationActive {
                         Section(AppLocalization.string("正在进行")) {
                             NavigationLink(value: ToolRoute.locationTracker) {
                                 ActiveFeatureBanner(
                                     route: .locationTracker,
+                                    statusTitle: locationTracker.isPaused ? "已暂停" : "记录中",
+                                    statusSystemImage: locationTracker.isPaused ? "pause.circle" : "dot.radiowaves.left.and.right",
+                                    statusTint: locationTracker.isPaused ? .orange : .green,
                                     elapsedSeconds: locationTracker.elapsedSeconds,
                                     pointCount: locationTracker.pointCount
                                 )
@@ -97,6 +100,10 @@ struct HomeView: View {
         container.locationTrackerViewModel
     }
 
+    private var isLocationActive: Bool {
+        locationTracker.isRecording || locationTracker.isPaused
+    }
+
     private var todayCheckIns: [ReminderRecord] {
         remindersViewModel?.todayCheckIns(on: currentDate) ?? []
     }
@@ -108,6 +115,7 @@ struct HomeView: View {
     private var homeStateContext: ToolHomeStateContext {
         ToolHomeStateContext(
             isLocationRecording: locationTracker.isRecording,
+            isLocationPaused: locationTracker.isPaused,
             todayCheckInCount: todayCheckIns.count,
             anniversaryStatusTitle: homeAnniversaries.isEmpty ? nil : anniversaryStatusTitle
         )

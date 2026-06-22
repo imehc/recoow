@@ -83,6 +83,17 @@ final class BillRepository: @unchecked Sendable {
         }
     }
 
+    func fetchBills(from startedAt: Int64, to endedAt: Int64) throws -> [BillRecord] {
+        try database.reader.read { db in
+            try BillRecord
+                .filter(Column("deleted_at") == nil)
+                .filter(Column("occurred_at") >= startedAt)
+                .filter(Column("occurred_at") <= endedAt)
+                .order(Column("occurred_at").asc, Column("id").asc)
+                .fetchAll(db)
+        }
+    }
+
     func observeBills() -> AsyncStream<Result<[BillRecord], Error>> {
         AsyncStream { continuation in
             let observation = ValueObservation.tracking { db in

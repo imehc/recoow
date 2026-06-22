@@ -61,6 +61,6 @@ final class TrackHistoryViewModel {
     }
 
     func reportCannotDeleteActiveTrack() {
-        errorMessage = "记录中的轨迹不能删除"
+        errorMessage = AppLocalization.string("记录中的轨迹不能删除")
     }
 }

@@ -48,6 +48,10 @@ struct TrackHistoryEntryRow: View {
                 MetadataItemView(titleKey: "记录中", systemImage: "dot.radiowaves.left.and.right")
                     .font(.footnote)
                     .foregroundStyle(.green)
+            } else if track.status == .paused {
+                MetadataItemView(titleKey: "已暂停", systemImage: "pause.circle")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
             }
         }
         .padding(.vertical, 4)

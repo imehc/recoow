@@ -21,19 +21,19 @@ struct TrackEditView: View {
 
     var body: some View {
         Form {
-            Section("基础信息") {
-                LabeledContent("名称") {
-                    TextField("请输入名称", text: $name)
+            Section(AppLocalization.string("基础信息")) {
+                LabeledContent(AppLocalization.string("名称")) {
+                    TextField(AppLocalization.string("请输入名称"), text: $name)
                         .multilineTextAlignment(.trailing)
                         .focused($focusedField, equals: "name")
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("备注")
+                    Text(AppLocalization.string("备注"))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
 
-                    TextField("请输入备注", text: $note, axis: .vertical)
+                    TextField(AppLocalization.string("请输入备注"), text: $note, axis: .vertical)
                         .lineLimit(3...)
                         .focused($focusedField, equals: "note")
                 }
@@ -47,16 +47,16 @@ struct TrackEditView: View {
             }
         }
         .dismissesKeyboardOnTap(focusedField: $focusedField)
-        .navigationTitle("编辑轨迹")
+        .navigationTitle(AppLocalization.string("编辑轨迹"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("取消", action: cancel)
+                Button(AppLocalization.string("取消"), action: cancel)
                     .disabled(isSaving)
             }
 
             ToolbarItem(placement: .confirmationAction) {
-                Button("保存", action: save)
+                Button(AppLocalization.string("保存"), action: save)
                     .disabled(trimmedName.isEmpty || isSaving)
             }
         }

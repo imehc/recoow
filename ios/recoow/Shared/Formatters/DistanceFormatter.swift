@@ -50,6 +50,14 @@ enum AppFormatters {
         )
     }
 
+    static func time(milliseconds: Int64, locale: Locale = AppLocalization.currentLocale) -> String {
+        let date = Date(timeIntervalSince1970: Double(milliseconds) / 1000)
+        return date.formatted(
+            Date.FormatStyle(date: .omitted, time: .shortened)
+                .locale(locale)
+        )
+    }
+
     static func money(cents: Int64) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency

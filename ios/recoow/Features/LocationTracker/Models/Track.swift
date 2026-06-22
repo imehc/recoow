@@ -22,6 +22,7 @@ struct Track: Identifiable, Codable, Hashable, Sendable, FetchableRecord, Persis
     var averageSpeedMetersPerSecond: Double?
     var maxSpeedMetersPerSecond: Double?
     var note: String?
+    var statusRawValue: String
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -40,6 +41,11 @@ struct Track: Identifiable, Codable, Hashable, Sendable, FetchableRecord, Persis
         case averageSpeedMetersPerSecond = "avg_speed_mps"
         case maxSpeedMetersPerSecond = "max_speed_mps"
         case note
+        case statusRawValue = "status"
+    }
+
+    var status: TrackRecordingStatus {
+        TrackRecordingStatus(rawValue: statusRawValue) ?? (endedAt == nil ? .paused : .finished)
     }
 
     static func makeNew(accuracy: LocationAccuracy, deviceID: String) -> Track {
@@ -52,7 +58,7 @@ struct Track: Identifiable, Codable, Hashable, Sendable, FetchableRecord, Persis
             syncStatus: .pending,
             deviceID: deviceID,
             serverVersion: nil,
-            name: "轨迹 \(DateFormatter.trackName.string(from: Date()))",
+            name: AppLocalization.format("轨迹 %@", DateFormatter.trackNameString(from: Date())),
             startedAt: now,
             endedAt: nil,
             desiredAccuracyMeters: accuracy.rawValue,
@@ -60,16 +66,17 @@ struct Track: Identifiable, Codable, Hashable, Sendable, FetchableRecord, Persis
             durationSeconds: 0,
             averageSpeedMetersPerSecond: nil,
             maxSpeedMetersPerSecond: nil,
-            note: nil
+            note: nil,
+            statusRawValue: TrackRecordingStatus.recording.rawValue
         )
     }
 }
 
 private extension DateFormatter {
-    static let trackName: DateFormatter = {
+    static func trackNameString(from date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_Hans_CN")
-        formatter.dateFormat = "yyyy-MM-dd HH:mm"
-        return formatter
-    }()
+        formatter.locale = AppLocalization.currentLocale
+        formatter.setLocalizedDateFormatFromTemplate("yyyyMMddHHmm")
+        return formatter.string(from: date)
+    }
 }

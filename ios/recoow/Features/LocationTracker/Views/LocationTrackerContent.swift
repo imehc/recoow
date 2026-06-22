@@ -7,30 +7,30 @@ struct LocationTrackerContent: View {
 
     var body: some View {
         Form {
-            Section("状态") {
+            Section(AppLocalization.string("状态")) {
                 LabeledContent {
                     if let currentTrackName = viewModel.currentTrackName {
                         Text(currentTrackName)
                             .foregroundStyle(.secondary)
                     } else {
-                        Text("准备开始新的轨迹")
+                        Text(AppLocalization.string("准备开始新的轨迹"))
                             .foregroundStyle(.secondary)
                     }
                 } label: {
                     MetadataItemView(
-                        titleKey: LocalizedStringKey(viewModel.state.title),
+                        title: viewModel.state.title,
                         systemImage: statusSystemImage
                     )
                     .foregroundStyle(statusColor)
                 }
 
-                LabeledContent("时长", value: AppFormatters.duration(viewModel.elapsedSeconds))
-                LabeledContent("采样点", value: "\(viewModel.pointCount)")
-                LabeledContent("距离", value: AppFormatters.distance(viewModel.currentDistanceMeters))
-                LabeledContent("最高速度", value: AppFormatters.speed(viewModel.currentMaxSpeedMetersPerSecond))
+                LabeledContent(AppLocalization.string("时长"), value: AppFormatters.duration(viewModel.elapsedSeconds))
+                LabeledContent(AppLocalization.string("采样点"), value: "\(viewModel.pointCount)")
+                LabeledContent(AppLocalization.string("距离"), value: AppFormatters.distance(viewModel.currentDistanceMeters))
+                LabeledContent(AppLocalization.string("最高速度"), value: AppFormatters.speed(viewModel.currentMaxSpeedMetersPerSecond))
 
                 if let coordinate = viewModel.currentCoordinate {
-                    LabeledContent("当前位置") {
+                    LabeledContent(AppLocalization.string("当前位置")) {
                         Text(AppFormatters.coordinate(latitude: coordinate.latitude, longitude: coordinate.longitude))
                             .monospacedDigit()
                             .lineLimit(1)
@@ -39,8 +39,8 @@ struct LocationTrackerContent: View {
                 }
             }
 
-            Section("采样设置") {
-                Picker("精度", selection: $viewModel.selectedAccuracy) {
+            Section(AppLocalization.string("采样设置")) {
+                Picker(AppLocalization.string("精度"), selection: $viewModel.selectedAccuracy) {
                     ForEach(LocationAccuracy.allCases) { accuracy in
                         Text(accuracy.title).tag(accuracy)
                     }
@@ -57,24 +57,50 @@ struct LocationTrackerContent: View {
             }
 
             Section {
-                Button(action: toggleRecording) {
-                    HStack(spacing: 8) {
-                        Image(systemName: recordingButtonImage)
-                            .symbolRenderingMode(.monochrome)
-                            .foregroundStyle(.white)
-
-                        Text(LocalizedStringKey(recordingButtonTitle))
-                            .foregroundStyle(.white)
+                if viewModel.isRecording {
+                    Button(action: pauseRecording) {
+                        actionLabel(title: AppLocalization.string("暂停记录"), systemImage: "pause.fill", tint: .orange)
                     }
-                    .font(.body)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 32)
-                    .background(recordingButtonTint, in: .rect(cornerRadius: AppDesign.cornerRadius))
-                    .contentShape(.rect)
+                    .buttonStyle(.plain)
+
+                    Button(action: finishRecording) {
+                        actionLabel(title: AppLocalization.string("结束记录"), systemImage: "stop.fill", tint: .red)
+                    }
+                    .buttonStyle(.plain)
+                } else if viewModel.isPaused {
+                    Button(action: startRecording) {
+                        actionLabel(title: AppLocalization.string("恢复记录"), systemImage: "play.fill", tint: .green)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: finishRecording) {
+                        actionLabel(title: AppLocalization.string("结束记录"), systemImage: "stop.fill", tint: .red)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Button(action: startRecording) {
+                        actionLabel(title: AppLocalization.string("开始记录"), systemImage: "play.fill", tint: .blue)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
+    }
+
+    private func actionLabel(title: String, systemImage: String, tint: Color) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+                .symbolRenderingMode(.monochrome)
+                .foregroundStyle(.white)
+
+            Text(title)
+                .foregroundStyle(.white)
+        }
+        .font(.body)
+        .frame(maxWidth: .infinity)
+        .frame(height: 32)
+        .background(tint, in: .rect(cornerRadius: AppDesign.cornerRadius))
+        .contentShape(.rect)
     }
 
     private var failedMessage: String? {
@@ -85,18 +111,6 @@ struct LocationTrackerContent: View {
         return nil
     }
 
-    private var recordingButtonTitle: String {
-        viewModel.isRecording ? "停止记录" : "开始记录"
-    }
-
-    private var recordingButtonImage: String {
-        viewModel.isRecording ? "stop.fill" : "play.fill"
-    }
-
-    private var recordingButtonTint: Color {
-        viewModel.isRecording ? .red : .blue
-    }
-
     private var statusSystemImage: String {
         switch viewModel.state {
         case .idle:
@@ -105,6 +119,8 @@ struct LocationTrackerContent: View {
             "location.circle"
         case .recording:
             "dot.radiowaves.left.and.right"
+        case .paused:
+            "pause.circle"
         case .stopped:
             "checkmark.circle"
         case .failed:
@@ -120,21 +136,31 @@ struct LocationTrackerContent: View {
             .blue
         case .recording:
             .green
+        case .paused:
+            .orange
         case .failed:
             .red
         }
     }
 
-    private func toggleRecording() {
+    private func startRecording() {
         Task {
-            if viewModel.isRecording {
-                await viewModel.stop()
+            await viewModel.start()
+        }
+    }
 
-                if let finishedTrackID = viewModel.finishedTrackID {
-                    detailRoute = TrackDetailRoute(id: finishedTrackID)
-                }
-            } else {
-                await viewModel.start()
+    private func pauseRecording() {
+        Task {
+            await viewModel.pause()
+        }
+    }
+
+    private func finishRecording() {
+        Task {
+            await viewModel.stop()
+
+            if let finishedTrackID = viewModel.finishedTrackID {
+                detailRoute = TrackDetailRoute(id: finishedTrackID)
             }
         }
     }

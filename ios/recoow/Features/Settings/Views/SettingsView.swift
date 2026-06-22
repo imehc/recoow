@@ -4,6 +4,8 @@ struct SettingsView: View {
     @Environment(AppContainer.self) private var container
 
     var body: some View {
+        let language = container.appPreferences.language
+
         Form {
             AppPreferencesSection(preferences: container.appPreferences)
 
@@ -18,6 +20,6 @@ struct SettingsView: View {
                 Text(AppLocalization.string("主页功能入口"))
             }
         }
-        .navigationTitle(AppLocalization.string("设置"))
+        .navigationTitle(AppLocalization.string("设置", language: language))
     }
 }

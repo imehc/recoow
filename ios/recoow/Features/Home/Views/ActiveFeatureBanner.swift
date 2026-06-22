@@ -2,6 +2,9 @@ import SwiftUI
 
 struct ActiveFeatureBanner: View {
     let route: ToolRoute
+    let statusTitle: LocalizedStringKey
+    let statusSystemImage: String
+    let statusTint: Color
     let elapsedSeconds: Int64
     let pointCount: Int
 
@@ -23,9 +26,9 @@ struct ActiveFeatureBanner: View {
 
             Spacer(minLength: 8)
 
-            MetadataItemView(titleKey: "记录中", systemImage: "dot.radiowaves.left.and.right")
+            MetadataItemView(titleKey: statusTitle, systemImage: statusSystemImage)
                 .font(.footnote)
-                .foregroundStyle(.green)
+                .foregroundStyle(statusTint)
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)

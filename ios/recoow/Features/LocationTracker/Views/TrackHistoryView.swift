@@ -16,6 +16,8 @@ struct TrackHistoryView: View {
     @Namespace private var billImageTransition
 
     var body: some View {
+        let language = container.appPreferences.language
+
         Group {
             if let historyViewModel,
                let trackViewModel,
@@ -49,10 +51,10 @@ struct TrackHistoryView: View {
                     }
                 )
             } else {
-                ProgressView("正在加载")
+                ProgressView(AppLocalization.string("正在加载"))
             }
         }
-        .navigationTitle("历史")
+        .navigationTitle(AppLocalization.string("历史", language: language))
         .navigationDestination(for: HistoryDetailRoute.self) { route in
             historyDestination(for: route)
                 .toolbar(.hidden, for: .tabBar)
@@ -332,7 +334,7 @@ private struct TrackHistoryContent: View {
                                 Button {
                                     requestDeleteEntries([entry])
                                 } label: {
-                                    Label("删除", systemImage: "trash")
+                                    Label(AppLocalization.string("删除"), systemImage: "trash")
                                 }
                                 .tint(.red)
                             }
@@ -354,7 +356,7 @@ private struct TrackHistoryContent: View {
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 if isEditing {
-                    Button("删除", systemImage: "trash", action: requestDeleteSelectedEntries)
+                    Button(AppLocalization.string("删除"), systemImage: "trash", action: requestDeleteSelectedEntries)
                         .disabled(selectedDeletableEntries.isEmpty)
                         .tint(.red)
                 } else {
@@ -381,7 +383,7 @@ private struct TrackHistoryContent: View {
             Button(deletionConfirmationButtonTitle(for: confirmation), role: .destructive) {
                 confirmDeleteEntries(confirmation.entries)
             }
-            Button("取消", role: .cancel, action: clearPendingDeletion)
+            Button(AppLocalization.string("取消"), role: .cancel, action: clearPendingDeletion)
         } message: { confirmation in
             Text(deletionConfirmationMessage(for: confirmation))
         }

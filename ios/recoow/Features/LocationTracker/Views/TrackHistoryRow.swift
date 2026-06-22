@@ -17,9 +17,13 @@ struct TrackHistoryRow: View {
                 Spacer(minLength: 8)
 
                 if isActive {
-                    MetadataItemView(titleKey: "记录中", systemImage: "dot.radiowaves.left.and.right")
+                    MetadataItemView(title: AppLocalization.string("记录中"), systemImage: "dot.radiowaves.left.and.right")
                         .font(.footnote)
                         .foregroundStyle(.green)
+                } else if track.status == .paused {
+                    MetadataItemView(title: AppLocalization.string("已暂停"), systemImage: "pause.circle")
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
                 }
             }
 

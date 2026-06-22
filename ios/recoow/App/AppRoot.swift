@@ -11,7 +11,7 @@ struct AppRoot: View {
         let language = container.appPreferences.language
 
         TabView(selection: $selectedTab) {
-            Tab(AppLocalization.string("首页"), systemImage: "house", value: .home) {
+            Tab(AppLocalization.string("首页", language: language), systemImage: "house", value: .home) {
                 NavigationStack {
                     HomeView {
                         selectedTab = .settings
@@ -19,13 +19,13 @@ struct AppRoot: View {
                 }
             }
 
-            Tab(AppLocalization.string("历史"), systemImage: "clock", value: .history) {
+            Tab(AppLocalization.string("历史", language: language), systemImage: "clock", value: .history) {
                 NavigationStack {
                     TrackHistoryView()
                 }
             }
 
-            Tab(AppLocalization.string("统计"), systemImage: "chart.bar.xaxis", value: .statistics) {
+            Tab(AppLocalization.string("统计", language: language), systemImage: "chart.bar.xaxis", value: .statistics) {
                 NavigationStack {
                     StatisticsView(
                         openHistory: {
@@ -36,7 +36,7 @@ struct AppRoot: View {
                 }
             }
 
-            Tab(AppLocalization.string("设置"), systemImage: "gearshape", value: .settings) {
+            Tab(AppLocalization.string("设置", language: language), systemImage: "gearshape", value: .settings) {
                 NavigationStack {
                     SettingsView()
                 }
@@ -46,14 +46,14 @@ struct AppRoot: View {
         .preferredColorScheme(container.appPreferences.colorScheme)
         .task {
             await container.notificationScheduler.clearBadge()
-            await container.locationTrackerViewModel.finishInterruptedRecordingIfNeeded()
+            await container.locationTrackerViewModel.pauseInterruptedRecordingIfNeeded()
         }
         .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {
             case .active:
                 Task {
                     await container.notificationScheduler.clearBadge()
-                    await container.locationTrackerViewModel.finishInterruptedRecordingIfNeeded()
+                    await container.locationTrackerViewModel.pauseInterruptedRecordingIfNeeded()
                 }
             case .background:
                 container.locationTrackerViewModel.prepareForSuspension()

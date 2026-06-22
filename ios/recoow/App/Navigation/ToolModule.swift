@@ -33,7 +33,12 @@ struct ToolModule: Identifiable, Hashable {
     func homeState(in context: ToolHomeStateContext) -> ToolHomeState {
         switch route {
         case .locationTracker:
-            ToolHomeState(isActive: context.isLocationRecording)
+            ToolHomeState(
+                isActive: context.isLocationRecording || context.isLocationPaused,
+                status: context.isLocationPaused
+                    ? ToolHomeStatus(title: AppLocalization.string("已暂停"), systemImage: "pause.circle", tint: .orange)
+                    : nil
+            )
         case .reminders where context.todayCheckInCount > 0:
             ToolHomeState(
                 status: ToolHomeStatus(
@@ -83,6 +88,7 @@ enum ToolRegistry {
 
 struct ToolHomeStateContext {
     let isLocationRecording: Bool
+    let isLocationPaused: Bool
     let todayCheckInCount: Int
     let anniversaryStatusTitle: String?
 }

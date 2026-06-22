@@ -73,6 +73,7 @@ actor LocationService {
         return AsyncStream { continuation in
             let task = Task {
                 var lastAcceptedLocation: CLLocation?
+                var lastAcceptedAt: Date?
 
                 do {
                     for try await update in CLLocationUpdate.liveUpdates(accuracy.liveConfiguration) {
@@ -85,9 +86,13 @@ actor LocationService {
 
                         let isAccurateEnough = location.horizontalAccuracy <= max(accuracy.desiredAccuracy, accuracy.distanceFilter * 2)
                         let movedEnough = lastAcceptedLocation.map { location.distance(from: $0) >= accuracy.distanceFilter } ?? true
+                        let stationaryHeartbeat = location.speed >= 0 &&
+                            location.speed < 0.5 &&
+                            (lastAcceptedAt.map { location.timestamp.timeIntervalSince($0) >= 30 } ?? true)
 
-                        if isAccurateEnough, movedEnough {
+                        if isAccurateEnough, movedEnough || stationaryHeartbeat {
                             lastAcceptedLocation = location
+                            lastAcceptedAt = location.timestamp
                             continuation.yield(update)
                         }
                     }
