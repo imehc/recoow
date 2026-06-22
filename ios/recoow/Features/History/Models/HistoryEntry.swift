@@ -4,7 +4,7 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
     case track(Track)
     case decisionChoice(DecisionChoiceRecord)
     case storedItem(StoredItem)
-    case reminder(ReminderRecord)
+    case reminder(ReminderHistoryRecord)
     case bill(BillRecord)
     case diary(DiaryEntry)
     case anniversary(AnniversaryRecord)
@@ -17,8 +17,8 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
             "decisionChoice:\(record.id)"
         case .storedItem(let item):
             "storedItem:\(item.id)"
-        case .reminder(let reminder):
-            "reminder:\(reminder.id)"
+        case .reminder(let record):
+            record.id
         case .bill(let bill):
             "bill:\(bill.id)"
         case .diary(let diary):
@@ -36,8 +36,8 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
             record.selectedAt
         case .storedItem(let item):
             item.updatedAt
-        case .reminder(let reminder):
-            reminder.scheduledAt
+        case .reminder(let record):
+            record.completedAt
         case .bill(let bill):
             bill.occurredAt
         case .diary(let diary):
@@ -78,8 +78,8 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
             .decisionChoice(record.id)
         case .storedItem(let item):
             .storedItem(item.id)
-        case .reminder(let reminder):
-            .reminder(reminder.id)
+        case .reminder(let record):
+            .reminder(record.reminderID)
         case .bill(let bill):
             .bill(bill.id)
         case .diary(let diary):
@@ -97,8 +97,8 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
             record.optionTitle
         case .storedItem(let item):
             item.title
-        case .reminder(let reminder):
-            reminder.title
+        case .reminder(let record):
+            record.reminder.title
         case .bill(let bill):
             bill.title
         case .diary(let diary):
@@ -124,8 +124,13 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
     }
 
     var reminderID: String? {
-        guard case .reminder(let reminder) = self else { return nil }
-        return reminder.id
+        guard case .reminder(let record) = self else { return nil }
+        return record.reminderID
+    }
+
+    var reminderCompletionDeletionTarget: ReminderCompletionDeletionTarget? {
+        guard case .reminder(let record) = self else { return nil }
+        return record.deletionTarget
     }
 
     var billID: String? {

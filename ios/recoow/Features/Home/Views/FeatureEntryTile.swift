@@ -32,7 +32,7 @@ struct FeatureEntryTile: View {
                         .foregroundStyle(status.tint)
                 }
             } else if isActive {
-                MetadataItemView(titleKey: "进行中", systemImage: "dot.radiowaves.left.and.right")
+                MetadataItemView(titleKey: "记录中", systemImage: "dot.radiowaves.left.and.right")
                     .font(.footnote)
                     .foregroundStyle(.green)
             }

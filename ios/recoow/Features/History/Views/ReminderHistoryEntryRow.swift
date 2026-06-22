@@ -3,8 +3,12 @@ import SwiftUI
 struct ReminderHistoryEntryRow: View {
     @Environment(\.locale) private var locale
 
-    let reminder: ReminderRecord
+    let record: ReminderHistoryRecord
     let reminderImageTransition: Namespace.ID
+
+    private var reminder: ReminderRecord {
+        record.reminder
+    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -32,7 +36,7 @@ struct ReminderHistoryEntryRow: View {
 
                 MetadataLineView {
                     MetadataItemView(titleKey: reminder.scheduleKind.titleKey, systemImage: reminder.scheduleKind.systemImage)
-                    MetadataItemView(title: statusText, systemImage: statusSystemImage)
+                    MetadataItemView(title: completionKindTitle, systemImage: record.completion.kind.systemImage)
                 }
 
                 if let goalSummaryText = reminder.goalSummaryText {
@@ -54,36 +58,14 @@ struct ReminderHistoryEntryRow: View {
     }
 
     private var timeText: String {
-        if let completedAt = reminder.completedAt {
-            return AppLocalization.format("完成于 %@", AppFormatters.dateTime(milliseconds: completedAt, locale: locale))
-        }
-
-        if let missedDate = reminder.firstMissedCheckInDate() {
-            return AppLocalization.format(
-                "需补签 %@",
-                AppFormatters.date(milliseconds: RemindersViewModel.milliseconds(for: missedDate), locale: locale)
-            )
-        }
-
-        if let nextOccurrenceDate = reminder.nextOccurrenceDate {
-            return AppLocalization.format(
-                "下次 %@",
-                AppFormatters.dateTime(milliseconds: RemindersViewModel.milliseconds(for: nextOccurrenceDate), locale: locale)
-            )
-        }
-
-        return reminder.scheduleTitle(locale: locale)
+        AppLocalization.format(
+            "%@于 %@",
+            completionKindTitle,
+            AppFormatters.dateTime(milliseconds: record.completedAt, locale: locale)
+        )
     }
 
-    private var statusText: String {
-        AppLocalization.string(status.title)
-    }
-
-    private var statusSystemImage: String {
-        status.systemImage
-    }
-
-    private var status: ReminderCheckInStatus {
-        reminder.checkInStatus()
+    private var completionKindTitle: String {
+        AppLocalization.string(record.completion.kind.title)
     }
 }

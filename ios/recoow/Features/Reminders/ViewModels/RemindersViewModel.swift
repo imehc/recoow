@@ -182,6 +182,32 @@ final class RemindersViewModel {
         }
     }
 
+    func deleteCompletionRecords(_ targets: [ReminderCompletionDeletionTarget]) async {
+        guard targets.isEmpty == false else { return }
+
+        do {
+            let savedReminders = try repository.deleteCompletionRecords(targets)
+
+            for reminder in savedReminders {
+                upsertReminder(reminder)
+            }
+
+            errorMessage = nil
+            await syncEngine.enqueueScan()
+
+            for reminder in savedReminders {
+                do {
+                    try await notificationService.reschedule(reminder)
+                    notificationMessage = nil
+                } catch {
+                    notificationMessage = error.localizedDescription
+                }
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     static func milliseconds(for date: Date) -> Int64 {
         Int64(date.timeIntervalSince1970 * 1000)
     }

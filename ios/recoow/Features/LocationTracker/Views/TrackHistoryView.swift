@@ -161,8 +161,12 @@ struct TrackHistoryView: View {
             return choiceRecordImageTransition
 
         case .reminder(let id):
-            guard case .reminder(let reminder) = historyViewModel?.entry(id: "reminder:\(id)"),
-                  reminder.imageData != nil else {
+            let reminderRecord = historyViewModel?.entries.compactMap { entry -> ReminderHistoryRecord? in
+                guard case .reminder(let record) = entry, record.reminderID == id else { return nil }
+                return record
+            }.first
+
+            guard reminderRecord?.reminder.imageData != nil else {
                 return nil
             }
             return reminderImageTransition
@@ -524,7 +528,7 @@ private struct TrackHistoryContent: View {
             for itemID in plan.itemIDs {
                 await itemLocatorViewModel.deleteItem(id: itemID)
             }
-            await remindersViewModel.deleteReminders(ids: plan.reminderIDs)
+            await remindersViewModel.deleteCompletionRecords(plan.reminderCompletionTargets)
             await billsViewModel.deleteBills(ids: plan.billIDs)
             await diaryViewModel.deleteEntries(ids: plan.diaryIDs)
             await anniversariesViewModel.deleteAnniversaries(ids: plan.anniversaryIDs)

@@ -27,7 +27,7 @@ final class HistoryRepository: @unchecked Sendable {
             }
 
             if shouldInclude(.reminders, route: request.route) {
-                entries += try fetchReminders(db: db, request: request, limit: sourceLimit).map(HistoryEntry.reminder)
+                entries += try fetchReminderHistoryRecords(db: db, request: request, limit: sourceLimit).map(HistoryEntry.reminder)
             }
 
             if shouldInclude(.bills, route: request.route) {
@@ -83,13 +83,7 @@ final class HistoryRepository: @unchecked Sendable {
                 start: start,
                 end: end
             )
-            + fetchTimestamps(
-                db: db,
-                table: ReminderRecord.databaseTableName,
-                timestampColumn: "scheduled_at",
-                start: start,
-                end: end
-            )
+            + fetchReminderHistoryTimestamps(db: db, start: start, end: end)
             + fetchTimestamps(
                 db: db,
                 table: BillRecord.databaseTableName,
@@ -124,7 +118,7 @@ final class HistoryRepository: @unchecked Sendable {
             try Track.filter(Column("deleted_at") == nil).fetchCount(db) > 0
             || DecisionChoiceRecord.filter(Column("deleted_at") == nil).fetchCount(db) > 0
             || StoredItem.filter(Column("deleted_at") == nil).fetchCount(db) > 0
-            || ReminderRecord.filter(Column("deleted_at") == nil).fetchCount(db) > 0
+            || hasAnyReminderHistoryRecords(db: db)
             || BillRecord.filter(Column("deleted_at") == nil).fetchCount(db) > 0
             || DiaryEntry.filter(Column("deleted_at") == nil).fetchCount(db) > 0
             || AnniversaryRecord.filter(Column("deleted_at") == nil).fetchCount(db) > 0
@@ -216,12 +210,10 @@ final class HistoryRepository: @unchecked Sendable {
             .fetchAll(db)
     }
 
-    private func fetchReminders(db: Database, request: HistoryPageRequest, limit: Int) throws -> [ReminderRecord] {
+    private func fetchReminderHistoryRecords(db: Database, request: HistoryPageRequest, limit: Int) throws -> [ReminderHistoryRecord] {
         var query = ReminderRecord
             .filter(Column("deleted_at") == nil)
 
-        query = applyDateFilter(query, timestampColumn: "scheduled_at", interval: request.dateInterval)
-        query = applyCursorFilter(query, timestampColumn: "scheduled_at", cursor: request.cursor)
         query = applySearchFilter(
             query,
             columns: ["title", "note", "memory_icon", "schedule_kind"],
@@ -229,9 +221,13 @@ final class HistoryRepository: @unchecked Sendable {
         )
 
         return try query
-            .order(Column("scheduled_at").desc, Column("id").desc)
-            .limit(limit)
             .fetchAll(db)
+            .flatMap(\.historyRecords)
+            .filter { matchesDateInterval(timestamp: $0.completedAt, interval: request.dateInterval) }
+            .filter { isAfterCursor(.reminder($0), cursor: request.cursor) }
+            .sorted { sortEntries(lhs: .reminder($0), rhs: .reminder($1)) }
+            .prefix(limit)
+            .map { $0 }
     }
 
     private func fetchBills(db: Database, request: HistoryPageRequest, limit: Int) throws -> [BillRecord] {
@@ -328,6 +324,11 @@ final class HistoryRepository: @unchecked Sendable {
         return query.filter(expression)
     }
 
+    private func matchesDateInterval(timestamp: Int64, interval: DateInterval?) -> Bool {
+        guard let interval else { return true }
+        return timestamp >= milliseconds(for: interval.start) && timestamp < milliseconds(for: interval.end)
+    }
+
     private func fetchTimestamps(
         db: Database,
         table: String,
@@ -346,6 +347,22 @@ final class HistoryRepository: @unchecked Sendable {
             """,
             arguments: [start, end]
         )
+    }
+
+    private func fetchReminderHistoryTimestamps(db: Database, start: Int64, end: Int64) throws -> [Int64] {
+        try ReminderRecord
+            .filter(Column("deleted_at") == nil)
+            .fetchAll(db)
+            .flatMap(\.historyRecords)
+            .map(\.completedAt)
+            .filter { $0 >= start && $0 < end }
+    }
+
+    private func hasAnyReminderHistoryRecords(db: Database) throws -> Bool {
+        try ReminderRecord
+            .filter(Column("deleted_at") == nil)
+            .fetchAll(db)
+            .contains { $0.historyRecords.isEmpty == false }
     }
 
     private func shouldInclude(_ route: ToolRoute, route selectedRoute: ToolRoute?) -> Bool {

@@ -33,9 +33,9 @@ struct HistoryEntryRow: View {
                 categoryName: itemCategoryName,
                 itemImageTransition: itemImageTransition
             )
-        case .reminder(let reminder):
+        case .reminder(let record):
             ReminderHistoryEntryRow(
-                reminder: reminder,
+                record: record,
                 reminderImageTransition: reminderImageTransition
             )
         case .bill(let bill):

@@ -61,6 +61,40 @@ final class ReminderRepository: @unchecked Sendable {
         }
     }
 
+    func deleteCompletionRecords(_ targets: [ReminderCompletionDeletionTarget]) throws -> [ReminderRecord] {
+        guard targets.isEmpty == false else { return [] }
+
+        let targetsByReminderID = Dictionary(grouping: targets, by: \.reminderID)
+
+        return try database.writer.write { db in
+            var savedReminders: [ReminderRecord] = []
+
+            for (reminderID, targets) in targetsByReminderID {
+                guard var reminder = try ReminderRecord.fetchOne(db, key: reminderID), reminder.deletedAt == nil else {
+                    continue
+                }
+
+                let dateKeys = Set(targets.map(\.dateKey))
+                var didChange = false
+
+                for dateKey in dateKeys {
+                    didChange = reminder.clearOccurrenceCompletion(dateKey: dateKey) || didChange
+                }
+
+                guard didChange else { continue }
+
+                reminder.updatedAt = SyncableTimestamp.nowMilliseconds()
+                reminder.syncStatus = .pending
+
+                try reminder.update(db)
+                try appendChange(db: db, record: reminder, operation: .update)
+                savedReminders.append(reminder)
+            }
+
+            return savedReminders
+        }
+    }
+
     func fetchReminder(id: String) throws -> ReminderRecord? {
         try database.reader.read { db in
             try ReminderRecord

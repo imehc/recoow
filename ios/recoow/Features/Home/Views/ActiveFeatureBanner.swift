@@ -10,12 +10,8 @@ struct ActiveFeatureBanner: View {
             FeatureIconView(route: route)
 
             VStack(alignment: .leading, spacing: 4) {
-                MetadataItemView(
-                    title: Text(route.titleKey) + Text("进行中"),
-                    systemImage: "dot.radiowaves.left.and.right"
-                )
-                .font(.headline)
-                .foregroundStyle(.green)
+                Text(route.titleKey)
+                    .font(.headline)
 
                 Text("\(AppFormatters.duration(elapsedSeconds)) · \(AppFormatters.sampleCount(pointCount))")
                     .font(.subheadline)
@@ -23,8 +19,13 @@ struct ActiveFeatureBanner: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
+            .layoutPriority(1)
 
             Spacer(minLength: 8)
+
+            MetadataItemView(titleKey: "记录中", systemImage: "dot.radiowaves.left.and.right")
+                .font(.footnote)
+                .foregroundStyle(.green)
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)

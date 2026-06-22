@@ -111,6 +111,12 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         Set(completionRecords.map(\.dateKey))
     }
 
+    var historyRecords: [ReminderHistoryRecord] {
+        completionRecords.map { completion in
+            ReminderHistoryRecord(reminder: self, completion: completion)
+        }
+    }
+
     private var legacyCompletedDateKeys: Set<String> {
         Set(
             completedDateKeysRawValue?
@@ -510,6 +516,10 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         guard let occurrenceDate = occurrenceDate(on: date, calendar: calendar) else { return false }
 
         let dateKey = Self.dateKey(for: occurrenceDate, calendar: calendar)
+        return clearOccurrenceCompletion(dateKey: dateKey)
+    }
+
+    mutating func clearOccurrenceCompletion(dateKey: String) -> Bool {
         let records = completionRecords
         let filteredRecords = records.filter { $0.dateKey != dateKey }
         guard filteredRecords.count != records.count else { return false }

@@ -5,7 +5,7 @@ struct HistoryDeletionPlan {
     let trackIDs: [String]
     let decisionRecordIDs: [String]
     let itemIDs: [String]
-    let reminderIDs: [String]
+    let reminderCompletionTargets: [ReminderCompletionDeletionTarget]
     let billIDs: [String]
     let diaryIDs: [String]
     let anniversaryIDs: [String]
@@ -15,7 +15,7 @@ struct HistoryDeletionPlan {
         trackIDs = entries.compactMap(\.trackID)
         decisionRecordIDs = entries.compactMap(\.decisionRecordID)
         itemIDs = entries.compactMap(\.storedItemID)
-        reminderIDs = entries.compactMap(\.reminderID)
+        reminderCompletionTargets = entries.compactMap(\.reminderCompletionDeletionTarget)
         billIDs = entries.compactMap(\.billID)
         diaryIDs = entries.compactMap(\.diaryID)
         anniversaryIDs = entries.compactMap(\.anniversaryID)
