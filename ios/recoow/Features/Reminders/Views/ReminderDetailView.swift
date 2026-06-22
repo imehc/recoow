@@ -79,9 +79,6 @@ struct ReminderDetailView: View {
 
             if reminder.scheduleKind == .dailyGoal {
                 Section("坚持统计") {
-                    if let progressTotalDays = reminder.progressTotalDays {
-                        LabeledContent("目标总天数", value: AppLocalization.format("%d 天", progressTotalDays))
-                    }
                     LabeledContent("累计打卡", value: AppLocalization.format("%d 天", reminder.totalCheckInDays))
                     LabeledContent("当前连续", value: AppLocalization.format("%d 天", reminder.currentStreakDays()))
                     LabeledContent("最长连续", value: AppLocalization.format("%d 天", reminder.longestStreakDays()))
@@ -123,14 +120,10 @@ struct ReminderDetailView: View {
                     reminderForEditing = reminder
                 }
             }
-
-            if hasFooterAction(for: reminder) {
-                ToolbarItem(placement: .bottomBar) {
-                    HStack {
-                        footerAction(for: reminder)
-                        Spacer()
-                    }
-                }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if hasAction(for: reminder) {
+                bottomActions(for: reminder)
             }
         }
         .alert(
@@ -153,25 +146,67 @@ struct ReminderDetailView: View {
         AppLocalization.string(reminder.checkInStatus().title)
     }
 
-    private func hasFooterAction(for reminder: ReminderRecord) -> Bool {
-        reminder.isCompleted || reminder.canCheckIn() || reminder.firstMissedCheckInDate() != nil
+    private func hasAction(for reminder: ReminderRecord) -> Bool {
+        reminder.isTodayCompleted || reminder.isCompleted || reminder.canCheckIn() || reminder.firstMissedCheckInDate() != nil
     }
 
     @ViewBuilder
-    private func footerAction(for reminder: ReminderRecord) -> some View {
-        if reminder.isCompleted {
-            Button("恢复", systemImage: "arrow.uturn.backward") {
-                setCompleted(reminder, isCompleted: false)
+    private func bottomActions(for reminder: ReminderRecord) -> some View {
+        if reminder.isTodayCompleted {
+            bottomActionContainer {
+                undoButton(for: reminder)
             }
-        } else if reminder.canCheckIn() {
-            Button("打卡", systemImage: "checkmark.circle") {
-                setCompleted(reminder, isCompleted: true)
+        } else if reminder.isCompleted {
+            bottomActionContainer {
+                Button("恢复", systemImage: "arrow.uturn.backward") {
+                    setCompleted(reminder, isCompleted: false)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
             }
-        } else if let missedDate = reminder.firstMissedCheckInDate() {
-            Button("补签", systemImage: "calendar.badge.plus") {
-                makeUpRequest = ReminderMakeUpRequest(reminder: reminder, date: missedDate)
+        } else {
+            let canCheckIn = reminder.canCheckIn()
+            let missedDate = reminder.firstMissedCheckInDate()
+
+            bottomActionContainer {
+                if let missedDate {
+                    Button("补签", systemImage: "calendar.badge.plus") {
+                        makeUpRequest = ReminderMakeUpRequest(reminder: reminder, date: missedDate)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .tint(.orange)
+                }
+
+                if canCheckIn {
+                    Button("打卡", systemImage: "checkmark.circle.fill") {
+                        setCompleted(reminder, isCompleted: true)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .tint(.green)
+                }
             }
         }
+    }
+
+    private func bottomActionContainer<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        HStack(spacing: 12) {
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .padding(.horizontal)
+        .padding(.vertical, 10)
+        .background(.bar)
+    }
+
+    private func undoButton(for reminder: ReminderRecord) -> some View {
+        Button("撤销打卡", systemImage: "arrow.uturn.backward.circle") {
+            undoTodayCheckIn(reminder)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+        .tint(.orange)
     }
 
     private func deleteReminder(id: String) {
@@ -186,6 +221,12 @@ struct ReminderDetailView: View {
     private func setCompleted(_ reminder: ReminderRecord, isCompleted: Bool) {
         Task {
             await viewModel.setCompleted(reminder, isCompleted: isCompleted)
+        }
+    }
+
+    private func undoTodayCheckIn(_ reminder: ReminderRecord) {
+        Task {
+            await viewModel.undoTodayCheckIn(reminder)
         }
     }
 }

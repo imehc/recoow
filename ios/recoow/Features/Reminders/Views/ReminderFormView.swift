@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct ReminderFormView: View {
     @Environment(\.dismiss) private var dismiss
@@ -108,7 +107,7 @@ struct ReminderFormView: View {
                     )
                 }
 
-                if supportsProgressImport {
+                if supportsBoundedProgress {
                     if supportsEditableTargetDays {
                         LabeledContent("目标总天数") {
                             dayNumberField(value: $continuousDays, range: 1...9999)
@@ -116,7 +115,7 @@ struct ReminderFormView: View {
                     }
 
                     LabeledContent("已打卡天数") {
-                        dayNumberField(value: $importedCompletedDays, range: 0...progressTotalDays)
+                        dayNumberField(value: $importedCompletedDays, range: completedDaysImportRange)
                     }
 
                     Text(AppLocalization.format("剩余 %d 天", remainingProgressDays))
@@ -131,6 +130,14 @@ struct ReminderFormView: View {
                 }
 
                 Toggle("启用通知", isOn: $isEnabled)
+            }
+
+            if scheduleKind == .dailyGoal {
+                Section("坚持进度") {
+                    LabeledContent("已连续打卡天数") {
+                        dayNumberField(value: $importedCompletedDays, range: completedDaysImportRange)
+                    }
+                }
             }
 
             EditablePhotoInputSection(
@@ -193,7 +200,11 @@ struct ReminderFormView: View {
             return true
         }
 
-        if supportsProgressImport && (importedCompletedDays < 0 || importedCompletedDays > progressTotalDays) {
+        if supportsCompletedDaysImport && importedCompletedDays < 0 {
+            return true
+        }
+
+        if supportsBoundedProgress && importedCompletedDays > progressTotalDays {
             return true
         }
 
@@ -214,15 +225,23 @@ struct ReminderFormView: View {
         .current
     }
 
-    private var supportsProgressImport: Bool {
-        progressTotalDays > 0
+    private var supportsCompletedDaysImport: Bool {
+        if scheduleKind == .dailyGoal {
+            return true
+        }
+
+        return progressTotalDays > 0
+    }
+
+    private var supportsBoundedProgress: Bool {
+        scheduleKind != .dailyGoal && progressTotalDays > 0
     }
 
     private var supportsEditableTargetDays: Bool {
         switch scheduleKind {
-        case .weekdays, .weekly, .continuousDays, .dailyGoal:
+        case .weekdays, .weekly, .continuousDays:
             return true
-        case .single, .dateRange:
+        case .single, .dateRange, .dailyGoal:
             return false
         }
     }
@@ -231,11 +250,17 @@ struct ReminderFormView: View {
         switch scheduleKind {
         case .dateRange:
             return numberOfDays(from: scheduledDate, through: endDate)
-        case .weekdays, .weekly, .continuousDays, .dailyGoal:
+        case .weekdays, .weekly, .continuousDays:
             return max(1, continuousDays)
+        case .dailyGoal:
+            return 0
         case .single:
             return 1
         }
+    }
+
+    private var completedDaysImportRange: ClosedRange<Int> {
+        return supportsBoundedProgress ? 0...progressTotalDays : 0...9999
     }
 
     private var remainingProgressDays: Int {
@@ -259,12 +284,27 @@ struct ReminderFormView: View {
     }
 
     private func dayNumberField(value: Binding<Int>, range: ClosedRange<Int>) -> some View {
-        TrailingIntegerTextField(
-            value: value,
-            range: range,
-            placeholder: AppLocalization.string("天数")
+        TextField(
+            AppLocalization.string("天数"),
+            text: Binding(
+                get: {
+                    String(value.wrappedValue)
+                },
+                set: { newValue in
+                    let digits = newValue.filter(\.isNumber)
+                    guard digits.isEmpty == false else {
+                        value.wrappedValue = range.lowerBound
+                        return
+                    }
+
+                    let number = Int(digits) ?? range.upperBound
+                    value.wrappedValue = min(max(number, range.lowerBound), range.upperBound)
+                }
+            )
         )
-            .frame(width: 96, alignment: .trailing)
+        .keyboardType(.numberPad)
+        .multilineTextAlignment(.trailing)
+        .frame(width: 96, alignment: .trailing)
     }
 
     private func cancel() {
@@ -327,8 +367,9 @@ struct ReminderFormView: View {
     }
 
     private var normalizedImportedCompletedDays: Int {
-        guard supportsProgressImport else { return 0 }
-        return min(progressTotalDays, max(0, importedCompletedDays))
+        guard supportsCompletedDaysImport else { return 0 }
+        let normalizedValue = max(0, importedCompletedDays)
+        return supportsBoundedProgress ? min(progressTotalDays, normalizedValue) : normalizedValue
     }
 
     private func combinedDate(day: Date, time: Date) -> Date? {
@@ -362,157 +403,5 @@ struct ReminderFormView: View {
         }
 
         return [Calendar.current.component(.weekday, from: reminder?.scheduledDate ?? Date())]
-    }
-}
-
-private struct TrailingIntegerTextField: UIViewRepresentable {
-    @Binding var value: Int
-    let range: ClosedRange<Int>
-    let placeholder: String
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(parent: self)
-    }
-
-    func makeUIView(context: Context) -> UITextField {
-        let textField = TrailingCaretTextField()
-        textField.delegate = context.coordinator
-        textField.keyboardType = .numberPad
-        textField.textAlignment = .right
-        textField.font = .preferredFont(forTextStyle: .body)
-        textField.adjustsFontForContentSizeCategory = true
-        textField.placeholder = placeholder
-        textField.text = String(value)
-        textField.inputAccessoryView = context.coordinator.makeAccessoryView()
-        textField.addTarget(
-            context.coordinator,
-            action: #selector(Coordinator.textDidChange(_:)),
-            for: .editingChanged
-        )
-        return textField
-    }
-
-    func updateUIView(_ textField: UITextField, context: Context) {
-        context.coordinator.parent = self
-        textField.placeholder = placeholder
-
-        if context.coordinator.isEditing == false {
-            let text = String(value)
-            if textField.text != text {
-                textField.text = text
-            }
-        }
-    }
-
-    final class Coordinator: NSObject, UITextFieldDelegate {
-        var parent: TrailingIntegerTextField
-        var isEditing = false
-        private var isMovingCaret = false
-
-        init(parent: TrailingIntegerTextField) {
-            self.parent = parent
-        }
-
-        func makeAccessoryView() -> UIView {
-            let toolbar = UIToolbar()
-            toolbar.sizeToFit()
-            toolbar.items = [
-                UIBarButtonItem(systemItem: .flexibleSpace),
-                UIBarButtonItem(
-                    title: AppLocalization.string("完成"),
-                    style: .done,
-                    target: self,
-                    action: #selector(doneEditing)
-                )
-            ]
-            return toolbar
-        }
-
-        func textFieldDidBeginEditing(_ textField: UITextField) {
-            isEditing = true
-            moveCaretToEnd(textField)
-        }
-
-        func textFieldDidEndEditing(_ textField: UITextField) {
-            isEditing = false
-            let clampedValue = clampedValue(for: textField.text)
-            parent.value = clampedValue
-            textField.text = String(clampedValue)
-        }
-
-        func textFieldDidChangeSelection(_ textField: UITextField) {
-            guard isEditing, isMovingCaret == false else { return }
-
-            DispatchQueue.main.async { [weak self, weak textField] in
-                guard let self, let textField, self.isEditing else { return }
-                self.moveCaretToEnd(textField)
-            }
-        }
-
-        func textField(
-            _ textField: UITextField,
-            shouldChangeCharactersIn range: NSRange,
-            replacementString string: String
-        ) -> Bool {
-            if string.rangeOfCharacter(from: CharacterSet.decimalDigits.inverted) != nil {
-                return false
-            }
-
-            let currentText = textField.text ?? ""
-            guard let textRange = Range(range, in: currentText) else {
-                return false
-            }
-
-            let nextText = currentText.replacingCharacters(in: textRange, with: string)
-            guard nextText.isEmpty == false else {
-                return true
-            }
-
-            guard let nextValue = Int(nextText) else {
-                return false
-            }
-
-            return parent.range.contains(nextValue)
-        }
-
-        @objc func textDidChange(_ textField: UITextField) {
-            guard let text = textField.text, text.isEmpty == false else {
-                return
-            }
-
-            parent.value = clampedValue(for: text)
-            moveCaretToEnd(textField)
-        }
-
-        @objc private func doneEditing() {
-            UIApplication.shared.sendAction(
-                #selector(UIResponder.resignFirstResponder),
-                to: nil,
-                from: nil,
-                for: nil
-            )
-        }
-
-        private func clampedValue(for text: String?) -> Int {
-            let value = Int(text ?? "") ?? parent.range.lowerBound
-            return min(max(value, parent.range.lowerBound), parent.range.upperBound)
-        }
-
-        private func moveCaretToEnd(_ textField: UITextField) {
-            guard isMovingCaret == false else { return }
-
-            isMovingCaret = true
-            textField.selectedTextRange = textField.textRange(
-                from: textField.endOfDocument,
-                to: textField.endOfDocument
-            )
-            isMovingCaret = false
-        }
-    }
-}
-
-private final class TrailingCaretTextField: UITextField {
-    override func closestPosition(to point: CGPoint) -> UITextPosition? {
-        endOfDocument
     }
 }

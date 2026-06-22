@@ -89,7 +89,14 @@ private struct RemindersContent: View {
                                 )
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                if reminder.canCheckIn() {
+                                if reminder.isTodayCompleted {
+                                    Button {
+                                        undoTodayCheckIn(reminder)
+                                    } label: {
+                                        Label("撤销打卡", systemImage: "arrow.uturn.backward.circle")
+                                    }
+                                    .tint(.orange)
+                                } else if reminder.canCheckIn() {
                                     Button {
                                         completeReminder(reminder)
                                     } label: {
@@ -126,12 +133,21 @@ private struct RemindersContent: View {
                                 )
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button {
-                                    reopenReminder(reminder)
-                                } label: {
-                                    Label("恢复", systemImage: "arrow.uturn.backward")
+                                if reminder.isTodayCompleted {
+                                    Button {
+                                        undoTodayCheckIn(reminder)
+                                    } label: {
+                                        Label("撤销打卡", systemImage: "arrow.uturn.backward.circle")
+                                    }
+                                    .tint(.orange)
+                                } else {
+                                    Button {
+                                        reopenReminder(reminder)
+                                    } label: {
+                                        Label("恢复", systemImage: "arrow.uturn.backward")
+                                    }
+                                    .tint(.blue)
                                 }
-                                .tint(.blue)
 
                                 Button {
                                     requestDeleteReminder(reminder)
@@ -200,6 +216,12 @@ private struct RemindersContent: View {
     private func reopenReminder(_ reminder: ReminderRecord) {
         Task {
             await viewModel.setCompleted(reminder, isCompleted: false)
+        }
+    }
+
+    private func undoTodayCheckIn(_ reminder: ReminderRecord) {
+        Task {
+            await viewModel.undoTodayCheckIn(reminder)
         }
     }
 }

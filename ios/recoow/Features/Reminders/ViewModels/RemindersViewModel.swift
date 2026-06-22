@@ -30,15 +30,7 @@ final class RemindersViewModel {
     var upcomingReminders: [ReminderRecord] {
         reminders
             .filter { $0.isCompleted == false }
-            .sorted {
-                let lhsPriority = statusPriority(for: $0)
-                let rhsPriority = statusPriority(for: $1)
-                if lhsPriority != rhsPriority {
-                    return lhsPriority < rhsPriority
-                }
-
-                return ($0.nextOccurrenceDate ?? $0.scheduledDate) < ($1.nextOccurrenceDate ?? $1.scheduledDate)
-            }
+            .sorted(by: stableReminderOrder)
     }
 
     var pastReminders: [ReminderRecord] {
@@ -160,6 +152,16 @@ final class RemindersViewModel {
         await persist(record)
     }
 
+    func undoTodayCheckIn(_ reminder: ReminderRecord) async {
+        var record = reminder
+        guard record.clearOccurrenceCompletion() else {
+            errorMessage = AppLocalization.string("今天没有可撤销的打卡")
+            return
+        }
+
+        await persist(record)
+    }
+
     func deleteReminder(id: String) async {
         await deleteReminders(ids: [id])
     }
@@ -210,22 +212,15 @@ final class RemindersViewModel {
         }
     }
 
-    private func statusPriority(for reminder: ReminderRecord) -> Int {
-        switch reminder.checkInStatus() {
-        case .ready:
-            0
-        case .broken:
-            1
-        case .checkedInToday:
-            2
-        case .upcoming:
-            3
-        case .disabled:
-            4
-        case .ended:
-            5
-        case .completed:
-            6
+    private func stableReminderOrder(lhs: ReminderRecord, rhs: ReminderRecord) -> Bool {
+        if lhs.scheduledAt != rhs.scheduledAt {
+            return lhs.scheduledAt > rhs.scheduledAt
         }
+
+        if lhs.createdAt != rhs.createdAt {
+            return lhs.createdAt > rhs.createdAt
+        }
+
+        return lhs.id < rhs.id
     }
 }
