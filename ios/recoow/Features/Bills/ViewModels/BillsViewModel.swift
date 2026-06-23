@@ -126,6 +126,7 @@ final class BillsViewModel {
         note: String?,
         startLocation: String?,
         endLocation: String?,
+        transportLines: String?,
         occurredDate: Date,
         imageData: Data?
     ) -> BillRecord {
@@ -140,6 +141,7 @@ final class BillsViewModel {
             note: note,
             startLocation: startLocation,
             endLocation: endLocation,
+            transportLines: transportLines,
             occurredAt: Self.milliseconds(for: occurredDate),
             imageData: imageData,
             deviceID: repository.deviceID
@@ -193,6 +195,7 @@ final class BillsViewModel {
             bill.billPaymentMethod.localizedTitle,
             bill.startLocation,
             bill.endLocation,
+            bill.transportLines,
             bill.note
         ]
         .compactMap(\.self)

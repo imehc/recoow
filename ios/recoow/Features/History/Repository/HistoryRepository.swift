@@ -238,7 +238,7 @@ final class HistoryRepository: @unchecked Sendable {
         query = applyCursorFilter(query, timestampColumn: "occurred_at", cursor: request.cursor)
         query = applySearchFilter(
             query,
-            columns: ["title", "note", "transaction_type", "category", "payment_method", "start_location", "end_location"],
+            columns: ["title", "note", "transaction_type", "category", "payment_method", "start_location", "end_location", "transport_lines"],
             searchText: request.searchText
         )
 

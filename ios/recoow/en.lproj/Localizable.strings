@@ -69,6 +69,7 @@
 "暂无采样点" = "No Samples";
 "起点" = "Start";
 "终点" = "End";
+"线路" = "Lines";
 
 "选择集合" = "Choice Collections";
 "还没有选择集合" = "No Choice Collections";
@@ -268,6 +269,7 @@
 "请输入金额" = "Enter amount";
 "请输入起点" = "Enter start";
 "请输入终点" = "Enter end";
+"请输入线路" = "Enter lines";
 "餐饮" = "Dining";
 "购物" = "Shopping";
 "交通" = "Transport";

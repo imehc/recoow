@@ -12,6 +12,7 @@ struct BillFormView: View {
     @State private var paymentMethod: BillPaymentMethod
     @State private var startLocation: String
     @State private var endLocation: String
+    @State private var transportLines: String
     @State private var note: String
     @State private var occurredDate: Date
     @State private var imageData: Data?
@@ -38,6 +39,7 @@ struct BillFormView: View {
         _paymentMethod = State(initialValue: initialBill?.billPaymentMethod ?? .wechat)
         _startLocation = State(initialValue: initialBill?.startLocation ?? "")
         _endLocation = State(initialValue: initialBill?.endLocation ?? "")
+        _transportLines = State(initialValue: initialBill?.transportLines ?? "")
         _note = State(initialValue: initialBill?.note ?? "")
         _occurredDate = State(initialValue: initialBill?.occurredDate ?? Date())
         _imageData = State(initialValue: initialBill?.imageData)
@@ -132,6 +134,18 @@ struct BillFormView: View {
                             .textInputAutocapitalization(.never)
                             .focused($focusedField, equals: "endLocation")
                     }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("线路")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+
+                        TextField("请输入线路", text: $transportLines, axis: .vertical)
+                            .lineLimit(1...4)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .focused($focusedField, equals: "transportLines")
+                    }
                 }
             }
 
@@ -205,6 +219,17 @@ struct BillFormView: View {
 
         let value = endLocation.trimmingCharacters(in: .whitespacesAndNewlines)
         return value.isEmpty ? nil : value
+    }
+
+    private var normalizedTransportLines: String? {
+        guard showsTransportFields else { return nil }
+
+        let lines = transportLines
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { $0.isEmpty == false }
+
+        return lines.isEmpty ? nil : lines.joined(separator: "\n")
     }
 
     private var showsTransportFields: Bool {
@@ -310,6 +335,7 @@ struct BillFormView: View {
             note: normalizedNote,
             startLocation: normalizedStartLocation,
             endLocation: normalizedEndLocation,
+            transportLines: normalizedTransportLines,
             occurredDate: occurredDate,
             imageData: imageData
         )
@@ -324,6 +350,7 @@ struct BillFormView: View {
         record.note = normalizedNote
         record.startLocation = normalizedStartLocation
         record.endLocation = normalizedEndLocation
+        record.transportLines = normalizedTransportLines
         record.occurredAt = BillsViewModel.milliseconds(for: occurredDate)
         record.imageData = imageData
 

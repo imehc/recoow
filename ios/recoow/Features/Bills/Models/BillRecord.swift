@@ -23,6 +23,7 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
     var note: String?
     var startLocation: String?
     var endLocation: String?
+    var transportLines: String?
     var occurredAt: Int64
     var imageData: Data?
 
@@ -44,6 +45,7 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         case note
         case startLocation = "start_location"
         case endLocation = "end_location"
+        case transportLines = "transport_lines"
         case occurredAt = "occurred_at"
         case imageData = "image_data"
     }
@@ -80,6 +82,14 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         normalizedLocation(endLocation)
     }
 
+    var normalizedTransportLines: String? {
+        normalizedMultilineText(transportLines)
+    }
+
+    var transportLinesSummary: String? {
+        normalizedTransportLines?.components(separatedBy: .newlines).joined(separator: " / ")
+    }
+
     var displayAmount: String {
         switch billType {
         case .expense:
@@ -100,6 +110,7 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         note: String?,
         startLocation: String?,
         endLocation: String?,
+        transportLines: String?,
         occurredAt: Int64,
         imageData: Data?,
         deviceID: String
@@ -123,6 +134,7 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
             note: note,
             startLocation: startLocation,
             endLocation: endLocation,
+            transportLines: transportLines,
             occurredAt: occurredAt,
             imageData: imageData
         )
@@ -145,5 +157,14 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
     private func normalizedLocation(_ value: String?) -> String? {
         let trimmedValue = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return trimmedValue.isEmpty ? nil : trimmedValue
+    }
+
+    private func normalizedMultilineText(_ value: String?) -> String? {
+        let lines = value?
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { $0.isEmpty == false } ?? []
+
+        return lines.isEmpty ? nil : lines.joined(separator: "\n")
     }
 }

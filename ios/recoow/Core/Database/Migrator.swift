@@ -22,6 +22,7 @@ enum AppMigrator {
         V16DiaryMediaSchemaReset.register(in: &migrator)
         V17BillTransportLocationsSchema.register(in: &migrator)
         V18TrackSegmentsSchema.register(in: &migrator)
+        V19BillTransportLinesSchema.register(in: &migrator)
         return migrator
     }
 

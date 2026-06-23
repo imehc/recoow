@@ -71,6 +71,13 @@ struct BillDetailView: View {
                 }
 
                 if bill.billType == .expense, bill.billCategory == .transport {
+                    if let transportLines = bill.normalizedTransportLines {
+                        LabeledContent("线路") {
+                            Text(transportLines)
+                                .multilineTextAlignment(.trailing)
+                        }
+                    }
+
                     if let startLocation = bill.normalizedStartLocation {
                         LabeledContent("起点", value: startLocation)
                     }
