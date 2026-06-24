@@ -6,6 +6,7 @@ enum HistoryDetailRoute: Hashable {
     case storedItem(String)
     case reminder(String)
     case bill(String)
+    case foodDay(Date)
     case diary(String)
     case anniversary(String)
 }

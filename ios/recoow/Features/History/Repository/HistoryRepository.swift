@@ -34,6 +34,10 @@ final class HistoryRepository: @unchecked Sendable {
                 entries += try fetchBills(db: db, request: request, limit: sourceLimit).map(HistoryEntry.bill)
             }
 
+            if shouldInclude(.foodJournal, route: request.route) {
+                entries += try fetchFoodDayGroups(db: db, request: request, limit: sourceLimit).map(HistoryEntry.foodDay)
+            }
+
             if shouldInclude(.diary, route: request.route) {
                 entries += try fetchDiaries(db: db, request: request, limit: sourceLimit).map(HistoryEntry.diary)
             }
@@ -91,6 +95,7 @@ final class HistoryRepository: @unchecked Sendable {
                 start: start,
                 end: end
             )
+            + fetchFoodDayTimestamps(db: db, start: start, end: end)
             + fetchTimestamps(
                 db: db,
                 table: DiaryEntry.databaseTableName,
@@ -120,6 +125,7 @@ final class HistoryRepository: @unchecked Sendable {
             || StoredItem.filter(Column("deleted_at") == nil).fetchCount(db) > 0
             || hasAnyReminderHistoryRecords(db: db)
             || BillRecord.filter(Column("deleted_at") == nil).fetchCount(db) > 0
+            || FoodEntry.filter(Column("deleted_at") == nil).fetchCount(db) > 0
             || DiaryEntry.filter(Column("deleted_at") == nil).fetchCount(db) > 0
             || AnniversaryRecord.filter(Column("deleted_at") == nil).fetchCount(db) > 0
         }
@@ -248,6 +254,34 @@ final class HistoryRepository: @unchecked Sendable {
             .fetchAll(db)
     }
 
+    private func fetchFoodDayGroups(db: Database, request: HistoryPageRequest, limit: Int) throws -> [FoodDayGroup] {
+        var query = FoodEntry
+            .filter(Column("deleted_at") == nil)
+
+        query = applyDateFilter(query, timestampColumn: "occurred_at", interval: request.dateInterval)
+
+        let entries = try query
+            .order(Column("occurred_at").desc, Column("id").desc)
+            .fetchAll(db)
+        let dayRecords = try FoodDayRecord
+            .filter(Column("deleted_at") == nil)
+            .fetchAll(db)
+
+        return FoodJournalViewModel
+            .makeDayGroups(entries: entries, dayRecords: dayRecords, calendar: calendar)
+            .filter { foodGroupMatchesSearch($0, searchText: request.searchText) }
+            .filter { isAfterCursor(.foodDay($0), cursor: request.cursor) }
+            .sorted {
+                if $0.updatedAt == $1.updatedAt {
+                    return $0.id > $1.id
+                }
+
+                return $0.updatedAt > $1.updatedAt
+            }
+            .prefix(limit)
+            .map { $0 }
+    }
+
     private func fetchDiaries(db: Database, request: HistoryPageRequest, limit: Int) throws -> [DiaryEntry] {
         var query = DiaryEntry
             .filter(Column("deleted_at") == nil)
@@ -324,6 +358,27 @@ final class HistoryRepository: @unchecked Sendable {
         return query.filter(expression)
     }
 
+    private func foodGroupMatchesSearch(_ group: FoodDayGroup, searchText: String) -> Bool {
+        let normalized = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalized.isEmpty == false else { return true }
+
+        if let title = group.title, title.localizedCaseInsensitiveContains(normalized) {
+            return true
+        }
+
+        return group.entries.contains { entry in
+            [
+                entry.title,
+                entry.foodMealKind.localizedTitle,
+                entry.portion,
+                entry.note
+            ]
+            .compactMap(\.self)
+            .joined(separator: " ")
+            .localizedCaseInsensitiveContains(normalized)
+        }
+    }
+
     private func matchesDateInterval(timestamp: Int64, interval: DateInterval?) -> Bool {
         guard let interval else { return true }
         return timestamp >= milliseconds(for: interval.start) && timestamp < milliseconds(for: interval.end)
@@ -356,6 +411,18 @@ final class HistoryRepository: @unchecked Sendable {
             .flatMap(\.historyRecords)
             .map(\.completedAt)
             .filter { $0 >= start && $0 < end }
+    }
+
+    private func fetchFoodDayTimestamps(db: Database, start: Int64, end: Int64) throws -> [Int64] {
+        let timestamps = try FoodEntry
+            .filter(Column("deleted_at") == nil)
+            .filter(Column("occurred_at") >= start)
+            .filter(Column("occurred_at") < end)
+            .fetchAll(db)
+            .map(\.occurredDate)
+            .map { calendar.startOfDay(for: $0) }
+
+        return Set(timestamps).map { milliseconds(for: $0) }
     }
 
     private func hasAnyReminderHistoryRecords(db: Database) throws -> Bool {

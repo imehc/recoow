@@ -6,6 +6,7 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
     case storedItem(StoredItem)
     case reminder(ReminderHistoryRecord)
     case bill(BillRecord)
+    case foodDay(FoodDayGroup)
     case diary(DiaryEntry)
     case anniversary(AnniversaryRecord)
 
@@ -21,6 +22,8 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
             record.id
         case .bill(let bill):
             "bill:\(bill.id)"
+        case .foodDay(let group):
+            "foodDay:\(group.id)"
         case .diary(let diary):
             "diary:\(diary.id)"
         case .anniversary(let anniversary):
@@ -40,6 +43,8 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
             record.completedAt
         case .bill(let bill):
             bill.occurredAt
+        case .foodDay(let group):
+            group.updatedAt
         case .diary(let diary):
             diary.occurredAt
         case .anniversary(let anniversary):
@@ -59,6 +64,8 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
             .reminders
         case .bill:
             .bills
+        case .foodDay:
+            .foodJournal
         case .diary:
             .diary
         case .anniversary:
@@ -82,6 +89,8 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
             .reminder(record.reminderID)
         case .bill(let bill):
             .bill(bill.id)
+        case .foodDay(let group):
+            .foodDay(group.date)
         case .diary(let diary):
             .diary(diary.id)
         case .anniversary(let anniversary):
@@ -101,6 +110,8 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
             record.reminder.title
         case .bill(let bill):
             bill.title
+        case .foodDay(let group):
+            group.title ?? AppFormatters.date(milliseconds: Int64(group.date.timeIntervalSince1970 * 1000))
         case .diary(let diary):
             diary.title
         case .anniversary(let anniversary):
@@ -136,6 +147,11 @@ enum HistoryEntry: Identifiable, Hashable, Sendable {
     var billID: String? {
         guard case .bill(let bill) = self else { return nil }
         return bill.id
+    }
+
+    var foodEntryIDs: [String]? {
+        guard case .foodDay(let group) = self else { return nil }
+        return group.entries.map(\.id)
     }
 
     var diaryID: String? {

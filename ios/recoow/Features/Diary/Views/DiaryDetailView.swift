@@ -5,6 +5,7 @@ struct DiaryDetailView: View {
     @Bindable var viewModel: DiaryViewModel
     @State private var entryPendingDeletion: DiaryEntry?
     @State private var presentedSheet: PresentedSheet?
+    @State private var previewPhotoAttachment: MediaAttachment?
 
     let diaryID: String
 
@@ -144,6 +145,12 @@ struct DiaryDetailView: View {
         .sheet(item: $presentedSheet) { sheet in
             presentedSheetView(sheet)
         }
+        .fullScreenCover(item: $previewPhotoAttachment) { attachment in
+            MediaAttachmentPreviewView(
+                attachment: attachment,
+                attachments: attachments
+            )
+        }
         .task {
             await viewModel.loadEntryIfNeeded(id: diaryID)
         }
@@ -188,7 +195,11 @@ struct DiaryDetailView: View {
     }
 
     private func showAttachmentPreview(_ attachment: MediaAttachment) {
-        presentedSheet = .attachmentPreview(attachment)
+        if attachment.kind == .photo {
+            previewPhotoAttachment = attachment
+        } else {
+            presentedSheet = .attachmentPreview(attachment)
+        }
     }
 
     private func confirmDelete(_ entry: DiaryEntry) {

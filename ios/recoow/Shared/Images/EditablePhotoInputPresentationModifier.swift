@@ -33,7 +33,9 @@ struct EditablePhotoInputPresentationModifier: ViewModifier {
             .onChange(of: coordinator.pendingEditablePhoto?.id) {
                 coordinator.presentPendingEditorIfNeeded()
             }
-            .sheet(item: $coordinator.previewPhoto, content: PhotoPreviewView.init)
+            .fullScreenCover(item: $coordinator.previewPhoto) { item in
+                PhotoPreviewView(item: item)
+            }
     }
 
     private func saveEditedImage(_ data: Data) {

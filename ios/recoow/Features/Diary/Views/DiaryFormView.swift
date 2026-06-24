@@ -13,6 +13,7 @@ struct DiaryFormView: View {
     @State private var selectedLinks: [DiaryLink]
     @State private var selectedAttachments: [MediaAttachment]
     @State private var presentedSheet: PresentedSheet?
+    @State private var previewPhotoAttachment: MediaAttachment?
     @State private var isShowingAttachmentPhotoPicker = false
     @State private var latitude: Double?
     @State private var longitude: Double?
@@ -186,6 +187,12 @@ struct DiaryFormView: View {
                 .presentationDragIndicator(.visible)
             }
         }
+        .fullScreenCover(item: $previewPhotoAttachment) { attachment in
+            MediaAttachmentPreviewView(
+                attachment: attachment,
+                attachments: selectedAttachments
+            )
+        }
         .fullScreenCover(isPresented: $isShowingAttachmentPhotoPicker) {
             PhotoSourcePickerView(
                 onPhotoPicked: addPhotoAttachment,
@@ -355,7 +362,11 @@ struct DiaryFormView: View {
     }
 
     private func showAttachmentPreview(_ attachment: MediaAttachment) {
-        presentedSheet = .attachmentPreview(attachment)
+        if attachment.kind == .photo {
+            previewPhotoAttachment = attachment
+        } else {
+            presentedSheet = .attachmentPreview(attachment)
+        }
     }
 
     private func captureCurrentLocation() {

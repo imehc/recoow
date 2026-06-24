@@ -110,7 +110,9 @@ struct DecisionOptionFormView: View {
                 onPhotoPicked: beginEditingPickedImage
             )
         }
-        .sheet(item: $previewPhoto, content: PhotoPreviewView.init)
+        .fullScreenCover(item: $previewPhoto) { item in
+            PhotoPreviewView(item: item)
+        }
     }
 
     private var trimmedTitle: String {

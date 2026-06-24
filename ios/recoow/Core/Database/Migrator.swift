@@ -23,6 +23,9 @@ enum AppMigrator {
         V17BillTransportLocationsSchema.register(in: &migrator)
         V18TrackSegmentsSchema.register(in: &migrator)
         V19BillTransportLinesSchema.register(in: &migrator)
+        V20FoodJournalSchema.register(in: &migrator)
+        V21FoodEntryBillLinkSchema.register(in: &migrator)
+        V22FoodDayRecordsSchema.register(in: &migrator)
         return migrator
     }
 

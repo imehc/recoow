@@ -3,10 +3,10 @@ import GRDB
 
 /// 应用数据库门面。Feature 层只接触 reader/writer，不直接决定数据库文件位置。
 final class AppDatabase: @unchecked Sendable {
-    let dbQueue: DatabaseQueue
+    nonisolated let dbQueue: DatabaseQueue
 
-    var reader: DatabaseReader { dbQueue }
-    var writer: DatabaseWriter { dbQueue }
+    nonisolated var reader: DatabaseReader { dbQueue }
+    nonisolated var writer: DatabaseWriter { dbQueue }
 
     private init(dbQueue: DatabaseQueue) throws {
         self.dbQueue = dbQueue

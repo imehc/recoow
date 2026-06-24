@@ -4,14 +4,12 @@ struct MediaAttachmentPreviewView: View {
     @Environment(\.dismiss) private var dismiss
 
     let attachment: MediaAttachment
+    var attachments: [MediaAttachment] = []
 
     var body: some View {
         switch attachment.kind {
         case .photo:
-            AdaptivePhotoPreviewView(
-                title: attachment.displayTitle,
-                imageData: attachment.data
-            )
+            PhotoPreviewView(items: photoPreviewItems, initialID: attachment.id)
         case .audio:
             NavigationStack {
                 ZStack {
@@ -33,5 +31,18 @@ struct MediaAttachmentPreviewView: View {
 
     private func close() {
         dismiss()
+    }
+
+    private var photoPreviewItems: [PhotoPreviewItem] {
+        let photoAttachments = attachments.filter { $0.kind == .photo }
+        let source = photoAttachments.isEmpty ? [attachment] : photoAttachments
+
+        return source.map { attachment in
+            PhotoPreviewItem(
+                id: attachment.id,
+                imageData: attachment.data,
+                title: attachment.displayTitle
+            )
+        }
     }
 }

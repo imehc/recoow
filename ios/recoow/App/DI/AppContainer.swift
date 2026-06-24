@@ -14,6 +14,7 @@ final class AppContainer {
     @ObservationIgnored let itemLocatorRepository: ItemLocatorRepository
     @ObservationIgnored let reminderRepository: ReminderRepository
     @ObservationIgnored let billRepository: BillRepository
+    @ObservationIgnored let foodJournalRepository: FoodJournalRepository
     @ObservationIgnored let mediaAttachmentRepository: MediaAttachmentRepository
     @ObservationIgnored let diaryRepository: DiaryRepository
     @ObservationIgnored let anniversaryRepository: AnniversaryRepository
@@ -36,6 +37,7 @@ final class AppContainer {
         itemLocatorRepository: ItemLocatorRepository,
         reminderRepository: ReminderRepository,
         billRepository: BillRepository,
+        foodJournalRepository: FoodJournalRepository,
         mediaAttachmentRepository: MediaAttachmentRepository,
         diaryRepository: DiaryRepository,
         anniversaryRepository: AnniversaryRepository,
@@ -56,6 +58,7 @@ final class AppContainer {
         self.itemLocatorRepository = itemLocatorRepository
         self.reminderRepository = reminderRepository
         self.billRepository = billRepository
+        self.foodJournalRepository = foodJournalRepository
         self.mediaAttachmentRepository = mediaAttachmentRepository
         self.diaryRepository = diaryRepository
         self.anniversaryRepository = anniversaryRepository
@@ -105,6 +108,12 @@ final class AppContainer {
                 changeLogRepository: changeLogRepository,
                 deviceIdentifier: deviceIdentifier
             )
+            let foodJournalRepository = FoodJournalRepository(
+                database: database,
+                changeLogRepository: changeLogRepository,
+                mediaAttachmentRepository: mediaAttachmentRepository,
+                deviceIdentifier: deviceIdentifier
+            )
             let diaryRepository = DiaryRepository(
                 database: database,
                 changeLogRepository: changeLogRepository,
@@ -137,6 +146,7 @@ final class AppContainer {
                 itemLocatorRepository: itemLocatorRepository,
                 reminderRepository: reminderRepository,
                 billRepository: billRepository,
+                foodJournalRepository: foodJournalRepository,
                 mediaAttachmentRepository: mediaAttachmentRepository,
                 diaryRepository: diaryRepository,
                 anniversaryRepository: anniversaryRepository,
@@ -193,6 +203,13 @@ final class AppContainer {
         )
     }
 
+    func makeFoodJournalViewModel() -> FoodJournalViewModel {
+        FoodJournalViewModel(
+            repository: foodJournalRepository,
+            syncEngine: syncEngine
+        )
+    }
+
     func makeDiaryViewModel() -> DiaryViewModel {
         DiaryViewModel(
             repository: diaryRepository,
@@ -215,6 +232,7 @@ final class AppContainer {
             itemLocatorRepository: itemLocatorRepository,
             reminderRepository: reminderRepository,
             billRepository: billRepository,
+            foodJournalRepository: foodJournalRepository,
             diaryRepository: diaryRepository,
             anniversaryRepository: anniversaryRepository
         )
@@ -257,6 +275,12 @@ final class AppContainer {
                 changeLogRepository: changeLogRepository,
                 deviceIdentifier: deviceIdentifier
             )
+            let foodJournalRepository = FoodJournalRepository(
+                database: database,
+                changeLogRepository: changeLogRepository,
+                mediaAttachmentRepository: mediaAttachmentRepository,
+                deviceIdentifier: deviceIdentifier
+            )
             let diaryRepository = DiaryRepository(
                 database: database,
                 changeLogRepository: changeLogRepository,
@@ -289,6 +313,7 @@ final class AppContainer {
                 itemLocatorRepository: itemLocatorRepository,
                 reminderRepository: reminderRepository,
                 billRepository: billRepository,
+                foodJournalRepository: foodJournalRepository,
                 mediaAttachmentRepository: mediaAttachmentRepository,
                 diaryRepository: diaryRepository,
                 anniversaryRepository: anniversaryRepository,

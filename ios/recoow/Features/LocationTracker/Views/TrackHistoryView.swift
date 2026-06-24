@@ -8,6 +8,7 @@ struct TrackHistoryView: View {
     @State private var itemLocatorViewModel: ItemLocatorViewModel?
     @State private var remindersViewModel: RemindersViewModel?
     @State private var billsViewModel: BillsViewModel?
+    @State private var foodJournalViewModel: FoodJournalViewModel?
     @State private var diaryViewModel: DiaryViewModel?
     @State private var anniversariesViewModel: AnniversariesViewModel?
     @Namespace private var choiceRecordImageTransition
@@ -25,6 +26,7 @@ struct TrackHistoryView: View {
                let itemLocatorViewModel,
                let remindersViewModel,
                let billsViewModel,
+               let foodJournalViewModel,
                let diaryViewModel,
                let anniversariesViewModel {
                 TrackHistoryContent(
@@ -34,6 +36,7 @@ struct TrackHistoryView: View {
                     itemLocatorViewModel: itemLocatorViewModel,
                     remindersViewModel: remindersViewModel,
                     billsViewModel: billsViewModel,
+                    foodJournalViewModel: foodJournalViewModel,
                     diaryViewModel: diaryViewModel,
                     anniversariesViewModel: anniversariesViewModel,
                     choiceRecordImageTransition: choiceRecordImageTransition,
@@ -87,7 +90,14 @@ struct TrackHistoryView: View {
 
             if billsViewModel == nil {
                 let model = container.makeBillsViewModel()
+                model.startObserving()
                 billsViewModel = model
+            }
+
+            if foodJournalViewModel == nil {
+                let model = container.makeFoodJournalViewModel()
+                model.startObserving()
+                foodJournalViewModel = model
             }
 
             if diaryViewModel == nil {
@@ -136,6 +146,14 @@ struct TrackHistoryView: View {
                     billImageTransition: imageTransition(for: route)
                 )
             }
+        case .foodDay(let dayStart):
+            if let foodJournalViewModel, let billsViewModel {
+                FoodDayDetailView(
+                    viewModel: foodJournalViewModel,
+                    billsViewModel: billsViewModel,
+                    dayStart: dayStart
+                )
+            }
         case .diary(let id):
             if let diaryViewModel {
                 DiaryDetailView(
@@ -180,7 +198,7 @@ struct TrackHistoryView: View {
             }
             return billImageTransition
 
-        case .track, .storedItem, .diary, .anniversary:
+        case .track, .storedItem, .foodDay, .diary, .anniversary:
             return nil
         }
     }
@@ -194,6 +212,7 @@ private struct TrackHistoryContent: View {
     @Bindable var itemLocatorViewModel: ItemLocatorViewModel
     @Bindable var remindersViewModel: RemindersViewModel
     @Bindable var billsViewModel: BillsViewModel
+    @Bindable var foodJournalViewModel: FoodJournalViewModel
     @Bindable var diaryViewModel: DiaryViewModel
     @Bindable var anniversariesViewModel: AnniversariesViewModel
     @State private var selectedEntryIDs = Set<String>()
@@ -257,6 +276,13 @@ private struct TrackHistoryContent: View {
                 }
 
                 if let errorMessage = billsViewModel.errorMessage {
+                    Section {
+                        Label(errorMessage, systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.red)
+                    }
+                }
+
+                if let errorMessage = foodJournalViewModel.errorMessage {
                     Section {
                         Label(errorMessage, systemImage: "exclamationmark.triangle")
                             .foregroundStyle(.red)
@@ -532,6 +558,7 @@ private struct TrackHistoryContent: View {
             }
             await remindersViewModel.deleteCompletionRecords(plan.reminderCompletionTargets)
             await billsViewModel.deleteBills(ids: plan.billIDs)
+            await foodJournalViewModel.deleteEntries(ids: plan.foodEntryIDs)
             await diaryViewModel.deleteEntries(ids: plan.diaryIDs)
             await anniversariesViewModel.deleteAnniversaries(ids: plan.anniversaryIDs)
             historyViewModel.removeEntries(ids: plan.entryIDs)

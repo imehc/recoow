@@ -4,6 +4,7 @@ struct DiaryView: View {
     @Environment(AppContainer.self) private var container
     @State private var viewModel: DiaryViewModel?
     @State private var billsViewModel: BillsViewModel?
+    @State private var foodJournalViewModel: FoodJournalViewModel?
     @State private var remindersViewModel: RemindersViewModel?
     @State private var anniversariesViewModel: AnniversariesViewModel?
     @State private var itemLocatorViewModel: ItemLocatorViewModel?
@@ -39,6 +40,16 @@ struct DiaryView: View {
                         viewModel: billsViewModel,
                         billID: id,
                         billImageTransition: billImageTransition
+                    )
+                } else {
+                    ProgressView(AppLocalization.string("正在加载"))
+                }
+            case .foodDay(let dayStart):
+                if let foodJournalViewModel, let billsViewModel {
+                    FoodDayDetailView(
+                        viewModel: foodJournalViewModel,
+                        billsViewModel: billsViewModel,
+                        dayStart: dayStart
                     )
                 } else {
                     ProgressView(AppLocalization.string("正在加载"))
@@ -96,6 +107,12 @@ struct DiaryView: View {
                 let model = container.makeBillsViewModel()
                 model.startObserving()
                 billsViewModel = model
+            }
+
+            if foodJournalViewModel == nil {
+                let model = container.makeFoodJournalViewModel()
+                model.startObserving()
+                foodJournalViewModel = model
             }
 
             if remindersViewModel == nil {
