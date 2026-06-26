@@ -1154,6 +1154,7 @@ private struct TrackRelatedBillRow: View {
 
             Text(bill.displayAmount)
                 .font(.footnote.weight(.semibold))
+                .strikethrough(bill.isVoided)
                 .foregroundStyle(bill.billType.amountTint)
         }
     }

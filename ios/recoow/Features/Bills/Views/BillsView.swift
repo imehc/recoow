@@ -50,6 +50,7 @@ private struct BillsContent: View {
     @Bindable var viewModel: BillsViewModel
     @State private var presentedSheet: Sheet?
     @State private var billPendingDeletion: BillRecord?
+    @State private var billPendingRefund: BillRecord?
 
     let billImageTransition: Namespace.ID
 
@@ -126,6 +127,9 @@ private struct BillsContent: View {
                             }
                             .tint(.red)
                         }
+                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            settlementSwipeActions(for: bill)
+                        }
                     }
                 }
             }
@@ -171,6 +175,33 @@ private struct BillsContent: View {
         } message: { _ in
             Text(AppLocalization.string("删除后该记录会从历史中移除。"))
         }
+        .sheet(item: $billPendingRefund) { bill in
+            RefundReasonSheet(bill: bill, viewModel: viewModel)
+        }
+    }
+
+    @ViewBuilder
+    private func settlementSwipeActions(for bill: BillRecord) -> some View {
+        switch bill.lifecycleState {
+        case .normal:
+            if bill.isGroupBuy {
+                Button {
+                    redeemBill(bill)
+                } label: {
+                    Label("核销", systemImage: "checkmark.seal")
+                }
+                .tint(.green)
+            }
+
+            Button {
+                billPendingRefund = bill
+            } label: {
+                Label("退款", systemImage: "arrow.uturn.backward")
+            }
+            .tint(.orange)
+        case .redeemed, .expired, .refunded:
+            EmptyView()
+        }
     }
 
     private var filterButtonImage: String {
@@ -206,6 +237,12 @@ private struct BillsContent: View {
     private func duplicateBill(_ bill: BillRecord) {
         let draft = viewModel.makeDuplicateDraft(from: bill)
         presentedSheet = .copyBill(draft)
+    }
+
+    private func redeemBill(_ bill: BillRecord) {
+        Task {
+            await viewModel.redeem(bill)
+        }
     }
 }
 

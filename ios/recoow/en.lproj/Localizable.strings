@@ -705,3 +705,15 @@
 "质量问题" = "Quality Issues";
 "已走轨迹" = "Playback Path";
 "地图图层" = "Map Layers";
+"团购" = "Group Buy";
+"已核销" = "Redeemed";
+"未核销" = "Not Redeemed";
+"已退款" = "Refunded";
+"待核销" = "Pending";
+"核销状态" = "Status";
+"核销时间" = "Redeemed At";
+"退款状态" = "Refund Status";
+"退款原因" = "Refund Reason";
+"有效期" = "Valid Until";
+"设置有效期" = "Set Validity";
+"请输入退款原因（可选）" = "Enter refund reason (optional)";

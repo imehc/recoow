@@ -26,6 +26,21 @@ struct BillMetadataLineView: View {
                 titleKey: bill.billPaymentMethod.titleKey,
                 systemImage: bill.billPaymentMethod.systemImage
             )
+
+            if let lifecycleTitle = bill.lifecycleState.titleKey,
+               let lifecycleImage = bill.lifecycleState.systemImage {
+                MetadataItemView(
+                    titleKey: lifecycleTitle,
+                    systemImage: lifecycleImage
+                )
+                .foregroundStyle(bill.lifecycleState.tint)
+            } else if bill.isGroupBuy, bill.billSettlementStatus == .active {
+                MetadataItemView(
+                    titleKey: "待核销",
+                    systemImage: "clock.badge.checkmark"
+                )
+                .foregroundStyle(.orange)
+            }
         }
     }
 }

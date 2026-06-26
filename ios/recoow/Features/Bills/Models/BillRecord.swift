@@ -26,6 +26,10 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
     var transportLines: String?
     var occurredAt: Int64
     var imageData: Data?
+    var settlementStatus: String
+    var groupBuyValidUntil: Int64?
+    var redeemedAt: Int64?
+    var refundReason: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -48,6 +52,10 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         case transportLines = "transport_lines"
         case occurredAt = "occurred_at"
         case imageData = "image_data"
+        case settlementStatus = "settlement_status"
+        case groupBuyValidUntil = "group_buy_valid_until"
+        case redeemedAt = "redeemed_at"
+        case refundReason = "refund_reason"
     }
 
     var occurredDate: Date {
@@ -68,6 +76,60 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
 
     var billPaymentMethod: BillPaymentMethod {
         BillPaymentMethod(rawValue: paymentMethod) ?? .other
+    }
+
+    var billSettlementStatus: BillSettlementStatus {
+        BillSettlementStatus(rawValue: settlementStatus) ?? .active
+    }
+
+    var groupBuyValidUntilDate: Date? {
+        groupBuyValidUntil.map { Date(timeIntervalSince1970: Double($0) / 1000) }
+    }
+
+    var redeemedAtDate: Date? {
+        redeemedAt.map { Date(timeIntervalSince1970: Double($0) / 1000) }
+    }
+
+    /// 是否为团购支出。
+    var isGroupBuy: Bool {
+        billType == .expense && billCategory == .groupBuy
+    }
+
+    /// 团购已过有效期且未核销（可退回）。
+    var isExpired: Bool {
+        guard isGroupBuy, billSettlementStatus == .active, let validUntil = groupBuyValidUntil else {
+            return false
+        }
+
+        return validUntil < SyncableTimestamp.nowMilliseconds()
+    }
+
+    /// 展示用生命周期状态。
+    var lifecycleState: BillLifecycleState {
+        switch billSettlementStatus {
+        case .refunded:
+            return .refunded
+        case .redeemed:
+            return .redeemed
+        case .active:
+            // 团购过期未核销，自动视为已退款。
+            return isExpired ? .refunded : .normal
+        }
+    }
+
+    /// 是否已作废，不计入所属类型的合计与统计。
+    var isVoided: Bool {
+        billSettlementStatus == .refunded || isExpired
+    }
+
+    /// 计入合计的金额：作废后为 0。
+    var countedAmountCents: Int64 {
+        isVoided ? 0 : finalAmountCents
+    }
+
+    /// 计入合计的优惠金额：作废后为 0。
+    var countedDiscountCents: Int64 {
+        isVoided ? 0 : discountAmountCents
     }
 
     var hasDiscount: Bool {
@@ -113,6 +175,10 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         transportLines: String?,
         occurredAt: Int64,
         imageData: Data?,
+        settlementStatus: BillSettlementStatus = .active,
+        groupBuyValidUntil: Int64? = nil,
+        redeemedAt: Int64? = nil,
+        refundReason: String? = nil,
         deviceID: String
     ) -> BillRecord {
         let now = SyncableTimestamp.nowMilliseconds()
@@ -136,7 +202,11 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
             endLocation: endLocation,
             transportLines: transportLines,
             occurredAt: occurredAt,
-            imageData: imageData
+            imageData: imageData,
+            settlementStatus: settlementStatus.rawValue,
+            groupBuyValidUntil: groupBuyValidUntil,
+            redeemedAt: redeemedAt,
+            refundReason: refundReason
         )
     }
 
@@ -151,6 +221,9 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         copy.deviceID = deviceID
         copy.serverVersion = nil
         copy.occurredAt = occurredAt
+        copy.settlementStatus = BillSettlementStatus.active.rawValue
+        copy.redeemedAt = nil
+        copy.refundReason = nil
         return copy
     }
 

@@ -26,6 +26,9 @@ enum AppMigrator {
         V20FoodJournalSchema.register(in: &migrator)
         V21FoodEntryBillLinkSchema.register(in: &migrator)
         V22FoodDayRecordsSchema.register(in: &migrator)
+        V23BillSettlementSchema.register(in: &migrator)
+        V24BillRedeemedAtSchema.register(in: &migrator)
+        V25BillRefundReasonSchema.register(in: &migrator)
         return migrator
     }
 

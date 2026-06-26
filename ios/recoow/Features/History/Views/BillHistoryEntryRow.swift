@@ -34,6 +34,7 @@ struct BillHistoryEntryRow: View {
 
                 Text(bill.displayAmount)
                     .font(.footnote)
+                    .strikethrough(bill.isVoided)
                     .foregroundStyle(bill.billType.amountTint)
 
             }

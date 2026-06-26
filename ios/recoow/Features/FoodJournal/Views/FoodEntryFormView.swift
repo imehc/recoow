@@ -126,18 +126,20 @@ struct FoodEntryFormView: View {
                 )
             }
 
-            Section(AppLocalization.string("关联账单")) {
+            Section {
                 if let selectedBill {
-                    Button {
-                        showBillSelection()
-                    } label: {
-                        FoodSelectedBillRow(bill: selectedBill, isSelected: true)
-                    }
-                    .buttonStyle(.plain)
-
-                    Button(AppLocalization.string("移除账单"), systemImage: "minus.circle", role: .destructive) {
-                        selectedBillID = nil
-                    }
+                    FoodSelectedBillRow(bill: selectedBill, isSelected: true)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button {
+                                selectedBillID = nil
+                            } label: {
+                                Label(AppLocalization.string("移除"), systemImage: "minus.circle")
+                            }
+                            .tint(.red)
+                        }
+                        .onTapGesture {
+                            showBillSelection()
+                        }
                 } else if selectedBillID != nil {
                     HStack(spacing: 12) {
                         AppIconTileView(
@@ -153,7 +155,7 @@ struct FoodEntryFormView: View {
 
                         Spacer(minLength: 8)
 
-                        Button(AppLocalization.string("移除账单"), systemImage: "minus.circle", role: .destructive) {
+                        Button(AppLocalization.string("移除"), systemImage: "minus.circle", role: .destructive) {
                             selectedBillID = nil
                         }
                         .labelStyle(.iconOnly)
@@ -163,6 +165,19 @@ struct FoodEntryFormView: View {
                         showBillSelection()
                     }
                 }
+            } header: {
+                HStack(spacing: 8) {
+                    Text(AppLocalization.string("关联账单"))
+
+                    if selectedBillID != nil {
+                        Text(AppLocalization.string("已关联"))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer(minLength: 12)
+                }
+                .textCase(nil)
             }
         }
         .overlay {
@@ -190,7 +205,6 @@ struct FoodEntryFormView: View {
                         selectedBillID: $selectedBillID
                     )
                 }
-                .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
             }
         }

@@ -15,6 +15,8 @@ struct BillFormView: View {
     @State private var transportLines: String
     @State private var note: String
     @State private var occurredDate: Date
+    @State private var groupBuyValidUntil: Date
+    @State private var hasGroupBuyValidUntil: Bool
     @State private var imageData: Data?
     @State private var isUpdatingFinalAmount = false
     @State private var isFinalAmountManuallyEdited = false
@@ -42,6 +44,8 @@ struct BillFormView: View {
         _transportLines = State(initialValue: initialBill?.transportLines ?? "")
         _note = State(initialValue: initialBill?.note ?? "")
         _occurredDate = State(initialValue: initialBill?.occurredDate ?? Date())
+        _groupBuyValidUntil = State(initialValue: initialBill?.groupBuyValidUntilDate ?? Date())
+        _hasGroupBuyValidUntil = State(initialValue: initialBill?.groupBuyValidUntilDate != nil)
         _imageData = State(initialValue: initialBill?.imageData)
     }
 
@@ -98,14 +102,14 @@ struct BillFormView: View {
                 if billType == .expense {
                     Picker("分类", selection: $category) {
                         ForEach(BillCategory.allCases) { category in
-                            Label(category.title, systemImage: category.systemImage)
+                            Label(category.titleKey, systemImage: category.systemImage)
                             .tag(category)
                         }
                     }
                 } else {
                     Picker("收入类型", selection: $incomeCategory) {
                         ForEach(BillIncomeCategory.allCases) { category in
-                            Label(category.title, systemImage: category.systemImage)
+                            Label(category.titleKey, systemImage: category.systemImage)
                                 .tag(category)
                         }
                     }
@@ -113,8 +117,22 @@ struct BillFormView: View {
 
                 Picker(billType == .expense ? "支付方式" : "收入渠道", selection: $paymentMethod) {
                     ForEach(BillPaymentMethod.allCases) { method in
-                        Label(method.title, systemImage: method.systemImage)
+                        Label(method.titleKey, systemImage: method.systemImage)
                             .tag(method)
+                    }
+                }
+            }
+
+            if showsGroupBuyFields {
+                Section("团购") {
+                    Toggle("设置有效期", isOn: $hasGroupBuyValidUntil)
+
+                    if hasGroupBuyValidUntil {
+                        DatePicker(
+                            "有效期",
+                            selection: $groupBuyValidUntil,
+                            displayedComponents: [.date, .hourAndMinute]
+                        )
                     }
                 }
             }
@@ -236,6 +254,15 @@ struct BillFormView: View {
         billType == .expense && category == .transport
     }
 
+    private var showsGroupBuyFields: Bool {
+        billType == .expense && category == .groupBuy
+    }
+
+    private var groupBuyValidUntilMilliseconds: Int64? {
+        guard showsGroupBuyFields, hasGroupBuyValidUntil else { return nil }
+        return BillsViewModel.milliseconds(for: groupBuyValidUntil)
+    }
+
     private var originalAmountCents: Int64? {
         AppFormatters.cents(from: originalAmountText)
     }
@@ -276,7 +303,16 @@ struct BillFormView: View {
     }
 
     private var isSaveDisabled: Bool {
-        trimmedTitle.isEmpty || normalizedAmountValues == nil
+        if trimmedTitle.isEmpty || normalizedAmountValues == nil {
+            return true
+        }
+
+        // 团购有效期必填。
+        if showsGroupBuyFields, hasGroupBuyValidUntil == false {
+            return true
+        }
+
+        return false
     }
 
     private func cancel() {
@@ -353,6 +389,7 @@ struct BillFormView: View {
         record.transportLines = normalizedTransportLines
         record.occurredAt = BillsViewModel.milliseconds(for: occurredDate)
         record.imageData = imageData
+        record.groupBuyValidUntil = groupBuyValidUntilMilliseconds
 
         Task {
             await viewModel.save(record)

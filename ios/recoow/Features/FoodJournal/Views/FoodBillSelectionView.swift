@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct FoodBillSelectionView: View {
+    static let minimumPresentationHeight: CGFloat = 320
+
     @Environment(\.dismiss) private var dismiss
     @Bindable var billsViewModel: BillsViewModel
     @Binding var selectedBillID: String?
@@ -23,13 +25,6 @@ struct FoodBillSelectionView: View {
                 )
             } else {
                 Section(AppLocalization.string("账单")) {
-                    if selectedBillID != nil {
-                        Button(AppLocalization.string("移除账单"), systemImage: "minus.circle", role: .destructive) {
-                            selectedBillID = nil
-                            dismiss()
-                        }
-                    }
-
                     ForEach(filteredBills) { bill in
                         Button {
                             selectedBillID = bill.id
@@ -54,6 +49,8 @@ struct FoodBillSelectionView: View {
                 Button(AppLocalization.string("完成"), action: done)
             }
         }
+        .presentationDetents([.height(preferredPresentationHeight)])
+        .presentationDragIndicator(.visible)
         .task {
             billsViewModel.startObserving()
         }
@@ -85,6 +82,14 @@ struct FoodBillSelectionView: View {
             : AppLocalization.string("没有匹配账单")
     }
 
+    private var preferredPresentationHeight: CGFloat {
+        let rowCount = max(1, min(filteredBills.count, 6))
+        let baseHeight: CGFloat = 180
+        let fittingHeight = baseHeight + CGFloat(rowCount) * 58
+        let maxHeight = max(Self.minimumPresentationHeight, UIScreen.main.bounds.height * 0.82)
+        return min(max(Self.minimumPresentationHeight, fittingHeight), maxHeight)
+    }
+
     private func done() {
         dismiss()
     }
@@ -103,31 +108,27 @@ struct FoodSelectedBillRow: View {
                     size: AppDesign.compactIconSize
                 )
             } else {
-                BillIconView(bill: bill, size: AppDesign.compactIconSize)
+                AppIconTileView(
+                    systemImage: "receipt",
+                    tint: .teal,
+                    size: AppDesign.compactIconSize,
+                    backgroundOpacity: 0.12
+                )
             }
 
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(bill.title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(bill.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
 
-                    Spacer(minLength: 8)
-
-                    Text(bill.displayAmount)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(bill.billType.amountTint)
-                }
-
-                BillMetadataLineView(bill: bill)
-                    .font(.caption)
-
-                Text(AppFormatters.dateTime(milliseconds: bill.occurredAt))
-                    .font(.caption)
+                Text(bill.displayAmount)
+                    .font(.footnote)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
+
+            Spacer(minLength: 8)
 
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")

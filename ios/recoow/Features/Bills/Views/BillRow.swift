@@ -23,6 +23,7 @@ struct BillRow: View {
 
                     Text(bill.displayAmount)
                         .font(.headline)
+                        .strikethrough(bill.isVoided)
                         .foregroundStyle(bill.billType.amountTint)
                 }
 

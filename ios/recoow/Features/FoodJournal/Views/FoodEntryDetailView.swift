@@ -75,7 +75,15 @@ struct FoodEntryDetailView: View {
             if entry.billID != nil {
                 Section(AppLocalization.string("关联账单")) {
                     if let linkedBill {
-                        FoodSelectedBillRow(bill: linkedBill)
+                        NavigationLink {
+                            BillDetailView(
+                                viewModel: billsViewModel,
+                                billID: linkedBill.id,
+                                billImageTransition: nil
+                            )
+                        } label: {
+                            FoodSelectedBillRow(bill: linkedBill)
+                        }
                     } else {
                         Label(AppLocalization.string("账单同步中"), systemImage: "receipt")
                             .foregroundStyle(.secondary)

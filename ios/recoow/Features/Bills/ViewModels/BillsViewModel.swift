@@ -55,29 +55,29 @@ final class BillsViewModel {
     }
 
     var currentMonthTotalCents: Int64 {
-        currentMonthExpenseBills.reduce(0) { $0 + $1.finalAmountCents }
+        currentMonthExpenseBills.reduce(0) { $0 + $1.countedAmountCents }
     }
 
     var currentMonthIncomeCents: Int64 {
-        currentMonthIncomeBills.reduce(0) { $0 + $1.finalAmountCents }
+        currentMonthIncomeBills.reduce(0) { $0 + $1.countedAmountCents }
     }
 
     var currentMonthDiscountCents: Int64 {
-        currentMonthExpenseBills.reduce(0) { $0 + $1.discountAmountCents }
+        currentMonthExpenseBills.reduce(0) { $0 + $1.countedDiscountCents }
     }
 
     var todayTotalCents: Int64 {
         bills
             .filter { Calendar.current.isDateInToday($0.occurredDate) }
             .filter { $0.billType == .expense }
-            .reduce(0) { $0 + $1.finalAmountCents }
+            .reduce(0) { $0 + $1.countedAmountCents }
     }
 
     var todayIncomeCents: Int64 {
         bills
             .filter { Calendar.current.isDateInToday($0.occurredDate) }
             .filter { $0.billType == .income }
-            .reduce(0) { $0 + $1.finalAmountCents }
+            .reduce(0) { $0 + $1.countedAmountCents }
     }
 
     func startObserving() {
@@ -128,7 +128,9 @@ final class BillsViewModel {
         endLocation: String?,
         transportLines: String?,
         occurredDate: Date,
-        imageData: Data?
+        imageData: Data?,
+        settlementStatus: BillSettlementStatus = .active,
+        groupBuyValidUntil: Int64? = nil
     ) -> BillRecord {
         BillRecord.makeNew(
             title: title,
@@ -144,6 +146,8 @@ final class BillsViewModel {
             transportLines: transportLines,
             occurredAt: Self.milliseconds(for: occurredDate),
             imageData: imageData,
+            settlementStatus: settlementStatus,
+            groupBuyValidUntil: groupBuyValidUntil,
             deviceID: repository.deviceID
         )
     }
@@ -157,6 +161,26 @@ final class BillsViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    /// 团购核销：确认彻底支出。
+    func redeem(_ bill: BillRecord) async {
+        guard bill.isGroupBuy, bill.billSettlementStatus == .active else { return }
+
+        var record = bill
+        record.settlementStatus = BillSettlementStatus.redeemed.rawValue
+        record.redeemedAt = Self.milliseconds(for: Date())
+        await save(record)
+    }
+
+    /// 退款 / 过期退回：从支出与统计中扣除（终态）。
+    func refund(_ bill: BillRecord, reason: String? = nil) async {
+        guard bill.billSettlementStatus != .refunded else { return }
+
+        var record = bill
+        record.settlementStatus = BillSettlementStatus.refunded.rawValue
+        record.refundReason = reason
+        await save(record)
     }
 
     func makeDuplicateDraft(from bill: BillRecord) -> BillRecord {

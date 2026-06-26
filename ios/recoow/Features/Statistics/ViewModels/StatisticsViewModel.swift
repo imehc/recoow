@@ -174,7 +174,7 @@ final class StatisticsViewModel {
         return groupedBills.map { category, bills in
             StatisticsBillCategoryPoint(
                 category: category,
-                totalCents: bills.reduce(0) { $0 + $1.finalAmountCents },
+                totalCents: bills.reduce(0) { $0 + $1.countedAmountCents },
                 count: bills.count
             )
         }
@@ -192,7 +192,7 @@ final class StatisticsViewModel {
         return groupedBills.map { category, bills in
             StatisticsBillIncomeCategoryPoint(
                 category: category,
-                totalCents: bills.reduce(0) { $0 + $1.finalAmountCents },
+                totalCents: bills.reduce(0) { $0 + $1.countedAmountCents },
                 count: bills.count
             )
         }
@@ -214,11 +214,11 @@ final class StatisticsViewModel {
     }
 
     func billExpenseTotalCents(for period: StatisticsBillPeriod) -> Int64 {
-        expenseBills(in: period).reduce(0) { $0 + $1.finalAmountCents }
+        expenseBills(in: period).reduce(0) { $0 + $1.countedAmountCents }
     }
 
     func billIncomeTotalCents(for period: StatisticsBillPeriod) -> Int64 {
-        incomeBills(in: period).reduce(0) { $0 + $1.finalAmountCents }
+        incomeBills(in: period).reduce(0) { $0 + $1.countedAmountCents }
     }
 
     func billDiscountTotalCents(for period: StatisticsBillPeriod) -> Int64 {
@@ -407,10 +407,10 @@ final class StatisticsViewModel {
                     label: format(day, template: labelTemplate, locale: locale),
                     expenseCents: dayBills
                         .filter { $0.billType == .expense }
-                        .reduce(0) { $0 + $1.finalAmountCents },
+                        .reduce(0) { $0 + $1.countedAmountCents },
                     incomeCents: dayBills
                         .filter { $0.billType == .income }
-                        .reduce(0) { $0 + $1.finalAmountCents },
+                        .reduce(0) { $0 + $1.countedAmountCents },
                     count: dayBills.count
                 )
             )
@@ -437,10 +437,10 @@ final class StatisticsViewModel {
                     label: format(month, template: "MMM", locale: locale),
                     expenseCents: monthBills
                         .filter { $0.billType == .expense }
-                        .reduce(0) { $0 + $1.finalAmountCents },
+                        .reduce(0) { $0 + $1.countedAmountCents },
                     incomeCents: monthBills
                         .filter { $0.billType == .income }
-                        .reduce(0) { $0 + $1.finalAmountCents },
+                        .reduce(0) { $0 + $1.countedAmountCents },
                     count: monthBills.count
                 )
             )

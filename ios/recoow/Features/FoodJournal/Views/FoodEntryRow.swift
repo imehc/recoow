@@ -88,6 +88,7 @@ private struct FoodLinkedBillInlineView: View {
                 .lineLimit(1)
 
             Text(bill.displayAmount)
+                .strikethrough(bill.isVoided)
                 .foregroundStyle(bill.billType.amountTint)
                 .lineLimit(1)
         }
