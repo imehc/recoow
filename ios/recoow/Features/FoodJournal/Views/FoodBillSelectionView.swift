@@ -101,9 +101,9 @@ struct FoodSelectedBillRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            if bill.imageData != nil {
+            if bill.hasImage {
                 PhotoThumbnailView(
-                    imageData: bill.imageData,
+                    imageData: bill.resolvedImageData,
                     systemImage: "receipt.fill",
                     size: AppDesign.compactIconSize
                 )

@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 /// 一条本地账单记录。金额以分为单位保存，避免小数计算误差。
-struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, PersistableRecord, SyncableRecord, ConflictComparableRecord {
+struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, PersistableRecord, SyncableRecord, ConflictComparableRecord, MutableStandardImageReferenceProviding {
     static let databaseTableName = "bills"
 
     var id: String
@@ -26,6 +26,7 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
     var transportLines: String?
     var occurredAt: Int64
     var imageData: Data?
+    var imageAssetID: String?
     var settlementStatus: String
     var groupBuyValidUntil: Int64?
     var redeemedAt: Int64?
@@ -52,6 +53,7 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         case transportLines = "transport_lines"
         case occurredAt = "occurred_at"
         case imageData = "image_data"
+        case imageAssetID = "image_asset_id"
         case settlementStatus = "settlement_status"
         case groupBuyValidUntil = "group_buy_valid_until"
         case redeemedAt = "redeemed_at"
@@ -175,6 +177,7 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         transportLines: String?,
         occurredAt: Int64,
         imageData: Data?,
+        imageAssetID: String? = nil,
         settlementStatus: BillSettlementStatus = .active,
         groupBuyValidUntil: Int64? = nil,
         redeemedAt: Int64? = nil,
@@ -203,6 +206,7 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
             transportLines: transportLines,
             occurredAt: occurredAt,
             imageData: imageData,
+            imageAssetID: imageAssetID,
             settlementStatus: settlementStatus.rawValue,
             groupBuyValidUntil: groupBuyValidUntil,
             redeemedAt: redeemedAt,

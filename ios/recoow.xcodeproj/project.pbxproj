@@ -8,7 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		3ABF80402FE16600003C5066 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 3ABF80412FE16600003C5066 /* GRDB */; };
-		3ABF805A2FE90000003C5066 /* recoowWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 3ABF80502FE90000003C5066 /* recoowWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		3ABF805A2FE90000003C5066 /* recoowWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3ABF80502FE90000003C5066 /* recoowWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		3ABF80602FEA0000003C5066 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3ABF805F2FEA0000003C5066 /* AppIntents.framework */; };
+		3ABF80612FEF0000003C5066 /* Lightbox in Frameworks */ = {isa = PBXBuildFile; productRef = 3ABF80622FEF0000003C5066 /* Lightbox */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -22,15 +24,15 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		3ABF80592FE90000003C5066 /* Embed App Extensions */ = {
+		3ABF80592FE90000003C5066 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				3ABF805A2FE90000003C5066 /* recoowWidget.appex in Embed App Extensions */,
+				3ABF805A2FE90000003C5066 /* recoowWidget.appex in Embed Foundation Extensions */,
 			);
-			name = "Embed App Extensions";
+			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -38,6 +40,7 @@
 /* Begin PBXFileReference section */
 		3ABF802C2FE1551D003C5066 /* recoow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = recoow.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3ABF80502FE90000003C5066 /* recoowWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = recoowWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		3ABF805F2FEA0000003C5066 /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -81,6 +84,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3ABF80602FEA0000003C5066 /* AppIntents.framework in Frameworks */,
+				3ABF80612FEF0000003C5066 /* Lightbox in Frameworks */,
 				3ABF80402FE16600003C5066 /* GRDB in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -95,12 +100,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		3A08EFCD2FEF8C3100B2B34D /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				3ABF805F2FEA0000003C5066 /* AppIntents.framework */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
 		3ABF80232FE1551D003C5066 = {
 			isa = PBXGroup;
 			children = (
 				3ABF802E2FE1551D003C5066 /* recoow */,
 				3ABF80512FE90000003C5066 /* recoowWidget */,
 				3ABF802D2FE1551D003C5066 /* Products */,
+				3A08EFCD2FEF8C3100B2B34D /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -123,7 +137,7 @@
 				3ABF80282FE1551D003C5066 /* Sources */,
 				3ABF80292FE1551D003C5066 /* Frameworks */,
 				3ABF802A2FE1551D003C5066 /* Resources */,
-				3ABF80592FE90000003C5066 /* Embed App Extensions */,
+				3ABF80592FE90000003C5066 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
@@ -136,6 +150,7 @@
 			name = recoow;
 			packageProductDependencies = (
 				3ABF80412FE16600003C5066 /* GRDB */,
+				3ABF80622FEF0000003C5066 /* Lightbox */,
 			);
 			productName = recoow;
 			productReference = 3ABF802C2FE1551D003C5066 /* recoow.app */;
@@ -193,6 +208,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				3ABF80422FE16600003C5066 /* XCRemoteSwiftPackageReference "GRDB" */,
+				3ABF80632FEF0000003C5066 /* XCRemoteSwiftPackageReference "Lightbox" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3ABF802D2FE1551D003C5066 /* Products */;
@@ -548,6 +564,14 @@
 				minimumVersion = 6.29.0;
 			};
 		};
+		3ABF80632FEF0000003C5066 /* XCRemoteSwiftPackageReference "Lightbox" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/hyperoslo/Lightbox";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -555,6 +579,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3ABF80422FE16600003C5066 /* XCRemoteSwiftPackageReference "GRDB" */;
 			productName = GRDB;
+		};
+		3ABF80622FEF0000003C5066 /* Lightbox */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3ABF80632FEF0000003C5066 /* XCRemoteSwiftPackageReference "Lightbox" */;
+			productName = Lightbox;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -39,7 +39,7 @@ struct StoredItemDetailView: View {
 
     @ViewBuilder
     private func content(for item: StoredItem) -> some View {
-        if item.imageData != nil, let itemImageTransition {
+        if item.hasImage, let itemImageTransition {
             form(for: item)
                 .navigationTransition(.zoom(sourceID: itemID, in: itemImageTransition))
         } else {
@@ -49,9 +49,9 @@ struct StoredItemDetailView: View {
 
     private func form(for item: StoredItem) -> some View {
         Form {
-            if item.imageData != nil {
+            if item.hasImage {
                 Section {
-                    PhotoSquareImageView(imageData: item.imageData, systemImage: "shippingbox")
+                    PhotoSquareImageView(imageData: item.resolvedImageData, systemImage: "shippingbox")
                         .padding(.vertical, 8)
                 }
             }

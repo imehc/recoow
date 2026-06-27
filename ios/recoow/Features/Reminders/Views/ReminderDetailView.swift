@@ -38,7 +38,7 @@ struct ReminderDetailView: View {
 
     @ViewBuilder
     private func content(for reminder: ReminderRecord) -> some View {
-        if reminder.imageData != nil, let reminderImageTransition {
+        if reminder.hasImage, let reminderImageTransition {
             form(for: reminder)
                 .navigationTransition(.zoom(sourceID: reminderID, in: reminderImageTransition))
         } else {
@@ -48,9 +48,9 @@ struct ReminderDetailView: View {
 
     private func form(for reminder: ReminderRecord) -> some View {
         List {
-            if reminder.imageData != nil {
+            if reminder.hasImage {
                 Section("图片") {
-                    PhotoSquareImageView(imageData: reminder.imageData, systemImage: "bell.fill")
+                    PhotoSquareImageView(imageData: reminder.resolvedImageData, systemImage: "bell.fill")
                 }
             }
 
@@ -93,9 +93,9 @@ struct ReminderDetailView: View {
                 }
             }
 
-            if reminder.imageData == nil || reminder.note != nil {
+            if reminder.hasImage == false || reminder.note != nil {
                 Section("记忆") {
-                    if reminder.imageData == nil {
+                    if reminder.hasImage == false {
                         HStack {
                             Text("图标")
                             Spacer()

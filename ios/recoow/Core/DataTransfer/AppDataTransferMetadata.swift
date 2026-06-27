@@ -32,6 +32,8 @@ struct AppDataTransferMetadata: Sendable {
 struct AppDataTransferPreferences: Sendable {
     let languageRawValue: String?
     let appearanceRawValue: String?
+    let addsPickedPhotosToMediaLibrary: Bool
+    let savesCameraPhotosToLibrary: Bool
     let hiddenToolRouteIDs: [String]
 }
 
@@ -40,6 +42,8 @@ extension AppDataTransferMetadata {
         let preferencesJSON: [String: Any] = [
             "languageRawValue": preferences.languageRawValue ?? NSNull(),
             "appearanceRawValue": preferences.appearanceRawValue ?? NSNull(),
+            "addsPickedPhotosToMediaLibrary": preferences.addsPickedPhotosToMediaLibrary,
+            "savesCameraPhotosToLibrary": preferences.savesCameraPhotosToLibrary,
             "hiddenToolRouteIDs": preferences.hiddenToolRouteIDs
         ]
         let json: [String: Any] = [
@@ -85,6 +89,8 @@ extension AppDataTransferMetadata {
             preferences: AppDataTransferPreferences(
                 languageRawValue: preferencesJSON["languageRawValue"] as? String,
                 appearanceRawValue: preferencesJSON["appearanceRawValue"] as? String,
+                addsPickedPhotosToMediaLibrary: preferencesJSON["addsPickedPhotosToMediaLibrary"] as? Bool ?? false,
+                savesCameraPhotosToLibrary: preferencesJSON["savesCameraPhotosToLibrary"] as? Bool ?? true,
                 hiddenToolRouteIDs: hiddenToolRouteIDs
             )
         )
@@ -170,9 +176,9 @@ enum AppDataImportScope: String, CaseIterable, Identifiable, Hashable, Sendable 
         case .bills:
             ["bills"]
         case .foodJournal:
-            ["food_entries", "food_day_records"]
+            ["food_entries", "food_day_records", "media_assets"]
         case .diary:
-            ["diary_entries", "diary_tags", "diary_links"]
+            ["diary_entries", "diary_tags", "diary_links", "media_assets"]
         case .anniversaries:
             ["anniversaries"]
         }

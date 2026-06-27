@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 /// 随机选择集合中的一个候选项。
-struct DecisionOption: Identifiable, Codable, Hashable, Sendable, FetchableRecord, PersistableRecord, SyncableRecord, ConflictComparableRecord {
+struct DecisionOption: Identifiable, Codable, Hashable, Sendable, FetchableRecord, PersistableRecord, SyncableRecord, ConflictComparableRecord, MutableStandardImageReferenceProviding {
     static let databaseTableName = "decision_options"
 
     var id: String
@@ -18,6 +18,7 @@ struct DecisionOption: Identifiable, Codable, Hashable, Sendable, FetchableRecor
     var detail: String?
     var customInfo: String?
     var imageData: Data?
+    var imageAssetID: String?
     var weight: Int
     var isEnabled: Bool
 
@@ -34,6 +35,7 @@ struct DecisionOption: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         case detail
         case customInfo = "custom_info"
         case imageData = "image_data"
+        case imageAssetID = "image_asset_id"
         case weight
         case isEnabled = "is_enabled"
     }
@@ -44,6 +46,7 @@ struct DecisionOption: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         detail: String?,
         customInfo: String?,
         imageData: Data?,
+        imageAssetID: String? = nil,
         weight: Int,
         isEnabled: Bool,
         deviceID: String
@@ -62,6 +65,7 @@ struct DecisionOption: Identifiable, Codable, Hashable, Sendable, FetchableRecor
             detail: detail,
             customInfo: customInfo,
             imageData: imageData,
+            imageAssetID: imageAssetID,
             weight: max(1, weight),
             isEnabled: isEnabled
         )

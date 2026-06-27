@@ -160,7 +160,7 @@ private struct FoodEntryReadonlyPhotoStrip: View {
                         onPreview(photo)
                     } label: {
                         PhotoThumbnailView(
-                            imageData: photo.data,
+                            imageData: photo.resolvedData,
                             systemImage: "photo.fill",
                             size: AppDesign.largeThumbnailSize
                         )

@@ -22,7 +22,7 @@ struct DecisionChoiceRecordDetailView: View {
     private var content: some View {
         if let record {
             Form {
-                if let imageData = record.optionImageData {
+                if let imageData = record.resolvedImageData {
                     Section {
                         PhotoSquareImageView(imageData: imageData, systemImage: "sparkles")
                             .padding(.vertical, 8)

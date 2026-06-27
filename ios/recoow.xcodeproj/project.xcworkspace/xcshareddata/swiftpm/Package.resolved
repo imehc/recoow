@@ -1,5 +1,5 @@
 {
-  "originHash" : "d77223ea3cadaebd2154378ec5005b6ebefcef3b34a4dafa368b0c4f16c0561c",
+  "originHash" : "18cf31d911817f8c214ad188f956f1fde42f4dfa45bc4f66dd830104d492cd01",
   "pins" : [
     {
       "identity" : "grdb.swift",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "2cf6c756e1e5ef6901ebae16576a7e4e4b834622",
         "version" : "6.29.3"
+      }
+    },
+    {
+      "identity" : "lightbox",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/hyperoslo/Lightbox",
+      "state" : {
+        "revision" : "398ee143f00bfc070023c155e6d088ffb399c8cb",
+        "version" : "2.5.1"
       }
     }
   ],

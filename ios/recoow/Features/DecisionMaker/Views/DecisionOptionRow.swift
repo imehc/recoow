@@ -5,7 +5,7 @@ struct DecisionOptionRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            PhotoThumbnailView(imageData: option.imageData, systemImage: "questionmark.circle")
+            PhotoThumbnailView(imageData: option.resolvedImageData, systemImage: "questionmark.circle")
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline) {

@@ -12,7 +12,7 @@ struct FoodEntryRow: View {
         HStack(alignment: .top, spacing: 12) {
             if let coverPhoto {
                 PhotoThumbnailView(
-                    imageData: coverPhoto.data,
+                    imageData: coverPhoto.resolvedData,
                     systemImage: "photo.fill",
                     size: iconSize
                 )

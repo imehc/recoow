@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 
 struct FoodEntryFormView: View {
+    @Environment(AppContainer.self) private var container
     @Environment(\.dismiss) private var dismiss
     @State private var title: String
     @State private var mealKind: FoodMealKind
@@ -13,6 +14,7 @@ struct FoodEntryFormView: View {
     @State private var presentedSheet: PresentedSheet?
     @State private var previewAttachment: MediaAttachment?
     @State private var isShowingPhotoPicker = false
+    @State private var photoErrorMessage: String?
     @State private var attachmentDragCoordinator = MediaAttachmentDragCoordinator()
     @State private var draftID: String
     @FocusState private var focusedField: String?
@@ -217,8 +219,17 @@ struct FoodEntryFormView: View {
         .fullScreenCover(isPresented: $isShowingPhotoPicker) {
             PhotoSourcePickerView(
                 onPhotoPicked: addPhotoAttachment,
+                mediaAssetRepository: container.mediaAssetRepository,
+                onMediaAssetPicked: addPhotoAttachment,
                 onClose: closePhotoPicker
             )
+        }
+        .alert(AppLocalization.string("无法添加照片"), isPresented: .isPresent($photoErrorMessage)) {
+            Button(AppLocalization.string("确定"), role: .cancel) {
+                photoErrorMessage = nil
+            }
+        } message: {
+            Text(photoErrorMessage ?? "")
         }
         .task(id: selectedBillID) {
             await loadSelectedBillIfNeeded()
@@ -294,6 +305,22 @@ struct FoodEntryFormView: View {
                 mimeType: "image/jpeg",
                 width: image.map { Int($0.size.width) },
                 height: image.map { Int($0.size.height) },
+                deviceID: viewModel.deviceID
+            )
+        )
+    }
+
+    private func addPhotoAttachment(_ asset: MediaAsset) {
+        selectedAttachments.append(
+            MediaAttachment.makeNew(
+                ownerType: .foodEntry,
+                ownerID: foodEntryID,
+                kind: .photo,
+                title: nil,
+                mimeType: asset.mimeType,
+                width: asset.width,
+                height: asset.height,
+                assetID: asset.id,
                 deviceID: viewModel.deviceID
             )
         )

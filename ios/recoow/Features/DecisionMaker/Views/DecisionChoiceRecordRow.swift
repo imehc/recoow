@@ -34,7 +34,7 @@ struct DecisionChoiceRecordRow: View {
 
     @ViewBuilder
     private var thumbnail: some View {
-        if let imageData = record.optionImageData {
+        if let imageData = record.resolvedImageData {
             if let choiceRecordImageTransition {
                 PhotoThumbnailView(imageData: imageData, systemImage: "sparkles", size: thumbnailSize)
                     .matchedTransitionSource(id: record.id, in: choiceRecordImageTransition)

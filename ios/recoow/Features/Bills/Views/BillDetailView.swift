@@ -35,7 +35,7 @@ struct BillDetailView: View {
 
     @ViewBuilder
     private func content(for bill: BillRecord) -> some View {
-        if bill.imageData != nil, let billImageTransition {
+        if bill.hasImage, let billImageTransition {
             form(for: bill)
                 .navigationTransition(.zoom(sourceID: billID, in: billImageTransition))
         } else {
@@ -45,9 +45,9 @@ struct BillDetailView: View {
 
     private func form(for bill: BillRecord) -> some View {
         List {
-            if bill.imageData != nil {
+            if bill.hasImage {
                 Section("图片") {
-                    PhotoSquareImageView(imageData: bill.imageData, systemImage: "receipt.fill")
+                    PhotoSquareImageView(imageData: bill.resolvedImageData, systemImage: "receipt.fill")
                 }
             }
 
@@ -146,7 +146,7 @@ struct BillDetailView: View {
             }
         }
         .alert(
-            billPendingDeletion.map { AppLocalization.format("删除\u{201c}%@\u{201d}？", $0.title) } ?? "",
+            billPendingDeletion.map { AppLocalization.format("删除“%@”？", $0.title) } ?? "",
             isPresented: .isPresent($billPendingDeletion),
             presenting: billPendingDeletion
         ) { bill in

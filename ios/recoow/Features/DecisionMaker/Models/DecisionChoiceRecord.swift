@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 /// “选什么”的一次随机结果快照。
-struct DecisionChoiceRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, PersistableRecord, SyncableRecord, ConflictComparableRecord {
+struct DecisionChoiceRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, PersistableRecord, SyncableRecord, ConflictComparableRecord, ImageReferenceProviding {
     static let databaseTableName = "decision_choice_records"
 
     var id: String
@@ -20,6 +20,7 @@ struct DecisionChoiceRecord: Identifiable, Codable, Hashable, Sendable, Fetchabl
     var optionDetail: String?
     var optionCustomInfo: String?
     var optionImageData: Data?
+    var optionImageAssetID: String?
     var selectedAt: Int64
 
     enum CodingKeys: String, CodingKey {
@@ -37,7 +38,12 @@ struct DecisionChoiceRecord: Identifiable, Codable, Hashable, Sendable, Fetchabl
         case optionDetail = "option_detail"
         case optionCustomInfo = "option_custom_info"
         case optionImageData = "option_image_data"
+        case optionImageAssetID = "option_image_asset_id"
         case selectedAt = "selected_at"
+    }
+
+    var imageReference: ImageReference {
+        ImageReference(data: optionImageData, assetID: optionImageAssetID)
     }
 
     static func makeNew(
@@ -61,7 +67,8 @@ struct DecisionChoiceRecord: Identifiable, Codable, Hashable, Sendable, Fetchabl
             optionTitle: option.title,
             optionDetail: option.detail,
             optionCustomInfo: option.customInfo,
-            optionImageData: option.imageData,
+            optionImageData: option.imageAssetID == nil ? option.imageData : nil,
+            optionImageAssetID: option.imageAssetID,
             selectedAt: now
         )
     }

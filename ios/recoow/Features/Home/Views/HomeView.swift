@@ -7,7 +7,16 @@ struct HomeView: View {
     @State private var anniversariesViewModel: AnniversariesViewModel?
     @State private var currentDate = Date()
 
+    @Binding private var tabBarVisibility: Visibility
     let openSettings: () -> Void
+
+    init(
+        tabBarVisibility: Binding<Visibility> = .constant(.visible),
+        openSettings: @escaping () -> Void
+    ) {
+        _tabBarVisibility = tabBarVisibility
+        self.openSettings = openSettings
+    }
 
     var body: some View {
         Group {
@@ -61,7 +70,7 @@ struct HomeView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
-                .hidesTabBarWhenScrollingDown()
+                .reportsTabBarVisibilityWhenScrolling($tabBarVisibility)
             }
         }
         .navigationTitle(AppLocalization.string("记刻"))

@@ -45,7 +45,7 @@ struct MediaAttachmentRow: View {
     private var thumbnail: some View {
         switch attachment.kind {
         case .photo:
-            if let image = UIImage(data: attachment.data) {
+            if let image = UIImage(data: attachment.resolvedData) {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()

@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 /// 一条本地打卡。系统通知可被用户关闭，数据库记录仍保留为离线历史。
-struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, PersistableRecord, SyncableRecord, ConflictComparableRecord {
+struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, PersistableRecord, SyncableRecord, ConflictComparableRecord, MutableStandardImageReferenceProviding {
     static let databaseTableName = "reminders"
 
     var id: String
@@ -17,6 +17,7 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
     var note: String?
     var memoryIcon: String
     var imageData: Data?
+    var imageAssetID: String?
     var scheduledAt: Int64
     var leadTimeMinutes: Int
     var isEnabled: Bool
@@ -42,6 +43,7 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         case note
         case memoryIcon = "memory_icon"
         case imageData = "image_data"
+        case imageAssetID = "image_asset_id"
         case scheduledAt = "scheduled_at"
         case leadTimeMinutes = "lead_time_minutes"
         case isEnabled = "is_enabled"
@@ -446,6 +448,7 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         note: String?,
         memoryIcon: String,
         imageData: Data?,
+        imageAssetID: String? = nil,
         scheduledAt: Int64,
         leadTimeMinutes: Int,
         deviceID: String
@@ -463,6 +466,7 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
             note: note,
             memoryIcon: memoryIcon,
             imageData: imageData,
+            imageAssetID: imageAssetID,
             scheduledAt: scheduledAt,
             leadTimeMinutes: leadTimeMinutes,
             isEnabled: true,

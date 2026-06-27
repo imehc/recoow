@@ -40,7 +40,7 @@ struct MediaAttachmentPreviewView: View {
         return source.map { attachment in
             PhotoPreviewItem(
                 id: attachment.id,
-                imageData: attachment.data,
+                imageData: attachment.resolvedData,
                 title: attachment.displayTitle
             )
         }

@@ -5,7 +5,7 @@ struct DecisionResultView: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            PhotoThumbnailView(imageData: option.imageData, systemImage: "sparkles", size: AppDesign.largeThumbnailSize)
+            PhotoThumbnailView(imageData: option.resolvedImageData, systemImage: "sparkles", size: AppDesign.largeThumbnailSize)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(option.title)

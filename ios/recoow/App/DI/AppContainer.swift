@@ -15,6 +15,7 @@ final class AppContainer {
     @ObservationIgnored let reminderRepository: ReminderRepository
     @ObservationIgnored let billRepository: BillRepository
     @ObservationIgnored let foodJournalRepository: FoodJournalRepository
+    @ObservationIgnored let mediaAssetRepository: MediaAssetRepository
     @ObservationIgnored let mediaAttachmentRepository: MediaAttachmentRepository
     @ObservationIgnored let diaryRepository: DiaryRepository
     @ObservationIgnored let anniversaryRepository: AnniversaryRepository
@@ -39,6 +40,7 @@ final class AppContainer {
         reminderRepository: ReminderRepository,
         billRepository: BillRepository,
         foodJournalRepository: FoodJournalRepository,
+        mediaAssetRepository: MediaAssetRepository,
         mediaAttachmentRepository: MediaAttachmentRepository,
         diaryRepository: DiaryRepository,
         anniversaryRepository: AnniversaryRepository,
@@ -61,6 +63,7 @@ final class AppContainer {
         self.reminderRepository = reminderRepository
         self.billRepository = billRepository
         self.foodJournalRepository = foodJournalRepository
+        self.mediaAssetRepository = mediaAssetRepository
         self.mediaAttachmentRepository = mediaAttachmentRepository
         self.diaryRepository = diaryRepository
         self.anniversaryRepository = anniversaryRepository
@@ -102,6 +105,11 @@ final class AppContainer {
                 deviceIdentifier: deviceIdentifier
             )
             let billRepository = BillRepository(
+                database: database,
+                changeLogRepository: changeLogRepository,
+                deviceIdentifier: deviceIdentifier
+            )
+            let mediaAssetRepository = MediaAssetRepository(
                 database: database,
                 changeLogRepository: changeLogRepository,
                 deviceIdentifier: deviceIdentifier
@@ -151,6 +159,7 @@ final class AppContainer {
                 reminderRepository: reminderRepository,
                 billRepository: billRepository,
                 foodJournalRepository: foodJournalRepository,
+                mediaAssetRepository: mediaAssetRepository,
                 mediaAttachmentRepository: mediaAttachmentRepository,
                 diaryRepository: diaryRepository,
                 anniversaryRepository: anniversaryRepository,
@@ -275,6 +284,11 @@ final class AppContainer {
                 changeLogRepository: changeLogRepository,
                 deviceIdentifier: deviceIdentifier
             )
+            let mediaAssetRepository = MediaAssetRepository(
+                database: database,
+                changeLogRepository: changeLogRepository,
+                deviceIdentifier: deviceIdentifier
+            )
             let mediaAttachmentRepository = MediaAttachmentRepository(
                 database: database,
                 changeLogRepository: changeLogRepository,
@@ -320,6 +334,7 @@ final class AppContainer {
                 reminderRepository: reminderRepository,
                 billRepository: billRepository,
                 foodJournalRepository: foodJournalRepository,
+                mediaAssetRepository: mediaAssetRepository,
                 mediaAttachmentRepository: mediaAttachmentRepository,
                 diaryRepository: diaryRepository,
                 anniversaryRepository: anniversaryRepository,

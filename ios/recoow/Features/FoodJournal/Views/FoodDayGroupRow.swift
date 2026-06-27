@@ -11,7 +11,7 @@ struct FoodDayGroupRow: View {
         HStack(alignment: .top, spacing: 12) {
             if let coverPhoto {
                 PhotoThumbnailView(
-                    imageData: coverPhoto.data,
+                    imageData: coverPhoto.resolvedData,
                     systemImage: "fork.knife.circle.fill",
                     size: AppDesign.listIconSize
                 )

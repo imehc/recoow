@@ -16,6 +16,7 @@ struct MediaAttachment: Identifiable, Codable, Hashable, Sendable, FetchableReco
     var ownerID: String
     var kindRawValue: String
     var title: String?
+    var assetID: String?
     var data: Data
     var mimeType: String
     var durationSeconds: Double?
@@ -35,6 +36,7 @@ struct MediaAttachment: Identifiable, Codable, Hashable, Sendable, FetchableReco
         case ownerID = "owner_id"
         case kindRawValue = "kind"
         case title
+        case assetID = "asset_id"
         case data
         case mimeType = "mime_type"
         case durationSeconds = "duration_seconds"
@@ -49,6 +51,16 @@ struct MediaAttachment: Identifiable, Codable, Hashable, Sendable, FetchableReco
 
     var kind: MediaAttachmentKind {
         MediaAttachmentKind(rawValue: kindRawValue) ?? .photo
+    }
+
+    var resolvedData: Data {
+        if kind == .photo,
+           let assetID,
+           let assetData = MediaAssetObjectStore.shared.data(forAssetID: assetID, mimeType: mimeType) {
+            return assetData
+        }
+
+        return data
     }
 
     var displayTitle: String {
@@ -79,11 +91,12 @@ struct MediaAttachment: Identifiable, Codable, Hashable, Sendable, FetchableReco
         ownerID: String,
         kind: MediaAttachmentKind,
         title: String?,
-        data: Data,
+        data: Data = Data(),
         mimeType: String,
         durationSeconds: Double? = nil,
         width: Int? = nil,
         height: Int? = nil,
+        assetID: String? = nil,
         deviceID: String
     ) -> MediaAttachment {
         let now = SyncableTimestamp.nowMilliseconds()
@@ -99,6 +112,7 @@ struct MediaAttachment: Identifiable, Codable, Hashable, Sendable, FetchableReco
             ownerID: ownerID,
             kindRawValue: kind.rawValue,
             title: title,
+            assetID: assetID,
             data: data,
             mimeType: mimeType,
             durationSeconds: durationSeconds,

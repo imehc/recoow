@@ -2,11 +2,13 @@ import SwiftUI
 import UIKit
 
 struct DecisionOptionFormView: View {
+    @Environment(AppContainer.self) private var container
     @Environment(\.dismiss) private var dismiss
     @State private var title: String
     @State private var detail: String
     @State private var customInfo: String
     @State private var imageData: Data?
+    @State private var imageAssetID: String?
     @State private var weight: Int
     @State private var isEnabled: Bool
     @State private var isShowingPhotoSourcePicker = false
@@ -28,6 +30,7 @@ struct DecisionOptionFormView: View {
         _detail = State(initialValue: option?.detail ?? "")
         _customInfo = State(initialValue: option?.customInfo ?? "")
         _imageData = State(initialValue: option?.imageData)
+        _imageAssetID = State(initialValue: option?.imageAssetID)
         _weight = State(initialValue: option?.weight ?? 1)
         _isEnabled = State(initialValue: option?.isEnabled ?? true)
     }
@@ -64,6 +67,7 @@ struct DecisionOptionFormView: View {
 
             PhotoInputSection(
                 imageData: $imageData,
+                imageAssetID: $imageAssetID,
                 placeholderSystemImage: "questionmark.circle",
                 isPreparingPhoto: isPreparingPhoto,
                 errorMessage: imageErrorMessage,
@@ -107,7 +111,9 @@ struct DecisionOptionFormView: View {
         }
         .fullScreenCover(isPresented: $isShowingPhotoSourcePicker, onDismiss: presentPendingEditorIfNeeded) {
             PhotoSourcePickerView(
-                onPhotoPicked: beginEditingPickedImage
+                onPhotoPicked: beginEditingPickedImage,
+                mediaAssetRepository: container.mediaAssetRepository,
+                onMediaAssetPicked: beginEditingPickedAsset
             )
         }
         .fullScreenCover(item: $previewPhoto) { item in
@@ -161,6 +167,18 @@ struct DecisionOptionFormView: View {
         }
     }
 
+    private func beginEditingPickedAsset(_ asset: MediaAsset) {
+        guard container.mediaAssetRepository.data(for: asset) != nil else {
+            imageErrorMessage = "无法准备照片，请重试"
+            return
+        }
+
+        imageData = nil
+        imageAssetID = asset.id
+        isShowingPhotoEditor = false
+        editablePhoto = nil
+    }
+
     private func presentPendingEditorIfNeeded() {
         presentPendingEditorIfPossible()
     }
@@ -200,7 +218,7 @@ struct DecisionOptionFormView: View {
     }
 
     private func previewCurrentPhoto() {
-        guard let imageData else { return }
+        guard let imageData = resolvedImageData else { return }
         previewPhoto = PhotoPreviewItem(imageData: imageData)
     }
 
@@ -210,8 +228,17 @@ struct DecisionOptionFormView: View {
 
     private func saveEditedImage(_ data: Data) {
         imageData = data
+        imageAssetID = nil
         isShowingPhotoEditor = false
         editablePhoto = nil
+    }
+
+    private var resolvedImageData: Data? {
+        imageReference.resolvedData
+    }
+
+    private var imageReference: ImageReference {
+        ImageReference(data: imageData, assetID: imageAssetID)
     }
 
     private func save() {
@@ -219,14 +246,15 @@ struct DecisionOptionFormView: View {
             title: trimmedTitle,
             detail: normalizedDetail,
             customInfo: normalizedCustomInfo,
-            imageData: imageData,
+            imageData: imageReference.independentData,
+            imageAssetID: imageReference.assetID,
             weight: weight,
             isEnabled: isEnabled
         )
         record.title = trimmedTitle
         record.detail = normalizedDetail
         record.customInfo = normalizedCustomInfo
-        record.imageData = imageData
+        record.setImageReference(imageReference)
         record.weight = weight
         record.isEnabled = isEnabled
 

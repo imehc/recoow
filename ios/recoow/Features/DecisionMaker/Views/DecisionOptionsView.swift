@@ -41,7 +41,7 @@ struct DecisionOptionsView: View {
 
     private func imageTransition(for route: DecisionChoiceRecordRoute) -> Namespace.ID? {
         guard viewModel?.choiceRecords.contains(where: { record in
-            record.id == route.id && record.optionImageData != nil
+            record.id == route.id && record.hasImage
         }) == true else {
             return nil
         }

@@ -7,6 +7,17 @@ struct StatisticsContent: View {
     @State private var billDetailContext: StatisticsBillDetailSheet.Context?
 
     let billsViewModel: BillsViewModel?
+    @Binding private var tabBarVisibility: Visibility
+
+    init(
+        viewModel: StatisticsViewModel,
+        billsViewModel: BillsViewModel?,
+        tabBarVisibility: Binding<Visibility> = .constant(.visible)
+    ) {
+        self.viewModel = viewModel
+        self.billsViewModel = billsViewModel
+        _tabBarVisibility = tabBarVisibility
+    }
 
     var body: some View {
         List {
@@ -50,7 +61,7 @@ struct StatisticsContent: View {
         }
         .id(locale.identifier)
         .listStyle(.insetGrouped)
-        .hidesTabBarWhenScrollingDown()
+        .reportsTabBarVisibilityWhenScrolling($tabBarVisibility)
         .sheet(item: $billDetailContext) { context in
             if let billsViewModel {
                 StatisticsBillDetailSheet(viewModel: billsViewModel, context: context)

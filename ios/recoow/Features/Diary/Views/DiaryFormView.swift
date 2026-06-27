@@ -20,6 +20,7 @@ struct DiaryFormView: View {
     @State private var horizontalAccuracy: Double?
     @State private var isLocating = false
     @State private var locationErrorMessage: String?
+    @State private var attachmentPhotoErrorMessage: String?
     @State private var attachmentDragCoordinator = MediaAttachmentDragCoordinator()
     @State private var draftID: String
     @FocusState private var focusedField: String?
@@ -196,8 +197,17 @@ struct DiaryFormView: View {
         .fullScreenCover(isPresented: $isShowingAttachmentPhotoPicker) {
             PhotoSourcePickerView(
                 onPhotoPicked: addPhotoAttachment,
+                mediaAssetRepository: container.mediaAssetRepository,
+                onMediaAssetPicked: addPhotoAttachment,
                 onClose: closeAttachmentPhotoPicker
             )
+        }
+        .alert(AppLocalization.string("无法添加照片"), isPresented: .isPresent($attachmentPhotoErrorMessage)) {
+            Button(AppLocalization.string("确定"), role: .cancel) {
+                attachmentPhotoErrorMessage = nil
+            }
+        } message: {
+            Text(attachmentPhotoErrorMessage ?? "")
         }
     }
 
@@ -414,6 +424,22 @@ struct DiaryFormView: View {
                 mimeType: "image/jpeg",
                 width: image.map { Int($0.size.width) },
                 height: image.map { Int($0.size.height) },
+                deviceID: viewModel.deviceID
+            )
+        )
+    }
+
+    private func addPhotoAttachment(_ asset: MediaAsset) {
+        selectedAttachments.append(
+            MediaAttachment.makeNew(
+                ownerType: .diary,
+                ownerID: diaryID,
+                kind: .photo,
+                title: nil,
+                mimeType: asset.mimeType,
+                width: asset.width,
+                height: asset.height,
+                assetID: asset.id,
                 deviceID: viewModel.deviceID
             )
         )

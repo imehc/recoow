@@ -48,7 +48,7 @@ final class NoopSyncEngine: SyncEngine {
     }
 }
 
-enum SyncableTimestamp {
+nonisolated enum SyncableTimestamp {
     static func nowMilliseconds() -> Int64 {
         Int64(Date().timeIntervalSince1970 * 1000)
     }

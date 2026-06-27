@@ -23,6 +23,7 @@ final class AppDataTransferService: @unchecked Sendable {
         "diary_entries",
         "diary_tags",
         "diary_links",
+        "media_assets",
         "media_attachments"
     ]
 
@@ -38,6 +39,7 @@ final class AppDataTransferService: @unchecked Sendable {
     ) throws -> URL {
         let exportURL = try makeTemporaryBackupURL(prefix: "recoow-export")
         try database.backup(to: exportURL)
+        try MediaAssetRepository.prepareBackupCopy(at: exportURL)
 
         // 备份文件本质是 SQLite 快照；元数据单独写入同一个库，保证未来格式升级时可以先校验再恢复。
         let metadata = AppDataTransferMetadata.current(
@@ -87,6 +89,7 @@ final class AppDataTransferService: @unchecked Sendable {
                 importedRowCount = 0
             }
 
+            try MediaAssetRepository.restoreInlineAssetsToObjectStore(database: database)
             try database.verifyIntegrity()
             return AppDataImportResult(
                 metadata: metadata,

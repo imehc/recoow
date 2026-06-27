@@ -37,7 +37,7 @@ struct BillsView: View {
 
     private func imageTransition(for route: BillRoute) -> Namespace.ID? {
         guard viewModel?.bills.contains(where: { bill in
-            bill.id == route.id && bill.imageData != nil
+            bill.id == route.id && bill.hasImage
         }) == true else {
             return nil
         }

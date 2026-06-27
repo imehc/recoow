@@ -364,7 +364,7 @@ private struct MediaAttachmentPhotoTile: View {
             ZStack {
                 Color(.secondarySystemFill)
 
-                if let image = UIImage(data: attachment.data) {
+                if let image = UIImage(data: attachment.resolvedData) {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()

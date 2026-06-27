@@ -86,7 +86,8 @@ final class ItemLocatorViewModel {
         note: String?,
         tags: String?,
         searchKeywords: String?,
-        imageData: Data?
+        imageData: Data?,
+        imageAssetID: String? = nil
     ) -> StoredItem {
         StoredItem.makeNew(
             categoryID: categoryID,
@@ -96,6 +97,7 @@ final class ItemLocatorViewModel {
             tags: tags,
             searchKeywords: searchKeywords,
             imageData: imageData,
+            imageAssetID: imageAssetID,
             deviceID: repository.deviceID
         )
     }

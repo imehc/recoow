@@ -59,6 +59,7 @@ final class MediaAttachmentRepository: @unchecked Sendable {
             if var existing = existingByID[incoming.id] {
                 existing.kindRawValue = incoming.kindRawValue
                 existing.title = incoming.title
+                existing.assetID = incoming.assetID
                 existing.data = incoming.data
                 existing.mimeType = incoming.mimeType
                 existing.durationSeconds = incoming.durationSeconds

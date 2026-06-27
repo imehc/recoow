@@ -3,6 +3,8 @@ import SwiftUI
 struct EditablePhotoInputPresentationModifier: ViewModifier {
     @Bindable var coordinator: EditablePhotoInputCoordinator
     @Binding var imageData: Data?
+    @Binding var imageAssetID: String?
+    var mediaAssetRepository: MediaAssetRepository?
 
     func body(content: Content) -> some View {
         content
@@ -22,7 +24,9 @@ struct EditablePhotoInputPresentationModifier: ViewModifier {
                 onDismiss: coordinator.presentPendingEditorIfNeeded
             ) {
                 PhotoSourcePickerView(
-                    onPhotoPicked: coordinator.beginEditingPickedImage
+                    onPhotoPicked: coordinator.beginEditingPickedImage,
+                    mediaAssetRepository: mediaAssetRepository,
+                    onMediaAssetPicked: beginEditingPickedAsset
                 )
             }
             .onChange(of: coordinator.isShowingPhotoSourcePicker) { _, isShowing in
@@ -40,6 +44,18 @@ struct EditablePhotoInputPresentationModifier: ViewModifier {
 
     private func saveEditedImage(_ data: Data) {
         imageData = data
+        imageAssetID = nil
+        coordinator.finishPhotoEditing()
+    }
+
+    private func beginEditingPickedAsset(_ asset: MediaAsset) {
+        guard mediaAssetRepository?.data(for: asset) != nil else {
+            coordinator.imageErrorMessage = AppLocalization.string("无法准备照片，请重试")
+            return
+        }
+
+        imageData = nil
+        imageAssetID = asset.id
         coordinator.finishPhotoEditing()
     }
 }
@@ -47,12 +63,16 @@ struct EditablePhotoInputPresentationModifier: ViewModifier {
 extension View {
     func editablePhotoInputPresentation(
         coordinator: EditablePhotoInputCoordinator,
-        imageData: Binding<Data?>
+        imageData: Binding<Data?>,
+        imageAssetID: Binding<String?>,
+        mediaAssetRepository: MediaAssetRepository? = nil
     ) -> some View {
         modifier(
             EditablePhotoInputPresentationModifier(
                 coordinator: coordinator,
-                imageData: imageData
+                imageData: imageData,
+                imageAssetID: imageAssetID,
+                mediaAssetRepository: mediaAssetRepository
             )
         )
     }

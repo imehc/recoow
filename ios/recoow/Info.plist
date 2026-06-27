@@ -93,6 +93,8 @@
 	<string>需要使用麦克风为日记录制语音附件</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>需要从照片图库选择图片以帮助记录日记、选项或物品位置</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>需要将拍摄的照片保存到系统图库</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

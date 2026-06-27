@@ -129,6 +129,7 @@ final class BillsViewModel {
         transportLines: String?,
         occurredDate: Date,
         imageData: Data?,
+        imageAssetID: String? = nil,
         settlementStatus: BillSettlementStatus = .active,
         groupBuyValidUntil: Int64? = nil
     ) -> BillRecord {
@@ -146,6 +147,7 @@ final class BillsViewModel {
             transportLines: transportLines,
             occurredAt: Self.milliseconds(for: occurredDate),
             imageData: imageData,
+            imageAssetID: imageAssetID,
             settlementStatus: settlementStatus,
             groupBuyValidUntil: groupBuyValidUntil,
             deviceID: repository.deviceID

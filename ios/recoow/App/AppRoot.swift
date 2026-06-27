@@ -7,6 +7,11 @@ struct AppRoot: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: AppTab = .home
     @State private var homePath = NavigationPath()
+    @State private var statisticsPath = NavigationPath()
+    @State private var settingsPath = NavigationPath()
+    @State private var homeTabBarVisibility: Visibility = .visible
+    @State private var statisticsTabBarVisibility: Visibility = .visible
+    @State private var settingsTabBarVisibility: Visibility = .visible
 
     var body: some View {
         let language = container.appPreferences.language
@@ -14,22 +19,25 @@ struct AppRoot: View {
         TabView(selection: $selectedTab) {
             Tab(AppLocalization.string("首页", language: language), systemImage: "house", value: .home) {
                 NavigationStack(path: $homePath) {
-                    HomeView {
+                    HomeView(tabBarVisibility: $homeTabBarVisibility) {
                         selectedTab = .settings
                     }
                 }
+                .toolbar(rootTabBarVisibility(path: homePath, requested: homeTabBarVisibility), for: .tabBar)
             }
 
             Tab(AppLocalization.string("统计", language: language), systemImage: "chart.bar.xaxis", value: .statistics) {
-                NavigationStack {
-                    StatisticsView()
+                NavigationStack(path: $statisticsPath) {
+                    StatisticsView(tabBarVisibility: $statisticsTabBarVisibility)
                 }
+                .toolbar(rootTabBarVisibility(path: statisticsPath, requested: statisticsTabBarVisibility), for: .tabBar)
             }
 
             Tab(AppLocalization.string("设置", language: language), systemImage: "gearshape", value: .settings) {
-                NavigationStack {
-                    SettingsView()
+                NavigationStack(path: $settingsPath) {
+                    SettingsView(tabBarVisibility: $settingsTabBarVisibility)
                 }
+                .toolbar(rootTabBarVisibility(path: settingsPath, requested: settingsTabBarVisibility), for: .tabBar)
             }
         }
         .environment(\.locale, language.locale)
@@ -59,6 +67,11 @@ struct AppRoot: View {
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willTerminateNotification)) { _ in
             container.locationTrackerViewModel.finishForAppTermination()
         }
+    }
+
+    private func rootTabBarVisibility(path: NavigationPath, requested: Visibility) -> Visibility {
+        // 只有三个一级根页面允许显示 TabBar；进入任意 push 路径后都隐藏，避免子页面被根页面滚动状态改回可见。
+        path.isEmpty ? requested : .hidden
     }
 
     private func handleDeepLink(_ url: URL) {

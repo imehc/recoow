@@ -1,6 +1,13 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+private enum SettingsNavigationRoute: Hashable {
+    case display
+    case homeTools
+    case data
+    case mediaLibrary
+}
+
 struct SettingsView: View {
     @Environment(AppContainer.self) private var container
     @State private var isConfirmingDeletedDataCleanup = false
@@ -23,126 +30,63 @@ struct SettingsView: View {
     @AppStorage(AppPreferenceStorageKeys.lastDataExportSchemaVersion) private var lastDataExportSchemaVersion: Int = 0
     @AppStorage(AppPreferenceStorageKeys.lastDataImportedAt) private var lastDataImportedAt: Double = 0
     @AppStorage(AppPreferenceStorageKeys.lastDataImportSchemaVersion) private var lastDataImportSchemaVersion: Int = 0
+    @Binding private var tabBarVisibility: Visibility
+
+    init(tabBarVisibility: Binding<Visibility> = .constant(.visible)) {
+        _tabBarVisibility = tabBarVisibility
+    }
 
     var body: some View {
         let language = container.appPreferences.language
 
         Form {
             Section {
-                NavigationLink {
-                    displaySettingsPage
-                } label: {
+                NavigationLink(value: SettingsNavigationRoute.display) {
                     SettingsCategoryRow(
                         titleKey: "显示与语言",
                         subtitleKey: "语言、外观和显示偏好",
                         systemImage: "textformat.size",
-                        tint: .blue
+                        tint: .blue,
+                        language: language
                     )
                 }
 
-                NavigationLink {
-                    homeToolsSettingsPage
-                } label: {
+                NavigationLink(value: SettingsNavigationRoute.homeTools) {
                     SettingsCategoryRow(
                         titleKey: "主页功能入口",
                         subtitleKey: "管理首页显示的工具入口",
                         systemImage: "square.grid.2x2",
-                        tint: .green
+                        tint: .green,
+                        language: language
                     )
                 }
 
-                NavigationLink {
-                    dataSettingsPage
-                } label: {
+                NavigationLink(value: SettingsNavigationRoute.data) {
                     SettingsCategoryRow(
                         titleKey: "数据与备份",
                         subtitleKey: "备份、导入和清理本地数据",
                         systemImage: "externaldrive",
-                        tint: .orange
+                        tint: .orange,
+                        language: language
                     )
                 }
             } header: {
-                Text(AppLocalization.string("设置分类"))
+                Text(AppLocalization.string("设置分类", language: language))
             }
         }
-        .hidesTabBarWhenScrollingDown()
+        .reportsTabBarVisibilityWhenScrolling($tabBarVisibility)
         .navigationTitle(AppLocalization.string("设置", language: language))
-        .alert(AppLocalization.string("永久删除已删除的数据？"), isPresented: $isConfirmingDeletedDataCleanup) {
-            Button(AppLocalization.string("清除"), role: .destructive, action: clearDeletedData)
-            Button(AppLocalization.string("取消"), role: .cancel) { }
-        } message: {
-            Text(AppLocalization.string("清除已删除数据确认说明"))
-        }
-        .sheet(isPresented: importPreviewPresence) {
-            if let importPreview {
-                AppDataImportOptionsSheet(
-                    preview: importPreview,
-                    mode: $importMode,
-                    selectedScopes: $selectedImportScopes,
-                    isImporting: isImportingData,
-                    onCancel: clearPendingImport,
-                    onImport: importData
-                )
+        .navigationDestination(for: SettingsNavigationRoute.self) { route in
+            switch route {
+            case .display:
+                displaySettingsPage
+            case .homeTools:
+                homeToolsSettingsPage
+            case .data:
+                dataSettingsPage
+            case .mediaLibrary:
+                MediaAssetLibraryManagementView(repository: container.mediaAssetRepository)
             }
-        }
-        .alert(
-            AppLocalization.string("清除完成"),
-            isPresented: .isPresent($cleanupResult),
-            presenting: cleanupResult
-        ) { _ in
-            Button(AppLocalization.string("确定"), role: .cancel) { }
-        } message: { result in
-            Text(cleanupMessage(for: result))
-        }
-        .alert(
-            AppLocalization.string("清除失败"),
-            isPresented: .isPresent($cleanupErrorMessage),
-            presenting: cleanupErrorMessage
-        ) { _ in
-            Button(AppLocalization.string("确定"), role: .cancel) { }
-        } message: { message in
-            Text(message)
-        }
-        .alert(
-            AppLocalization.string("完成"),
-            isPresented: .isPresent($transferSuccessMessage),
-            presenting: transferSuccessMessage
-        ) { _ in
-            Button(AppLocalization.string("确定"), role: .cancel) { }
-        } message: { message in
-            Text(message)
-        }
-        .alert(
-            AppLocalization.string("数据导入导出失败"),
-            isPresented: .isPresent($transferErrorMessage),
-            presenting: transferErrorMessage
-        ) { _ in
-            Button(AppLocalization.string("确定"), role: .cancel) { }
-        } message: { message in
-            Text(message)
-        }
-        .fileExporter(
-            isPresented: $isShowingBackupExporter,
-            document: exportDocument,
-            contentType: .recoowBackup,
-            defaultFilename: exportFileName
-        ) { result in
-            switch result {
-            case .success:
-                recordLastExport()
-                transferSuccessMessage = AppLocalization.string("备份文件已导出。")
-            case .failure(let error):
-                transferErrorMessage = error.localizedDescription
-            }
-
-            exportDocument = nil
-        }
-        .fileImporter(
-            isPresented: $isShowingBackupImporter,
-            allowedContentTypes: [.recoowBackup, .recoowBackupFilenameExtension, .database],
-            allowsMultipleSelection: false
-        ) { result in
-            handleImportSelection(result)
         }
     }
 
@@ -150,8 +94,9 @@ struct SettingsView: View {
         Form {
             AppPreferencesSection(preferences: container.appPreferences)
         }
-        .navigationTitle(AppLocalization.string("显示与语言"))
+        .navigationTitle(AppLocalization.string("显示与语言", language: container.appPreferences.language))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
     }
 
     private var homeToolsSettingsPage: some View {
@@ -164,15 +109,26 @@ struct SettingsView: View {
                     )
                 }
             } footer: {
-                Text(AppLocalization.string("管理首页显示的工具入口"))
+                Text(AppLocalization.string("管理首页显示的工具入口", language: container.appPreferences.language))
             }
         }
-        .navigationTitle(AppLocalization.string("主页功能入口"))
+        .navigationTitle(AppLocalization.string("主页功能入口", language: container.appPreferences.language))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
     }
 
     private var dataSettingsPage: some View {
         Form {
+            Section {
+                NavigationLink(value: SettingsNavigationRoute.mediaLibrary) {
+                    Label(AppLocalization.string("媒体素材库"), systemImage: "photo.stack")
+                }
+            } header: {
+                Text(AppLocalization.string("媒体素材"))
+            }
+
+            MediaLibraryPreferencesSection(preferences: container.appPreferences)
+
             Section {
                 Button(action: exportData) {
                     HStack {
@@ -233,8 +189,86 @@ struct SettingsView: View {
                 Text(AppLocalization.string("清除已删除数据说明"))
             }
         }
-        .navigationTitle(AppLocalization.string("数据与备份"))
+        .navigationTitle(AppLocalization.string("数据与备份", language: container.appPreferences.language))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
+        .alert(AppLocalization.string("永久删除已删除的数据？"), isPresented: $isConfirmingDeletedDataCleanup) {
+            Button(AppLocalization.string("清除"), role: .destructive, action: clearDeletedData)
+            Button(AppLocalization.string("取消"), role: .cancel) { }
+        } message: {
+            Text(AppLocalization.string("清除已删除数据确认说明"))
+        }
+        .alert(
+            AppLocalization.string("清除完成"),
+            isPresented: .isPresent($cleanupResult),
+            presenting: cleanupResult
+        ) { _ in
+            Button(AppLocalization.string("确定"), role: .cancel) { }
+        } message: { result in
+            Text(cleanupMessage(for: result))
+        }
+        .alert(
+            AppLocalization.string("清除失败"),
+            isPresented: .isPresent($cleanupErrorMessage),
+            presenting: cleanupErrorMessage
+        ) { _ in
+            Button(AppLocalization.string("确定"), role: .cancel) { }
+        } message: { message in
+            Text(message)
+        }
+        .alert(
+            AppLocalization.string("完成"),
+            isPresented: .isPresent($transferSuccessMessage),
+            presenting: transferSuccessMessage
+        ) { _ in
+            Button(AppLocalization.string("确定"), role: .cancel) { }
+        } message: { message in
+            Text(message)
+        }
+        .alert(
+            AppLocalization.string("数据导入导出失败"),
+            isPresented: .isPresent($transferErrorMessage),
+            presenting: transferErrorMessage
+        ) { _ in
+            Button(AppLocalization.string("确定"), role: .cancel) { }
+        } message: { message in
+            Text(message)
+        }
+        .sheet(isPresented: importPreviewPresence) {
+            if let importPreview {
+                AppDataImportOptionsSheet(
+                    preview: importPreview,
+                    mode: $importMode,
+                    selectedScopes: $selectedImportScopes,
+                    isImporting: isImportingData,
+                    onCancel: clearPendingImport,
+                    onImport: importData
+                )
+            }
+        }
+        .fileExporter(
+            isPresented: $isShowingBackupExporter,
+            document: exportDocument,
+            contentType: .recoowBackup,
+            defaultFilename: exportFileName
+        ) { result in
+            switch result {
+            case .success:
+                recordLastExport()
+                transferSuccessMessage = AppLocalization.string("备份文件已导出。")
+            case .failure(let error):
+                transferErrorMessage = error.localizedDescription
+            }
+
+            exportDocument = nil
+        }
+        .fileImporter(
+            isPresented: $isShowingBackupImporter,
+            allowedContentTypes: [.recoowBackup, .recoowBackupFilenameExtension, .database],
+            allowsMultipleSelection: false
+        ) { result in
+            handleImportSelection(result)
+        }
     }
 
     private func clearDeletedData() {
@@ -352,6 +386,8 @@ struct SettingsView: View {
         return AppDataTransferPreferences(
             languageRawValue: appPreferences.languageRawValue,
             appearanceRawValue: appPreferences.appearanceRawValue,
+            addsPickedPhotosToMediaLibrary: appPreferences.addsPickedPhotosToMediaLibrary,
+            savesCameraPhotosToLibrary: appPreferences.savesCameraPhotosToLibrary,
             hiddenToolRouteIDs: container.featureVisibilitySettings.transferSnapshotHiddenRouteIDs
         )
     }
@@ -359,7 +395,9 @@ struct SettingsView: View {
     private func applyImportedPreferences(_ preferences: AppDataTransferPreferences) {
         container.appPreferences.applyImportedSnapshot(
             languageRawValue: preferences.languageRawValue,
-            appearanceRawValue: preferences.appearanceRawValue
+            appearanceRawValue: preferences.appearanceRawValue,
+            addsPickedPhotosToMediaLibrary: preferences.addsPickedPhotosToMediaLibrary,
+            savesCameraPhotosToLibrary: preferences.savesCameraPhotosToLibrary
         )
         container.featureVisibilitySettings.replaceHiddenRoutes(preferences.hiddenToolRouteIDs)
     }
@@ -456,19 +494,44 @@ private struct SettingsCategoryRow: View {
     let subtitleKey: String
     let systemImage: String
     let tint: Color
+    let language: AppLanguagePreference
 
     var body: some View {
         Label {
             VStack(alignment: .leading, spacing: 2) {
-                Text(AppLocalization.string(titleKey))
+                Text(AppLocalization.string(titleKey, language: language))
 
-                Text(AppLocalization.string(subtitleKey))
+                Text(AppLocalization.string(subtitleKey, language: language))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
         } icon: {
             Image(systemName: systemImage)
                 .foregroundStyle(tint)
+        }
+    }
+}
+
+private struct MediaLibraryPreferencesSection: View {
+    @Bindable var preferences: AppPreferences
+
+    var body: some View {
+        let language = preferences.language
+
+        Section {
+            Toggle(
+                AppLocalization.string("选择照片后加入素材库", language: language),
+                isOn: $preferences.addsPickedPhotosToMediaLibrary
+            )
+
+            Toggle(
+                AppLocalization.string("拍照后保存到系统图库", language: language),
+                isOn: $preferences.savesCameraPhotosToLibrary
+            )
+        } header: {
+            Text(AppLocalization.string("照片处理", language: language))
+        } footer: {
+            Text(AppLocalization.string("开启后，从相册或相机添加的新图片会加入素材库，并在当前记录中保存为素材引用；关闭时保存为独立图片。保存到系统图库只影响相机拍摄。", language: language))
         }
     }
 }

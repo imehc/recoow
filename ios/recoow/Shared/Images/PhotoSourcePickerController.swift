@@ -4,13 +4,15 @@ import UIKit
 
 struct PhotoSourcePickerController: UIViewControllerRepresentable {
     let mode: PhotoSourcePickerMode
-    let onSelect: (Data) -> Void
+    let savesCameraPhotosToLibrary: Bool
+    let onSelect: (PhotoSourcePickerMode, Data) -> Void
     let onCancel: () -> Void
 
     typealias UIViewControllerType = UIViewController
 
     func makeCoordinator() -> PhotoSourcePickerCoordinator {
         PhotoSourcePickerCoordinator(
+            savesCameraPhotosToLibrary: savesCameraPhotosToLibrary,
             onSelect: onSelect,
             onCancel: onCancel
         )
@@ -26,6 +28,8 @@ struct PhotoSourcePickerController: UIViewControllerRepresentable {
             } else {
                 makePhotoLibraryPicker(context: context)
             }
+        case .assetLibrary:
+            makePhotoLibraryPicker(context: context)
         }
     }
 

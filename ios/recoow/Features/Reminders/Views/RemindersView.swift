@@ -37,7 +37,7 @@ struct RemindersView: View {
 
     private func imageTransition(for route: ReminderRoute) -> Namespace.ID? {
         guard viewModel?.reminders.contains(where: { reminder in
-            reminder.id == route.id && reminder.imageData != nil
+            reminder.id == route.id && reminder.hasImage
         }) == true else {
             return nil
         }

@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 /// 一条物品位置记录。
-struct StoredItem: Identifiable, Codable, Hashable, Sendable, FetchableRecord, PersistableRecord, SyncableRecord, ConflictComparableRecord {
+struct StoredItem: Identifiable, Codable, Hashable, Sendable, FetchableRecord, PersistableRecord, SyncableRecord, ConflictComparableRecord, MutableStandardImageReferenceProviding {
     static let databaseTableName = "stored_items"
 
     var id: String
@@ -20,6 +20,7 @@ struct StoredItem: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
     var tags: String?
     var searchKeywords: String?
     var imageData: Data?
+    var imageAssetID: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -36,6 +37,7 @@ struct StoredItem: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         case tags
         case searchKeywords = "search_keywords"
         case imageData = "image_data"
+        case imageAssetID = "image_asset_id"
     }
 
     static func makeNew(
@@ -46,6 +48,7 @@ struct StoredItem: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         tags: String?,
         searchKeywords: String?,
         imageData: Data?,
+        imageAssetID: String? = nil,
         deviceID: String
     ) -> StoredItem {
         let now = SyncableTimestamp.nowMilliseconds()
@@ -63,7 +66,8 @@ struct StoredItem: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
             note: note,
             tags: tags,
             searchKeywords: searchKeywords,
-            imageData: imageData
+            imageData: imageData,
+            imageAssetID: imageAssetID
         )
     }
 }

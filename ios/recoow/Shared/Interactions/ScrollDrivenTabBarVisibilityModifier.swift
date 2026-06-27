@@ -2,33 +2,28 @@ import SwiftUI
 import UIKit
 
 extension View {
-    /// 用于一级 Tab 内的滚动页面：向下滚动隐藏底部 Tab，向上滚动或回到顶部时恢复显示。
-    func hidesTabBarWhenScrollingDown() -> some View {
-        modifier(ScrollDrivenTabBarVisibilityModifier())
+    /// 根页面使用上报版本，由 AppRoot 统一裁决 TabBar 是否显示，避免 push 后子页面被根页面强制改回可见。
+    func reportsTabBarVisibilityWhenScrolling(_ visibility: Binding<Visibility>) -> some View {
+        modifier(ScrollDrivenTabBarVisibilityReporter(visibility: visibility))
     }
 }
 
-private struct ScrollDrivenTabBarVisibilityModifier: ViewModifier {
-    @State private var tabBarVisibility: Visibility = .visible
-    private let tabBarAnimation = Animation.easeInOut(duration: 0.22)
+private struct ScrollDrivenTabBarVisibilityReporter: ViewModifier {
+    @Binding var visibility: Visibility
 
     func body(content: Content) -> some View {
         content
             .background(
                 TabBarScrollObserver { visibility in
-                    guard tabBarVisibility != visibility else { return }
+                    guard self.visibility != visibility else { return }
 
-                    withAnimation(tabBarAnimation) {
-                        tabBarVisibility = visibility
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        self.visibility = visibility
                     }
                 }
             )
-            .toolbar(tabBarVisibility, for: .tabBar)
             .onAppear {
-                tabBarVisibility = .visible
-            }
-            .onDisappear {
-                tabBarVisibility = .visible
+                visibility = .visible
             }
     }
 }

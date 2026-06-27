@@ -1,11 +1,13 @@
 import SwiftUI
 
 struct ReminderFormView: View {
+    @Environment(AppContainer.self) private var container
     @Environment(\.dismiss) private var dismiss
     @State private var title: String
     @State private var note: String
     @State private var memoryIcon: String
     @State private var imageData: Data?
+    @State private var imageAssetID: String?
     @State private var scheduledDate: Date
     @State private var endDate: Date
     @State private var reminderTime: Date
@@ -28,6 +30,7 @@ struct ReminderFormView: View {
         _note = State(initialValue: reminder?.note ?? "")
         _memoryIcon = State(initialValue: reminder?.memoryIcon ?? ReminderMemoryIcon.bell.rawValue)
         _imageData = State(initialValue: reminder?.imageData)
+        _imageAssetID = State(initialValue: reminder?.imageAssetID)
         _scheduledDate = State(initialValue: reminder?.scheduledDate ?? Date().addingTimeInterval(3600))
         _endDate = State(initialValue: reminder?.endDate ?? Calendar.current.date(byAdding: .day, value: 6, to: reminder?.scheduledDate ?? Date().addingTimeInterval(3600)) ?? Date().addingTimeInterval(6 * 86_400))
         _reminderTime = State(initialValue: reminder?.scheduledDate ?? Date().addingTimeInterval(3600))
@@ -142,6 +145,7 @@ struct ReminderFormView: View {
 
             EditablePhotoInputSection(
                 imageData: $imageData,
+                imageAssetID: $imageAssetID,
                 placeholderSystemImage: "bell.fill",
                 coordinator: photoInputCoordinator
             )
@@ -151,7 +155,9 @@ struct ReminderFormView: View {
         .navigationBarTitleDisplayMode(.inline)
         .editablePhotoInputPresentation(
             coordinator: photoInputCoordinator,
-            imageData: $imageData
+            imageData: $imageData,
+            imageAssetID: $imageAssetID,
+            mediaAssetRepository: container.mediaAssetRepository
         )
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -325,7 +331,8 @@ struct ReminderFormView: View {
             title: trimmedTitle,
             note: normalizedNote,
             memoryIcon: normalizedMemoryIcon,
-            imageData: imageData,
+            imageData: imageReference.independentData,
+            imageAssetID: imageReference.assetID,
             scheduledDate: scheduledDate,
             leadTime: leadTime
         )
@@ -335,7 +342,7 @@ struct ReminderFormView: View {
         record.title = trimmedTitle
         record.note = normalizedNote
         record.memoryIcon = normalizedMemoryIcon
-        record.imageData = imageData
+        record.setImageReference(imageReference)
         record.scheduledAt = RemindersViewModel.milliseconds(for: normalizedStartDate)
         record.endAt = normalizedEndDate.map(RemindersViewModel.milliseconds)
         record.reminderTimeMinutes = ReminderRecord.minutesSinceStartOfDay(for: reminderTime)
@@ -354,6 +361,10 @@ struct ReminderFormView: View {
         }
 
         return combinedDate(day: scheduledDate, time: reminderTime) ?? scheduledDate
+    }
+
+    private var imageReference: ImageReference {
+        ImageReference(data: imageData, assetID: imageAssetID)
     }
 
     private var normalizedEndDate: Date? {

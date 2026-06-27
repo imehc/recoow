@@ -1,12 +1,19 @@
+import Photos
 import PhotosUI
 import UIKit
 import UniformTypeIdentifiers
 
 final class PhotoSourcePickerCoordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate, PHPickerViewControllerDelegate {
-    private let onSelect: (Data) -> Void
+    private let savesCameraPhotosToLibrary: Bool
+    private let onSelect: (PhotoSourcePickerMode, Data) -> Void
     private let onCancel: () -> Void
 
-    init(onSelect: @escaping (Data) -> Void, onCancel: @escaping () -> Void) {
+    init(
+        savesCameraPhotosToLibrary: Bool,
+        onSelect: @escaping (PhotoSourcePickerMode, Data) -> Void,
+        onCancel: @escaping () -> Void
+    ) {
+        self.savesCameraPhotosToLibrary = savesCameraPhotosToLibrary
         self.onSelect = onSelect
         self.onCancel = onCancel
     }
@@ -17,7 +24,11 @@ final class PhotoSourcePickerCoordinator: NSObject, UINavigationControllerDelega
     ) {
         if let image = info[.originalImage] as? UIImage,
            let data = image.jpegData(compressionQuality: 0.82) {
-            onSelect(data)
+            let source: PhotoSourcePickerMode = picker.sourceType == .camera ? .camera : .library
+            if source == .camera, savesCameraPhotosToLibrary {
+                PhotoLibraryImageSaver.save(image)
+            }
+            onSelect(source, data)
         } else {
             onCancel()
         }
@@ -47,7 +58,7 @@ final class PhotoSourcePickerCoordinator: NSObject, UINavigationControllerDelega
                     return
                 }
 
-                self.onSelect(normalizedData)
+                self.onSelect(.library, normalizedData)
             }
         }
     }
@@ -55,5 +66,14 @@ final class PhotoSourcePickerCoordinator: NSObject, UINavigationControllerDelega
     private static func normalizedImageData(from data: Data) -> Data? {
         guard let image = UIImage(data: data) else { return nil }
         return image.jpegData(compressionQuality: 0.82)
+    }
+}
+
+private enum PhotoLibraryImageSaver {
+    static func save(_ image: UIImage) {
+        PHPhotoLibrary.shared().performChanges {
+            PHAssetChangeRequest.creationRequestForAsset(from: image)
+        } completionHandler: { _, _ in
+        }
     }
 }

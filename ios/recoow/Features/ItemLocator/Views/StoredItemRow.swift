@@ -7,8 +7,8 @@ struct StoredItemRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            if item.imageData != nil {
-                PhotoThumbnailView(imageData: item.imageData, systemImage: "shippingbox")
+            if item.hasImage {
+                PhotoThumbnailView(imageData: item.resolvedImageData, systemImage: "shippingbox")
                     .matchedTransitionSource(id: item.id, in: itemImageTransition)
             }
 

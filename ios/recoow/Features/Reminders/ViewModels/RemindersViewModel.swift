@@ -91,6 +91,7 @@ final class RemindersViewModel {
         note: String?,
         memoryIcon: String,
         imageData: Data?,
+        imageAssetID: String? = nil,
         scheduledDate: Date,
         leadTime: ReminderLeadTime
     ) -> ReminderRecord {
@@ -99,6 +100,7 @@ final class RemindersViewModel {
             note: note,
             memoryIcon: memoryIcon,
             imageData: imageData,
+            imageAssetID: imageAssetID,
             scheduledAt: Self.milliseconds(for: scheduledDate),
             leadTimeMinutes: leadTime.rawValue,
             deviceID: repository.deviceID

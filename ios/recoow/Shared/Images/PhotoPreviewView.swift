@@ -1,44 +1,40 @@
+import Lightbox
 import SwiftUI
 import UIKit
 
+@MainActor
 struct PhotoPreviewView: View {
     @Environment(\.dismiss) private var dismiss
 
-    private let items: [PhotoPreviewItem]
-    @State private var selectedID: String
+    private let previewItems: [PhotoPreviewDisplayItem]
+    private let startIndex: Int
 
     init(item: PhotoPreviewItem) {
         self.init(items: [item], initialID: item.id)
     }
 
     init(items: [PhotoPreviewItem], initialID: String? = nil) {
-        self.items = items
-        let selectedID = initialID.flatMap { id in
-            items.contains { $0.id == id } ? id : nil
-        } ?? items.first?.id ?? UUID().uuidString
-        _selectedID = State(initialValue: selectedID)
+        let displayItems = items.compactMap(PhotoPreviewDisplayItem.init(item:))
+        self.previewItems = displayItems
+        self.startIndex = initialID.flatMap { id in
+            displayItems.firstIndex { $0.id == id }
+        } ?? 0
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
-            Color.black
-                .ignoresSafeArea()
-
-            if items.isEmpty {
+        Group {
+            if previewItems.isEmpty {
                 unavailableView
             } else {
-                TabView(selection: $selectedID) {
-                    ForEach(items) { item in
-                        ZoomablePhotoPreviewPage(item: item, onClose: close)
-                            .tag(item.id)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
+                LightboxPhotoPreviewController(
+                    items: previewItems,
+                    startIndex: startIndex,
+                    onDismiss: close
+                )
                 .ignoresSafeArea()
             }
-
-            previewChrome
         }
+        .background(Color.black.ignoresSafeArea())
         .preferredColorScheme(.dark)
         .statusBarHidden(true)
     }
@@ -56,177 +52,97 @@ struct PhotoPreviewView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var previewChrome: some View {
-        HStack(spacing: 12) {
-            if items.count > 1 {
-                Text("\(selectedIndex + 1)/\(items.count)")
-                    .font(.subheadline.weight(.semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
-                    .background(.black.opacity(0.42), in: Capsule())
-                    .accessibilityLabel(AppLocalization.format("第 %d 张，共 %d 张", selectedIndex + 1, items.count))
-            }
-
-            Spacer(minLength: 8)
-
-            Button(action: close) {
-                Image(systemName: "xmark")
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: AppDesign.touchIconSize, height: AppDesign.touchIconSize)
-                    .background(.black.opacity(0.42), in: Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(AppLocalization.string("完成"))
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 12)
-    }
-
-    private var selectedIndex: Int {
-        items.firstIndex { $0.id == selectedID } ?? 0
-    }
-
     private func close() {
         dismiss()
     }
 }
 
-private struct ZoomablePhotoPreviewPage: View {
-    let item: PhotoPreviewItem
-    let onClose: () -> Void
+private struct LightboxPhotoPreviewController: UIViewControllerRepresentable {
+    let items: [PhotoPreviewDisplayItem]
+    let startIndex: Int
+    let onDismiss: () -> Void
 
-    @State private var baseScale: CGFloat = 1
-    @State private var baseOffset: CGSize = .zero
-    @GestureState private var gestureScale: CGFloat = 1
-    @GestureState private var gestureOffset: CGSize = .zero
+    func makeUIViewController(context: Context) -> LightboxController {
+        configureLightboxStyle()
 
-    private let maxScale: CGFloat = 4
-    private let doubleTapScale: CGFloat = 2.35
+        let controller = LightboxController(
+            images: items.map { LightboxImage(image: $0.image) },
+            startIndex: startIndex
+        )
+        controller.dynamicBackground = false
+        controller.dismissalDelegate = context.coordinator
+        controller.pageDelegate = context.coordinator
+        return controller
+    }
 
-    var body: some View {
-        GeometryReader { proxy in
-            ZStack {
-                Color.clear
-                    .contentShape(Rectangle())
+    func updateUIViewController(_ uiViewController: LightboxController, context: Context) {
+        context.coordinator.onDismiss = onDismiss
+    }
 
-                if let image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .scaleEffect(currentScale)
-                        .offset(currentOffset(in: proxy.size))
-                        .animation(.interactiveSpring(response: 0.24, dampingFraction: 0.88), value: baseScale)
-                        .animation(.interactiveSpring(response: 0.24, dampingFraction: 0.88), value: baseOffset)
-                        .accessibilityLabel(item.title ?? AppLocalization.string("图片预览"))
-                } else {
-                    VStack(spacing: 12) {
-                        Image(systemName: "photo")
-                            .font(.largeTitle)
-                            .accessibilityHidden(true)
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onDismiss: onDismiss)
+    }
 
-                        Text(AppLocalization.string("无法预览图片"))
-                            .font(.headline)
-                    }
-                    .foregroundStyle(.white)
-                }
-            }
-            .frame(width: proxy.size.width, height: proxy.size.height)
-            .contentShape(Rectangle())
-            .simultaneousGesture(magnifyGesture(in: proxy.size))
-            .simultaneousGesture(dragGesture(in: proxy.size))
-            .onTapGesture(count: 2) {
-                toggleZoom(in: proxy.size)
-            }
+    private func configureLightboxStyle() {
+        LightboxConfig.hideStatusBar = true
+        LightboxConfig.imageBackgroundColor = .black
+        LightboxConfig.preload = 0
+        LightboxConfig.Zoom.maximumScale = 4
+
+        LightboxConfig.CloseButton.enabled = true
+        LightboxConfig.CloseButton.text = AppLocalization.string("关闭")
+        LightboxConfig.CloseButton.size = CGSize(width: 56, height: AppDesign.touchIconSize)
+        LightboxConfig.CloseButton.image = nil
+        LightboxConfig.CloseButton.textAttributes = [
+            .font: UIFont.systemFont(ofSize: 16, weight: .semibold),
+            .foregroundColor: UIColor.white,
+            .paragraphStyle: centeredParagraphStyle
+        ]
+
+        LightboxConfig.DeleteButton.enabled = false
+        LightboxConfig.InfoLabel.enabled = false
+        LightboxConfig.PageIndicator.enabled = items.count > 1
+        LightboxConfig.PageIndicator.separatorColor = .clear
+        LightboxConfig.PageIndicator.textAttributes = [
+            .font: UIFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold),
+            .foregroundColor: UIColor.white.withAlphaComponent(0.92),
+            .paragraphStyle: centeredParagraphStyle
+        ]
+    }
+
+    private var centeredParagraphStyle: NSMutableParagraphStyle {
+        let style = NSMutableParagraphStyle()
+        style.alignment = .center
+        return style
+    }
+
+    final class Coordinator: NSObject, LightboxControllerDismissalDelegate, LightboxControllerPageDelegate {
+        var onDismiss: () -> Void
+        private var didRequestDismiss = false
+
+        init(onDismiss: @escaping () -> Void) {
+            self.onDismiss = onDismiss
+        }
+
+        func lightboxControllerWillDismiss(_ controller: LightboxController) {
+            guard didRequestDismiss == false else { return }
+            didRequestDismiss = true
+            onDismiss()
+        }
+
+        func lightboxController(_ controller: LightboxController, didMoveToPage page: Int) {
+            didRequestDismiss = false
         }
     }
+}
 
-    private var image: UIImage? {
-        UIImage(data: item.imageData)
-    }
+private struct PhotoPreviewDisplayItem: Identifiable {
+    let id: String
+    let image: UIImage
 
-    private var currentScale: CGFloat {
-        clampScale(baseScale * gestureScale)
-    }
-
-    private func currentOffset(in size: CGSize) -> CGSize {
-        clampedOffset(
-            CGSize(
-                width: baseOffset.width + gestureOffset.width,
-                height: baseOffset.height + gestureOffset.height
-            ),
-            in: size,
-            scale: currentScale
-        )
-    }
-
-    private func magnifyGesture(in size: CGSize) -> some Gesture {
-        MagnifyGesture()
-            .updating($gestureScale) { value, state, _ in
-                state = value.magnification
-            }
-            .onEnded { value in
-                let nextScale = clampScale(baseScale * value.magnification)
-
-                withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
-                    baseScale = nextScale
-                    baseOffset = nextScale <= 1.01 ? .zero : clampedOffset(baseOffset, in: size, scale: nextScale)
-                }
-            }
-    }
-
-    private func dragGesture(in size: CGSize) -> some Gesture {
-        DragGesture(minimumDistance: 6)
-            .updating($gestureOffset) { value, state, _ in
-                guard currentScale > 1.01 else { return }
-                state = value.translation
-            }
-            .onEnded { value in
-                if currentScale > 1.01 {
-                    let nextOffset = CGSize(
-                        width: baseOffset.width + value.translation.width,
-                        height: baseOffset.height + value.translation.height
-                    )
-
-                    withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
-                        baseOffset = clampedOffset(nextOffset, in: size, scale: currentScale)
-                    }
-                } else if shouldClose(for: value.translation) {
-                    onClose()
-                }
-            }
-    }
-
-    private func shouldClose(for translation: CGSize) -> Bool {
-        translation.height > 120 && abs(translation.height) > abs(translation.width) * 1.35
-    }
-
-    private func toggleZoom(in size: CGSize) {
-        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
-            if baseScale > 1.01 {
-                baseScale = 1
-                baseOffset = .zero
-            } else {
-                baseScale = doubleTapScale
-                baseOffset = clampedOffset(.zero, in: size, scale: doubleTapScale)
-            }
-        }
-    }
-
-    private func clampScale(_ scale: CGFloat) -> CGFloat {
-        min(max(scale, 1), maxScale)
-    }
-
-    private func clampedOffset(_ offset: CGSize, in size: CGSize, scale: CGFloat) -> CGSize {
-        guard scale > 1 else { return .zero }
-
-        let maxX = size.width * (scale - 1) / 2
-        let maxY = size.height * (scale - 1) / 2
-        return CGSize(
-            width: min(max(offset.width, -maxX), maxX),
-            height: min(max(offset.height, -maxY), maxY)
-        )
+    init?(item: PhotoPreviewItem) {
+        guard let image = UIImage(data: item.imageData) else { return nil }
+        self.id = item.id
+        self.image = image
     }
 }

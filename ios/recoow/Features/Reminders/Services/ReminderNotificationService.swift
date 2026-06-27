@@ -26,6 +26,7 @@ final class ReminderNotificationService: @unchecked Sendable {
     private func notificationRequests(for reminder: ReminderRecord) -> [AppNotificationRequest] {
         var requests: [AppNotificationRequest] = []
         let occurrenceDates = reminder.occurrenceDates(maxCount: maxScheduledOccurrences)
+        let attachmentData = reminder.resolvedImageData
 
         for (index, scheduledDate) in occurrenceDates.enumerated() {
             requests.append(
@@ -34,7 +35,7 @@ final class ReminderNotificationService: @unchecked Sendable {
                     title: notificationTitle(for: reminder),
                     body: reminder.note,
                     scheduledDate: scheduledDate,
-                    attachmentData: reminder.imageData,
+                    attachmentData: attachmentData,
                     userInfo: notificationUserInfo(for: reminder, kind: "main", occurrenceIndex: index)
                 )
             )
@@ -52,7 +53,7 @@ final class ReminderNotificationService: @unchecked Sendable {
                         subtitle: reminder.leadTime.notificationSubtitle,
                         body: reminder.note,
                         scheduledDate: leadDate,
-                        attachmentData: reminder.imageData,
+                        attachmentData: attachmentData,
                         userInfo: notificationUserInfo(for: reminder, kind: "lead", occurrenceIndex: index)
                     )
                 )
@@ -63,7 +64,7 @@ final class ReminderNotificationService: @unchecked Sendable {
     }
 
     private func notificationTitle(for reminder: ReminderRecord) -> String {
-        if reminder.imageData != nil {
+        if reminder.hasImage {
             return reminder.title
         }
 

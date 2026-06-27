@@ -20,6 +20,18 @@ final class AppPreferences {
         }
     }
 
+    var addsPickedPhotosToMediaLibrary: Bool {
+        didSet {
+            defaults?.set(addsPickedPhotosToMediaLibrary, forKey: AppPreferenceStorageKeys.addsPickedPhotosToMediaLibrary)
+        }
+    }
+
+    var savesCameraPhotosToLibrary: Bool {
+        didSet {
+            defaults?.set(savesCameraPhotosToLibrary, forKey: AppPreferenceStorageKeys.savesCameraPhotosToLibrary)
+        }
+    }
+
     init(defaults: UserDefaults? = .standard) {
         self.defaults = defaults
 
@@ -28,6 +40,13 @@ final class AppPreferences {
 
         let storedAppearance = defaults?.string(forKey: AppPreferenceStorageKeys.appearance)
         appearance = storedAppearance.flatMap(AppAppearancePreference.init(rawValue:)) ?? .system
+
+        addsPickedPhotosToMediaLibrary = defaults?.bool(forKey: AppPreferenceStorageKeys.addsPickedPhotosToMediaLibrary) ?? false
+        if defaults?.object(forKey: AppPreferenceStorageKeys.savesCameraPhotosToLibrary) == nil {
+            savesCameraPhotosToLibrary = true
+        } else {
+            savesCameraPhotosToLibrary = defaults?.bool(forKey: AppPreferenceStorageKeys.savesCameraPhotosToLibrary) ?? true
+        }
     }
 
     var locale: Locale {
@@ -38,12 +57,29 @@ final class AppPreferences {
         appearance.colorScheme
     }
 
-    func applyImportedSnapshot(languageRawValue: String?, appearanceRawValue: String?) {
+    func applyImportedSnapshot(
+        languageRawValue: String?,
+        appearanceRawValue: String?,
+        addsPickedPhotosToMediaLibrary: Bool? = nil,
+        savesCameraPhotosToLibrary: Bool? = nil
+    ) {
         language = languageRawValue.flatMap(AppLanguagePreference.init(rawValue:)) ?? .system
         appearance = appearanceRawValue.flatMap(AppAppearancePreference.init(rawValue:)) ?? .system
+        self.addsPickedPhotosToMediaLibrary = addsPickedPhotosToMediaLibrary ?? false
+        self.savesCameraPhotosToLibrary = savesCameraPhotosToLibrary ?? true
     }
 
-    var transferSnapshot: (languageRawValue: String, appearanceRawValue: String) {
-        (language.rawValue, appearance.rawValue)
+    var transferSnapshot: (
+        languageRawValue: String,
+        appearanceRawValue: String,
+        addsPickedPhotosToMediaLibrary: Bool,
+        savesCameraPhotosToLibrary: Bool
+    ) {
+        (
+            language.rawValue,
+            appearance.rawValue,
+            addsPickedPhotosToMediaLibrary,
+            savesCameraPhotosToLibrary
+        )
     }
 }

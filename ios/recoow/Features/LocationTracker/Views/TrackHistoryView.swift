@@ -177,7 +177,7 @@ struct TrackHistoryView: View {
         switch route {
         case .decisionChoice(let id):
             guard case .decisionChoice(let record) = historyViewModel?.entry(id: "decisionChoice:\(id)"),
-                  record.optionImageData != nil else {
+                  record.hasImage else {
                 return nil
             }
             return choiceRecordImageTransition
@@ -188,14 +188,14 @@ struct TrackHistoryView: View {
                 return record
             }.first
 
-            guard reminderRecord?.reminder.imageData != nil else {
+            guard reminderRecord?.reminder.hasImage == true else {
                 return nil
             }
             return reminderImageTransition
 
         case .bill(let id):
             guard case .bill(let bill) = historyViewModel?.entry(id: "bill:\(id)"),
-                  bill.imageData != nil else {
+                  bill.hasImage else {
                 return nil
             }
             return billImageTransition

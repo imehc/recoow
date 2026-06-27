@@ -70,6 +70,7 @@ final class DecisionOptionsViewModel {
         detail: String?,
         customInfo: String?,
         imageData: Data?,
+        imageAssetID: String? = nil,
         weight: Int,
         isEnabled: Bool
     ) -> DecisionOption {
@@ -79,6 +80,7 @@ final class DecisionOptionsViewModel {
             detail: detail,
             customInfo: customInfo,
             imageData: imageData,
+            imageAssetID: imageAssetID,
             weight: weight,
             isEnabled: isEnabled,
             deviceID: repository.deviceID

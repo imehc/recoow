@@ -1,10 +1,12 @@
 import SwiftUI
 
 struct BillFormView: View {
+    @Environment(AppContainer.self) private var container
     @Environment(\.dismiss) private var dismiss
     @State private var title: String
     @State private var originalAmountText: String
     @State private var discountAmountText: String
+    @State private var discountRateText: String
     @State private var finalAmountText: String
     @State private var billType: BillType
     @State private var category: BillCategory
@@ -18,8 +20,9 @@ struct BillFormView: View {
     @State private var groupBuyValidUntil: Date
     @State private var hasGroupBuyValidUntil: Bool
     @State private var imageData: Data?
-    @State private var isUpdatingFinalAmount = false
-    @State private var isFinalAmountManuallyEdited = false
+    @State private var imageAssetID: String?
+    @State private var isUpdatingAmountFields = false
+    @State private var amountCompanionField: String?
     @State private var photoInputCoordinator = EditablePhotoInputCoordinator()
     @FocusState private var focusedField: String?
 
@@ -33,7 +36,8 @@ struct BillFormView: View {
         let initialBill = bill ?? prefillBill
         _title = State(initialValue: initialBill?.title ?? "")
         _originalAmountText = State(initialValue: initialBill.map { AppFormatters.amountInput(cents: $0.originalAmountCents) } ?? "")
-        _discountAmountText = State(initialValue: initialBill.map { AppFormatters.amountInput(cents: $0.discountAmountCents) } ?? "")
+        _discountAmountText = State(initialValue: Self.discountAmountInput(for: initialBill))
+        _discountRateText = State(initialValue: Self.discountRateInput(for: initialBill))
         _finalAmountText = State(initialValue: initialBill.map { AppFormatters.amountInput(cents: $0.finalAmountCents) } ?? "")
         _billType = State(initialValue: initialBill?.billType ?? .expense)
         _category = State(initialValue: initialBill?.billCategory ?? .dining)
@@ -47,6 +51,8 @@ struct BillFormView: View {
         _groupBuyValidUntil = State(initialValue: initialBill?.groupBuyValidUntilDate ?? Date())
         _hasGroupBuyValidUntil = State(initialValue: initialBill?.groupBuyValidUntilDate != nil)
         _imageData = State(initialValue: initialBill?.imageData)
+        _imageAssetID = State(initialValue: initialBill?.imageAssetID)
+        _amountCompanionField = State(initialValue: initialBill == nil ? "discountAmount" : "finalAmount")
     }
 
     var body: some View {
@@ -82,12 +88,7 @@ struct BillFormView: View {
                             .focused($focusedField, equals: "originalAmount")
                     }
 
-                    LabeledContent("优惠") {
-                        TextField("请输入优惠", text: $discountAmountText)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                            .focused($focusedField, equals: "discountAmount")
-                    }
+                    discountInputRow
                 }
 
                 LabeledContent(billType == .expense ? "实付" : "金额") {
@@ -169,6 +170,7 @@ struct BillFormView: View {
 
             EditablePhotoInputSection(
                 imageData: $imageData,
+                imageAssetID: $imageAssetID,
                 placeholderSystemImage: "receipt",
                 coordinator: photoInputCoordinator
             )
@@ -190,7 +192,9 @@ struct BillFormView: View {
         .navigationBarTitleDisplayMode(.inline)
         .editablePhotoInputPresentation(
             coordinator: photoInputCoordinator,
-            imageData: $imageData
+            imageData: $imageData,
+            imageAssetID: $imageAssetID,
+            mediaAssetRepository: container.mediaAssetRepository
         )
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -203,10 +207,13 @@ struct BillFormView: View {
             }
         }
         .onChange(of: originalAmountText) {
-            updateFinalAmountIfNeeded()
+            handleOriginalAmountChange()
         }
         .onChange(of: discountAmountText) {
-            updateFinalAmountIfNeeded()
+            handleDiscountAmountChange()
+        }
+        .onChange(of: discountRateText) {
+            handleDiscountRateChange()
         }
         .onChange(of: finalAmountText) {
             handleFinalAmountChange()
@@ -263,6 +270,32 @@ struct BillFormView: View {
         return BillsViewModel.milliseconds(for: groupBuyValidUntil)
     }
 
+    private var discountInputRow: some View {
+        LabeledContent("优惠") {
+            HStack(spacing: 8) {
+                TextField("优惠金额", text: $discountAmountText)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .focused($focusedField, equals: "discountAmount")
+                    .frame(minWidth: 72)
+
+                Divider()
+                    .frame(height: 22)
+
+                HStack(spacing: 2) {
+                    TextField("折扣", text: $discountRateText)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .focused($focusedField, equals: "discountRate")
+                        .frame(minWidth: 46, maxWidth: 64)
+
+                    Text("折")
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
     private var originalAmountCents: Int64? {
         AppFormatters.cents(from: originalAmountText)
     }
@@ -279,20 +312,14 @@ struct BillFormView: View {
         AppFormatters.cents(from: finalAmountText)
     }
 
+    private var discountRateFraction: Decimal? {
+        Self.discountRateFraction(from: discountRateText)
+    }
+
     private var normalizedAmountValues: (original: Int64, discount: Int64, final: Int64)? {
         switch billType {
         case .expense:
-            guard let originalAmountCents,
-                  let discountAmountCents,
-                  let finalAmountCents,
-                  originalAmountCents > 0,
-                  discountAmountCents <= originalAmountCents,
-                  finalAmountCents >= 0
-            else {
-                return nil
-            }
-
-            return (originalAmountCents, discountAmountCents, finalAmountCents)
+            return normalizedExpenseAmountValues
         case .income:
             guard let finalAmountCents, finalAmountCents > 0 else {
                 return nil
@@ -300,6 +327,69 @@ struct BillFormView: View {
 
             return (finalAmountCents, 0, finalAmountCents)
         }
+    }
+
+    private var normalizedExpenseAmountValues: (original: Int64, discount: Int64, final: Int64)? {
+        guard let originalAmountCents, originalAmountCents > 0 else {
+            return nil
+        }
+
+        switch focusedField {
+        case "discountAmount":
+            return expenseAmountValuesFromDiscountAmount(originalCents: originalAmountCents)
+        case "discountRate":
+            return expenseAmountValuesFromDiscountRate(originalCents: originalAmountCents)
+        case "originalAmount":
+            return expenseAmountValuesFromOriginalAmount(originalCents: originalAmountCents)
+        default:
+            return expenseAmountValuesFromFinalAmount(originalCents: originalAmountCents)
+                ?? expenseAmountValuesFromDiscountAmount(originalCents: originalAmountCents)
+                ?? expenseAmountValuesFromDiscountRate(originalCents: originalAmountCents)
+        }
+    }
+
+    private func expenseAmountValuesFromOriginalAmount(originalCents: Int64) -> (original: Int64, discount: Int64, final: Int64)? {
+        switch amountCompanionField {
+        case "discountRate":
+            return expenseAmountValuesFromDiscountRate(originalCents: originalCents)
+        case "discountAmount":
+            return expenseAmountValuesFromDiscountAmount(originalCents: originalCents)
+        case "finalAmount":
+            return expenseAmountValuesFromFinalAmount(originalCents: originalCents)
+        default:
+            return expenseAmountValuesFromFinalAmount(originalCents: originalCents)
+                ?? expenseAmountValuesFromDiscountAmount(originalCents: originalCents)
+                ?? expenseAmountValuesFromDiscountRate(originalCents: originalCents)
+        }
+    }
+
+    private func expenseAmountValuesFromFinalAmount(originalCents: Int64) -> (original: Int64, discount: Int64, final: Int64)? {
+        guard let finalAmountCents,
+              (0...originalCents).contains(finalAmountCents) else {
+            return nil
+        }
+
+        return (originalCents, originalCents - finalAmountCents, finalAmountCents)
+    }
+
+    private func expenseAmountValuesFromDiscountAmount(originalCents: Int64) -> (original: Int64, discount: Int64, final: Int64)? {
+        guard let discountAmountCents,
+              (0...originalCents).contains(discountAmountCents) else {
+            return nil
+        }
+
+        return (originalCents, discountAmountCents, originalCents - discountAmountCents)
+    }
+
+    private func expenseAmountValuesFromDiscountRate(originalCents: Int64) -> (original: Int64, discount: Int64, final: Int64)? {
+        guard let discountRateFraction,
+              discountRateFraction >= 0,
+              discountRateFraction <= 1,
+              let finalCents = Self.finalCents(originalCents: originalCents, rateFraction: discountRateFraction) else {
+            return nil
+        }
+
+        return (originalCents, originalCents - finalCents, finalCents)
     }
 
     private var isSaveDisabled: Bool {
@@ -319,25 +409,35 @@ struct BillFormView: View {
         dismiss()
     }
 
-    private func updateFinalAmountIfNeeded() {
-        guard isFinalAmountManuallyEdited == false,
-              let originalAmountCents,
-              let discountAmountCents
-        else {
-            return
-        }
+    private func handleOriginalAmountChange() {
+        guard focusedField == "originalAmount" else { return }
+        guard beginAmountFieldUpdateIfNeeded() else { return }
+        defer { isUpdatingAmountFields = false }
+        syncAmountsFromOriginalAmount()
+    }
 
-        let calculatedFinalAmount = max(0, originalAmountCents - discountAmountCents)
-        isUpdatingFinalAmount = true
-        finalAmountText = AppFormatters.amountInput(cents: calculatedFinalAmount)
+    private func handleDiscountAmountChange() {
+        guard focusedField == "discountAmount" else { return }
+        guard beginAmountFieldUpdateIfNeeded() else { return }
+        defer { isUpdatingAmountFields = false }
+        amountCompanionField = "discountAmount"
+        syncAmountsFromDiscountAmount()
+    }
+
+    private func handleDiscountRateChange() {
+        guard focusedField == "discountRate" else { return }
+        guard beginAmountFieldUpdateIfNeeded() else { return }
+        defer { isUpdatingAmountFields = false }
+        amountCompanionField = "discountRate"
+        syncAmountsFromDiscountRate()
     }
 
     private func handleFinalAmountChange() {
-        if isUpdatingFinalAmount {
-            isUpdatingFinalAmount = false
-        } else {
-            isFinalAmountManuallyEdited = true
-        }
+        guard focusedField == "finalAmount" else { return }
+        guard beginAmountFieldUpdateIfNeeded() else { return }
+        defer { isUpdatingAmountFields = false }
+        amountCompanionField = "finalAmount"
+        syncAmountsFromFinalAmount()
     }
 
     private func handleBillTypeChange() {
@@ -346,13 +446,170 @@ struct BillFormView: View {
             if originalAmountText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 originalAmountText = finalAmountText
             }
-            updateFinalAmountIfNeeded()
+            guard beginAmountFieldUpdateIfNeeded() else { return }
+            defer { isUpdatingAmountFields = false }
+            syncAmountsFromOriginalAmount()
         case .income:
             if finalAmountText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 finalAmountText = originalAmountText
             }
             discountAmountText = ""
+            discountRateText = ""
         }
+    }
+
+    private func beginAmountFieldUpdateIfNeeded() -> Bool {
+        if isUpdatingAmountFields {
+            return false
+        }
+
+        isUpdatingAmountFields = true
+        return true
+    }
+
+    private func syncAmountsFromOriginalAmount() {
+        guard billType == .expense,
+              let originalAmountCents,
+              originalAmountCents > 0
+        else {
+            updateFinalAndDiscountFields(finalCents: nil, originalCents: originalAmountCents)
+            updateDiscountRateText(finalCents: nil, originalCents: originalAmountCents)
+            return
+        }
+
+        switch amountCompanionField {
+        case "discountRate" where discountRateFraction != nil:
+            syncAmountsFromDiscountRate()
+        case "discountAmount" where discountAmountCents != nil:
+            syncAmountsFromDiscountAmount()
+        case "finalAmount" where finalAmountCents != nil:
+            syncAmountsFromFinalAmount()
+        default:
+            if discountRateFraction != nil {
+                syncAmountsFromDiscountRate()
+            } else if discountAmountCents != nil {
+                syncAmountsFromDiscountAmount()
+            } else if finalAmountCents != nil {
+                syncAmountsFromFinalAmount()
+            } else {
+                updateFinalAndDiscountFields(finalCents: originalAmountCents, originalCents: originalAmountCents)
+                updateDiscountRateText(finalCents: originalAmountCents, originalCents: originalAmountCents)
+            }
+        }
+    }
+
+    private func syncAmountsFromFinalAmount() {
+        guard billType == .expense,
+              let originalAmountCents,
+              originalAmountCents > 0,
+              let finalAmountCents
+        else {
+            updateDiscountFields(discountCents: nil, originalCents: originalAmountCents)
+            return
+        }
+
+        guard finalAmountCents <= originalAmountCents else {
+            updateDiscountFields(discountCents: nil, originalCents: originalAmountCents)
+            return
+        }
+
+        updateDiscountFields(
+            discountCents: originalAmountCents - finalAmountCents,
+            originalCents: originalAmountCents
+        )
+    }
+
+    private func syncAmountsFromDiscountAmount() {
+        guard billType == .expense,
+              let originalAmountCents,
+              originalAmountCents > 0,
+              let discountAmountCents
+        else {
+            updateFinalAndRateFields(finalCents: nil, originalCents: originalAmountCents)
+            return
+        }
+
+        guard discountAmountCents <= originalAmountCents else {
+            updateFinalAndRateFields(finalCents: nil, originalCents: originalAmountCents)
+            return
+        }
+
+        updateFinalAndRateFields(
+            finalCents: originalAmountCents - discountAmountCents,
+            originalCents: originalAmountCents
+        )
+    }
+
+    private func syncAmountsFromDiscountRate() {
+        guard billType == .expense,
+              let originalAmountCents,
+              originalAmountCents > 0,
+              let rateFraction = discountRateFraction
+        else {
+            updateFinalAndDiscountFields(finalCents: nil, originalCents: originalAmountCents)
+            return
+        }
+
+        let normalizedRateFraction = min(max(rateFraction, Decimal(0)), Decimal(1))
+        guard let finalCents = Self.finalCents(originalCents: originalAmountCents, rateFraction: normalizedRateFraction) else {
+            updateFinalAndDiscountFields(finalCents: nil, originalCents: originalAmountCents)
+            return
+        }
+
+        updateFinalAndDiscountFields(finalCents: finalCents, originalCents: originalAmountCents)
+    }
+
+    private func updateDiscountFields(discountCents: Int64?, originalCents: Int64?) {
+        if let discountCents, focusedField != "discountAmount" {
+            discountAmountText = AppFormatters.amountInput(cents: discountCents)
+        } else if focusedField != "discountAmount" {
+            discountAmountText = ""
+        }
+
+        updateDiscountRateText(
+            finalCents: originalCents.flatMap { original in
+                discountCents.map { max(0, original - $0) }
+            },
+            originalCents: originalCents
+        )
+    }
+
+    private func updateFinalAndRateFields(finalCents: Int64?, originalCents: Int64?) {
+        if let finalCents, focusedField != "finalAmount" {
+            finalAmountText = AppFormatters.amountInput(cents: finalCents)
+        } else if focusedField != "finalAmount" {
+            finalAmountText = ""
+        }
+
+        updateDiscountRateText(finalCents: finalCents, originalCents: originalCents)
+    }
+
+    private func updateFinalAndDiscountFields(finalCents: Int64?, originalCents: Int64?) {
+        if let finalCents, focusedField != "finalAmount" {
+            finalAmountText = AppFormatters.amountInput(cents: finalCents)
+        } else if focusedField != "finalAmount" {
+            finalAmountText = ""
+        }
+
+        if let originalCents, let finalCents, focusedField != "discountAmount" {
+            discountAmountText = AppFormatters.amountInput(cents: max(0, originalCents - finalCents))
+        } else if focusedField != "discountAmount" {
+            discountAmountText = ""
+        }
+    }
+
+    private func updateDiscountRateText(finalCents: Int64?, originalCents: Int64?) {
+        guard focusedField != "discountRate" else { return }
+
+        guard let originalCents,
+              originalCents > 0,
+              let finalCents
+        else {
+            discountRateText = ""
+            return
+        }
+
+        discountRateText = Self.discountRateInput(originalCents: originalCents, finalCents: finalCents)
     }
 
     private func save() {
@@ -373,7 +630,8 @@ struct BillFormView: View {
             endLocation: normalizedEndLocation,
             transportLines: normalizedTransportLines,
             occurredDate: occurredDate,
-            imageData: imageData
+            imageData: imageReference.independentData,
+            imageAssetID: imageReference.assetID
         )
 
         record.title = trimmedTitle
@@ -388,7 +646,7 @@ struct BillFormView: View {
         record.endLocation = normalizedEndLocation
         record.transportLines = normalizedTransportLines
         record.occurredAt = BillsViewModel.milliseconds(for: occurredDate)
-        record.imageData = imageData
+        record.setImageReference(imageReference)
         record.groupBuyValidUntil = groupBuyValidUntilMilliseconds
 
         Task {
@@ -404,5 +662,72 @@ struct BillFormView: View {
         case .income:
             incomeCategory.rawValue
         }
+    }
+
+    private var imageReference: ImageReference {
+        ImageReference(data: imageData, assetID: imageAssetID)
+    }
+
+    private static func discountRateInput(for bill: BillRecord?) -> String {
+        guard let bill, bill.billType == .expense else { return "" }
+        return discountRateInput(originalCents: bill.originalAmountCents, finalCents: bill.finalAmountCents)
+    }
+
+    private static func discountAmountInput(for bill: BillRecord?) -> String {
+        guard let bill else { return "" }
+
+        if bill.billType == .expense,
+           bill.originalAmountCents >= bill.finalAmountCents {
+            return AppFormatters.amountInput(cents: bill.originalAmountCents - bill.finalAmountCents)
+        }
+
+        return AppFormatters.amountInput(cents: bill.discountAmountCents)
+    }
+
+    private static func discountRateInput(originalCents: Int64, finalCents: Int64) -> String {
+        guard originalCents > 0 else { return "" }
+
+        let rate = truncatedDecimal(Decimal(finalCents) / Decimal(originalCents) * Decimal(10), scale: 2)
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 2
+        return formatter.string(from: NSDecimalNumber(decimal: rate)) ?? "\(rate)"
+    }
+
+    private static func discountRateFraction(from text: String) -> Decimal? {
+        let sanitized = text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ",", with: "")
+            .replacingOccurrences(of: "折", with: "")
+            .replacingOccurrences(of: "%", with: "")
+
+        guard sanitized.isEmpty == false,
+              let value = Decimal(string: sanitized),
+              value >= 0 else {
+            return nil
+        }
+
+        if value <= 10 {
+            return value / 10
+        }
+
+        if value <= 100 {
+            return value / 100
+        }
+
+        return nil
+    }
+
+    private static func finalCents(originalCents: Int64, rateFraction: Decimal) -> Int64? {
+        let cents = truncatedDecimal(Decimal(originalCents) * rateFraction, scale: 0)
+        return NSDecimalNumber(decimal: cents).int64Value
+    }
+
+    private static func truncatedDecimal(_ value: Decimal, scale: Int) -> Decimal {
+        var source = value
+        var result = Decimal()
+        NSDecimalRound(&result, &source, scale, .down)
+        return result
     }
 }

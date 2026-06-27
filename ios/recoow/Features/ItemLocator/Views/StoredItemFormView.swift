@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct StoredItemFormView: View {
+    @Environment(AppContainer.self) private var container
     @Environment(\.dismiss) private var dismiss
     @State private var categoryID: String?
     @State private var title: String
@@ -9,6 +10,7 @@ struct StoredItemFormView: View {
     @State private var tags: String
     @State private var searchKeywords: String
     @State private var imageData: Data?
+    @State private var imageAssetID: String?
     @State private var photoInputCoordinator = EditablePhotoInputCoordinator()
     @FocusState private var focusedField: String?
 
@@ -25,6 +27,7 @@ struct StoredItemFormView: View {
         _tags = State(initialValue: item?.tags ?? "")
         _searchKeywords = State(initialValue: item?.searchKeywords ?? "")
         _imageData = State(initialValue: item?.imageData)
+        _imageAssetID = State(initialValue: item?.imageAssetID)
     }
 
     var body: some View {
@@ -57,6 +60,7 @@ struct StoredItemFormView: View {
 
             EditablePhotoInputSection(
                 imageData: $imageData,
+                imageAssetID: $imageAssetID,
                 placeholderSystemImage: "shippingbox",
                 coordinator: photoInputCoordinator
             )
@@ -90,7 +94,9 @@ struct StoredItemFormView: View {
         .navigationBarTitleDisplayMode(.inline)
         .editablePhotoInputPresentation(
             coordinator: photoInputCoordinator,
-            imageData: $imageData
+            imageData: $imageData,
+            imageAssetID: $imageAssetID,
+            mediaAssetRepository: container.mediaAssetRepository
         )
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -139,7 +145,8 @@ struct StoredItemFormView: View {
             note: normalizedNote,
             tags: normalizedTags,
             searchKeywords: normalizedSearchKeywords,
-            imageData: imageData
+            imageData: imageReference.independentData,
+            imageAssetID: imageReference.assetID
         )
         record.categoryID = categoryID
         record.title = trimmedTitle
@@ -147,11 +154,15 @@ struct StoredItemFormView: View {
         record.note = normalizedNote
         record.tags = normalizedTags
         record.searchKeywords = normalizedSearchKeywords
-        record.imageData = imageData
+        record.setImageReference(imageReference)
 
         Task {
             await viewModel.save(record)
             dismiss()
         }
+    }
+
+    private var imageReference: ImageReference {
+        ImageReference(data: imageData, assetID: imageAssetID)
     }
 }

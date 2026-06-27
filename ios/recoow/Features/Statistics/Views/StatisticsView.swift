@@ -1,30 +1,46 @@
 import SwiftUI
 
+private enum StatisticsNavigationRoute: Hashable {
+    case history
+}
+
 struct StatisticsView: View {
     @Environment(AppContainer.self) private var container
     @State private var viewModel: StatisticsViewModel?
     @State private var billsViewModel: BillsViewModel?
+    @Binding private var tabBarVisibility: Visibility
+
+    init(tabBarVisibility: Binding<Visibility> = .constant(.visible)) {
+        _tabBarVisibility = tabBarVisibility
+    }
 
     var body: some View {
+        let language = container.appPreferences.language
+
         Group {
             if let viewModel {
                 StatisticsContent(
                     viewModel: viewModel,
-                    billsViewModel: billsViewModel
+                    billsViewModel: billsViewModel,
+                    tabBarVisibility: $tabBarVisibility
                 )
             } else {
                 ProgressView("正在加载")
             }
         }
-        .navigationTitle(AppLocalization.string("统计"))
+        .navigationTitle(AppLocalization.string("统计", language: language))
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink {
-                    TrackHistoryView()
-                } label: {
+                NavigationLink(value: StatisticsNavigationRoute.history) {
                     Image(systemName: "clock")
                 }
-                .accessibilityLabel(AppLocalization.string("历史"))
+                .accessibilityLabel(AppLocalization.string("历史", language: language))
+            }
+        }
+        .navigationDestination(for: StatisticsNavigationRoute.self) { route in
+            switch route {
+            case .history:
+                TrackHistoryView()
             }
         }
         .task {
