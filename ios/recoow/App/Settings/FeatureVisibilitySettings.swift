@@ -4,7 +4,7 @@ import Observation
 @MainActor
 @Observable
 final class FeatureVisibilitySettings {
-    private static let hiddenRoutesKey = "home.hiddenToolRoutes"
+    nonisolated static let hiddenRoutesKey = "home.hiddenToolRoutes"
 
     @ObservationIgnored private let defaults: UserDefaults?
     private var hiddenRouteIDs: Set<String>
@@ -30,5 +30,14 @@ final class FeatureVisibilitySettings {
         }
 
         defaults?.set(hiddenRouteIDs.sorted(), forKey: Self.hiddenRoutesKey)
+    }
+
+    func replaceHiddenRoutes(_ routeIDs: [String]) {
+        hiddenRouteIDs = Set(routeIDs)
+        defaults?.set(hiddenRouteIDs.sorted(), forKey: Self.hiddenRoutesKey)
+    }
+
+    var transferSnapshotHiddenRouteIDs: [String] {
+        hiddenRouteIDs.sorted()
     }
 }

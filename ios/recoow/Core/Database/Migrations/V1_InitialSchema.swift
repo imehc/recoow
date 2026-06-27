@@ -2,7 +2,7 @@ import GRDB
 
 /// V1 初始 schema：轨迹、轨迹点和同步 outbox。
 enum V1InitialSchema {
-    static func register(in migrator: inout DatabaseMigrator) {
+    nonisolated static func register(in migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v1_initial_schema") { db in
             try db.create(table: "tracks") { t in
                 t.syncMetadata()

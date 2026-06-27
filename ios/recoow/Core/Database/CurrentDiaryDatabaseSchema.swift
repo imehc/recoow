@@ -1,13 +1,13 @@
 import GRDB
 
 enum CurrentDiaryDatabaseSchema {
-    static let tableNames = [
+    nonisolated static let tableNames = [
         "diary_entries",
         "diary_tags",
         "diary_links"
     ]
 
-    static func create(in db: Database) throws {
+    nonisolated static func create(in db: Database) throws {
         try db.create(table: "diary_entries") { t in
             t.syncMetadata()
             t.column("title", .text).notNull()
@@ -51,7 +51,7 @@ enum CurrentDiaryDatabaseSchema {
         try db.create(index: "idx_diary_links_updated_at", on: "diary_links", columns: ["updated_at"])
     }
 
-    static func drop(in db: Database) throws {
+    nonisolated static func drop(in db: Database) throws {
         try db.execute(sql: "DROP TABLE IF EXISTS diary_links")
         try db.execute(sql: "DROP TABLE IF EXISTS diary_tags")
         try db.execute(sql: "DROP TABLE IF EXISTS diary_entries")

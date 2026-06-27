@@ -61,6 +61,7 @@ struct HomeView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+                .hidesTabBarWhenScrollingDown()
             }
         }
         .navigationTitle(AppLocalization.string("记刻"))

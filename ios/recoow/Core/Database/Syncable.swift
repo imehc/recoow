@@ -27,7 +27,7 @@ extension SyncableRecord {
 
 extension TableDefinition {
     /// 一行式声明同步列。建新表时复用该方法，避免不同模块 schema 漂移。
-    func syncMetadata() {
+    nonisolated func syncMetadata() {
         column("id", .text).notNull().primaryKey()
         // SQLite 允许表达式默认值，但表达式必须包在外层括号中。
         column("created_at", .integer).notNull().defaults(sql: "(CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER))")

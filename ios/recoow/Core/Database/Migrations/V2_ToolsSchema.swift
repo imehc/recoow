@@ -2,7 +2,7 @@ import GRDB
 
 /// V2：随机选择工具和物品位置工具。
 enum V2ToolsSchema {
-    static func register(in migrator: inout DatabaseMigrator) {
+    nonisolated static func register(in migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v2_tools_schema") { db in
             try db.create(table: "decision_collections") { t in
                 t.syncMetadata()

@@ -37,4 +37,13 @@ final class AppPreferences {
     var colorScheme: ColorScheme? {
         appearance.colorScheme
     }
+
+    func applyImportedSnapshot(languageRawValue: String?, appearanceRawValue: String?) {
+        language = languageRawValue.flatMap(AppLanguagePreference.init(rawValue:)) ?? .system
+        appearance = appearanceRawValue.flatMap(AppAppearancePreference.init(rawValue:)) ?? .system
+    }
+
+    var transferSnapshot: (languageRawValue: String, appearanceRawValue: String) {
+        (language.rawValue, appearance.rawValue)
+    }
 }

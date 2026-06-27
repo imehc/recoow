@@ -3,7 +3,7 @@ import GRDB
 
 /// V16：开发期重建日记相关 schema，不保留旧日记数据。
 enum V16DiaryMediaSchemaReset {
-    static func register(in migrator: inout DatabaseMigrator) {
+    nonisolated static func register(in migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v16_diary_media_schema_reset") { db in
             try removePendingChanges(in: db)
 
@@ -15,7 +15,7 @@ enum V16DiaryMediaSchemaReset {
         }
     }
 
-    private static func removePendingChanges(in db: Database) throws {
+    nonisolated private static func removePendingChanges(in db: Database) throws {
         let tableNames = CurrentDiaryDatabaseSchema.tableNames + CurrentMediaAttachmentDatabaseSchema.tableNames
         try db.execute(
             sql: "DELETE FROM change_log WHERE entity_table IN \(tableNames.sqlInList)"
@@ -24,7 +24,7 @@ enum V16DiaryMediaSchemaReset {
 }
 
 private extension Array where Element == String {
-    var sqlInList: String {
+    nonisolated var sqlInList: String {
         let escapedValues = map { value in
             "'\(value.replacingOccurrences(of: "'", with: "''"))'"
         }

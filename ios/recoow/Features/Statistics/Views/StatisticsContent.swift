@@ -7,7 +7,6 @@ struct StatisticsContent: View {
     @State private var billDetailContext: StatisticsBillDetailSheet.Context?
 
     let billsViewModel: BillsViewModel?
-    let openHistory: () -> Void
 
     var body: some View {
         List {
@@ -48,15 +47,10 @@ struct StatisticsContent: View {
                 incomeCategoryPoints: viewModel.billIncomeCategoryPoints(for: selectedBillPeriod),
                 viewBills: viewBills
             )
-
-            Section {
-                Button(action: openHistory) {
-                    Label("查看历史记录", systemImage: "clock")
-                }
-            }
         }
         .id(locale.identifier)
         .listStyle(.insetGrouped)
+        .hidesTabBarWhenScrollingDown()
         .sheet(item: $billDetailContext) { context in
             if let billsViewModel {
                 StatisticsBillDetailSheet(viewModel: billsViewModel, context: context)

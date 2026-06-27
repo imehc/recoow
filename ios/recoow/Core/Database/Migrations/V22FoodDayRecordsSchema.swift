@@ -2,7 +2,7 @@ import GRDB
 
 /// V22: 饮食日级记录。保存某一天的标题等聚合信息。
 enum V22FoodDayRecordsSchema {
-    static func register(in migrator: inout DatabaseMigrator) {
+    nonisolated static func register(in migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v22_food_day_records_schema") { db in
             try db.create(table: "food_day_records") { t in
                 t.syncMetadata()

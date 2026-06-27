@@ -2,7 +2,7 @@ import GRDB
 
 /// V4：本地提醒记录和通知配置。
 enum V4RemindersSchema {
-    static func register(in migrator: inout DatabaseMigrator) {
+    nonisolated static func register(in migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v4_reminders_schema") { db in
             try db.create(table: "reminders") { t in
                 t.syncMetadata()

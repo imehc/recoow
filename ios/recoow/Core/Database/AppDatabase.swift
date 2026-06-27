@@ -31,4 +31,43 @@ final class AppDatabase: @unchecked Sendable {
     static func makeInMemory() throws -> AppDatabase {
         try AppDatabase(dbQueue: DatabaseQueue())
     }
+
+    nonisolated func migrate() throws {
+        try AppMigrator.migrate(dbQueue)
+    }
+
+    nonisolated func backup(to destinationURL: URL) throws {
+        let fileManager = FileManager.default
+        let directory = destinationURL.deletingLastPathComponent()
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+
+        if fileManager.fileExists(atPath: destinationURL.path(percentEncoded: false)) {
+            try fileManager.removeItem(at: destinationURL)
+        }
+
+        let destination = try DatabaseQueue(path: destinationURL.path(percentEncoded: false))
+        defer {
+            try? destination.close()
+        }
+
+        try dbQueue.backup(to: destination)
+    }
+
+    nonisolated func restore(from sourceURL: URL) throws {
+        let source = try DatabaseQueue(path: sourceURL.path(percentEncoded: false))
+        defer {
+            try? source.close()
+        }
+
+        try source.backup(to: dbQueue)
+    }
+
+    nonisolated func verifyIntegrity() throws {
+        try reader.read { db in
+            let result = try String.fetchOne(db, sql: "PRAGMA integrity_check") ?? ""
+            guard result == "ok" else {
+                throw DatabaseError(message: "SQLite integrity check failed: \(result)")
+            }
+        }
+    }
 }

@@ -5,21 +5,28 @@ struct StatisticsView: View {
     @State private var viewModel: StatisticsViewModel?
     @State private var billsViewModel: BillsViewModel?
 
-    let openHistory: () -> Void
-
     var body: some View {
         Group {
             if let viewModel {
                 StatisticsContent(
                     viewModel: viewModel,
-                    billsViewModel: billsViewModel,
-                    openHistory: openHistory
+                    billsViewModel: billsViewModel
                 )
             } else {
                 ProgressView("正在加载")
             }
         }
-        .navigationTitle("统计")
+        .navigationTitle(AppLocalization.string("统计"))
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink {
+                    TrackHistoryView()
+                } label: {
+                    Image(systemName: "clock")
+                }
+                .accessibilityLabel(AppLocalization.string("历史"))
+            }
+        }
         .task {
             guard viewModel == nil else { return }
 
@@ -36,7 +43,7 @@ struct StatisticsView: View {
 
 #Preview {
     NavigationStack {
-        StatisticsView(openHistory: {})
+        StatisticsView()
             .environment(AppContainer.preview)
     }
 }

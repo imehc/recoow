@@ -20,20 +20,9 @@ struct AppRoot: View {
                 }
             }
 
-            Tab(AppLocalization.string("历史", language: language), systemImage: "clock", value: .history) {
-                NavigationStack {
-                    TrackHistoryView()
-                }
-            }
-
             Tab(AppLocalization.string("统计", language: language), systemImage: "chart.bar.xaxis", value: .statistics) {
                 NavigationStack {
-                    StatisticsView(
-                        openHistory: {
-                            container.historyFilterRequest = nil
-                            selectedTab = .history
-                        }
-                    )
+                    StatisticsView()
                 }
             }
 

@@ -2,7 +2,7 @@ import GRDB
 
 /// V21: 饮食条目关联记一笔。
 enum V21FoodEntryBillLinkSchema {
-    static func register(in migrator: inout DatabaseMigrator) {
+    nonisolated static func register(in migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v21_food_entry_bill_link_schema") { db in
             try db.alter(table: "food_entries") { t in
                 t.add(column: "bill_id", .text)

@@ -58,6 +58,8 @@ struct TrackHistoryView: View {
             }
         }
         .navigationTitle(AppLocalization.string("历史", language: language))
+        // 历史页是统计下的二级页面，不作为底部 Tab 的一级入口展示。
+        .toolbar(.hidden, for: .tabBar)
         .navigationDestination(for: HistoryDetailRoute.self) { route in
             historyDestination(for: route)
                 .toolbar(.hidden, for: .tabBar)

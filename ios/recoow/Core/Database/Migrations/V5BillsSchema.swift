@@ -2,7 +2,7 @@ import GRDB
 
 /// V5：本地账单记录。
 enum V5BillsSchema {
-    static func register(in migrator: inout DatabaseMigrator) {
+    nonisolated static func register(in migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v5_bills_schema") { db in
             try db.create(table: "bills") { t in
                 t.syncMetadata()

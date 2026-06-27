@@ -2,7 +2,7 @@ import GRDB
 
 /// V10：本地纪念日记录。
 enum V10AnniversariesSchema {
-    static func register(in migrator: inout DatabaseMigrator) {
+    nonisolated static func register(in migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v10_anniversaries_schema") { db in
             try db.create(table: "anniversaries") { t in
                 t.syncMetadata()

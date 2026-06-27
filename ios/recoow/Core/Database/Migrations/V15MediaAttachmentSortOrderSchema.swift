@@ -2,7 +2,7 @@ import GRDB
 
 /// V15：补齐早期本地 v14 数据库缺失的附件排序列。
 enum V15MediaAttachmentSortOrderSchema {
-    static func register(in migrator: inout DatabaseMigrator) {
+    nonisolated static func register(in migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v15_media_attachment_sort_order_schema") { db in
             let columnRows = try Row.fetchAll(db, sql: "PRAGMA table_info(media_attachments)")
             guard columnRows.isEmpty == false else { return }

@@ -1,7 +1,7 @@
 import GRDB
 
 enum V18TrackSegmentsSchema {
-    static func register(in migrator: inout DatabaseMigrator) {
+    nonisolated static func register(in migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v18_track_segments_schema") { db in
             try db.alter(table: "tracks") { t in
                 t.add(column: "status", .text).notNull().defaults(to: TrackRecordingStatus.finished.rawValue)

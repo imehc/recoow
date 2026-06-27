@@ -2,7 +2,7 @@ import GRDB
 
 /// V3：记录“选什么”的随机结果历史。
 enum V3DecisionChoiceHistorySchema {
-    static func register(in migrator: inout DatabaseMigrator) {
+    nonisolated static func register(in migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v3_decision_choice_history_schema") { db in
             try db.create(table: "decision_choice_records") { t in
                 t.syncMetadata()

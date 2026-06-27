@@ -19,6 +19,7 @@ final class AppContainer {
     @ObservationIgnored let diaryRepository: DiaryRepository
     @ObservationIgnored let anniversaryRepository: AnniversaryRepository
     @ObservationIgnored let historyRepository: HistoryRepository
+    @ObservationIgnored let dataTransferService: AppDataTransferService
     @ObservationIgnored let notificationScheduler: any AppNotificationScheduling
     @ObservationIgnored let reminderNotificationService: ReminderNotificationService
     @ObservationIgnored let anniversaryNotificationService: AnniversaryNotificationService
@@ -42,6 +43,7 @@ final class AppContainer {
         diaryRepository: DiaryRepository,
         anniversaryRepository: AnniversaryRepository,
         historyRepository: HistoryRepository,
+        dataTransferService: AppDataTransferService,
         notificationScheduler: any AppNotificationScheduling,
         reminderNotificationService: ReminderNotificationService,
         anniversaryNotificationService: AnniversaryNotificationService,
@@ -63,6 +65,7 @@ final class AppContainer {
         self.diaryRepository = diaryRepository
         self.anniversaryRepository = anniversaryRepository
         self.historyRepository = historyRepository
+        self.dataTransferService = dataTransferService
         self.notificationScheduler = notificationScheduler
         self.reminderNotificationService = reminderNotificationService
         self.anniversaryNotificationService = anniversaryNotificationService
@@ -126,6 +129,7 @@ final class AppContainer {
                 deviceIdentifier: deviceIdentifier
             )
             let historyRepository = HistoryRepository(database: database)
+            let dataTransferService = AppDataTransferService(database: database)
             let notificationScheduler = LocalNotificationScheduler()
             let reminderNotificationService = ReminderNotificationService(scheduler: notificationScheduler)
             let anniversaryNotificationService = AnniversaryNotificationService(scheduler: notificationScheduler)
@@ -151,6 +155,7 @@ final class AppContainer {
                 diaryRepository: diaryRepository,
                 anniversaryRepository: anniversaryRepository,
                 historyRepository: historyRepository,
+                dataTransferService: dataTransferService,
                 notificationScheduler: notificationScheduler,
                 reminderNotificationService: reminderNotificationService,
                 anniversaryNotificationService: anniversaryNotificationService,
@@ -293,6 +298,7 @@ final class AppContainer {
                 deviceIdentifier: deviceIdentifier
             )
             let historyRepository = HistoryRepository(database: database)
+            let dataTransferService = AppDataTransferService(database: database)
             let notificationScheduler = LocalNotificationScheduler()
             let reminderNotificationService = ReminderNotificationService(scheduler: notificationScheduler)
             let anniversaryNotificationService = AnniversaryNotificationService(scheduler: notificationScheduler)
@@ -318,6 +324,7 @@ final class AppContainer {
                 diaryRepository: diaryRepository,
                 anniversaryRepository: anniversaryRepository,
                 historyRepository: historyRepository,
+                dataTransferService: dataTransferService,
                 notificationScheduler: notificationScheduler,
                 reminderNotificationService: reminderNotificationService,
                 anniversaryNotificationService: anniversaryNotificationService,

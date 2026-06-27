@@ -2,7 +2,7 @@ import GRDB
 
 /// V20: 饮食记录。记录单次饮食条目，界面按天聚合展示。
 enum V20FoodJournalSchema {
-    static func register(in migrator: inout DatabaseMigrator) {
+    nonisolated static func register(in migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v20_food_journal_schema") { db in
             try db.create(table: "food_entries") { t in
                 t.syncMetadata()
