@@ -48,6 +48,8 @@ struct BillDetailView: View {
             if bill.hasImage {
                 Section("图片") {
                     PhotoSquareImageView(imageData: bill.resolvedImageData, systemImage: "receipt.fill")
+                        .listRowInsets(EdgeInsets())
+                        .listRowSeparator(.hidden)
                 }
             }
 

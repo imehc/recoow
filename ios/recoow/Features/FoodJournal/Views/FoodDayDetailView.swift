@@ -10,6 +10,7 @@ struct FoodDayDetailView: View {
     @State private var isConfirmingDayDeletion = false
 
     let dayStart: Date
+    let billImageTransition: Namespace.ID
 
     private enum Sheet: Identifiable {
         case addEntry(Date)
@@ -162,13 +163,14 @@ struct FoodDayDetailView: View {
                                 FoodEntryDetailView(
                                     viewModel: viewModel,
                                     billsViewModel: billsViewModel,
-                                    entryID: entry.id
+                                    entryID: entry.id,
+                                    billImageTransition: billImageTransition
                                 )
                             } label: {
                                 FoodEntryRow(
                                     entry: entry,
                                     attachments: viewModel.attachments(for: entry.id),
-                                    linkedBill: linkedBill(for: entry)
+                                    linkedBills: linkedBills(for: entry)
                                 )
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -214,22 +216,21 @@ struct FoodDayDetailView: View {
 
     private var linkedBillIDsKey: String {
         viewModel.entries(for: dayStart)
-            .compactMap(\.billID)
+            .flatMap(\.billIDs)
             .sorted()
             .joined(separator: "|")
     }
 
-    private func linkedBill(for entry: FoodEntry) -> BillRecord? {
-        guard let billID = entry.billID else { return nil }
-        return billsViewModel.bill(id: billID)
+    private func linkedBills(for entry: FoodEntry) -> [BillRecord] {
+        entry.billIDs.compactMap { billsViewModel.bill(id: $0) }
     }
 
     private func linkedBillCount(for group: FoodDayGroup) -> Int {
-        group.entries.filter { $0.billID != nil }.count
+        Set(group.entries.flatMap(\.billIDs)).count
     }
 
     private func loadLinkedBillsIfNeeded() async {
-        for id in viewModel.entries(for: dayStart).compactMap(\.billID) {
+        for id in Set(viewModel.entries(for: dayStart).flatMap(\.billIDs)) {
             await billsViewModel.loadBillIfNeeded(id: id)
         }
     }

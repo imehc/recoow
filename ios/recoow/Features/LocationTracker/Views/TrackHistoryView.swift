@@ -153,14 +153,17 @@ struct TrackHistoryView: View {
                 FoodDayDetailView(
                     viewModel: foodJournalViewModel,
                     billsViewModel: billsViewModel,
-                    dayStart: dayStart
+                    dayStart: dayStart,
+                    billImageTransition: billImageTransition
                 )
             }
         case .diary(let id):
             if let diaryViewModel {
                 DiaryDetailView(
                     viewModel: diaryViewModel,
-                    diaryID: id
+                    billsViewModel: billsViewModel,
+                    diaryID: id,
+                    billImageTransition: billImageTransition
                 )
             }
         case .anniversary(let id):

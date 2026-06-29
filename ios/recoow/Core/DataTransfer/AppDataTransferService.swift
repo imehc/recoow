@@ -212,6 +212,21 @@ final class AppDataTransferService: @unchecked Sendable {
                 """
         }
 
+        if tableName == "food_entries", columnName == "bill_ids_json" {
+            // 多账单关联不设外键；增量导入时仍过滤掉当前库不存在的账单，避免列表长期显示“同步中”。
+            return """
+                COALESCE((
+                    SELECT json_group_array(value)
+                    FROM json_each(src.\(Self.quotedIdentifier(columnName)))
+                    WHERE EXISTS (
+                        SELECT 1
+                        FROM \(Self.quotedIdentifier("bills"))
+                        WHERE \(Self.quotedIdentifier("bills")).\(Self.quotedIdentifier("id")) = value
+                    )
+                ), '[]')
+                """
+        }
+
         return "src.\(Self.quotedIdentifier(columnName))"
     }
 

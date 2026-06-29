@@ -9,6 +9,7 @@ struct FoodEntryDetailView: View {
     @State private var previewAttachment: MediaAttachment?
 
     let entryID: String
+    let billImageTransition: Namespace.ID
 
     var body: some View {
         Group {
@@ -39,7 +40,7 @@ struct FoodEntryDetailView: View {
         .task(id: entryID) {
             await viewModel.loadEntryIfNeeded(id: entryID)
         }
-        .task(id: entry?.billID) {
+        .task(id: linkedBillIDsKey) {
             await loadLinkedBillIfNeeded()
         }
     }
@@ -72,21 +73,26 @@ struct FoodEntryDetailView: View {
                 }
             }
 
-            if entry.billID != nil {
+            if entry.hasLinkedBills {
                 Section(AppLocalization.string("关联账单")) {
-                    if let linkedBill {
-                        NavigationLink {
-                            BillDetailView(
-                                viewModel: billsViewModel,
-                                billID: linkedBill.id,
-                                billImageTransition: nil
-                            )
-                        } label: {
-                            FoodSelectedBillRow(bill: linkedBill)
+                    ForEach(entry.billIDs, id: \.self) { billID in
+                        if let linkedBill = billsViewModel.bill(id: billID) {
+                            NavigationLink {
+                                BillDetailView(
+                                    viewModel: billsViewModel,
+                                    billID: linkedBill.id,
+                                    billImageTransition: imageTransition(for: linkedBill)
+                                )
+                            } label: {
+                                FoodSelectedBillRow(
+                                    bill: linkedBill,
+                                    billImageTransition: billImageTransition
+                                )
+                            }
+                        } else {
+                            Label(AppLocalization.string("账单同步中"), systemImage: "receipt")
+                                .foregroundStyle(.secondary)
                         }
-                    } else {
-                        Label(AppLocalization.string("账单同步中"), systemImage: "receipt")
-                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -126,14 +132,19 @@ struct FoodEntryDetailView: View {
         attachments.filter { $0.kind == .photo }
     }
 
-    private var linkedBill: BillRecord? {
-        guard let billID = entry?.billID else { return nil }
-        return billsViewModel.bill(id: billID)
+    private var linkedBillIDsKey: String {
+        entry?.billIDs.joined(separator: "|") ?? ""
+    }
+
+    private func imageTransition(for bill: BillRecord) -> Namespace.ID? {
+        bill.hasImage ? billImageTransition : nil
     }
 
     private func loadLinkedBillIfNeeded() async {
-        guard let billID = entry?.billID else { return }
-        await billsViewModel.loadBillIfNeeded(id: billID)
+        guard let entry else { return }
+        for id in entry.billIDs {
+            await billsViewModel.loadBillIfNeeded(id: id)
+        }
     }
 
     private func deleteEntry() {

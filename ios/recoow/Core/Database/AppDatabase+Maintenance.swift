@@ -111,7 +111,14 @@ private struct SoftDeletedCleanupStatement {
             AND NOT EXISTS (
                 SELECT 1
                 FROM food_entries
-                WHERE food_entries.bill_id = bills.id
+                WHERE (
+                    food_entries.bill_id = bills.id
+                    OR EXISTS (
+                        SELECT 1
+                        FROM json_each(food_entries.bill_ids_json)
+                        WHERE value = bills.id
+                    )
+                )
                   AND food_entries.deleted_at IS NULL
             )
             """

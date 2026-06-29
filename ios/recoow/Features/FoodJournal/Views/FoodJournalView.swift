@@ -4,6 +4,7 @@ struct FoodJournalView: View {
     @Environment(AppContainer.self) private var container
     @State private var viewModel: FoodJournalViewModel?
     @State private var billsViewModel: BillsViewModel?
+    @Namespace private var billImageTransition
 
     var body: some View {
         Group {
@@ -22,7 +23,8 @@ struct FoodJournalView: View {
                 FoodDayDetailView(
                     viewModel: viewModel,
                     billsViewModel: billsViewModel,
-                    dayStart: route.dayStart
+                    dayStart: route.dayStart,
+                    billImageTransition: billImageTransition
                 )
             }
         }
@@ -159,7 +161,7 @@ private struct FoodJournalContent: View {
     }
 
     private func billCount(for group: FoodDayGroup) -> Int {
-        group.entries.filter { $0.billID != nil }.count
+        Set(group.entries.flatMap(\.billIDs)).count
     }
 
     private func coverPhoto(for group: FoodDayGroup) -> MediaAttachment? {

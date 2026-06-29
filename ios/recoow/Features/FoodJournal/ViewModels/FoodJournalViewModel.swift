@@ -197,7 +197,7 @@ final class FoodJournalViewModel {
         mealKind: FoodMealKind,
         portion: String?,
         note: String?,
-        billID: String?,
+        billIDs: [String],
         occurredDate: Date
     ) -> FoodEntry {
         FoodEntry.makeNew(
@@ -205,7 +205,7 @@ final class FoodJournalViewModel {
             mealKind: mealKind,
             portion: portion,
             note: note,
-            billID: billID,
+            billIDs: billIDs,
             occurredAt: Self.milliseconds(for: occurredDate),
             deviceID: repository.deviceID
         )
@@ -329,7 +329,7 @@ final class FoodJournalViewModel {
             entry.foodMealKind.localizedTitle,
             entry.portion,
             entry.note,
-            entry.billID == nil ? nil : AppLocalization.string("已关联账单"),
+            entry.hasLinkedBills ? AppLocalization.string("已关联账单") : nil,
             attachments(for: entry.id).isEmpty ? nil : AppLocalization.string("照片")
         ]
         .compactMap(\.self)

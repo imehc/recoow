@@ -5,7 +5,7 @@ struct FoodBillSelectionView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Bindable var billsViewModel: BillsViewModel
-    @Binding var selectedBillID: String?
+    @Binding var selectedBillIDs: [String]
     @State private var searchText = ""
 
     var body: some View {
@@ -27,12 +27,11 @@ struct FoodBillSelectionView: View {
                 Section(AppLocalization.string("账单")) {
                     ForEach(filteredBills) { bill in
                         Button {
-                            selectedBillID = bill.id
-                            dismiss()
+                            toggleSelection(for: bill.id)
                         } label: {
                             FoodSelectedBillRow(
                                 bill: bill,
-                                isSelected: selectedBillID == bill.id
+                                isSelected: selectedBillIDs.contains(bill.id)
                             )
                         }
                         .buttonStyle(.plain)
@@ -93,28 +92,24 @@ struct FoodBillSelectionView: View {
     private func done() {
         dismiss()
     }
+
+    private func toggleSelection(for id: String) {
+        if let index = selectedBillIDs.firstIndex(of: id) {
+            selectedBillIDs.remove(at: index)
+        } else {
+            selectedBillIDs.append(id)
+        }
+    }
 }
 
 struct FoodSelectedBillRow: View {
     let bill: BillRecord
     var isSelected = false
+    var billImageTransition: Namespace.ID?
 
     var body: some View {
         HStack(spacing: 12) {
-            if bill.hasImage {
-                PhotoThumbnailView(
-                    imageData: bill.resolvedImageData,
-                    systemImage: "receipt.fill",
-                    size: AppDesign.compactIconSize
-                )
-            } else {
-                AppIconTileView(
-                    systemImage: "receipt",
-                    tint: .teal,
-                    size: AppDesign.compactIconSize,
-                    backgroundOpacity: 0.12
-                )
-            }
+            thumbnail
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(bill.title)
@@ -138,5 +133,32 @@ struct FoodSelectedBillRow: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private var thumbnail: some View {
+        if bill.hasImage {
+            if let billImageTransition {
+                PhotoThumbnailView(
+                    imageData: bill.resolvedImageData,
+                    systemImage: "receipt.fill",
+                    size: AppDesign.compactIconSize
+                )
+                .matchedTransitionSource(id: bill.id, in: billImageTransition)
+            } else {
+                PhotoThumbnailView(
+                    imageData: bill.resolvedImageData,
+                    systemImage: "receipt.fill",
+                    size: AppDesign.compactIconSize
+                )
+            }
+        } else {
+            AppIconTileView(
+                systemImage: "receipt",
+                tint: .teal,
+                size: AppDesign.compactIconSize,
+                backgroundOpacity: 0.12
+            )
+        }
     }
 }

@@ -10,7 +10,7 @@ struct FoodEntryFormView: View {
     @State private var note: String
     @State private var occurredDate: Date
     @State private var selectedAttachments: [MediaAttachment]
-    @State private var selectedBillID: String?
+    @State private var selectedBillIDs: [String]
     @State private var presentedSheet: PresentedSheet?
     @State private var previewAttachment: MediaAttachment?
     @State private var isShowingPhotoPicker = false
@@ -52,7 +52,7 @@ struct FoodEntryFormView: View {
         _note = State(initialValue: entry?.note ?? "")
         _occurredDate = State(initialValue: initialOccurredDate)
         _selectedAttachments = State(initialValue: attachments)
-        _selectedBillID = State(initialValue: entry?.billID)
+        _selectedBillIDs = State(initialValue: entry?.billIDs ?? [])
         _draftID = State(initialValue: entry?.id ?? UUID().uuidString)
     }
 
@@ -129,57 +129,54 @@ struct FoodEntryFormView: View {
             }
 
             Section {
-                if let selectedBill {
-                    FoodSelectedBillRow(bill: selectedBill, isSelected: true)
+                if selectedBillIDs.isEmpty == false {
+                    ForEach(selectedBills) { bill in
+                        Button {
+                            showBillSelection()
+                        } label: {
+                            FoodSelectedBillRow(bill: bill, isSelected: true)
+                        }
+                        .buttonStyle(.plain)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button {
-                                selectedBillID = nil
+                                removeBill(id: bill.id)
                             } label: {
                                 Label(AppLocalization.string("移除"), systemImage: "minus.circle")
                             }
                             .tint(.red)
                         }
-                        .onTapGesture {
-                            showBillSelection()
+                    }
+
+                    if missingSelectedBillCount > 0 {
+                        HStack(spacing: 12) {
+                            AppIconTileView(
+                                systemImage: "receipt",
+                                tint: .teal,
+                                size: AppDesign.compactIconSize,
+                                backgroundOpacity: 0.12
+                            )
+
+                            Text(AppLocalization.format("账单同步中 %d", missingSelectedBillCount))
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+
+                            Spacer(minLength: 8)
+
+                            Button(AppLocalization.string("移除"), systemImage: "minus.circle", role: .destructive) {
+                                removeMissingBills()
+                            }
+                            .labelStyle(.iconOnly)
                         }
-                } else if selectedBillID != nil {
-                    HStack(spacing: 12) {
-                        AppIconTileView(
-                            systemImage: "receipt",
-                            tint: .teal,
-                            size: AppDesign.compactIconSize,
-                            backgroundOpacity: 0.12
-                        )
-
-                        Text(AppLocalization.string("账单同步中"))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-
-                        Spacer(minLength: 8)
-
-                        Button(AppLocalization.string("移除"), systemImage: "minus.circle", role: .destructive) {
-                            selectedBillID = nil
-                        }
-                        .labelStyle(.iconOnly)
                     }
                 } else {
-                    Button(AppLocalization.string("选择账单"), systemImage: "link") {
-                        showBillSelection()
-                    }
+                    Text(AppLocalization.string("还没有关联账单"))
+                        .foregroundStyle(.secondary)
                 }
             } header: {
-                HStack(spacing: 8) {
-                    Text(AppLocalization.string("关联账单"))
-
-                    if selectedBillID != nil {
-                        Text(AppLocalization.string("已关联"))
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer(minLength: 12)
-                }
-                .textCase(nil)
+                FoodBillSectionHeader(
+                    selectedCount: selectedBillIDs.count,
+                    onSelectBills: showBillSelection
+                )
             }
         }
         .overlay {
@@ -204,7 +201,7 @@ struct FoodEntryFormView: View {
                 NavigationStack {
                     FoodBillSelectionView(
                         billsViewModel: billsViewModel,
-                        selectedBillID: $selectedBillID
+                        selectedBillIDs: $selectedBillIDs
                     )
                 }
                 .presentationDragIndicator(.visible)
@@ -231,7 +228,7 @@ struct FoodEntryFormView: View {
         } message: {
             Text(photoErrorMessage ?? "")
         }
-        .task(id: selectedBillID) {
+        .task(id: selectedBillIDsKey) {
             await loadSelectedBillIfNeeded()
         }
     }
@@ -262,9 +259,16 @@ struct FoodEntryFormView: View {
         selectedAttachments.filter { $0.kind == .photo }
     }
 
-    private var selectedBill: BillRecord? {
-        guard let selectedBillID else { return nil }
-        return billsViewModel.bill(id: selectedBillID)
+    private var selectedBills: [BillRecord] {
+        selectedBillIDs.compactMap { billsViewModel.bill(id: $0) }
+    }
+
+    private var missingSelectedBillCount: Int {
+        selectedBillIDs.filter { billsViewModel.bill(id: $0) == nil }.count
+    }
+
+    private var selectedBillIDsKey: String {
+        selectedBillIDs.joined(separator: "|")
     }
 
     private func cancel() {
@@ -291,6 +295,14 @@ struct FoodEntryFormView: View {
 
     private func showBillSelection() {
         presentedSheet = .billSelection
+    }
+
+    private func removeBill(id: String) {
+        selectedBillIDs.removeAll { $0 == id }
+    }
+
+    private func removeMissingBills() {
+        selectedBillIDs.removeAll { billsViewModel.bill(id: $0) == nil }
     }
 
     private func addPhotoAttachment(_ data: Data) {
@@ -357,8 +369,9 @@ struct FoodEntryFormView: View {
     }
 
     private func loadSelectedBillIfNeeded() async {
-        guard let selectedBillID else { return }
-        await billsViewModel.loadBillIfNeeded(id: selectedBillID)
+        for id in selectedBillIDs {
+            await billsViewModel.loadBillIfNeeded(id: id)
+        }
     }
 
     private func save() {
@@ -367,7 +380,7 @@ struct FoodEntryFormView: View {
             mealKind: mealKind,
             portion: normalizedPortion,
             note: normalizedNote,
-            billID: selectedBillID,
+            billIDs: selectedBillIDs,
             occurredDate: occurredDate
         )
 
@@ -376,7 +389,7 @@ struct FoodEntryFormView: View {
         record.mealKind = mealKind.rawValue
         record.portion = normalizedPortion
         record.note = normalizedNote
-        record.billID = selectedBillID
+        record.billIDs = selectedBillIDs
         record.occurredAt = FoodJournalViewModel.milliseconds(for: occurredDate)
 
         Task {
@@ -419,6 +432,35 @@ struct FoodEntryFormView: View {
         default:
             return .other
         }
+    }
+}
+
+private struct FoodBillSectionHeader: View {
+    let selectedCount: Int
+    let onSelectBills: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(AppLocalization.string("关联账单"))
+
+            if selectedCount > 0 {
+                Text(AppLocalization.format("已关联 %d 条", selectedCount))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 12)
+
+            Button {
+                onSelectBills()
+            } label: {
+                MetadataItemView(titleKey: "新增", systemImage: "plus.circle")
+                    .font(.footnote.weight(.semibold))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(AppLocalization.string("新增关联账单"))
+        }
+        .textCase(nil)
     }
 }
 

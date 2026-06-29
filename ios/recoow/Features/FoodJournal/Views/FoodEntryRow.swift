@@ -5,7 +5,7 @@ struct FoodEntryRow: View {
 
     let entry: FoodEntry
     var attachments: [MediaAttachment] = []
-    var linkedBill: BillRecord?
+    var linkedBills: [BillRecord] = []
     var iconSize: CGFloat = AppDesign.listIconSize
 
     var body: some View {
@@ -44,13 +44,13 @@ struct FoodEntryRow: View {
                         MetadataItemView(title: AppLocalization.format("%d 张照片", photoCount), systemImage: "photo.on.rectangle")
                     }
 
-                    if entry.billID != nil {
-                        MetadataItemView(title: AppLocalization.string("已关联账单"), systemImage: "receipt")
+                    if entry.hasLinkedBills {
+                        MetadataItemView(title: linkedBillMetadataTitle, systemImage: "receipt")
                     }
                 }
 
-                if let linkedBill {
-                    FoodLinkedBillInlineView(bill: linkedBill)
+                if linkedBills.isEmpty == false {
+                    FoodLinkedBillsInlineView(bills: linkedBills, totalCount: entry.linkedBillCount)
                 }
 
                 if let note = entry.normalizedNote {
@@ -72,27 +72,42 @@ struct FoodEntryRow: View {
     private var photoCount: Int {
         attachments.filter { $0.kind == .photo }.count
     }
+
+    private var linkedBillMetadataTitle: String {
+        entry.linkedBillCount == 1
+            ? AppLocalization.string("已关联账单")
+            : AppLocalization.format("%d 个账单", entry.linkedBillCount)
+    }
 }
 
-private struct FoodLinkedBillInlineView: View {
-    let bill: BillRecord
+private struct FoodLinkedBillsInlineView: View {
+    let bills: [BillRecord]
+    let totalCount: Int
 
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "receipt")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.teal)
-                .accessibilityHidden(true)
+        if let firstBill = bills.first {
+            HStack(spacing: 6) {
+                Image(systemName: "receipt")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.teal)
+                    .accessibilityHidden(true)
 
-            Text(bill.title)
-                .lineLimit(1)
+                Text(firstBill.title)
+                    .lineLimit(1)
 
-            Text(bill.displayAmount)
-                .strikethrough(bill.isVoided)
-                .foregroundStyle(bill.billType.amountTint)
-                .lineLimit(1)
+                Text(firstBill.displayAmount)
+                    .strikethrough(firstBill.isVoided)
+                    .foregroundStyle(firstBill.billType.amountTint)
+                    .lineLimit(1)
+
+                let remainingCount = max(0, totalCount - 1)
+                if remainingCount > 0 {
+                    Text("+\(remainingCount)")
+                        .lineLimit(1)
+                }
+            }
+            .font(.footnote)
+            .foregroundStyle(.secondary)
         }
-        .font(.footnote)
-        .foregroundStyle(.secondary)
     }
 }

@@ -3,11 +3,13 @@ import SwiftUI
 struct DiaryDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var viewModel: DiaryViewModel
+    let billsViewModel: BillsViewModel?
     @State private var entryPendingDeletion: DiaryEntry?
     @State private var presentedSheet: PresentedSheet?
     @State private var previewPhotoAttachment: MediaAttachment?
 
     let diaryID: String
+    let billImageTransition: Namespace.ID?
 
     private enum PresentedSheet: Identifiable {
         case edit(DiaryEntry)
@@ -100,10 +102,10 @@ struct DiaryDetailView: View {
                             ForEach(links) { link in
                                 if let route = HistoryDetailRoute(diaryLink: link) {
                                     NavigationLink(value: route) {
-                                        DiaryLinkRow(link: link)
+                                        row(for: link)
                                     }
                                 } else {
-                                    DiaryLinkRow(link: link)
+                                    row(for: link)
                                 }
                             }
                         }
@@ -154,6 +156,9 @@ struct DiaryDetailView: View {
         .task {
             await viewModel.loadEntryIfNeeded(id: diaryID)
         }
+        .task(id: billLinkIDsKey) {
+            await loadLinkedBillsIfNeeded()
+        }
     }
 
     @ViewBuilder
@@ -181,6 +186,14 @@ struct DiaryDetailView: View {
         viewModel.links(for: diaryID)
     }
 
+    private var billLinkIDsKey: String {
+        links
+            .filter { $0.type == .bill }
+            .map(\.sourceID)
+            .sorted()
+            .joined(separator: "|")
+    }
+
     private var attachments: [MediaAttachment] {
         viewModel.attachments(for: diaryID)
     }
@@ -188,6 +201,27 @@ struct DiaryDetailView: View {
     private var resolvedTags: [DiaryTagReference] {
         guard let entry else { return [] }
         return viewModel.resolvedTagReferences(for: entry)
+    }
+
+    @ViewBuilder
+    private func row(for link: DiaryLink) -> some View {
+        if link.type == .bill, let bill = billsViewModel?.bill(id: link.sourceID) {
+            DiaryBillLinkRow(
+                link: link,
+                bill: bill,
+                billImageTransition: billImageTransition
+            )
+        } else {
+            DiaryLinkRow(link: link)
+        }
+    }
+
+    private func loadLinkedBillsIfNeeded() async {
+        guard let billsViewModel else { return }
+
+        for id in Set(links.filter { $0.type == .bill }.map(\.sourceID)) {
+            await billsViewModel.loadBillIfNeeded(id: id)
+        }
     }
 
     private func showEditSheet(_ entry: DiaryEntry) {

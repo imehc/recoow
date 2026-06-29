@@ -640,11 +640,14 @@
 "今日餐别" = "Today's Meals";
 "%d 类" = "%d types";
 "%d 张照片" = "%d photos";
-"关联账单" = "Linked Bill";
+"关联账单" = "Linked Bills";
 "已关联账单" = "Bill Linked";
-"选择账单" = "Choose Bill";
+"还没有关联账单" = "No linked bills yet";
+"新增关联账单" = "Add Linked Bill";
+"选择账单" = "Choose Bills";
 "移除账单" = "Remove Bill";
 "账单同步中" = "Bill is syncing";
+"账单同步中 %d" = "%d bills are syncing";
 "暂无可关联账单" = "No Bills to Link";
 "可关联的账单会显示在这里" = "Bills you can link will appear here";
 "%d 个账单" = "%d bills";

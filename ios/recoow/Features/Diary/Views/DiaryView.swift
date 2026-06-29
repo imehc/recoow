@@ -26,7 +26,9 @@ struct DiaryView: View {
             if let viewModel {
                 DiaryDetailView(
                     viewModel: viewModel,
-                    diaryID: route.id
+                    billsViewModel: billsViewModel,
+                    diaryID: route.id,
+                    billImageTransition: billImageTransition
                 )
             }
         }
@@ -49,7 +51,8 @@ struct DiaryView: View {
                     FoodDayDetailView(
                         viewModel: foodJournalViewModel,
                         billsViewModel: billsViewModel,
-                        dayStart: dayStart
+                        dayStart: dayStart,
+                        billImageTransition: billImageTransition
                     )
                 } else {
                     ProgressView(AppLocalization.string("正在加载"))
@@ -89,7 +92,9 @@ struct DiaryView: View {
                 if let viewModel {
                     DiaryDetailView(
                         viewModel: viewModel,
-                        diaryID: id
+                        billsViewModel: billsViewModel,
+                        diaryID: id,
+                        billImageTransition: billImageTransition
                     )
                 } else {
                     ProgressView(AppLocalization.string("正在加载"))
