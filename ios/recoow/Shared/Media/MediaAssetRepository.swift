@@ -216,16 +216,27 @@ final class MediaAssetRepository: @unchecked Sendable {
             let assets = try MediaAsset
                 .filter(Column("deleted_at") == nil)
                 .fetchAll(db)
+            var missingAssetCount = 0
 
             for var asset in assets {
-                guard let data = objectStore.data(for: asset.storageKey),
-                      asset.inlineData != data else {
+                guard let data = objectStore.data(for: asset.storageKey) else {
+                    if asset.inlineData == nil {
+                        missingAssetCount += 1
+                    }
+                    continue
+                }
+
+                guard asset.inlineData != data else {
                     continue
                 }
 
                 // inline_data 是备份承载层，不作为用户编辑变更写入 change_log。
                 asset.inlineData = data
                 try asset.update(db)
+            }
+
+            if missingAssetCount > 0 {
+                throw AppDataTransferError.missingMediaAssets(missingAssetCount)
             }
         }
     }

@@ -5,6 +5,7 @@ final class AppDataTransferService: @unchecked Sendable {
     nonisolated private static let metadataTableName = "_recoow_backup_metadata"
     nonisolated private static let metadataKey = "metadata"
     nonisolated private static let incomingSchemaName = "incoming"
+    nonisolated private static let changeLogTableName = "change_log"
 
     nonisolated private static let mergeTableOrder = [
         "decision_collections",
@@ -86,6 +87,7 @@ final class AppDataTransferService: @unchecked Sendable {
                 try database.restore(from: localURL)
                 // 老版本备份允许导入，恢复后立即跑当前 App 的迁移，避免旧 schema 留在运行态。
                 try database.migrate()
+                try normalizeReplacedDatabaseSyncState()
                 importedRowCount = 0
             }
 
@@ -122,6 +124,24 @@ final class AppDataTransferService: @unchecked Sendable {
         try AppMigrator.migrate(queue)
     }
 
+    nonisolated private func normalizeReplacedDatabaseSyncState() throws {
+        try database.writer.write { db in
+            if try db.tableExists(Self.changeLogTableName) {
+                try db.execute(sql: "DELETE FROM \(Self.quotedIdentifier(Self.changeLogTableName))")
+            }
+
+            for tableName in Self.syncableTableNames where try db.tableExists(tableName) {
+                let columns = try columnNames(db: db, tableName: tableName, schemaName: nil)
+                guard columns.contains("sync_status") else { continue }
+
+                try db.execute(sql: """
+                    UPDATE \(Self.quotedIdentifier(tableName))
+                    SET \(Self.quotedIdentifier("sync_status")) = ?
+                    """, arguments: [SyncStatus.synced.rawValue])
+            }
+        }
+    }
+
     nonisolated private func mergeMissingRows(from sourceURL: URL, scopes: Set<AppDataImportScope>) throws -> Int {
         try database.writer.write { db in
             let sourcePath = sourceURL.path(percentEncoded: false)
@@ -137,6 +157,10 @@ final class AppDataTransferService: @unchecked Sendable {
 
             let selectedTableNames = Set(scopes.flatMap { $0.tableNames })
             for tableName in Self.mergeTableOrder where selectedTableNames.contains(tableName) {
+                guard tableName != "media_assets", tableName != "media_attachments" else {
+                    continue
+                }
+
                 guard try db.tableExists(tableName),
                       try db.tableExists(tableName, in: Self.incomingSchemaName)
                 else {
@@ -146,7 +170,26 @@ final class AppDataTransferService: @unchecked Sendable {
                 let columns = try commonColumns(db: db, tableName: tableName)
                 guard columns.contains("id") else { continue }
 
-                importedRowCount += try mergeMissingRows(db: db, tableName: tableName, columns: columns)
+                importedRowCount += try mergeMissingRows(
+                    db: db,
+                    tableName: tableName,
+                    columns: columns,
+                    whereClause: try businessTableImportWhereClause(db: db, tableName: tableName, columns: columns)
+                )
+            }
+
+            if try db.tableExists("media_assets"),
+               try db.tableExists("media_assets", in: Self.incomingSchemaName),
+               let whereClause = try mediaAssetImportWhereClause(db: db, scopes: scopes) {
+                let columns = try commonColumns(db: db, tableName: "media_assets")
+                if columns.contains("id") {
+                    importedRowCount += try mergeMissingRows(
+                        db: db,
+                        tableName: "media_assets",
+                        columns: columns,
+                        whereClause: whereClause
+                    )
+                }
             }
 
             let mediaOwnerTypes = Set(scopes.flatMap { $0.mediaOwnerTypes })
@@ -154,12 +197,12 @@ final class AppDataTransferService: @unchecked Sendable {
                try db.tableExists("media_attachments"),
                try db.tableExists("media_attachments", in: Self.incomingSchemaName) {
                 let columns = try commonColumns(db: db, tableName: "media_attachments")
-                if columns.contains("id"), columns.contains("owner_type") {
+                if columns.contains("id"), columns.contains("owner_type"), columns.contains("owner_id") {
                     importedRowCount += try mergeMissingRows(
                         db: db,
                         tableName: "media_attachments",
                         columns: columns,
-                        whereClause: "src.\(Self.quotedIdentifier("owner_type")) IN \(Self.sqlStringList(Array(mediaOwnerTypes).sorted()))"
+                        whereClause: try mediaAttachmentImportWhereClause(db: db, ownerTypes: mediaOwnerTypes)
                     )
                 }
             }
@@ -196,7 +239,32 @@ final class AppDataTransferService: @unchecked Sendable {
         return db.totalChangesCount - before
     }
 
+    nonisolated private func businessTableImportWhereClause(
+        db: Database,
+        tableName: String,
+        columns: [String]
+    ) throws -> String? {
+        if tableName == "diary_links",
+           columns.contains("diary_id"),
+           try db.tableExists("diary_entries") {
+            return """
+                EXISTS (
+                    SELECT 1
+                    FROM \(Self.quotedIdentifier("diary_entries"))
+                    WHERE \(Self.quotedIdentifier("diary_entries")).\(Self.quotedIdentifier("id")) = src.\(Self.quotedIdentifier("diary_id"))
+                      AND \(Self.quotedIdentifier("diary_entries")).\(Self.quotedIdentifier("deleted_at")) IS NULL
+                )
+                """
+        }
+
+        return nil
+    }
+
     nonisolated private func selectExpression(for columnName: String, tableName: String) -> String {
+        if columnName == "sync_status" {
+            return "\(SyncStatus.synced.rawValue)"
+        }
+
         if tableName == "food_entries", columnName == "bill_id" {
             // 饮食记录到账单是可选关联；只导入饮食、不导入账单时，缺失的账单引用置空，避免外键失败导致整批导入中断。
             return """
@@ -228,6 +296,147 @@ final class AppDataTransferService: @unchecked Sendable {
         }
 
         return "src.\(Self.quotedIdentifier(columnName))"
+    }
+
+    nonisolated private func mediaAttachmentImportWhereClause(
+        db: Database,
+        ownerTypes: Set<String>
+    ) throws -> String {
+        var ownerPredicates: [String] = []
+
+        if ownerTypes.contains(MediaAttachmentOwnerType.foodEntry.rawValue),
+           try db.tableExists("food_entries") {
+            ownerPredicates.append("""
+                (
+                    src.\(Self.quotedIdentifier("owner_type")) = \(Self.quotedStringLiteral(MediaAttachmentOwnerType.foodEntry.rawValue))
+                    AND EXISTS (
+                        SELECT 1
+                        FROM \(Self.quotedIdentifier("food_entries"))
+                        WHERE \(Self.quotedIdentifier("food_entries")).\(Self.quotedIdentifier("id")) = src.\(Self.quotedIdentifier("owner_id"))
+                          AND \(Self.quotedIdentifier("food_entries")).\(Self.quotedIdentifier("deleted_at")) IS NULL
+                    )
+                )
+                """)
+        }
+
+        if ownerTypes.contains(MediaAttachmentOwnerType.diary.rawValue),
+           try db.tableExists("diary_entries") {
+            ownerPredicates.append("""
+                (
+                    src.\(Self.quotedIdentifier("owner_type")) = \(Self.quotedStringLiteral(MediaAttachmentOwnerType.diary.rawValue))
+                    AND EXISTS (
+                        SELECT 1
+                        FROM \(Self.quotedIdentifier("diary_entries"))
+                        WHERE \(Self.quotedIdentifier("diary_entries")).\(Self.quotedIdentifier("id")) = src.\(Self.quotedIdentifier("owner_id"))
+                          AND \(Self.quotedIdentifier("diary_entries")).\(Self.quotedIdentifier("deleted_at")) IS NULL
+                    )
+                )
+                """)
+        }
+
+        guard ownerPredicates.isEmpty == false else {
+            return "0"
+        }
+
+        return "(\(ownerPredicates.joined(separator: " OR ")))"
+    }
+
+    nonisolated private func mediaAssetImportWhereClause(
+        db: Database,
+        scopes: Set<AppDataImportScope>
+    ) throws -> String? {
+        var references: [String] = []
+        let mediaOwnerTypes = Set(scopes.flatMap(\.mediaOwnerTypes))
+
+        if mediaOwnerTypes.isEmpty == false,
+           try db.tableExists("media_attachments", in: Self.incomingSchemaName),
+           try columnNames(db: db, tableName: "media_attachments", schemaName: Self.incomingSchemaName).contains("asset_id") {
+            references.append("""
+                SELECT DISTINCT src_attachment.\(Self.quotedIdentifier("asset_id"))
+                FROM \(Self.incomingSchemaName).\(Self.quotedIdentifier("media_attachments")) AS src_attachment
+                WHERE src_attachment.\(Self.quotedIdentifier("asset_id")) IS NOT NULL
+                  AND \(try mediaAttachmentAssetOwnerWhereClause(db: db, ownerTypes: mediaOwnerTypes))
+                """)
+        }
+
+        for reference in try imageAssetReferences(db: db, scopes: scopes) {
+            references.append("""
+                SELECT DISTINCT src_reference.\(Self.quotedIdentifier(reference.column))
+                FROM \(Self.incomingSchemaName).\(Self.quotedIdentifier(reference.table)) AS src_reference
+                WHERE src_reference.\(Self.quotedIdentifier(reference.column)) IS NOT NULL
+                  AND EXISTS (
+                      SELECT 1
+                      FROM \(Self.quotedIdentifier(reference.table)) AS dst_reference
+                      WHERE dst_reference.\(Self.quotedIdentifier("id")) = src_reference.\(Self.quotedIdentifier("id"))
+                        AND dst_reference.\(Self.quotedIdentifier("deleted_at")) IS NULL
+                  )
+                """)
+        }
+
+        guard references.isEmpty == false else { return nil }
+        return "src.\(Self.quotedIdentifier("id")) IN (\(references.joined(separator: " UNION ")))"
+    }
+
+    nonisolated private func mediaAttachmentAssetOwnerWhereClause(
+        db: Database,
+        ownerTypes: Set<String>
+    ) throws -> String {
+        var ownerPredicates: [String] = []
+
+        if ownerTypes.contains(MediaAttachmentOwnerType.foodEntry.rawValue),
+           try db.tableExists("food_entries") {
+            ownerPredicates.append("""
+                (
+                    src_attachment.\(Self.quotedIdentifier("owner_type")) = \(Self.quotedStringLiteral(MediaAttachmentOwnerType.foodEntry.rawValue))
+                    AND EXISTS (
+                        SELECT 1
+                        FROM \(Self.quotedIdentifier("food_entries"))
+                        WHERE \(Self.quotedIdentifier("food_entries")).\(Self.quotedIdentifier("id")) = src_attachment.\(Self.quotedIdentifier("owner_id"))
+                          AND \(Self.quotedIdentifier("food_entries")).\(Self.quotedIdentifier("deleted_at")) IS NULL
+                    )
+                )
+                """)
+        }
+
+        if ownerTypes.contains(MediaAttachmentOwnerType.diary.rawValue),
+           try db.tableExists("diary_entries") {
+            ownerPredicates.append("""
+                (
+                    src_attachment.\(Self.quotedIdentifier("owner_type")) = \(Self.quotedStringLiteral(MediaAttachmentOwnerType.diary.rawValue))
+                    AND EXISTS (
+                        SELECT 1
+                        FROM \(Self.quotedIdentifier("diary_entries"))
+                        WHERE \(Self.quotedIdentifier("diary_entries")).\(Self.quotedIdentifier("id")) = src_attachment.\(Self.quotedIdentifier("owner_id"))
+                          AND \(Self.quotedIdentifier("diary_entries")).\(Self.quotedIdentifier("deleted_at")) IS NULL
+                    )
+                )
+                """)
+        }
+
+        guard ownerPredicates.isEmpty == false else { return "0" }
+        return "(\(ownerPredicates.joined(separator: " OR ")))"
+    }
+
+    nonisolated private func imageAssetReferences(
+        db: Database,
+        scopes: Set<AppDataImportScope>
+    ) throws -> [(table: String, column: String)] {
+        let selectedTables = Set(scopes.flatMap(\.tableNames))
+        var references: [(table: String, column: String)] = []
+
+        for reference in Self.imageAssetReferenceColumns where selectedTables.contains(reference.table) {
+            guard try db.tableExists(reference.table),
+                  try db.tableExists(reference.table, in: Self.incomingSchemaName),
+                  try db.columns(in: reference.table).contains(where: { $0.name == reference.column }),
+                  try columnNames(db: db, tableName: reference.table, schemaName: Self.incomingSchemaName).contains(reference.column)
+            else {
+                continue
+            }
+
+            references.append(reference)
+        }
+
+        return references
     }
 
     nonisolated private func commonColumns(db: Database, tableName: String) throws -> [String] {
@@ -373,7 +582,37 @@ final class AppDataTransferService: @unchecked Sendable {
         "'\(value.replacingOccurrences(of: "'", with: "''"))'"
     }
 
-    nonisolated private static func sqlStringList(_ values: [String]) -> String {
-        "(\(values.map(quotedStringLiteral).joined(separator: ", ")))"
+    nonisolated private static var imageAssetReferenceColumns: [(table: String, column: String)] {
+        [
+            ("media_attachments", "asset_id"),
+            ("reminders", "image_asset_id"),
+            ("bills", "image_asset_id"),
+            ("stored_items", "image_asset_id"),
+            ("decision_options", "image_asset_id"),
+            ("decision_choice_records", "option_image_asset_id")
+        ]
+    }
+
+    nonisolated private static var syncableTableNames: [String] {
+        [
+            "decision_collections",
+            "decision_options",
+            "item_categories",
+            "stored_items",
+            "tracks",
+            "track_points",
+            "track_segments",
+            "decision_choice_records",
+            "reminders",
+            "bills",
+            "food_entries",
+            "food_day_records",
+            "anniversaries",
+            "diary_entries",
+            "diary_tags",
+            "diary_links",
+            "media_assets",
+            "media_attachments"
+        ]
     }
 }
