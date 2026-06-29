@@ -107,6 +107,9 @@ final class StatisticsViewModel {
                   let progressFraction = reminder.progressFraction else {
                 return nil
             }
+            guard reminder.scheduleKind != .continuousDays || reminder.isCompleted == false else {
+                return nil
+            }
 
             let detailText = if reminder.scheduleKind == .dailyGoal {
                 AppLocalization.format(
