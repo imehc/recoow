@@ -598,6 +598,7 @@
 "预览" = "Preview";
 "预览照片" = "Preview Photo";
 "删除照片" = "Delete Photo";
+"长按拖动可排序" = "Long press and drag to reorder";
 "长按拖动可排序或删除" = "Long press and drag to reorder or delete";
 "拖动到此处删除" = "Drag here to delete";
 "松手即可删除" = "Release to delete";

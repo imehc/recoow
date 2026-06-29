@@ -44,7 +44,7 @@ final class MediaAssetRepository: @unchecked Sendable {
             try MediaAsset
                 .filter(Column("kind") == "image")
                 .filter(Column("deleted_at") == nil)
-                .order(Column("updated_at").desc)
+                .order(Column("sort_order").asc, Column("updated_at").desc, Column("created_at").desc)
                 .fetchAll(db)
         }
     }
@@ -54,7 +54,7 @@ final class MediaAssetRepository: @unchecked Sendable {
             let assets = try MediaAsset
                 .filter(Column("kind") == "image")
                 .filter(Column("deleted_at") == nil)
-                .order(Column("updated_at").desc)
+                .order(Column("sort_order").asc, Column("updated_at").desc, Column("created_at").desc)
                 .fetchAll(db)
 
             return try assets.map { asset in
@@ -90,6 +90,7 @@ final class MediaAssetRepository: @unchecked Sendable {
                 width: image.map { Int($0.size.width) },
                 height: image.map { Int($0.size.height) },
                 checksum: checksum,
+                sortOrder: try Self.nextImageAssetSortOrder(db: db),
                 deviceID: deviceIdentifier.value,
                 inlineData: nil
             )
@@ -150,6 +151,44 @@ final class MediaAssetRepository: @unchecked Sendable {
 
             try asset.update(db)
             try appendChange(db: db, record: asset, operation: .delete)
+        }
+    }
+
+    func reorderImageAssets(ids orderedIDs: [String]) throws {
+        guard orderedIDs.isEmpty == false else { return }
+
+        try database.writer.write { db in
+            guard Set(orderedIDs).count == orderedIDs.count else {
+                throw MediaAssetRepositoryError.assetStateChanged
+            }
+
+            let assets = try MediaAsset
+                .filter(orderedIDs.contains(Column("id")))
+                .filter(Column("kind") == "image")
+                .filter(Column("deleted_at") == nil)
+                .fetchAll(db)
+
+            guard assets.count == orderedIDs.count else {
+                throw MediaAssetRepositoryError.assetStateChanged
+            }
+
+            let assetsByID = Dictionary(uniqueKeysWithValues: assets.map { ($0.id, $0) })
+            let now = SyncableTimestamp.nowMilliseconds()
+
+            for (index, id) in orderedIDs.enumerated() {
+                guard var asset = assetsByID[id] else {
+                    throw MediaAssetRepositoryError.assetStateChanged
+                }
+
+                guard asset.sortOrder != index else { continue }
+
+                asset.sortOrder = index
+                asset.updatedAt = now
+                asset.syncStatus = .pending
+
+                try asset.update(db)
+                try appendChange(db: db, record: asset, operation: .update)
+            }
         }
     }
 
@@ -222,6 +261,20 @@ final class MediaAssetRepository: @unchecked Sendable {
             payload: record,
             clientTimestampMilliseconds: record.updatedAt
         )
+    }
+
+    private static func nextImageAssetSortOrder(db: Database) throws -> Int {
+        let minimumSortOrder = try Int.fetchOne(
+            db,
+            sql: """
+                SELECT MIN(sort_order)
+                FROM media_assets
+                WHERE kind = 'image'
+                  AND deleted_at IS NULL
+                """
+        ) ?? 1
+
+        return minimumSortOrder - 1
     }
 
     private static func referenceCount(db: Database, assetID: String) throws -> Int {

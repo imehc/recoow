@@ -20,6 +20,7 @@ nonisolated struct MediaAsset: Identifiable, Codable, Hashable, Sendable, Fetcha
     var checksum: String
     var width: Int?
     var height: Int?
+    var sortOrder: Int
     var inlineData: Data?
 
     enum CodingKeys: String, CodingKey {
@@ -38,6 +39,7 @@ nonisolated struct MediaAsset: Identifiable, Codable, Hashable, Sendable, Fetcha
         case checksum
         case width
         case height
+        case sortOrder = "sort_order"
         case inlineData = "inline_data"
     }
 
@@ -47,6 +49,7 @@ nonisolated struct MediaAsset: Identifiable, Codable, Hashable, Sendable, Fetcha
         width: Int?,
         height: Int?,
         checksum: String,
+        sortOrder: Int = 0,
         deviceID: String,
         inlineData: Data? = nil
     ) -> MediaAsset {
@@ -69,6 +72,7 @@ nonisolated struct MediaAsset: Identifiable, Codable, Hashable, Sendable, Fetcha
             checksum: checksum,
             width: width,
             height: height,
+            sortOrder: sortOrder,
             inlineData: inlineData
         )
     }

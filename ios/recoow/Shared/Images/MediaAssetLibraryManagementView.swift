@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 struct MediaAssetLibraryManagementView: View {
     let repository: MediaAssetRepository
@@ -13,38 +14,30 @@ struct MediaAssetLibraryManagementView: View {
     @State private var successMessage: String?
     @State private var isSelectionMode = false
     @State private var selectedItemIDs = Set<String>()
+    @State private var draggedItemID: String?
+    @State private var dropTargetItemID: String?
+    @State private var didReorderDuringDrag = false
+    @State private var columnCount = 3
+    @State private var columnCountBeforeMagnify = 3
+    @State private var isMagnifyingGrid = false
+    @State private var previewSuppressedUntil: Date = .distantPast
+    @State private var gridContainerWidth: CGFloat = 0
+    @State private var magnificationResetToken = 0
+    @State private var dragResetToken = 0
 
-    private let columns = [
-        GridItem(.adaptive(minimum: 112), spacing: 12)
-    ]
+    private let minimumColumnCount = 3
+    private let maximumColumnCount = 6
+    private let magnificationSensitivity = 1.45
+    private let magnificationActivationThreshold: CGFloat = 0.025
+    private let gridHorizontalPadding: CGFloat = 12
+    private let gridColumnSpacing: CGFloat = 10
+
+    private var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: gridColumnSpacing), count: columnCount)
+    }
 
     var body: some View {
-        Group {
-            if items.isEmpty {
-                emptyView
-            } else {
-                ScrollView {
-                    LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(items) { item in
-                            MediaAssetManagementTile(
-                                item: item,
-                                repository: repository,
-                                isSelectionMode: isSelectionMode,
-                                isSelected: selectedItemIDs.contains(item.id),
-                                isSelectable: item.referenceCount == 0,
-                                onPreview: { preview(item.asset) },
-                                onToggleSelection: { toggleSelection(for: item) },
-                                onUnavailableSelection: { showReferencedSelectionMessage() },
-                                onEdit: { editingAsset = item.asset },
-                                onReplace: { photoPickerPurpose = .replace(item.asset) },
-                                onDelete: { requestDelete(item) }
-                            )
-                        }
-                    }
-                    .padding(12)
-                }
-            }
-        }
+        content
         .navigationTitle(selectionTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -81,6 +74,13 @@ struct MediaAssetLibraryManagementView: View {
         .task {
             loadItems()
         }
+        .onChange(of: items.map(\.id)) { _, itemIDs in
+            if let dragID = draggedItemID, itemIDs.contains(dragID) == false {
+                resetDrag()
+            }
+        }
+        .sensoryFeedback(.selection, trigger: columnCount)
+        .animation(.interactiveSpring(response: 0.22, dampingFraction: 0.86), value: items.map(\.id))
         .fullScreenCover(item: $photoPickerPurpose) { purpose in
             PhotoSourcePickerView(
                 onPhotoPicked: { data in
@@ -140,6 +140,48 @@ struct MediaAssetLibraryManagementView: View {
         }
     }
 
+    @ViewBuilder
+    private var content: some View {
+        if items.isEmpty {
+            emptyView
+        } else {
+            libraryContent
+        }
+    }
+
+    private var libraryContent: some View {
+        GeometryReader { proxy in
+            libraryGrid
+                .onAppear {
+                    updateGridContainerWidth(proxy.size.width)
+                }
+                .onChange(of: proxy.size.width) { _, width in
+                    updateGridContainerWidth(width)
+                }
+        }
+    }
+
+    private var libraryGrid: some View {
+        ZStack(alignment: .topLeading) {
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(items) { item in
+                        itemTile(for: item)
+                    }
+                }
+                .padding(gridHorizontalPadding)
+                .contentShape(Rectangle())
+            }
+            .scrollDisabled(isScrollInteractionDisabled)
+        }
+        .contentShape(Rectangle())
+        .simultaneousGesture(assetZoomGesture)
+        .onDrop(of: [UTType.text], isTargeted: nil) { _, _ in
+            finishDrag()
+            return true
+        }
+    }
+
     private var emptyView: some View {
         ContentUnavailableView {
             Label(AppLocalization.string("暂无素材"), systemImage: "rectangle.stack")
@@ -151,6 +193,101 @@ struct MediaAssetLibraryManagementView: View {
             }
             .buttonStyle(.borderedProminent)
         }
+    }
+
+    @ViewBuilder
+    private func itemTile(for item: MediaAssetLibraryItem) -> some View {
+        let isDropTarget = dropTargetItemID == item.id
+        let tile = MediaAssetManagementTile(
+            item: item,
+            repository: repository,
+            isSelectionMode: isSelectionMode,
+            isSelected: selectedItemIDs.contains(item.id),
+            isSelectable: item.referenceCount == 0,
+            isDropTarget: isDropTarget,
+            showsMenu: columnCount <= 4,
+            onPreview: { previewIfNotSuppressed(item) },
+            onToggleSelection: { toggleSelection(for: item) },
+            onUnavailableSelection: { showReferencedSelectionMessage() },
+            onEdit: { editingAsset = item.asset },
+            onReplace: { photoPickerPurpose = .replace(item.asset) },
+            onDelete: { requestDelete(item) }
+        )
+
+        if canDragItems {
+            tile
+                .onDrag {
+                    dragItemProvider(for: item)
+                } preview: {
+                    MediaAssetManagementThumbnail(asset: item.asset, repository: repository)
+                        .frame(width: dragPreviewSideLength, height: dragPreviewSideLength)
+                }
+                .onDrop(
+                    of: [UTType.text],
+                    delegate: MediaAssetLibraryDropDelegate(
+                        item: item,
+                        items: $items,
+                        draggedItemID: $draggedItemID,
+                        dropTargetItemID: $dropTargetItemID,
+                        didReorderDuringDrag: $didReorderDuringDrag,
+                        onDropCompleted: finishDrag
+                    )
+                )
+        } else {
+            tile
+        }
+    }
+
+    private func dragItemProvider(for item: MediaAssetLibraryItem) -> NSItemProvider {
+        draggedItemID = item.id
+        dropTargetItemID = nil
+        didReorderDuringDrag = false
+        suppressPreview(for: 1.5)
+        scheduleDragReset(for: item.id)
+        return NSItemProvider(object: item.id as NSString)
+    }
+
+    private func finishDrag() {
+        let shouldSaveOrder = didReorderDuringDrag
+        suppressPreview(for: 1.0)
+        dragResetToken += 1
+        resetDrag()
+
+        if shouldSaveOrder {
+            saveItemOrder()
+        }
+    }
+
+    private func resetDrag() {
+        draggedItemID = nil
+        dropTargetItemID = nil
+        didReorderDuringDrag = false
+    }
+
+    private var canDragItems: Bool {
+        isSelectionMode == false && isMagnifyingGrid == false && items.count > 1
+    }
+
+    private var isScrollInteractionDisabled: Bool {
+        isMagnifyingGrid
+    }
+
+    private var dragPreviewSideLength: CGFloat {
+        let spacingWidth = CGFloat(max(0, columnCount - 1)) * gridColumnSpacing
+        let availableWidth = gridContainerWidth - gridHorizontalPadding * 2 - spacingWidth
+        guard availableWidth > 0 else { return 92 }
+
+        return max(44, floor(availableWidth / CGFloat(columnCount)))
+    }
+
+    private var assetZoomGesture: some Gesture {
+        MagnifyGesture()
+            .onChanged { value in
+                handleMagnificationChanged(value.magnification)
+            }
+            .onEnded { _ in
+                finishMagnification()
+            }
     }
 
     private var editingPresence: Binding<Bool> {
@@ -199,6 +336,7 @@ struct MediaAssetLibraryManagementView: View {
         do {
             let loadedItems = try repository.fetchImageAssetLibraryItems()
             items = loadedItems
+            columnCountBeforeMagnify = columnCount
             selectedItemIDs.formIntersection(Set(loadedItems.filter { $0.referenceCount == 0 }.map(\.id)))
             if isSelectionMode, loadedItems.contains(where: { $0.referenceCount == 0 }) == false {
                 exitSelectionMode()
@@ -258,6 +396,16 @@ struct MediaAssetLibraryManagementView: View {
         )
     }
 
+    private func previewIfNotSuppressed(_ item: MediaAssetLibraryItem) {
+        guard Date() >= previewSuppressedUntil,
+              draggedItemID == nil,
+              isMagnifyingGrid == false else {
+            return
+        }
+
+        preview(item.asset)
+    }
+
     private func requestDelete(_ item: MediaAssetLibraryItem) {
         guard item.referenceCount == 0 else {
             // 被业务记录引用的素材必须保留 asset_id 稳定性，只允许原地编辑或替换。
@@ -289,9 +437,94 @@ struct MediaAssetLibraryManagementView: View {
         }
     }
 
+    private func saveItemOrder() {
+        do {
+            try repository.reorderImageAssets(ids: items.map(\.id))
+            loadItems()
+        } catch {
+            loadItems()
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func updateColumnCount(magnification: CGFloat) {
+        guard magnification > 0 else { return }
+
+        let scaledColumnCount = CGFloat(columnCountBeforeMagnify) / pow(magnification, magnificationSensitivity)
+        let nextColumnCount = min(maximumColumnCount, max(minimumColumnCount, Int(scaledColumnCount.rounded())))
+
+        guard nextColumnCount != columnCount else { return }
+
+        columnCount = nextColumnCount
+    }
+
+    private func updateGridContainerWidth(_ width: CGFloat) {
+        guard abs(gridContainerWidth - width) > 0.5 else { return }
+        gridContainerWidth = width
+    }
+
+    private func handleMagnificationChanged(_ magnification: CGFloat) {
+        suppressPreview(for: 1.0)
+
+        if isMagnifyingGrid == false {
+            guard abs(magnification - 1) >= magnificationActivationThreshold else { return }
+
+            isMagnifyingGrid = true
+            columnCountBeforeMagnify = columnCount
+            resetDrag()
+        }
+
+        updateColumnCount(magnification: magnification)
+        scheduleMagnificationReset()
+    }
+
+    private func finishMagnification() {
+        guard isMagnifyingGrid else {
+            suppressPreview(for: 0.8)
+            return
+        }
+
+        suppressPreview(for: 1.0)
+        columnCountBeforeMagnify = columnCount
+        isMagnifyingGrid = false
+        magnificationResetToken += 1
+    }
+
+    private func scheduleMagnificationReset() {
+        magnificationResetToken += 1
+        let token = magnificationResetToken
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            guard token == magnificationResetToken, isMagnifyingGrid else { return }
+
+            columnCountBeforeMagnify = columnCount
+            isMagnifyingGrid = false
+        }
+    }
+
+    private func scheduleDragReset(for itemID: String) {
+        dragResetToken += 1
+        let token = dragResetToken
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            guard token == dragResetToken, draggedItemID == itemID else { return }
+
+            suppressPreview(for: 0.8)
+            resetDrag()
+        }
+    }
+
+    private func suppressPreview(for duration: TimeInterval) {
+        let nextDate = Date().addingTimeInterval(duration)
+        if nextDate > previewSuppressedUntil {
+            previewSuppressedUntil = nextDate
+        }
+    }
+
     private func enterSelectionMode() {
         selectedItemIDs.removeAll()
         isSelectionMode = true
+        resetDrag()
     }
 
     private func exitSelectionMode() {
@@ -381,12 +614,58 @@ private enum PhotoPickerPurpose: Identifiable {
     }
 }
 
+private struct MediaAssetLibraryDropDelegate: DropDelegate {
+    let item: MediaAssetLibraryItem
+    @Binding var items: [MediaAssetLibraryItem]
+    @Binding var draggedItemID: String?
+    @Binding var dropTargetItemID: String?
+    @Binding var didReorderDuringDrag: Bool
+    let onDropCompleted: () -> Void
+
+    func dropEntered(info: DropInfo) {
+        guard let draggedItemID,
+              draggedItemID != item.id,
+              let sourceIndex = items.firstIndex(where: { $0.id == draggedItemID }),
+              let targetIndex = items.firstIndex(where: { $0.id == item.id }) else {
+            return
+        }
+
+        dropTargetItemID = item.id
+
+        withAnimation(.interactiveSpring(response: 0.22, dampingFraction: 0.86)) {
+            items.move(
+                fromOffsets: IndexSet(integer: sourceIndex),
+                toOffset: targetIndex > sourceIndex ? targetIndex + 1 : targetIndex
+            )
+        }
+
+        didReorderDuringDrag = true
+    }
+
+    func dropExited(info: DropInfo) {
+        if dropTargetItemID == item.id {
+            dropTargetItemID = nil
+        }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        onDropCompleted()
+        return true
+    }
+}
+
 private struct MediaAssetManagementTile: View {
     let item: MediaAssetLibraryItem
     let repository: MediaAssetRepository
     let isSelectionMode: Bool
     let isSelected: Bool
     let isSelectable: Bool
+    let isDropTarget: Bool
+    let showsMenu: Bool
     let onPreview: () -> Void
     let onToggleSelection: () -> Void
     let onUnavailableSelection: () -> Void
@@ -399,6 +678,12 @@ private struct MediaAssetManagementTile: View {
             ZStack(alignment: .topTrailing) {
                 Button(action: primaryAction) {
                     MediaAssetManagementThumbnail(asset: item.asset, repository: repository)
+                        .overlay {
+                            if isDropTarget {
+                                RoundedRectangle(cornerRadius: AppDesign.iconCornerRadius)
+                                    .strokeBorder(Color.accentColor, lineWidth: 2)
+                            }
+                        }
                         .overlay {
                             if isSelectionMode, isSelectable == false {
                                 RoundedRectangle(cornerRadius: AppDesign.iconCornerRadius)
@@ -414,8 +699,9 @@ private struct MediaAssetManagementTile: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(accessibilityLabel)
+                .accessibilityHint(isSelectionMode ? "" : AppLocalization.string("长按拖动可排序"))
 
-                if isSelectionMode == false {
+                if isSelectionMode == false, showsMenu {
                     Menu {
                         Button(AppLocalization.string("编辑"), systemImage: "slider.horizontal.3", action: onEdit)
                         Button(AppLocalization.string("替换"), systemImage: "arrow.triangle.2.circlepath", action: onReplace)

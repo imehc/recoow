@@ -40,11 +40,13 @@ enum CurrentMediaAttachmentDatabaseSchema {
             t.column("checksum", .text).notNull()
             t.column("width", .integer)
             t.column("height", .integer)
+            t.column("sort_order", .integer).notNull().defaults(to: 0)
             // 运行时优先读对象文件；inline_data 只用于单文件备份/导入时携带完整图片数据。
             t.column("inline_data", .blob)
         }
 
         try db.create(index: "idx_media_assets_checksum", on: "media_assets", columns: ["checksum"], ifNotExists: true)
+        try db.create(index: "idx_media_assets_sort_order", on: "media_assets", columns: ["sort_order"], ifNotExists: true)
         try db.create(index: "idx_media_assets_updated_at", on: "media_assets", columns: ["updated_at"], ifNotExists: true)
     }
 
