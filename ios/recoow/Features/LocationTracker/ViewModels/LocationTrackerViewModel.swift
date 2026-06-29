@@ -271,12 +271,13 @@ final class LocationTrackerViewModel {
         try flushPendingPoints()
         let points = try repository.fetchPoints(trackID: track.id)
         let metrics = TrackSegmentAnalyzer.metrics(for: points)
+        let durationSeconds = max(metrics.durationSeconds, currentElapsedSeconds())
         try regenerateAutoSegments(trackID: track.id, points: points)
 
         return try repository.pauseTrack(
             id: track.id,
             distanceMeters: metrics.distanceMeters,
-            durationSeconds: metrics.durationSeconds,
+            durationSeconds: durationSeconds,
             averageSpeedMetersPerSecond: metrics.averageSpeedMetersPerSecond,
             maxSpeedMetersPerSecond: metrics.maxSpeedMetersPerSecond
         )
@@ -289,12 +290,13 @@ final class LocationTrackerViewModel {
         try regenerateAutoSegments(trackID: track.id, points: points)
 
         let endedAt = SyncableTimestamp.nowMilliseconds()
+        let durationSeconds = max(metrics.durationSeconds, currentElapsedSeconds(now: endedAt))
 
         return try repository.finishTrack(
             id: track.id,
             endedAt: endedAt,
             distanceMeters: metrics.distanceMeters,
-            durationSeconds: metrics.durationSeconds,
+            durationSeconds: durationSeconds,
             averageSpeedMetersPerSecond: metrics.averageSpeedMetersPerSecond,
             maxSpeedMetersPerSecond: metrics.maxSpeedMetersPerSecond
         )
@@ -321,10 +323,11 @@ final class LocationTrackerViewModel {
         applyCurrentTrack(track)
         let points = try repository.fetchPoints(trackID: track.id)
         let metrics = TrackSegmentAnalyzer.metrics(for: points)
+        let durationSeconds = max(track.durationSeconds, metrics.durationSeconds)
 
         pointCount = points.count
-        elapsedSeconds = metrics.durationSeconds
-        activeBaseElapsedSeconds = metrics.durationSeconds
+        elapsedSeconds = durationSeconds
+        activeBaseElapsedSeconds = durationSeconds
         currentDistanceMeters = metrics.distanceMeters
         currentMaxSpeedMetersPerSecond = metrics.maxSpeedMetersPerSecond
         currentCoordinate = points.last?.coordinate
@@ -353,5 +356,10 @@ final class LocationTrackerViewModel {
                 try? await Task.sleep(for: .seconds(1))
             }
         }
+    }
+
+    private func currentElapsedSeconds(now: Int64 = SyncableTimestamp.nowMilliseconds()) -> Int64 {
+        let activeSeconds = activeStartedAt.map { max(0, (now - $0) / 1000) } ?? 0
+        return max(elapsedSeconds, activeBaseElapsedSeconds + activeSeconds)
     }
 }
