@@ -77,104 +77,22 @@ final class AppContainer {
         self.appPreferences = appPreferences
     }
 
-    /// App 启动入口。数据库初始化失败属于不可恢复配置错误，直接暴露给开发阶段。
-    static func bootstrap() -> AppContainer {
-        do {
-            let deviceIdentifier = DeviceIdentifier()
-            let database = try AppDatabase.makeDefault()
-            let changeLogRepository = ChangeLogRepository(database: database)
-            let syncEngine = NoopSyncEngine(changeLogRepository: changeLogRepository)
-            let trackRepository = TrackRepository(
-                database: database,
-                changeLogRepository: changeLogRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let decisionRepository = DecisionRepository(
-                database: database,
-                changeLogRepository: changeLogRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let itemLocatorRepository = ItemLocatorRepository(
-                database: database,
-                changeLogRepository: changeLogRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let reminderRepository = ReminderRepository(
-                database: database,
-                changeLogRepository: changeLogRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let billRepository = BillRepository(
-                database: database,
-                changeLogRepository: changeLogRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let mediaAssetRepository = MediaAssetRepository(
-                database: database,
-                changeLogRepository: changeLogRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let mediaAttachmentRepository = MediaAttachmentRepository(
-                database: database,
-                changeLogRepository: changeLogRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let foodJournalRepository = FoodJournalRepository(
-                database: database,
-                changeLogRepository: changeLogRepository,
-                mediaAttachmentRepository: mediaAttachmentRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let diaryRepository = DiaryRepository(
-                database: database,
-                changeLogRepository: changeLogRepository,
-                mediaAttachmentRepository: mediaAttachmentRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let anniversaryRepository = AnniversaryRepository(
-                database: database,
-                changeLogRepository: changeLogRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let historyRepository = HistoryRepository(database: database)
-            let dataTransferService = AppDataTransferService(database: database)
-            let notificationScheduler = LocalNotificationScheduler()
-            let reminderNotificationService = ReminderNotificationService(scheduler: notificationScheduler)
-            let anniversaryNotificationService = AnniversaryNotificationService(scheduler: notificationScheduler)
-            let locationService = LocationService()
-            let locationTrackerViewModel = LocationTrackerViewModel(
-                repository: trackRepository,
-                locationService: locationService,
-                syncEngine: syncEngine
-            )
+    /// App 启动入口。数据库初始化失败时由 App 层展示恢复界面。
+    static func bootstrap() throws -> AppContainer {
+        let deviceIdentifier = DeviceIdentifier()
+        let database = try AppDatabase.makeDefault()
+        try database.verifyIntegrity()
+        return try makeContainer(
+            database: database,
+            deviceIdentifier: deviceIdentifier,
+            featureVisibilitySettings: FeatureVisibilitySettings(),
+            appPreferences: AppPreferences()
+        )
+    }
 
-            return AppContainer(
-                database: database,
-                syncEngine: syncEngine,
-                deviceIdentifier: deviceIdentifier,
-                locationService: locationService,
-                trackRepository: trackRepository,
-                decisionRepository: decisionRepository,
-                itemLocatorRepository: itemLocatorRepository,
-                reminderRepository: reminderRepository,
-                billRepository: billRepository,
-                foodJournalRepository: foodJournalRepository,
-                mediaAssetRepository: mediaAssetRepository,
-                mediaAttachmentRepository: mediaAttachmentRepository,
-                diaryRepository: diaryRepository,
-                anniversaryRepository: anniversaryRepository,
-                historyRepository: historyRepository,
-                dataTransferService: dataTransferService,
-                notificationScheduler: notificationScheduler,
-                reminderNotificationService: reminderNotificationService,
-                anniversaryNotificationService: anniversaryNotificationService,
-                locationTrackerViewModel: locationTrackerViewModel,
-                featureVisibilitySettings: FeatureVisibilitySettings(),
-                appPreferences: AppPreferences()
-            )
-        } catch {
-            fatalError("AppContainer 初始化失败: \(error)")
-        }
+    func prepareForFullDataReset() {
+        locationTrackerViewModel.finishForAppTermination()
+        try? database.close()
     }
 
     func makeHistoryViewModel() -> HistoryViewModel {
@@ -257,98 +175,112 @@ final class AppContainer {
         do {
             let deviceIdentifier = DeviceIdentifier(defaults: .standard, key: "preview_device_id")
             let database = try AppDatabase.makeInMemory()
-            let changeLogRepository = ChangeLogRepository(database: database)
-            let syncEngine = NoopSyncEngine(changeLogRepository: changeLogRepository)
-            let trackRepository = TrackRepository(
+            return try makeContainer(
                 database: database,
-                changeLogRepository: changeLogRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let decisionRepository = DecisionRepository(
-                database: database,
-                changeLogRepository: changeLogRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let itemLocatorRepository = ItemLocatorRepository(
-                database: database,
-                changeLogRepository: changeLogRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let reminderRepository = ReminderRepository(
-                database: database,
-                changeLogRepository: changeLogRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let billRepository = BillRepository(
-                database: database,
-                changeLogRepository: changeLogRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let mediaAssetRepository = MediaAssetRepository(
-                database: database,
-                changeLogRepository: changeLogRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let mediaAttachmentRepository = MediaAttachmentRepository(
-                database: database,
-                changeLogRepository: changeLogRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let foodJournalRepository = FoodJournalRepository(
-                database: database,
-                changeLogRepository: changeLogRepository,
-                mediaAttachmentRepository: mediaAttachmentRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let diaryRepository = DiaryRepository(
-                database: database,
-                changeLogRepository: changeLogRepository,
-                mediaAttachmentRepository: mediaAttachmentRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let anniversaryRepository = AnniversaryRepository(
-                database: database,
-                changeLogRepository: changeLogRepository,
-                deviceIdentifier: deviceIdentifier
-            )
-            let historyRepository = HistoryRepository(database: database)
-            let dataTransferService = AppDataTransferService(database: database)
-            let notificationScheduler = LocalNotificationScheduler()
-            let reminderNotificationService = ReminderNotificationService(scheduler: notificationScheduler)
-            let anniversaryNotificationService = AnniversaryNotificationService(scheduler: notificationScheduler)
-            let locationService = LocationService()
-            let locationTrackerViewModel = LocationTrackerViewModel(
-                repository: trackRepository,
-                locationService: locationService,
-                syncEngine: syncEngine
-            )
-
-            return AppContainer(
-                database: database,
-                syncEngine: syncEngine,
                 deviceIdentifier: deviceIdentifier,
-                locationService: locationService,
-                trackRepository: trackRepository,
-                decisionRepository: decisionRepository,
-                itemLocatorRepository: itemLocatorRepository,
-                reminderRepository: reminderRepository,
-                billRepository: billRepository,
-                foodJournalRepository: foodJournalRepository,
-                mediaAssetRepository: mediaAssetRepository,
-                mediaAttachmentRepository: mediaAttachmentRepository,
-                diaryRepository: diaryRepository,
-                anniversaryRepository: anniversaryRepository,
-                historyRepository: historyRepository,
-                dataTransferService: dataTransferService,
-                notificationScheduler: notificationScheduler,
-                reminderNotificationService: reminderNotificationService,
-                anniversaryNotificationService: anniversaryNotificationService,
-                locationTrackerViewModel: locationTrackerViewModel,
                 featureVisibilitySettings: FeatureVisibilitySettings(defaults: nil),
                 appPreferences: AppPreferences(defaults: nil)
             )
         } catch {
             fatalError("Preview AppContainer 初始化失败: \(error)")
         }
+    }
+
+    private static func makeContainer(
+        database: AppDatabase,
+        deviceIdentifier: DeviceIdentifier,
+        featureVisibilitySettings: FeatureVisibilitySettings,
+        appPreferences: AppPreferences
+    ) throws -> AppContainer {
+        let changeLogRepository = ChangeLogRepository(database: database)
+        let syncEngine = NoopSyncEngine(changeLogRepository: changeLogRepository)
+        let trackRepository = TrackRepository(
+            database: database,
+            changeLogRepository: changeLogRepository,
+            deviceIdentifier: deviceIdentifier
+        )
+        let decisionRepository = DecisionRepository(
+            database: database,
+            changeLogRepository: changeLogRepository,
+            deviceIdentifier: deviceIdentifier
+        )
+        let itemLocatorRepository = ItemLocatorRepository(
+            database: database,
+            changeLogRepository: changeLogRepository,
+            deviceIdentifier: deviceIdentifier
+        )
+        let reminderRepository = ReminderRepository(
+            database: database,
+            changeLogRepository: changeLogRepository,
+            deviceIdentifier: deviceIdentifier
+        )
+        let billRepository = BillRepository(
+            database: database,
+            changeLogRepository: changeLogRepository,
+            deviceIdentifier: deviceIdentifier
+        )
+        let mediaAssetRepository = MediaAssetRepository(
+            database: database,
+            changeLogRepository: changeLogRepository,
+            deviceIdentifier: deviceIdentifier
+        )
+        let mediaAttachmentRepository = MediaAttachmentRepository(
+            database: database,
+            changeLogRepository: changeLogRepository,
+            deviceIdentifier: deviceIdentifier
+        )
+        let foodJournalRepository = FoodJournalRepository(
+            database: database,
+            changeLogRepository: changeLogRepository,
+            mediaAttachmentRepository: mediaAttachmentRepository,
+            deviceIdentifier: deviceIdentifier
+        )
+        let diaryRepository = DiaryRepository(
+            database: database,
+            changeLogRepository: changeLogRepository,
+            mediaAttachmentRepository: mediaAttachmentRepository,
+            deviceIdentifier: deviceIdentifier
+        )
+        let anniversaryRepository = AnniversaryRepository(
+            database: database,
+            changeLogRepository: changeLogRepository,
+            deviceIdentifier: deviceIdentifier
+        )
+        let historyRepository = HistoryRepository(database: database)
+        let dataTransferService = AppDataTransferService(database: database)
+        let notificationScheduler = LocalNotificationScheduler()
+        let reminderNotificationService = ReminderNotificationService(scheduler: notificationScheduler)
+        let anniversaryNotificationService = AnniversaryNotificationService(scheduler: notificationScheduler)
+        let locationService = LocationService()
+        let locationTrackerViewModel = LocationTrackerViewModel(
+            repository: trackRepository,
+            locationService: locationService,
+            syncEngine: syncEngine
+        )
+
+        return AppContainer(
+            database: database,
+            syncEngine: syncEngine,
+            deviceIdentifier: deviceIdentifier,
+            locationService: locationService,
+            trackRepository: trackRepository,
+            decisionRepository: decisionRepository,
+            itemLocatorRepository: itemLocatorRepository,
+            reminderRepository: reminderRepository,
+            billRepository: billRepository,
+            foodJournalRepository: foodJournalRepository,
+            mediaAssetRepository: mediaAssetRepository,
+            mediaAttachmentRepository: mediaAttachmentRepository,
+            diaryRepository: diaryRepository,
+            anniversaryRepository: anniversaryRepository,
+            historyRepository: historyRepository,
+            dataTransferService: dataTransferService,
+            notificationScheduler: notificationScheduler,
+            reminderNotificationService: reminderNotificationService,
+            anniversaryNotificationService: anniversaryNotificationService,
+            locationTrackerViewModel: locationTrackerViewModel,
+            featureVisibilitySettings: featureVisibilitySettings,
+            appPreferences: appPreferences
+        )
     }
 }

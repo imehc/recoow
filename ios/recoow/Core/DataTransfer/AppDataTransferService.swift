@@ -92,6 +92,8 @@ final class AppDataTransferService: @unchecked Sendable {
             }
 
             try MediaAssetRepository.restoreInlineAssetsToObjectStore(database: database)
+            // 备份用 inline_data 承载媒体，导入后清空这些列需要压实库文件，设置页才会显示真实占用。
+            try database.settleDatabaseFilesAfterImport()
             try database.verifyIntegrity()
             return AppDataImportResult(
                 metadata: metadata,

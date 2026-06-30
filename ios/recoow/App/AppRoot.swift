@@ -2,6 +2,11 @@ import Combine
 import SwiftUI
 
 /// 应用根导航。后续新增工具时，在 ToolRoute 中追加入口即可继承主页、设置和详情隐藏 Tab 的规则。
+enum AppLaunchDestination: Hashable {
+    case home
+    case dataSettings
+}
+
 struct AppRoot: View {
     @Environment(AppContainer.self) private var container
     @Environment(\.scenePhase) private var scenePhase
@@ -12,6 +17,21 @@ struct AppRoot: View {
     @State private var homeTabBarVisibility: Visibility = .visible
     @State private var statisticsTabBarVisibility: Visibility = .visible
     @State private var settingsTabBarVisibility: Visibility = .visible
+    let resetAllLocalData: (AppLaunchDestination) async throws -> Void
+
+    init(
+        initialDestination: AppLaunchDestination = .home,
+        resetAllLocalData: @escaping (AppLaunchDestination) async throws -> Void = { _ in }
+    ) {
+        var initialSettingsPath = NavigationPath()
+        if initialDestination == .dataSettings {
+            initialSettingsPath.append(SettingsNavigationRoute.data)
+        }
+
+        _selectedTab = State(initialValue: initialDestination == .dataSettings ? .settings : .home)
+        _settingsPath = State(initialValue: initialSettingsPath)
+        self.resetAllLocalData = resetAllLocalData
+    }
 
     var body: some View {
         let language = container.appPreferences.language
@@ -35,7 +55,12 @@ struct AppRoot: View {
 
             Tab(AppLocalization.string("设置", language: language), systemImage: "gearshape", value: .settings) {
                 NavigationStack(path: $settingsPath) {
-                    SettingsView(tabBarVisibility: $settingsTabBarVisibility)
+                    SettingsView(
+                        tabBarVisibility: $settingsTabBarVisibility,
+                        resetAllLocalData: {
+                            try await resetAllLocalData(.dataSettings)
+                        }
+                    )
                 }
                 .toolbar(rootTabBarVisibility(path: settingsPath, requested: settingsTabBarVisibility), for: .tabBar)
             }

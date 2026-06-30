@@ -54,7 +54,7 @@ final class ChangeLogRepository: @unchecked Sendable {
         payload: T,
         clientTimestampMilliseconds: Int64
     ) throws {
-        let data = try encoder.encode(payload)
+        let data = try sanitizedPayloadData(for: payload, table: table)
         let record = ChangeRecord(
             id: nil,
             entityTable: table,
@@ -78,4 +78,49 @@ final class ChangeLogRepository: @unchecked Sendable {
                 .fetchAll(db)
         }
     }
+
+    private func sanitizedPayloadData<T: Encodable>(for payload: T, table: String) throws -> Data {
+        let data = try encoder.encode(payload)
+        return try Self.sanitizedPayloadData(data, table: table) ?? data
+    }
+
+    nonisolated static func sanitizedPayloadJSON(_ json: String, table: String) throws -> String? {
+        guard let data = json.data(using: .utf8),
+              let sanitizedData = try sanitizedPayloadData(data, table: table)
+        else {
+            return nil
+        }
+
+        return String(decoding: sanitizedData, as: UTF8.self)
+    }
+
+    nonisolated private static func sanitizedPayloadData(_ data: Data, table: String) throws -> Data? {
+        guard let omittedKeys = Self.omittedBinaryPayloadKeysByTable[table],
+              omittedKeys.isEmpty == false,
+              var object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
+            return nil
+        }
+
+        var didOmitBinaryPayload = false
+        for key in omittedKeys where object.removeValue(forKey: key) != nil {
+            didOmitBinaryPayload = true
+        }
+
+        guard didOmitBinaryPayload else {
+            return nil
+        }
+
+        return try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+    }
+
+    nonisolated static let omittedBinaryPayloadKeysByTable: [String: Set<String>] = [
+        "media_attachments": ["data"],
+        "media_assets": ["inline_data"],
+        "bills": ["image_data"],
+        "reminders": ["image_data"],
+        "stored_items": ["image_data"],
+        "decision_options": ["image_data"],
+        "decision_choice_records": ["option_image_data"]
+    ]
 }

@@ -23,7 +23,7 @@ final class PhotoSourcePickerCoordinator: NSObject, UINavigationControllerDelega
         didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
     ) {
         if let image = info[.originalImage] as? UIImage,
-           let data = image.jpegData(compressionQuality: 0.82) {
+           let data = PhotoStorageOptimizer.normalizedJPEGData(from: image) {
             let source: PhotoSourcePickerMode = picker.sourceType == .camera ? .camera : .library
             if source == .camera, savesCameraPhotosToLibrary {
                 PhotoLibraryImageSaver.save(image)
@@ -53,7 +53,7 @@ final class PhotoSourcePickerCoordinator: NSObject, UINavigationControllerDelega
 
             DispatchQueue.main.async {
                 guard let data,
-                      let normalizedData = Self.normalizedImageData(from: data) else {
+                      let normalizedData = PhotoStorageOptimizer.normalizedJPEGData(from: data) else {
                     self.onCancel()
                     return
                 }
@@ -63,10 +63,6 @@ final class PhotoSourcePickerCoordinator: NSObject, UINavigationControllerDelega
         }
     }
 
-    private static func normalizedImageData(from data: Data) -> Data? {
-        guard let image = UIImage(data: data) else { return nil }
-        return image.jpegData(compressionQuality: 0.82)
-    }
 }
 
 private enum PhotoLibraryImageSaver {

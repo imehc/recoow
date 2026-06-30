@@ -39,6 +39,57 @@ nonisolated final class MediaAssetObjectStore: @unchecked Sendable {
         return fileManager.fileExists(atPath: url.path(percentEncoded: false))
     }
 
+    func totalByteCount() throws -> Int64 {
+        try byteCount(at: storageRootURL(create: false))
+    }
+
+    func allStorageKeys() throws -> Set<String> {
+        let rootURL = try storageRootURL(create: false)
+        guard fileManager.fileExists(atPath: rootURL.path(percentEncoded: false)) else {
+            return []
+        }
+
+        let rootPath = rootURL.path(percentEncoded: false)
+        let fileURLs = fileManager.enumerator(
+            at: rootURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )?.compactMap { $0 as? URL } ?? []
+
+        return try fileURLs.reduce(into: Set<String>()) { keys, url in
+            let values = try url.resourceValues(forKeys: [.isRegularFileKey])
+            guard values.isRegularFile == true else { return }
+
+            let path = url.path(percentEncoded: false)
+            guard path.hasPrefix(rootPath) else { return }
+
+            let relativePath = path
+                .dropFirst(rootPath.count)
+                .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            guard relativePath.isEmpty == false else { return }
+
+            keys.insert(relativePath)
+        }
+    }
+
+    func remove(storageKey: String) throws {
+        let url = try url(for: storageKey)
+        guard fileManager.fileExists(atPath: url.path(percentEncoded: false)) else { return }
+        try fileManager.removeItem(at: url)
+    }
+
+    func removeObjects(excluding retainedStorageKeys: Set<String>) throws -> Int {
+        let storageKeys = try allStorageKeys()
+        var removedCount = 0
+
+        for storageKey in storageKeys where retainedStorageKeys.contains(storageKey) == false {
+            try remove(storageKey: storageKey)
+            removedCount += 1
+        }
+
+        return removedCount
+    }
+
     nonisolated static func storageKey(for assetID: String, mimeType: String) -> String {
         "images/\(assetID).\(fileExtension(for: mimeType))"
     }
@@ -60,14 +111,40 @@ nonisolated final class MediaAssetObjectStore: @unchecked Sendable {
             .split(separator: "/")
             .filter { $0 != "." && $0 != ".." }
             .joined(separator: "/")
+        return try storageRootURL(create: true).appending(path: safeKey)
+    }
+
+    private func storageRootURL(create: Bool) throws -> URL {
         let baseURL = try fileManager.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
             appropriateFor: nil,
             create: true
         )
-        return baseURL
+        let rootURL = baseURL
             .appending(path: "MediaObjects", directoryHint: .isDirectory)
-            .appending(path: safeKey)
+        if create {
+            try fileManager.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        }
+
+        return rootURL
+    }
+
+    private func byteCount(at directoryURL: URL) throws -> Int64 {
+        guard fileManager.fileExists(atPath: directoryURL.path(percentEncoded: false)) else {
+            return 0
+        }
+
+        let fileURLs = fileManager.enumerator(
+            at: directoryURL,
+            includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey],
+            options: [.skipsHiddenFiles]
+        )?.compactMap { $0 as? URL } ?? []
+
+        return try fileURLs.reduce(Int64(0)) { total, url in
+            let values = try url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
+            guard values.isRegularFile == true else { return total }
+            return total + Int64(values.fileSize ?? 0)
+        }
     }
 }

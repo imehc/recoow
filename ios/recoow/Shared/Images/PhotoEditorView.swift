@@ -159,7 +159,7 @@ struct PhotoEditorView: View {
             rotationDegrees: rotationDegrees
         )
 
-        guard let data = editedImage.jpegData(compressionQuality: 0.82) else { return }
+        guard let data = PhotoStorageOptimizer.normalizedJPEGData(from: editedImage) else { return }
         onSave(data)
     }
 }

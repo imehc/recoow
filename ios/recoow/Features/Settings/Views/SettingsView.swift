@@ -1,7 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-private enum SettingsNavigationRoute: Hashable {
+enum SettingsNavigationRoute: Hashable {
     case display
     case homeTools
     case data
@@ -14,6 +14,15 @@ struct SettingsView: View {
     @State private var isClearingDeletedData = false
     @State private var cleanupResult: SoftDeletedDataCleanupResult?
     @State private var cleanupErrorMessage: String?
+    @State private var storageUsage: AppStorageUsageSnapshot?
+    @State private var isLoadingStorageUsage = false
+    @State private var isOptimizingStorage = false
+    @State private var storageOptimizationResult: StorageOptimizationResult?
+    @State private var storageOptimizationErrorMessage: String?
+    @State private var storageUsageRefreshGeneration = 0
+    @State private var isConfirmingAllDataReset = false
+    @State private var isResettingAllData = false
+    @State private var allDataResetErrorMessage: String?
     @State private var isExportingData = false
     @State private var exportDocument: AppDataBackupDocument?
     @State private var exportFileName = "recoow-backup"
@@ -31,9 +40,14 @@ struct SettingsView: View {
     @AppStorage(AppPreferenceStorageKeys.lastDataImportedAt) private var lastDataImportedAt: Double = 0
     @AppStorage(AppPreferenceStorageKeys.lastDataImportSchemaVersion) private var lastDataImportSchemaVersion: Int = 0
     @Binding private var tabBarVisibility: Visibility
+    private let resetAllLocalData: () async throws -> Void
 
-    init(tabBarVisibility: Binding<Visibility> = .constant(.visible)) {
+    init(
+        tabBarVisibility: Binding<Visibility> = .constant(.visible),
+        resetAllLocalData: @escaping () async throws -> Void = { }
+    ) {
         _tabBarVisibility = tabBarVisibility
+        self.resetAllLocalData = resetAllLocalData
     }
 
     var body: some View {
@@ -168,6 +182,24 @@ struct SettingsView: View {
             }
 
             Section {
+                StorageUsageSummaryRows(
+                    usage: storageUsage,
+                    isLoading: isLoadingStorageUsage
+                )
+
+                Button(action: optimizeStorage) {
+                    HStack {
+                        Label(AppLocalization.string("压缩存储空间"), systemImage: "arrow.down.doc")
+
+                        Spacer()
+
+                        if isOptimizingStorage {
+                            ProgressView()
+                        }
+                    }
+                }
+                .disabled(isOptimizingStorage || isClearingDeletedData || isResettingAllData)
+
                 Button(role: .destructive) {
                     isConfirmingDeletedDataCleanup = true
                 } label: {
@@ -182,11 +214,27 @@ struct SettingsView: View {
                         }
                     }
                 }
-                .disabled(isClearingDeletedData)
+                .disabled(isClearingDeletedData || isOptimizingStorage || isResettingAllData)
+
+                Button(role: .destructive) {
+                    isConfirmingAllDataReset = true
+                } label: {
+                    HStack {
+                        Label(AppLocalization.string("清除所有数据"), systemImage: "trash.slash")
+                            .foregroundStyle(.red)
+
+                        Spacer()
+
+                        if isResettingAllData {
+                            ProgressView()
+                        }
+                    }
+                }
+                .disabled(isResettingAllData || isClearingDeletedData || isOptimizingStorage)
             } header: {
                 Text(AppLocalization.string("数据维护"))
             } footer: {
-                Text(AppLocalization.string("清除已删除数据说明"))
+                Text(AppLocalization.string("存储优化说明"))
             }
         }
         .navigationTitle(AppLocalization.string("数据与备份", language: container.appPreferences.language))
@@ -197,6 +245,12 @@ struct SettingsView: View {
             Button(AppLocalization.string("取消"), role: .cancel) { }
         } message: {
             Text(AppLocalization.string("清除已删除数据确认说明"))
+        }
+        .alert(AppLocalization.string("清除所有数据？"), isPresented: $isConfirmingAllDataReset) {
+            Button(AppLocalization.string("清除"), role: .destructive, action: resetAllData)
+            Button(AppLocalization.string("取消"), role: .cancel) { }
+        } message: {
+            Text(AppLocalization.string("清除所有数据确认说明"))
         }
         .alert(
             AppLocalization.string("清除完成"),
@@ -211,6 +265,33 @@ struct SettingsView: View {
             AppLocalization.string("清除失败"),
             isPresented: .isPresent($cleanupErrorMessage),
             presenting: cleanupErrorMessage
+        ) { _ in
+            Button(AppLocalization.string("确定"), role: .cancel) { }
+        } message: { message in
+            Text(message)
+        }
+        .alert(
+            AppLocalization.string("清除所有数据失败"),
+            isPresented: .isPresent($allDataResetErrorMessage),
+            presenting: allDataResetErrorMessage
+        ) { _ in
+            Button(AppLocalization.string("确定"), role: .cancel) { }
+        } message: { message in
+            Text(message)
+        }
+        .alert(
+            AppLocalization.string("存储优化完成"),
+            isPresented: .isPresent($storageOptimizationResult),
+            presenting: storageOptimizationResult
+        ) { _ in
+            Button(AppLocalization.string("确定"), role: .cancel) { }
+        } message: { result in
+            Text(storageOptimizationMessage(for: result))
+        }
+        .alert(
+            AppLocalization.string("存储优化失败"),
+            isPresented: .isPresent($storageOptimizationErrorMessage),
+            presenting: storageOptimizationErrorMessage
         ) { _ in
             Button(AppLocalization.string("确定"), role: .cancel) { }
         } message: { message in
@@ -269,6 +350,9 @@ struct SettingsView: View {
         ) { result in
             handleImportSelection(result)
         }
+        .task {
+            await refreshStorageUsageIfNeeded()
+        }
     }
 
     private func clearDeletedData() {
@@ -278,9 +362,12 @@ struct SettingsView: View {
         Task {
             do {
                 let result = try await Task.detached {
-                    try database.clearSoftDeletedRecords()
+                    let cleanupResult = try database.clearSoftDeletedRecords()
+                    let storageUsage = try database.storageUsageSnapshot()
+                    return (cleanupResult, storageUsage)
                 }.value
-                cleanupResult = result
+                cleanupResult = result.0
+                storageUsage = result.1
             } catch {
                 cleanupErrorMessage = error.localizedDescription
             }
@@ -305,6 +392,76 @@ struct SettingsView: View {
         return AppLocalization.format("已清除 %d 条已删除数据。", result.deletedRowCount)
     }
 
+    private func optimizeStorage() {
+        let database = container.database
+        isOptimizingStorage = true
+
+        Task {
+            do {
+                let result = try await Task.detached {
+                    try database.optimizeStorage()
+                }.value
+                storageOptimizationResult = result
+                storageUsage = result.afterUsage
+            } catch {
+                storageOptimizationErrorMessage = error.localizedDescription
+            }
+
+            isOptimizingStorage = false
+        }
+    }
+
+    private func resetAllData() {
+        isResettingAllData = true
+
+        Task {
+            do {
+                try await resetAllLocalData()
+            } catch {
+                allDataResetErrorMessage = error.localizedDescription
+            }
+
+            isResettingAllData = false
+        }
+    }
+
+    private func storageOptimizationMessage(for result: StorageOptimizationResult) -> String {
+        AppLocalization.format(
+            "已释放 %@。压缩了 %d 条同步日志，清理了 %d 个媒体文件，移除了 %d 个旧回滚备份。",
+            storageSizeText(result.reclaimedBytes),
+            result.sanitizedChangeLogRowCount,
+            result.prunedMediaObjectCount,
+            result.removedRollbackBackupCount
+        )
+    }
+
+    private func refreshStorageUsageIfNeeded() async {
+        guard storageUsage == nil, isLoadingStorageUsage == false else { return }
+        await refreshStorageUsage()
+    }
+
+    private func refreshStorageUsage() async {
+        let database = container.database
+        storageUsageRefreshGeneration += 1
+        let generation = storageUsageRefreshGeneration
+        storageUsage = nil
+        isLoadingStorageUsage = true
+
+        do {
+            let snapshot = try await Task.detached(priority: .utility) {
+                try database.storageUsageSnapshot()
+            }.value
+            guard generation == storageUsageRefreshGeneration else { return }
+            storageUsage = snapshot
+        } catch {
+            guard generation == storageUsageRefreshGeneration else { return }
+            storageOptimizationErrorMessage = error.localizedDescription
+        }
+
+        guard generation == storageUsageRefreshGeneration else { return }
+        isLoadingStorageUsage = false
+    }
+
     private func exportData() {
         let service = container.dataTransferService
         let sourceDeviceID = container.deviceIdentifier.value
@@ -320,6 +477,7 @@ struct SettingsView: View {
                 exportFileName = defaultExportFileName()
                 isShowingBackupExporter = true
                 try? FileManager.default.removeItem(at: backupURL)
+                await refreshStorageUsage()
             } catch {
                 transferErrorMessage = error.localizedDescription
             }
@@ -372,6 +530,7 @@ struct SettingsView: View {
                 }
                 recordLastImport(schemaVersion: result.metadata.databaseSchemaVersion)
                 transferSuccessMessage = successMessage(for: result, mode: mode)
+                await refreshStorageUsage()
             } catch {
                 transferErrorMessage = error.localizedDescription
             }
@@ -487,6 +646,10 @@ struct SettingsView: View {
         )
         return AppLocalization.format(formatKey, dateText, schemaVersion)
     }
+
+    private func storageSizeText(_ bytes: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+    }
 }
 
 private struct SettingsCategoryRow: View {
@@ -533,6 +696,59 @@ private struct MediaLibraryPreferencesSection: View {
         } footer: {
             Text(AppLocalization.string("开启后，从相册或相机添加的新图片会加入素材库，并在当前记录中保存为素材引用；关闭时保存为独立图片。保存到系统图库只影响相机拍摄。", language: language))
         }
+    }
+}
+
+private struct StorageUsageSummaryRows: View {
+    let usage: AppStorageUsageSnapshot?
+    let isLoading: Bool
+
+    var body: some View {
+        if isLoading {
+            LabeledContent(AppLocalization.string("当前占用")) {
+                HStack(spacing: 8) {
+                    Text(AppLocalization.string("计算中..."))
+                        .foregroundStyle(.secondary)
+                    ProgressView()
+                }
+            }
+        } else if let usage {
+            LabeledContent(AppLocalization.string("当前占用"), value: Self.sizeText(usage.totalBytes))
+            LabeledContent(AppLocalization.string("数据库"), value: Self.sizeText(usage.databaseBytes))
+
+            if usage.changeLogPayloadBytes > 0 {
+                LabeledContent(AppLocalization.string("同步日志载荷"), value: Self.sizeText(usage.changeLogPayloadBytes))
+            }
+
+            if usage.mediaAttachmentDataBytes > 0 {
+                LabeledContent(AppLocalization.string("附件二进制"), value: Self.sizeText(usage.mediaAttachmentDataBytes))
+            }
+
+            if usage.legacyImageDataBytes > 0 {
+                LabeledContent(AppLocalization.string("旧图片字段"), value: Self.sizeText(usage.legacyImageDataBytes))
+            }
+
+            if usage.mediaObjectBytes > 0 {
+                LabeledContent(AppLocalization.string("素材文件"), value: Self.sizeText(usage.mediaObjectBytes))
+            }
+
+            if usage.rollbackBackupBytes > 0 {
+                LabeledContent(AppLocalization.string("回滚备份"), value: Self.sizeText(usage.rollbackBackupBytes))
+            }
+
+            if usage.cacheBytes > 0 {
+                LabeledContent(AppLocalization.string("缓存"), value: Self.sizeText(usage.cacheBytes))
+            }
+        } else {
+            LabeledContent(AppLocalization.string("当前占用")) {
+                Text("--")
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private static func sizeText(_ bytes: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
     }
 }
 
