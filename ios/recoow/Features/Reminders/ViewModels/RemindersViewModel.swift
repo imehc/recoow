@@ -136,6 +136,10 @@ final class RemindersViewModel {
 
             record.markOccurrenceCompleted(kind: .checkIn)
         } else {
+            guard record.canRestoreCompletion else {
+                return
+            }
+
             record.clearCompletion()
         }
 

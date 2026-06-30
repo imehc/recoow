@@ -140,7 +140,7 @@ private struct RemindersContent: View {
                                         Label("撤销打卡", systemImage: "arrow.uturn.backward.circle")
                                     }
                                     .tint(.orange)
-                                } else {
+                                } else if reminder.canRestoreCompletion {
                                     Button {
                                         reopenReminder(reminder)
                                     } label: {

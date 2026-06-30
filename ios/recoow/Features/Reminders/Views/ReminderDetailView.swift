@@ -147,7 +147,7 @@ struct ReminderDetailView: View {
     }
 
     private func hasAction(for reminder: ReminderRecord) -> Bool {
-        reminder.isTodayCompleted || reminder.isCompleted || reminder.canCheckIn() || reminder.firstMissedCheckInDate() != nil
+        reminder.isTodayCompleted || reminder.canRestoreCompletion || reminder.canCheckIn() || reminder.firstMissedCheckInDate() != nil
     }
 
     @ViewBuilder
@@ -156,7 +156,7 @@ struct ReminderDetailView: View {
             bottomActionContainer {
                 undoButton(for: reminder)
             }
-        } else if reminder.isCompleted {
+        } else if reminder.canRestoreCompletion {
             bottomActionContainer {
                 Button("恢复", systemImage: "arrow.uturn.backward") {
                     setCompleted(reminder, isCompleted: false)

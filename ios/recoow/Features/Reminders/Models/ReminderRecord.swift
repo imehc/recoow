@@ -135,6 +135,10 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         return completedAt != nil || isProgressFullyCompleted
     }
 
+    var canRestoreCompletion: Bool {
+        isCompleted && scheduleKind != .continuousDays
+    }
+
     var isUpcoming: Bool {
         let status = checkInStatus()
         return status == .ready || status == .upcoming
