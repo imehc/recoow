@@ -1,6 +1,6 @@
 "CFBundleDisplayName" = "记刻";
 "NSCameraUsageDescription" = "需要使用相机拍摄图片以帮助记录日记、选项或物品位置";
-"NSLocationAlwaysAndWhenInUseUsageDescription" = "需要后台持续记录定位以完成轨迹采样，也可为日记保存当前位置";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "开启轨迹记录后，需要后台持续定位以完成轨迹采样";
 "NSLocationWhenInUseUsageDescription" = "需要在使用期间获取您的位置以记录轨迹或为日记保存当前位置";
 "NSPhotoLibraryUsageDescription" = "需要从照片图库选择图片以帮助记录日记、选项或物品位置";
 "NSPhotoLibraryAddUsageDescription" = "需要将拍摄的照片保存到系统图库";

@@ -20,6 +20,7 @@ struct DiaryFormView: View {
     @State private var horizontalAccuracy: Double?
     @State private var isLocating = false
     @State private var locationErrorMessage: String?
+    @State private var locationTask: Task<Void, Never>?
     @State private var attachmentPhotoErrorMessage: String?
     @State private var attachmentDragCoordinator = MediaAttachmentDragCoordinator()
     @State private var draftID: String
@@ -209,6 +210,9 @@ struct DiaryFormView: View {
         } message: {
             Text(attachmentPhotoErrorMessage ?? "")
         }
+        .onDisappear {
+            cancelCurrentLocationCapture()
+        }
     }
 
     private var diaryID: String {
@@ -356,6 +360,7 @@ struct DiaryFormView: View {
     }
 
     private func cancel() {
+        cancelCurrentLocationCapture()
         dismiss()
     }
 
@@ -380,21 +385,36 @@ struct DiaryFormView: View {
     }
 
     private func captureCurrentLocation() {
+        guard isLocating == false else { return }
+
         isLocating = true
         locationErrorMessage = nil
 
-        Task {
+        locationTask = Task { @MainActor in
+            defer {
+                isLocating = false
+                locationTask = nil
+            }
+
             do {
                 let location = try await container.locationService.currentLocation(accuracy: .tenMeters)
+                guard Task.isCancelled == false else { return }
                 latitude = location.coordinate.latitude
                 longitude = location.coordinate.longitude
                 horizontalAccuracy = location.horizontalAccuracy >= 0 ? location.horizontalAccuracy : nil
+            } catch is CancellationError {
+                return
             } catch {
+                guard Task.isCancelled == false else { return }
                 locationErrorMessage = error.localizedDescription
             }
-
-            isLocating = false
         }
+    }
+
+    private func cancelCurrentLocationCapture() {
+        locationTask?.cancel()
+        locationTask = nil
+        isLocating = false
     }
 
     private func clearLocation() {

@@ -184,6 +184,7 @@
 "已停止" = "Stopped";
 "发生错误" = "Error";
 "定位权限未开启" = "Location access is not enabled";
+"请在系统设置中允许定位权限后再开始记录。" = "Allow location access in Settings before starting a route recording.";
 "记录中的轨迹不能删除" = "A route currently being recorded cannot be deleted";
 
 "%lld小时 %lld分钟" = "%lld hr %lld min";

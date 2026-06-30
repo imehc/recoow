@@ -37,6 +37,8 @@ final class LocationTrackerViewModel {
     var elapsedSeconds: Int64 = 0
     var pointCount = 0
     var finishedTrackID: String?
+    var isLocationPermissionBlocked = false
+    var isShowingLocationPermissionSettingsPrompt = false
     private(set) var currentTrackID: String?
     private(set) var currentTrackName: String?
     private(set) var currentDistanceMeters: Double = 0
@@ -71,14 +73,28 @@ final class LocationTrackerViewModel {
     func start() async {
         guard recordingTask == nil else { return }
 
+        isLocationPermissionBlocked = false
+        isShowingLocationPermissionSettingsPrompt = false
         state = .requestingAuthorization
         let authorization = await locationService.requestAuthorization()
 
-        guard authorization == .authorizedAlways || authorization == .authorizedWhenInUse else {
+        switch authorization {
+        case .authorizedAlways, .authorizedWhenInUse:
+            break
+        case .denied, .restricted:
+            isLocationPermissionBlocked = true
+            isShowingLocationPermissionSettingsPrompt = true
+            state = .failed(AppLocalization.string("定位权限未开启"))
+            return
+        case .notDetermined:
+            state = .failed(AppLocalization.string("定位权限未开启"))
+            return
+        @unknown default:
             state = .failed(AppLocalization.string("定位权限未开启"))
             return
         }
 
+        isLocationPermissionBlocked = false
         if let currentTrack, currentTrack.status == .paused {
             await resume(track: currentTrack)
             return
@@ -114,7 +130,10 @@ final class LocationTrackerViewModel {
     }
 
     func pause() async {
-        guard let track = currentTrack else { return }
+        guard let track = currentTrack else {
+            await locationService.stop()
+            return
+        }
 
         recordingTask?.cancel()
         recordingTask = nil
@@ -137,7 +156,10 @@ final class LocationTrackerViewModel {
     }
 
     func stop() async {
-        guard let track = currentTrack else { return }
+        guard let track = currentTrack else {
+            await locationService.stop()
+            return
+        }
 
         recordingTask?.cancel()
         recordingTask = nil
@@ -161,7 +183,10 @@ final class LocationTrackerViewModel {
     }
 
     func prepareForSuspension() {
-        guard let track = currentTrack else { return }
+        guard let track = currentTrack else {
+            releaseLocationSession()
+            return
+        }
 
         do {
             try flushPendingPoints()
@@ -171,6 +196,8 @@ final class LocationTrackerViewModel {
                 let metrics = TrackSegmentAnalyzer.metrics(for: points)
                 currentDistanceMeters = metrics.distanceMeters
                 currentMaxSpeedMetersPerSecond = metrics.maxSpeedMetersPerSecond
+            } else {
+                releaseLocationSession()
             }
         } catch {
             state = .failed(AppLocalization.format("写入采样点失败: %@", error.localizedDescription))
@@ -178,12 +205,16 @@ final class LocationTrackerViewModel {
     }
 
     func finishForAppTermination() {
-        guard let track = currentTrack else { return }
+        guard let track = currentTrack else {
+            releaseLocationSession()
+            return
+        }
 
         recordingTask?.cancel()
         recordingTask = nil
         elapsedTask?.cancel()
         elapsedTask = nil
+        releaseLocationSession()
 
         do {
             let paused = try pauseCurrentTrack(track)
@@ -195,6 +226,10 @@ final class LocationTrackerViewModel {
     }
 
     func pauseInterruptedRecordingIfNeeded() async {
+        if isRecording == false {
+            await locationService.stop()
+        }
+
         guard currentTrack == nil, isRecording == false else { return }
 
         do {
@@ -339,6 +374,12 @@ final class LocationTrackerViewModel {
         currentTrack = track
         currentTrackID = track.id
         currentTrackName = track.name
+    }
+
+    private func releaseLocationSession() {
+        Task { [locationService] in
+            await locationService.stop()
+        }
     }
 
     private func regenerateAutoSegments(trackID: String, points: [TrackPoint]) throws {

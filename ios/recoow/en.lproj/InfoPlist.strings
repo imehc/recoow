@@ -1,6 +1,6 @@
 "CFBundleDisplayName" = "Recoow";
 "NSCameraUsageDescription" = "Camera access is needed to take photos for diary entries, choices, or item locations.";
-"NSLocationAlwaysAndWhenInUseUsageDescription" = "Background location access is needed to keep recording route samples and save the current location to diary entries.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Background location access is needed only after route recording is enabled.";
 "NSLocationWhenInUseUsageDescription" = "Location access is needed while using the app to record routes or save the current location to diary entries.";
 "NSPhotoLibraryUsageDescription" = "Photo library access is needed to choose photos for diary entries, choices, or item locations.";
 "NSPhotoLibraryAddUsageDescription" = "Photo library add access is needed to save photos taken in the app.";

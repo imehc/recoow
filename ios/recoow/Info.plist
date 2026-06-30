@@ -86,7 +86,7 @@
 	<key>NSCameraUsageDescription</key>
 	<string>需要使用相机拍摄图片以帮助记录日记、选项或物品位置</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>需要后台持续记录定位以完成轨迹采样，也可为日记保存当前位置</string>
+	<string>开启轨迹记录后，需要后台持续定位以完成轨迹采样</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>需要在使用期间获取您的位置以记录轨迹或为日记保存当前位置</string>
 	<key>NSMicrophoneUsageDescription</key>

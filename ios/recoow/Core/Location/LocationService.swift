@@ -28,8 +28,12 @@ actor LocationService {
         await authorization.requestAlwaysAuthorization()
     }
 
+    func requestTemporaryAuthorization() async -> CLAuthorizationStatus {
+        await authorization.requestWhenInUseAuthorization()
+    }
+
     func currentLocation(accuracy: LocationAccuracy) async throws -> CLLocation {
-        let authorization = await requestAuthorization()
+        let authorization = await requestTemporaryAuthorization()
 
         guard authorization == .authorizedAlways || authorization == .authorizedWhenInUse else {
             throw LocationServiceError.authorizationDenied
@@ -64,6 +68,7 @@ actor LocationService {
     }
 
     func liveUpdates(accuracy: LocationAccuracy) -> AsyncStream<CLLocationUpdate> {
+        stop()
         backgroundSession = CLBackgroundActivitySession()
 
         if #available(iOS 18.0, *) {

@@ -1,7 +1,10 @@
 import CoreLocation
 import SwiftUI
+import UIKit
 
 struct LocationTrackerContent: View {
+    @Environment(\.openURL) private var openURL
+
     @Bindable var viewModel: LocationTrackerViewModel
     @Binding var detailRoute: TrackDetailRoute?
 
@@ -53,6 +56,12 @@ struct LocationTrackerContent: View {
                 Section {
                     Label(failedMessage, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.red)
+
+                    if viewModel.isLocationPermissionBlocked {
+                        Button(action: openAppSettings) {
+                            Label(AppLocalization.string("打开设置"), systemImage: "gearshape")
+                        }
+                    }
                 }
             }
 
@@ -84,6 +93,15 @@ struct LocationTrackerContent: View {
                     .buttonStyle(.plain)
                 }
             }
+        }
+        .alert(AppLocalization.string("定位权限未开启"), isPresented: $viewModel.isShowingLocationPermissionSettingsPrompt) {
+            Button(AppLocalization.string("打开设置")) {
+                openAppSettings()
+            }
+
+            Button(AppLocalization.string("取消"), role: .cancel) { }
+        } message: {
+            Text(AppLocalization.string("请在系统设置中允许定位权限后再开始记录。"))
         }
     }
 
@@ -163,5 +181,13 @@ struct LocationTrackerContent: View {
                 detailRoute = TrackDetailRoute(id: finishedTrackID)
             }
         }
+    }
+
+    private func openAppSettings() {
+        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
+            return
+        }
+
+        openURL(settingsURL)
     }
 }
