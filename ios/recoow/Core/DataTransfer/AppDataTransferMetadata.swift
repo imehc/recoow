@@ -174,7 +174,7 @@ enum AppDataImportScope: String, CaseIterable, Identifiable, Hashable, Sendable 
         case .reminders:
             ["reminders"]
         case .bills:
-            ["bills"]
+            ["stored_value_accounts", "bills"]
         case .foodJournal:
             ["food_entries", "food_day_records", "media_assets"]
         case .diary:

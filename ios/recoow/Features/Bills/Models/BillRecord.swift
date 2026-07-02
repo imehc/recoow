@@ -31,6 +31,7 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
     var groupBuyValidUntil: Int64?
     var redeemedAt: Int64?
     var refundReason: String?
+    var storedValueAccountID: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -58,6 +59,7 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         case groupBuyValidUntil = "group_buy_valid_until"
         case redeemedAt = "redeemed_at"
         case refundReason = "refund_reason"
+        case storedValueAccountID = "stored_value_account_id"
     }
 
     var occurredDate: Date {
@@ -160,6 +162,21 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
             "-\(AppFormatters.money(cents: finalAmountCents))"
         case .income:
             "+\(AppFormatters.money(cents: finalAmountCents))"
+        case .storedValueUse:
+            "-\(AppFormatters.money(cents: finalAmountCents))"
+        }
+    }
+
+    var storedValueBalanceDeltaCents: Int64 {
+        guard storedValueAccountID != nil, deletedAt == nil, isVoided == false else { return 0 }
+
+        switch billType {
+        case .expense:
+            return finalAmountCents
+        case .storedValueUse:
+            return -finalAmountCents
+        case .income:
+            return 0
         }
     }
 
@@ -182,6 +199,7 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         groupBuyValidUntil: Int64? = nil,
         redeemedAt: Int64? = nil,
         refundReason: String? = nil,
+        storedValueAccountID: String? = nil,
         deviceID: String
     ) -> BillRecord {
         let now = SyncableTimestamp.nowMilliseconds()
@@ -210,7 +228,8 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
             settlementStatus: settlementStatus.rawValue,
             groupBuyValidUntil: groupBuyValidUntil,
             redeemedAt: redeemedAt,
-            refundReason: refundReason
+            refundReason: refundReason,
+            storedValueAccountID: storedValueAccountID
         )
     }
 

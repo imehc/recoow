@@ -5,6 +5,7 @@ import Observation
 @Observable
 final class BillsViewModel {
     var bills: [BillRecord] = []
+    var storedValueAccounts: [StoredValueAccount] = []
     var searchText = ""
     var selectedBillType: BillType?
     var selectedCategory: BillCategory?
@@ -15,6 +16,7 @@ final class BillsViewModel {
     @ObservationIgnored private let repository: BillRepository
     @ObservationIgnored private let syncEngine: any SyncEngine
     @ObservationIgnored private var observationTask: Task<Void, Never>?
+    @ObservationIgnored private var storedValueAccountsObservationTask: Task<Void, Never>?
 
     init(repository: BillRepository, syncEngine: any SyncEngine) {
         self.repository = repository
@@ -23,12 +25,13 @@ final class BillsViewModel {
 
     deinit {
         observationTask?.cancel()
+        storedValueAccountsObservationTask?.cancel()
     }
 
     var filteredBills: [BillRecord] {
         bills.filter { bill in
             let matchesType = selectedBillType == nil || bill.billType == selectedBillType
-            let matchesCategory = selectedCategory == nil || (bill.billType == .expense && bill.billCategory == selectedCategory)
+            let matchesCategory = selectedCategory == nil || ((bill.billType == .expense || bill.billType == .storedValueUse) && bill.billCategory == selectedCategory)
             let matchesIncomeCategory = selectedIncomeCategory == nil || (bill.billType == .income && bill.billIncomeCategory == selectedIncomeCategory)
             let matchesPaymentMethod = selectedPaymentMethod == nil || bill.billPaymentMethod == selectedPaymentMethod
             guard matchesType && matchesCategory && matchesIncomeCategory && matchesPaymentMethod else { return false }
@@ -54,6 +57,10 @@ final class BillsViewModel {
         currentMonthBills.filter { $0.billType == .income }
     }
 
+    var currentMonthStoredValueUseBills: [BillRecord] {
+        currentMonthBills.filter { $0.billType == .storedValueUse }
+    }
+
     var currentMonthTotalCents: Int64 {
         currentMonthExpenseBills.reduce(0) { $0 + $1.countedAmountCents }
     }
@@ -64,6 +71,10 @@ final class BillsViewModel {
 
     var currentMonthDiscountCents: Int64 {
         currentMonthExpenseBills.reduce(0) { $0 + $1.countedDiscountCents }
+    }
+
+    var currentMonthStoredValueUseCents: Int64 {
+        currentMonthStoredValueUseBills.reduce(0) { $0 + $1.countedAmountCents }
     }
 
     var todayTotalCents: Int64 {
@@ -77,6 +88,27 @@ final class BillsViewModel {
         bills
             .filter { Calendar.current.isDateInToday($0.occurredDate) }
             .filter { $0.billType == .income }
+            .reduce(0) { $0 + $1.countedAmountCents }
+    }
+
+    var todayDiscountCents: Int64 {
+        bills
+            .filter { Calendar.current.isDateInToday($0.occurredDate) }
+            .filter { $0.billType == .expense }
+            .reduce(0) { $0 + $1.countedDiscountCents }
+    }
+
+    var todayStoredValueRechargeCents: Int64 {
+        bills
+            .filter { Calendar.current.isDateInToday($0.occurredDate) }
+            .filter { $0.billType == .expense && $0.storedValueAccountID != nil }
+            .reduce(0) { $0 + $1.countedAmountCents }
+    }
+
+    var todayStoredValueUseCents: Int64 {
+        bills
+            .filter { Calendar.current.isDateInToday($0.occurredDate) }
+            .filter { $0.billType == .storedValueUse }
             .reduce(0) { $0 + $1.countedAmountCents }
     }
 
@@ -96,10 +128,39 @@ final class BillsViewModel {
                 }
             }
         }
+
+        storedValueAccountsObservationTask = Task { [weak self] in
+            guard let self else { return }
+
+            for await result in repository.observeStoredValueAccounts() {
+                switch result {
+                case .success(let accounts):
+                    self.storedValueAccounts = accounts
+                    self.errorMessage = nil
+                case .failure(let error):
+                    self.errorMessage = error.localizedDescription
+                }
+            }
+        }
     }
 
     func bill(id: String) -> BillRecord? {
         bills.first { $0.id == id }
+    }
+
+    func storedValueAccount(id: String?) -> StoredValueAccount? {
+        guard let id else { return nil }
+        return storedValueAccounts.first { $0.id == id }
+    }
+
+    func storedValueAccountName(id: String?) -> String? {
+        storedValueAccount(id: id)?.name
+    }
+
+    func canDeleteStoredValueAccount(_ account: StoredValueAccount) -> Bool {
+        bills.contains { bill in
+            bill.storedValueAccountID == account.id
+        } == false
     }
 
     func loadBillIfNeeded(id: String) async {
@@ -131,7 +192,8 @@ final class BillsViewModel {
         imageData: Data?,
         imageAssetID: String? = nil,
         settlementStatus: BillSettlementStatus = .active,
-        groupBuyValidUntil: Int64? = nil
+        groupBuyValidUntil: Int64? = nil,
+        storedValueAccountID: String? = nil
     ) -> BillRecord {
         BillRecord.makeNew(
             title: title,
@@ -150,8 +212,46 @@ final class BillsViewModel {
             imageAssetID: imageAssetID,
             settlementStatus: settlementStatus,
             groupBuyValidUntil: groupBuyValidUntil,
+            storedValueAccountID: storedValueAccountID,
             deviceID: repository.deviceID
         )
+    }
+
+    func makeStoredValueAccount(
+        name: String,
+        kind: StoredValueAccountKind,
+        balanceCents: Int64
+    ) -> StoredValueAccount {
+        StoredValueAccount.makeNew(
+            name: name,
+            kind: kind,
+            balanceCents: balanceCents,
+            deviceID: repository.deviceID
+        )
+    }
+
+    func saveStoredValueAccount(_ account: StoredValueAccount) async -> StoredValueAccount? {
+        do {
+            let savedAccount = try repository.saveStoredValueAccount(account)
+            upsertStoredValueAccount(savedAccount)
+            errorMessage = nil
+            await syncEngine.enqueueScan()
+            return savedAccount
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    func deleteStoredValueAccount(_ account: StoredValueAccount) async {
+        do {
+            try repository.deleteStoredValueAccount(id: account.id)
+            storedValueAccounts.removeAll { $0.id == account.id }
+            errorMessage = nil
+            await syncEngine.enqueueScan()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     func save(_ bill: BillRecord) async {
@@ -217,8 +317,9 @@ final class BillsViewModel {
         [
             bill.title,
             bill.billType.localizedTitle,
-            bill.billType == .expense ? bill.billCategory.localizedTitle : bill.billIncomeCategory.localizedTitle,
+            bill.billType == .income ? bill.billIncomeCategory.localizedTitle : bill.billCategory.localizedTitle,
             bill.billPaymentMethod.localizedTitle,
+            storedValueAccountName(id: bill.storedValueAccountID),
             bill.startLocation,
             bill.endLocation,
             bill.transportLines,
@@ -233,6 +334,15 @@ final class BillsViewModel {
             bills[index] = bill
         } else {
             bills.insert(bill, at: 0)
+        }
+    }
+
+    private func upsertStoredValueAccount(_ account: StoredValueAccount) {
+        if let index = storedValueAccounts.firstIndex(where: { $0.id == account.id }) {
+            storedValueAccounts[index] = account
+        } else {
+            storedValueAccounts.append(account)
+            storedValueAccounts.sort { $0.name < $1.name }
         }
     }
 }

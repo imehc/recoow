@@ -17,6 +17,7 @@ final class AppDataTransferService: @unchecked Sendable {
         "track_segments",
         "decision_choice_records",
         "reminders",
+        "stored_value_accounts",
         "bills",
         "food_entries",
         "food_day_records",

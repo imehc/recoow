@@ -60,8 +60,12 @@ struct BillDetailView: View {
                     LabeledContent("实付") {
                         amountText(cents: bill.finalAmountCents, voided: bill.isVoided)
                     }
-                } else {
+                } else if bill.billType == .income {
                     LabeledContent("金额") {
+                        amountText(cents: bill.finalAmountCents, voided: bill.isVoided)
+                    }
+                } else {
+                    LabeledContent("扣减") {
                         amountText(cents: bill.finalAmountCents, voided: bill.isVoided)
                     }
                 }
@@ -72,15 +76,29 @@ struct BillDetailView: View {
                 LabeledContent("类型", value: bill.billType.localizedTitle)
                 LabeledContent("日期", value: AppFormatters.dateTime(milliseconds: bill.occurredAt))
 
-                if bill.billType == .expense {
-                    LabeledContent("分类", value: bill.billCategory.localizedTitle)
-                    LabeledContent("支付方式", value: bill.billPaymentMethod.localizedTitle)
-                } else {
+                if bill.billType == .income {
                     LabeledContent("收入类型", value: bill.billIncomeCategory.localizedTitle)
                     LabeledContent("收入渠道", value: bill.billPaymentMethod.localizedTitle)
+                } else {
+                    LabeledContent("分类", value: bill.billCategory.localizedTitle)
+                    if bill.billType == .expense {
+                        LabeledContent("支付方式", value: bill.billPaymentMethod.localizedTitle)
+                    }
                 }
 
-                if bill.billType == .expense, bill.billCategory == .transport {
+                if let account = viewModel.storedValueAccount(id: bill.storedValueAccountID) {
+                    LabeledContent(bill.billType == .storedValueUse ? "扣款账户" : "充值账户") {
+                        HStack(spacing: 6) {
+                            Image(systemName: account.accountKind.systemImage)
+                                .foregroundStyle(.secondary)
+                            Text(account.name)
+                        }
+                    }
+
+                    LabeledContent("账户余额", value: AppFormatters.money(cents: account.balanceCents))
+                }
+
+                if (bill.billType == .expense || bill.billType == .storedValueUse), bill.billCategory == .transport {
                     if let transportLines = bill.normalizedTransportLines {
                         LabeledContent("线路") {
                             Text(transportLines)

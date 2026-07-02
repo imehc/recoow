@@ -64,8 +64,8 @@ struct FoodBillSelectionView: View {
                 bill.title,
                 bill.displayAmount,
                 bill.billType.localizedTitle,
-                bill.billType == .expense ? bill.billCategory.localizedTitle : bill.billIncomeCategory.localizedTitle,
-                bill.billPaymentMethod.localizedTitle,
+                bill.billType == .income ? bill.billIncomeCategory.localizedTitle : bill.billCategory.localizedTitle,
+                bill.billType == .storedValueUse ? nil : bill.billPaymentMethod.localizedTitle,
                 bill.note,
                 AppFormatters.date(milliseconds: bill.occurredAt)
             ]

@@ -9,6 +9,7 @@ struct StatisticsBillSection: View {
     let expenseTotalCents: Int64
     let incomeTotalCents: Int64
     let discountCents: Int64
+    let storedValueUseCents: Int64
     let points: [StatisticsBillChartPoint]
     let categoryPoints: [StatisticsBillCategoryPoint]
     let incomeCategoryPoints: [StatisticsBillIncomeCategoryPoint]
@@ -58,6 +59,13 @@ struct StatisticsBillSection: View {
                         value: moneyOrPlaceholder(discountCents),
                         systemImage: "tag.fill",
                         tint: .orange
+                    )
+
+                    StatisticsMetricTile(
+                        title: AppLocalization.string("储值消费"),
+                        value: moneyOrPlaceholder(storedValueUseCents),
+                        systemImage: "wallet.pass.fill",
+                        tint: .purple
                     )
                 }
                 .padding(.vertical, 2)

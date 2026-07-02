@@ -53,6 +53,7 @@ struct StatisticsContent: View {
                 expenseTotalCents: viewModel.billExpenseTotalCents(for: selectedBillPeriod),
                 incomeTotalCents: viewModel.billIncomeTotalCents(for: selectedBillPeriod),
                 discountCents: viewModel.billDiscountTotalCents(for: selectedBillPeriod),
+                storedValueUseCents: viewModel.billStoredValueUseTotalCents(for: selectedBillPeriod),
                 points: viewModel.billPoints(for: selectedBillPeriod, locale: locale),
                 categoryPoints: viewModel.billCategoryPoints(for: selectedBillPeriod),
                 incomeCategoryPoints: viewModel.billIncomeCategoryPoints(for: selectedBillPeriod),

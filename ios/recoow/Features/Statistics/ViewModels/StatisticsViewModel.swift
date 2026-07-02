@@ -228,6 +228,10 @@ final class StatisticsViewModel {
         expenseBills(in: period).reduce(0) { $0 + $1.discountAmountCents }
     }
 
+    func billStoredValueUseTotalCents(for period: StatisticsBillPeriod) -> Int64 {
+        storedValueUseBills(in: period).reduce(0) { $0 + $1.countedAmountCents }
+    }
+
     func billDateInterval(for period: StatisticsBillPeriod) -> DateInterval? {
         let component: Calendar.Component = switch period {
         case .week:
@@ -464,6 +468,10 @@ final class StatisticsViewModel {
 
     private func incomeBills(in period: StatisticsBillPeriod) -> [BillRecord] {
         bills(in: period).filter { $0.billType == .income }
+    }
+
+    private func storedValueUseBills(in period: StatisticsBillPeriod) -> [BillRecord] {
+        bills(in: period).filter { $0.billType == .storedValueUse }
     }
 
     private func date(milliseconds: Int64) -> Date {

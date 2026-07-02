@@ -12,6 +12,8 @@ struct BillFormView: View {
     @State private var category: BillCategory
     @State private var incomeCategory: BillIncomeCategory
     @State private var paymentMethod: BillPaymentMethod
+    @State private var isStoredValueRecharge: Bool
+    @State private var selectedStoredValueAccountID: String?
     @State private var startLocation: String
     @State private var endLocation: String
     @State private var transportLines: String
@@ -23,6 +25,7 @@ struct BillFormView: View {
     @State private var imageAssetID: String?
     @State private var isUpdatingAmountFields = false
     @State private var amountCompanionField: String?
+    @State private var showsStoredValueAccountForm = false
     @State private var photoInputCoordinator = EditablePhotoInputCoordinator()
     @FocusState private var focusedField: String?
 
@@ -43,6 +46,8 @@ struct BillFormView: View {
         _category = State(initialValue: initialBill?.billCategory ?? .dining)
         _incomeCategory = State(initialValue: initialBill?.billIncomeCategory ?? .salary)
         _paymentMethod = State(initialValue: initialBill?.billPaymentMethod ?? .wechat)
+        _isStoredValueRecharge = State(initialValue: initialBill?.billType == .expense && initialBill?.storedValueAccountID != nil)
+        _selectedStoredValueAccountID = State(initialValue: initialBill?.storedValueAccountID)
         _startLocation = State(initialValue: initialBill?.startLocation ?? "")
         _endLocation = State(initialValue: initialBill?.endLocation ?? "")
         _transportLines = State(initialValue: initialBill?.transportLines ?? "")
@@ -91,8 +96,8 @@ struct BillFormView: View {
                     discountInputRow
                 }
 
-                LabeledContent(billType == .expense ? "实付" : "金额") {
-                    TextField(billType == .expense ? "请输入实付金额" : "请输入金额", text: $finalAmountText)
+                LabeledContent(amountInputTitle) {
+                    TextField(amountInputPlaceholder, text: $finalAmountText)
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
                         .focused($focusedField, equals: "finalAmount")
@@ -100,26 +105,48 @@ struct BillFormView: View {
             }
 
             Section("分类") {
-                if billType == .expense {
-                    Picker("分类", selection: $category) {
-                        ForEach(BillCategory.allCases) { category in
-                            Label(category.titleKey, systemImage: category.systemImage)
-                            .tag(category)
-                        }
-                    }
-                } else {
+                if billType == .income {
                     Picker("收入类型", selection: $incomeCategory) {
                         ForEach(BillIncomeCategory.allCases) { category in
                             Label(category.titleKey, systemImage: category.systemImage)
                                 .tag(category)
                         }
                     }
+                } else {
+                    Picker("分类", selection: $category) {
+                        ForEach(BillCategory.allCases) { category in
+                            Label(category.titleKey, systemImage: category.systemImage)
+                            .tag(category)
+                        }
+                    }
                 }
 
-                Picker(billType == .expense ? "支付方式" : "收入渠道", selection: $paymentMethod) {
-                    ForEach(BillPaymentMethod.allCases) { method in
-                        Label(method.titleKey, systemImage: method.systemImage)
-                            .tag(method)
+                if billType != .storedValueUse {
+                    Picker(billType == .expense ? "支付方式" : "收入渠道", selection: $paymentMethod) {
+                        ForEach(BillPaymentMethod.allCases) { method in
+                            Label(method.titleKey, systemImage: method.systemImage)
+                                .tag(method)
+                        }
+                    }
+                }
+            }
+
+            if showsStoredValueSection {
+                Section("储值账户") {
+                    if billType == .expense {
+                        Toggle("这是储值充值", isOn: $isStoredValueRecharge)
+                    }
+
+                    if requiresStoredValueAccount {
+                        storedValueAccountPicker
+
+                        if let selectedAccount {
+                            LabeledContent("当前余额", value: AppFormatters.money(cents: selectedAccount.balanceCents))
+                        }
+                    }
+
+                    Button("添加储值账户", systemImage: "plus") {
+                        showsStoredValueAccountForm = true
                     }
                 }
             }
@@ -196,6 +223,14 @@ struct BillFormView: View {
             imageAssetID: $imageAssetID,
             mediaAssetRepository: container.mediaAssetRepository
         )
+        .sheet(isPresented: $showsStoredValueAccountForm) {
+            StoredValueAccountFormView(viewModel: viewModel) { account in
+                selectedStoredValueAccountID = account.id
+                if billType == .expense {
+                    isStoredValueRecharge = true
+                }
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("取消", action: cancel)
@@ -220,6 +255,11 @@ struct BillFormView: View {
         }
         .onChange(of: billType) {
             handleBillTypeChange()
+        }
+        .onChange(of: isStoredValueRecharge) {
+            if isStoredValueRecharge == false, billType == .expense {
+                selectedStoredValueAccountID = nil
+            }
         }
     }
 
@@ -258,16 +298,72 @@ struct BillFormView: View {
     }
 
     private var showsTransportFields: Bool {
-        billType == .expense && category == .transport
+        (billType == .expense || billType == .storedValueUse) && category == .transport
     }
 
     private var showsGroupBuyFields: Bool {
         billType == .expense && category == .groupBuy
     }
 
+    private var showsStoredValueSection: Bool {
+        billType == .expense || billType == .storedValueUse
+    }
+
+    private var requiresStoredValueAccount: Bool {
+        billType == .storedValueUse || (billType == .expense && isStoredValueRecharge)
+    }
+
+    private var selectedAccount: StoredValueAccount? {
+        viewModel.storedValueAccount(id: selectedStoredValueAccountID)
+    }
+
+    private var storedValueAccountIDForSave: String? {
+        requiresStoredValueAccount ? selectedStoredValueAccountID : nil
+    }
+
+    private var amountInputTitle: String {
+        switch billType {
+        case .expense:
+            "实付"
+        case .income:
+            "金额"
+        case .storedValueUse:
+            "扣减"
+        }
+    }
+
+    private var amountInputPlaceholder: String {
+        switch billType {
+        case .expense:
+            "请输入实付金额"
+        case .income:
+            "请输入金额"
+        case .storedValueUse:
+            "请输入扣减金额"
+        }
+    }
+
     private var groupBuyValidUntilMilliseconds: Int64? {
         guard showsGroupBuyFields, hasGroupBuyValidUntil else { return nil }
         return BillsViewModel.milliseconds(for: groupBuyValidUntil)
+    }
+
+    private var storedValueAccountPicker: some View {
+        Picker("账户", selection: $selectedStoredValueAccountID) {
+            Text("请选择账户").tag(nil as String?)
+
+            ForEach(viewModel.storedValueAccounts) { account in
+                HStack {
+                    Label(account.name, systemImage: account.accountKind.systemImage)
+
+                    Spacer()
+
+                    Text(AppFormatters.money(cents: account.balanceCents))
+                        .foregroundStyle(.secondary)
+                }
+                    .tag(Optional(account.id))
+            }
+        }
     }
 
     private var discountInputRow: some View {
@@ -320,7 +416,7 @@ struct BillFormView: View {
         switch billType {
         case .expense:
             return normalizedExpenseAmountValues
-        case .income:
+        case .income, .storedValueUse:
             guard let finalAmountCents, finalAmountCents > 0 else {
                 return nil
             }
@@ -402,6 +498,10 @@ struct BillFormView: View {
             return true
         }
 
+        if requiresStoredValueAccount, selectedStoredValueAccountID == nil {
+            return true
+        }
+
         return false
     }
 
@@ -455,6 +555,18 @@ struct BillFormView: View {
             }
             discountAmountText = ""
             discountRateText = ""
+            isStoredValueRecharge = false
+            selectedStoredValueAccountID = nil
+        case .storedValueUse:
+            if finalAmountText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                finalAmountText = originalAmountText
+            }
+            discountAmountText = ""
+            discountRateText = ""
+            isStoredValueRecharge = false
+            if selectedStoredValueAccountID == nil {
+                selectedStoredValueAccountID = viewModel.storedValueAccounts.first?.id
+            }
         }
     }
 
@@ -631,7 +743,8 @@ struct BillFormView: View {
             transportLines: normalizedTransportLines,
             occurredDate: occurredDate,
             imageData: imageReference.independentData,
-            imageAssetID: imageReference.assetID
+            imageAssetID: imageReference.assetID,
+            storedValueAccountID: storedValueAccountIDForSave
         )
 
         record.title = trimmedTitle
@@ -648,6 +761,7 @@ struct BillFormView: View {
         record.occurredAt = BillsViewModel.milliseconds(for: occurredDate)
         record.setImageReference(imageReference)
         record.groupBuyValidUntil = groupBuyValidUntilMilliseconds
+        record.storedValueAccountID = storedValueAccountIDForSave
 
         Task {
             await viewModel.save(record)
@@ -657,7 +771,7 @@ struct BillFormView: View {
 
     private var categoryRawValue: String {
         switch billType {
-        case .expense:
+        case .expense, .storedValueUse:
             category.rawValue
         case .income:
             incomeCategory.rawValue
@@ -729,5 +843,122 @@ struct BillFormView: View {
         var result = Decimal()
         NSDecimalRound(&result, &source, scale, .down)
         return result
+    }
+}
+
+struct StoredValueAccountFormView: View {
+    @Environment(\.dismiss) private var dismiss
+    let account: StoredValueAccount?
+    let viewModel: BillsViewModel
+    let onSave: (StoredValueAccount) -> Void
+
+    @State private var name = ""
+    @State private var kind: StoredValueAccountKind = .transitCard
+    @State private var balanceText = ""
+    @FocusState private var focusedField: Field?
+
+    private enum Field: Hashable {
+        case name
+        case balance
+    }
+
+    init(
+        account: StoredValueAccount? = nil,
+        viewModel: BillsViewModel,
+        onSave: @escaping (StoredValueAccount) -> Void
+    ) {
+        self.account = account
+        self.viewModel = viewModel
+        self.onSave = onSave
+        _name = State(initialValue: account?.name ?? "")
+        _kind = State(initialValue: account?.accountKind ?? .transitCard)
+        _balanceText = State(initialValue: account.map { AppFormatters.amountInput(cents: $0.balanceCents) } ?? "")
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("账户") {
+                    LabeledContent("名称") {
+                        TextField(defaultName, text: $name)
+                            .multilineTextAlignment(.trailing)
+                            .focused($focusedField, equals: .name)
+                    }
+
+                    Picker("类型", selection: $kind) {
+                        ForEach(StoredValueAccountKind.allCases) { kind in
+                            Label(kind.titleKey, systemImage: kind.systemImage)
+                                .tag(kind)
+                        }
+                    }
+                }
+
+                Section("余额") {
+                    LabeledContent("当前余额") {
+                        TextField("请输入余额", text: $balanceText)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .focused($focusedField, equals: .balance)
+                    }
+                }
+            }
+            .dismissesKeyboardOnTap(focusedField: $focusedField)
+            .navigationTitle(account == nil ? "添加储值账户" : "编辑储值账户")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消", action: dismiss.callAsFunction)
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("保存", action: save)
+                        .disabled(isSaveDisabled)
+                }
+            }
+        }
+    }
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var defaultName: String {
+        kind.localizedTitle
+    }
+
+    private var normalizedName: String {
+        trimmedName.isEmpty ? defaultName : trimmedName
+    }
+
+    private var balanceCents: Int64? {
+        if balanceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return 0
+        }
+
+        return AppFormatters.cents(from: balanceText)
+    }
+
+    private var isSaveDisabled: Bool {
+        balanceCents == nil
+    }
+
+    private func save() {
+        guard let balanceCents else { return }
+
+        var record = account ?? viewModel.makeStoredValueAccount(
+            name: normalizedName,
+            kind: kind,
+            balanceCents: balanceCents
+        )
+        record.name = normalizedName
+        record.kind = kind.rawValue
+        record.balanceCents = balanceCents
+
+        Task {
+            if let savedAccount = await viewModel.saveStoredValueAccount(record) {
+                onSave(savedAccount)
+                dismiss()
+            }
+        }
     }
 }

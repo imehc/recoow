@@ -19,6 +19,8 @@ struct BillIconView: View {
             bill.billCategory.systemImage
         case .income:
             bill.billIncomeCategory.systemImage
+        case .storedValueUse:
+            "wallet.pass.fill"
         }
     }
 
@@ -28,6 +30,8 @@ struct BillIconView: View {
             .teal
         case .income:
             .green
+        case .storedValueUse:
+            .orange
         }
     }
 }

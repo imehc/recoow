@@ -21,6 +21,7 @@ struct StatisticsBillDetailSheet: View {
                     LabeledContent("支出", value: AppFormatters.money(cents: expenseTotalCents))
                     LabeledContent("收入", value: AppFormatters.money(cents: incomeTotalCents))
                     LabeledContent("优惠", value: AppFormatters.money(cents: discountCents))
+                    LabeledContent("储值消费", value: AppFormatters.money(cents: storedValueUseCents))
                 }
 
                 if context.bills.isEmpty {
@@ -61,18 +62,24 @@ struct StatisticsBillDetailSheet: View {
     private var expenseTotalCents: Int64 {
         context.bills
             .filter { $0.billType == .expense }
-            .reduce(0) { $0 + $1.finalAmountCents }
+            .reduce(0) { $0 + $1.countedAmountCents }
     }
 
     private var incomeTotalCents: Int64 {
         context.bills
             .filter { $0.billType == .income }
-            .reduce(0) { $0 + $1.finalAmountCents }
+            .reduce(0) { $0 + $1.countedAmountCents }
     }
 
     private var discountCents: Int64 {
         context.bills
             .filter { $0.billType == .expense }
-            .reduce(0) { $0 + $1.discountAmountCents }
+            .reduce(0) { $0 + $1.countedDiscountCents }
+    }
+
+    private var storedValueUseCents: Int64 {
+        context.bills
+            .filter { $0.billType == .storedValueUse }
+            .reduce(0) { $0 + $1.countedAmountCents }
     }
 }

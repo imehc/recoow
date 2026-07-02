@@ -1135,7 +1135,7 @@ private struct TrackRelatedBillRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: bill.billType == .expense ? bill.billCategory.systemImage : bill.billIncomeCategory.systemImage)
+            Image(systemName: bill.billType == .income ? bill.billIncomeCategory.systemImage : bill.billCategory.systemImage)
                 .foregroundStyle(.white)
                 .frame(width: 28, height: 28)
                 .background(bill.billType.amountTint, in: .rect(cornerRadius: AppDesign.iconCornerRadius))

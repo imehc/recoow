@@ -10,22 +10,24 @@ struct BillMetadataLineView: View {
                 systemImage: bill.billType.systemImage
             )
 
-            if bill.billType == .expense {
-                MetadataItemView(
-                    titleKey: bill.billCategory.titleKey,
-                    systemImage: bill.billCategory.systemImage
-                )
-            } else {
+            if bill.billType == .income {
                 MetadataItemView(
                     titleKey: bill.billIncomeCategory.titleKey,
                     systemImage: bill.billIncomeCategory.systemImage
                 )
+            } else {
+                MetadataItemView(
+                    titleKey: bill.billCategory.titleKey,
+                    systemImage: bill.billCategory.systemImage
+                )
             }
 
-            MetadataItemView(
-                titleKey: bill.billPaymentMethod.titleKey,
-                systemImage: bill.billPaymentMethod.systemImage
-            )
+            if bill.billType != .storedValueUse {
+                MetadataItemView(
+                    titleKey: bill.billPaymentMethod.titleKey,
+                    systemImage: bill.billPaymentMethod.systemImage
+                )
+            }
 
             if let lifecycleTitle = bill.lifecycleState.titleKey,
                let lifecycleImage = bill.lifecycleState.systemImage {
