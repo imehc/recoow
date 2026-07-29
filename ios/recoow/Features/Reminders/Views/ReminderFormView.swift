@@ -21,25 +21,28 @@ struct ReminderFormView: View {
     @FocusState private var focusedField: String?
 
     let reminder: ReminderRecord?
+    let isCopy: Bool
     let viewModel: RemindersViewModel
 
-    init(reminder: ReminderRecord?, viewModel: RemindersViewModel) {
+    init(reminder: ReminderRecord?, copying template: ReminderRecord? = nil, viewModel: RemindersViewModel) {
         self.reminder = reminder
+        self.isCopy = reminder == nil && template != nil
         self.viewModel = viewModel
-        _title = State(initialValue: reminder?.title ?? "")
-        _note = State(initialValue: reminder?.note ?? "")
-        _memoryIcon = State(initialValue: reminder?.memoryIcon ?? ReminderMemoryIcon.bell.rawValue)
-        _imageData = State(initialValue: reminder?.imageData)
-        _imageAssetID = State(initialValue: reminder?.imageAssetID)
-        _scheduledDate = State(initialValue: reminder?.scheduledDate ?? Date().addingTimeInterval(3600))
-        _endDate = State(initialValue: reminder?.endDate ?? Calendar.current.date(byAdding: .day, value: 6, to: reminder?.scheduledDate ?? Date().addingTimeInterval(3600)) ?? Date().addingTimeInterval(6 * 86_400))
-        _reminderTime = State(initialValue: reminder?.scheduledDate ?? Date().addingTimeInterval(3600))
-        _scheduleKind = State(initialValue: reminder?.scheduleKind ?? .dailyGoal)
-        _selectedWeekdays = State(initialValue: Set(Self.initialWeekdays(for: reminder)))
-        _continuousDays = State(initialValue: max(1, reminder?.continuousDays ?? 30))
-        _importedCompletedDays = State(initialValue: max(0, reminder?.importedCompletedDays ?? 0))
-        _leadTime = State(initialValue: reminder?.leadTime ?? .none)
-        _isEnabled = State(initialValue: reminder?.isEnabled ?? true)
+        let source = reminder ?? template
+        _title = State(initialValue: source?.title ?? "")
+        _note = State(initialValue: source?.note ?? "")
+        _memoryIcon = State(initialValue: source?.memoryIcon ?? ReminderMemoryIcon.bell.rawValue)
+        _imageData = State(initialValue: source?.imageData)
+        _imageAssetID = State(initialValue: source?.imageAssetID)
+        _scheduledDate = State(initialValue: source?.scheduledDate ?? Date().addingTimeInterval(3600))
+        _endDate = State(initialValue: source?.endDate ?? Calendar.current.date(byAdding: .day, value: 6, to: source?.scheduledDate ?? Date().addingTimeInterval(3600)) ?? Date().addingTimeInterval(6 * 86_400))
+        _reminderTime = State(initialValue: source?.scheduledDate ?? Date().addingTimeInterval(3600))
+        _scheduleKind = State(initialValue: source?.scheduleKind ?? .dailyGoal)
+        _selectedWeekdays = State(initialValue: Set(Self.initialWeekdays(for: source)))
+        _continuousDays = State(initialValue: max(1, source?.continuousDays ?? 30))
+        _importedCompletedDays = State(initialValue: reminder.map { max(0, $0.importedCompletedDays) } ?? 0)
+        _leadTime = State(initialValue: source?.leadTime ?? .none)
+        _isEnabled = State(initialValue: source?.isEnabled ?? true)
     }
 
     var body: some View {
@@ -151,7 +154,7 @@ struct ReminderFormView: View {
             )
         }
         .dismissesKeyboardOnTap(focusedField: $focusedField)
-        .navigationTitle(AppLocalization.string(reminder == nil ? "添加打卡任务" : "编辑打卡任务"))
+        .navigationTitle(AppLocalization.string(isCopy ? "复制打卡任务" : (reminder == nil ? "添加打卡任务" : "编辑打卡任务")))
         .navigationBarTitleDisplayMode(.inline)
         .editablePhotoInputPresentation(
             coordinator: photoInputCoordinator,
@@ -352,6 +355,10 @@ struct ReminderFormView: View {
         record.importedCompletedDays = normalizedImportedCompletedDays
         record.leadTimeMinutes = leadTime.rawValue
         record.isEnabled = isEnabled
+        if scheduleKind != .continuousDays {
+            record.endedEarlyAt = nil
+            record.earlyEndReason = nil
+        }
         return record
     }
 

@@ -21,6 +21,8 @@ struct ReminderStatusTag: View {
         switch status {
         case .completed, .checkedInToday:
             return .green
+        case .endedEarly:
+            return .orange
         case .ready:
             return .purple
         case .broken:

@@ -52,6 +52,7 @@ struct ReminderCheckInCompletion: Identifiable, Codable, Hashable, Sendable {
 
 enum ReminderCheckInStatus: Hashable, Sendable {
     case completed
+    case endedEarly
     case checkedInToday
     case ready
     case broken
@@ -63,6 +64,8 @@ enum ReminderCheckInStatus: Hashable, Sendable {
         switch self {
         case .completed:
             "已完成"
+        case .endedEarly:
+            "已提前结束"
         case .checkedInToday:
             "今日已打卡"
         case .ready:
@@ -82,6 +85,8 @@ enum ReminderCheckInStatus: Hashable, Sendable {
         switch self {
         case .completed:
             "checkmark.circle.fill"
+        case .endedEarly:
+            "stop.circle.fill"
         case .checkedInToday:
             "checkmark.circle"
         case .ready:

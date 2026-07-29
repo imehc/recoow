@@ -30,6 +30,8 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
     var importedCompletedDays: Int
     var completedDateKeysRawValue: String?
     var completionRecordsRawValue: String?
+    var endedEarlyAt: Int64?
+    var earlyEndReason: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -56,6 +58,8 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         case importedCompletedDays = "imported_completed_days"
         case completedDateKeysRawValue = "completed_date_keys"
         case completionRecordsRawValue = "completion_records"
+        case endedEarlyAt = "ended_early_at"
+        case earlyEndReason = "early_end_reason"
     }
 
     var scheduledDate: Date {
@@ -132,7 +136,15 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
             return false
         }
 
-        return completedAt != nil || isProgressFullyCompleted
+        return completedAt != nil || isProgressFullyCompleted || isEndedEarly
+    }
+
+    var isEndedEarly: Bool {
+        scheduleKind == .continuousDays && endedEarlyAt != nil
+    }
+
+    var canEndEarly: Bool {
+        scheduleKind == .continuousDays && isCompleted == false
     }
 
     var canRestoreCompletion: Bool {
@@ -245,6 +257,10 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
     }
 
     func checkInStatus(on date: Date = Date(), calendar: Calendar = .current) -> ReminderCheckInStatus {
+        if isEndedEarly {
+            return .endedEarly
+        }
+
         if isCompleted {
             return .completed
         }
@@ -482,8 +498,20 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
             completedAt: nil,
             importedCompletedDays: 0,
             completedDateKeysRawValue: nil,
-            completionRecordsRawValue: nil
+            completionRecordsRawValue: nil,
+            endedEarlyAt: nil,
+            earlyEndReason: nil
         )
+    }
+
+    mutating func endEarly(reason: String) -> Bool {
+        let normalizedReason = reason.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard canEndEarly, normalizedReason.isEmpty == false else { return false }
+
+        endedEarlyAt = SyncableTimestamp.nowMilliseconds()
+        earlyEndReason = normalizedReason
+        completedAt = nil
+        return true
     }
 
     mutating func markOccurrenceCompleted(

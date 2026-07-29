@@ -66,6 +66,13 @@ struct ReminderRow: View {
     }
 
     private var nextTimeText: String {
+        if reminder.isEndedEarly, let endedEarlyAt = reminder.endedEarlyAt {
+            return AppLocalization.format(
+                "提前结束于 %@",
+                AppFormatters.dateTime(milliseconds: endedEarlyAt, locale: locale)
+            )
+        }
+
         if reminder.isCompleted {
             return reminder.completedAt.map {
                 AppLocalization.format("完成于 %@", AppFormatters.dateTime(milliseconds: $0, locale: locale))

@@ -855,3 +855,15 @@
 "已关联账单的储值账户不能删除。" = "Stored value accounts linked to bills cannot be deleted.";
 "删除后该储值账户会从列表中移除。" = "The stored value account will be removed from the list.";
 "储值账户已被账单使用，不能删除。" = "This stored value account is used by bills and cannot be deleted.";
+"复制打卡任务" = "Copy Check-in Task";
+"提前结束" = "End Early";
+"提前结束连续挑战" = "End Continuous Challenge Early";
+"提前结束时间" = "Ended Early At";
+"提前结束原因" = "Reason for Ending Early";
+"请输入提前结束原因" = "Enter a reason for ending early";
+"结束后将停止后续打卡和提醒，已有打卡记录会保留。" = "Future check-ins and reminders will stop. Existing check-in records will be kept.";
+"已提前结束" = "Ended Early";
+"提前结束于 %@" = "Ended early at %@";
+"更多" = "More";
+"确认提前结束？" = "End Challenge Early?";
+"提前结束后无法恢复，已有打卡记录会保留。" = "Ending early cannot be undone. Existing check-in records will be kept.";

@@ -5,6 +5,7 @@ struct ReminderDetailView: View {
     @Environment(\.locale) private var locale
     @Bindable var viewModel: RemindersViewModel
     @State private var reminderForEditing: ReminderRecord?
+    @State private var reminderForCopying: ReminderRecord?
     @State private var reminderPendingDeletion: ReminderRecord?
     @State private var makeUpRequest: ReminderMakeUpRequest?
 
@@ -24,6 +25,11 @@ struct ReminderDetailView: View {
         .sheet(item: $reminderForEditing) { reminder in
             NavigationStack {
                 ReminderFormView(reminder: reminder, viewModel: viewModel)
+            }
+        }
+        .sheet(item: $reminderForCopying) { reminder in
+            NavigationStack {
+                ReminderFormView(reminder: nil, copying: reminder, viewModel: viewModel)
             }
         }
         .sheet(item: $makeUpRequest) { request in
@@ -69,10 +75,19 @@ struct ReminderDetailView: View {
                 }
                 LabeledContent("提前提醒", value: reminder.leadTime.localizedTitle)
                 LabeledContent("状态", value: statusText(for: reminder))
+                if let endedEarlyAt = reminder.endedEarlyAt, reminder.isEndedEarly {
+                    LabeledContent(
+                        "提前结束时间",
+                        value: AppFormatters.dateTime(milliseconds: endedEarlyAt, locale: locale)
+                    )
+                }
+                if let earlyEndReason = reminder.earlyEndReason, reminder.isEndedEarly {
+                    LabeledContent("提前结束原因", value: earlyEndReason)
+                }
                 if let progressText = reminder.progressText {
                     LabeledContent("进度", value: progressText)
                 }
-                if let progressRemainingDays = reminder.progressRemainingDays {
+                if let progressRemainingDays = reminder.progressRemainingDays, reminder.isEndedEarly == false {
                     LabeledContent("剩余", value: AppLocalization.format("%d 天", progressRemainingDays))
                 }
             }
@@ -111,13 +126,20 @@ struct ReminderDetailView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
-                Button("删除", systemImage: "trash", role: .destructive) {
-                    reminderPendingDeletion = reminder
-                }
-                .tint(.red)
-
                 Button("编辑", systemImage: "square.and.pencil") {
                     reminderForEditing = reminder
+                }
+
+                Menu {
+                    Button("复制", systemImage: "doc.on.doc") {
+                        reminderForCopying = reminder
+                    }
+
+                    Button("删除", systemImage: "trash", role: .destructive) {
+                        reminderPendingDeletion = reminder
+                    }
+                } label: {
+                    Label("更多", systemImage: "ellipsis.circle")
                 }
             }
         }
@@ -147,29 +169,23 @@ struct ReminderDetailView: View {
     }
 
     private func hasAction(for reminder: ReminderRecord) -> Bool {
-        reminder.isTodayCompleted || reminder.canRestoreCompletion || reminder.canCheckIn() || reminder.firstMissedCheckInDate() != nil
+        reminder.isTodayCompleted || reminder.canRestoreCompletion || reminder.canCheckIn()
+            || reminder.firstMissedCheckInDate() != nil
     }
 
     @ViewBuilder
     private func bottomActions(for reminder: ReminderRecord) -> some View {
-        if reminder.isTodayCompleted {
-            bottomActionContainer {
+        bottomActionContainer {
+            if reminder.isTodayCompleted {
                 undoButton(for: reminder)
-            }
-        } else if reminder.canRestoreCompletion {
-            bottomActionContainer {
+            } else if reminder.canRestoreCompletion {
                 Button("恢复", systemImage: "arrow.uturn.backward") {
                     setCompleted(reminder, isCompleted: false)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.large)
-            }
-        } else {
-            let canCheckIn = reminder.canCheckIn()
-            let missedDate = reminder.firstMissedCheckInDate()
-
-            bottomActionContainer {
-                if let missedDate {
+            } else {
+                if let missedDate = reminder.firstMissedCheckInDate() {
                     Button("补签", systemImage: "calendar.badge.plus") {
                         makeUpRequest = ReminderMakeUpRequest(reminder: reminder, date: missedDate)
                     }
@@ -178,7 +194,7 @@ struct ReminderDetailView: View {
                     .tint(.orange)
                 }
 
-                if canCheckIn {
+                if reminder.canCheckIn() {
                     Button("打卡", systemImage: "checkmark.circle.fill") {
                         setCompleted(reminder, isCompleted: true)
                     }
@@ -227,6 +243,76 @@ struct ReminderDetailView: View {
     private func undoTodayCheckIn(_ reminder: ReminderRecord) {
         Task {
             await viewModel.undoTodayCheckIn(reminder)
+        }
+    }
+}
+
+struct ReminderEarlyEndRequest: Identifiable {
+    let reminder: ReminderRecord
+
+    var id: String { reminder.id }
+}
+
+struct ReminderEarlyEndSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var reason = ""
+    @State private var isConfirmingEarlyEnd = false
+    @FocusState private var isReasonFocused: Bool
+
+    let request: ReminderEarlyEndRequest
+    let viewModel: RemindersViewModel
+
+    var body: some View {
+        Form {
+            Section {
+                LabeledContent("任务", value: request.reminder.title)
+
+                TextField("请输入提前结束原因", text: $reason, axis: .vertical)
+                    .lineLimit(3...6)
+                    .focused($isReasonFocused)
+            } header: {
+                Text("提前结束连续挑战")
+            } footer: {
+                Text("结束后将停止后续打卡和提醒，已有打卡记录会保留。")
+            }
+        }
+        .navigationTitle("提前结束")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            isReasonFocused = true
+        }
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("取消") {
+                    dismiss()
+                }
+            }
+
+            ToolbarItem(placement: .confirmationAction) {
+                Button("提前结束", role: .destructive) {
+                    isConfirmingEarlyEnd = true
+                }
+                .disabled(normalizedReason.isEmpty)
+            }
+        }
+        .alert("确认提前结束？", isPresented: $isConfirmingEarlyEnd) {
+            Button("提前结束", role: .destructive) {
+                endEarly()
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("提前结束后无法恢复，已有打卡记录会保留。")
+        }
+    }
+
+    private var normalizedReason: String {
+        reason.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func endEarly() {
+        Task {
+            await viewModel.endEarly(request.reminder, reason: normalizedReason)
+            dismiss()
         }
     }
 }

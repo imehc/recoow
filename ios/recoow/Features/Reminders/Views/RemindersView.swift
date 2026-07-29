@@ -51,6 +51,7 @@ private struct RemindersContent: View {
     @State private var isShowingAddReminder = false
     @State private var reminderPendingDeletion: ReminderRecord?
     @State private var makeUpRequest: ReminderMakeUpRequest?
+    @State private var earlyEndRequest: ReminderEarlyEndRequest?
 
     let reminderImageTransition: Namespace.ID
 
@@ -108,6 +109,15 @@ private struct RemindersContent: View {
                                         makeUpRequest = ReminderMakeUpRequest(reminder: reminder, date: missedDate)
                                     } label: {
                                         Label("补签", systemImage: "calendar.badge.plus")
+                                    }
+                                    .tint(.orange)
+                                }
+
+                                if reminder.canEndEarly {
+                                    Button {
+                                        earlyEndRequest = ReminderEarlyEndRequest(reminder: reminder)
+                                    } label: {
+                                        Label("提前结束", systemImage: "stop.circle")
                                     }
                                     .tint(.orange)
                                 }
@@ -173,6 +183,11 @@ private struct RemindersContent: View {
         .sheet(item: $makeUpRequest) { request in
             NavigationStack {
                 ReminderMakeUpSheet(request: request, viewModel: viewModel)
+            }
+        }
+        .sheet(item: $earlyEndRequest) { request in
+            NavigationStack {
+                ReminderEarlyEndSheet(request: request, viewModel: viewModel)
             }
         }
         .alert(

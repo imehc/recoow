@@ -168,6 +168,16 @@ final class RemindersViewModel {
         await persist(record)
     }
 
+    func endEarly(_ reminder: ReminderRecord, reason: String) async {
+        var record = reminder
+        guard record.endEarly(reason: reason) else {
+            errorMessage = AppLocalization.string("请输入提前结束原因")
+            return
+        }
+
+        await persist(record)
+    }
+
     func deleteReminder(id: String) async {
         await deleteReminders(ids: [id])
     }
