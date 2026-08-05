@@ -131,6 +131,12 @@ struct ReminderDetailView: View {
                 }
 
                 Menu {
+                    if let missedDate = reminder.firstMissedCheckInDate() {
+                        Button("补签", systemImage: "calendar.badge.plus") {
+                            makeUpRequest = ReminderMakeUpRequest(reminder: reminder, date: missedDate)
+                        }
+                    }
+
                     Button("复制", systemImage: "doc.on.doc") {
                         reminderForCopying = reminder
                     }
@@ -170,7 +176,6 @@ struct ReminderDetailView: View {
 
     private func hasAction(for reminder: ReminderRecord) -> Bool {
         reminder.isTodayCompleted || reminder.canRestoreCompletion || reminder.canCheckIn()
-            || reminder.firstMissedCheckInDate() != nil
     }
 
     @ViewBuilder
@@ -185,15 +190,6 @@ struct ReminderDetailView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.large)
             } else {
-                if let missedDate = reminder.firstMissedCheckInDate() {
-                    Button("补签", systemImage: "calendar.badge.plus") {
-                        makeUpRequest = ReminderMakeUpRequest(reminder: reminder, date: missedDate)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-                    .tint(.orange)
-                }
-
                 if reminder.canCheckIn() {
                     Button("打卡", systemImage: "checkmark.circle.fill") {
                         setCompleted(reminder, isCompleted: true)
@@ -364,6 +360,8 @@ struct ReminderMakeUpSheet: View {
                 }
             }
         }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 
     private func save() {

@@ -34,9 +34,11 @@ struct ReminderFormView: View {
         _memoryIcon = State(initialValue: source?.memoryIcon ?? ReminderMemoryIcon.bell.rawValue)
         _imageData = State(initialValue: source?.imageData)
         _imageAssetID = State(initialValue: source?.imageAssetID)
-        _scheduledDate = State(initialValue: source?.scheduledDate ?? Date().addingTimeInterval(3600))
+        // 复制“连续挑战”时，开始日期与提醒时间默认当前，而不是沿用被复制任务的时间
+        let copyingContinuousChallenge = reminder == nil && template != nil && source?.scheduleKind == .continuousDays
+        _scheduledDate = State(initialValue: copyingContinuousChallenge ? Date() : (source?.scheduledDate ?? Date().addingTimeInterval(3600)))
         _endDate = State(initialValue: source?.endDate ?? Calendar.current.date(byAdding: .day, value: 6, to: source?.scheduledDate ?? Date().addingTimeInterval(3600)) ?? Date().addingTimeInterval(6 * 86_400))
-        _reminderTime = State(initialValue: source?.scheduledDate ?? Date().addingTimeInterval(3600))
+        _reminderTime = State(initialValue: copyingContinuousChallenge ? Date() : (source?.scheduledDate ?? Date().addingTimeInterval(3600)))
         _scheduleKind = State(initialValue: source?.scheduleKind ?? .dailyGoal)
         _selectedWeekdays = State(initialValue: Set(Self.initialWeekdays(for: source)))
         _continuousDays = State(initialValue: max(1, source?.continuousDays ?? 30))
