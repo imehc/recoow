@@ -126,11 +126,27 @@ struct ReminderDetailView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
-                Button("编辑", systemImage: "square.and.pencil") {
-                    reminderForEditing = reminder
+                if reminder.canCheckIn() {
+                    Button("打卡", systemImage: "checkmark.circle") {
+                        setCompleted(reminder, isCompleted: true)
+                    }
                 }
 
                 Menu {
+                    Button("编辑", systemImage: "square.and.pencil") {
+                        reminderForEditing = reminder
+                    }
+
+                    if reminder.isTodayCompleted {
+                        Button("撤销打卡", systemImage: "arrow.uturn.backward.circle") {
+                            undoTodayCheckIn(reminder)
+                        }
+                    } else if reminder.canRestoreCompletion {
+                        Button("恢复", systemImage: "arrow.uturn.backward") {
+                            setCompleted(reminder, isCompleted: false)
+                        }
+                    }
+
                     if let missedDate = reminder.firstMissedCheckInDate() {
                         Button("补签", systemImage: "calendar.badge.plus") {
                             makeUpRequest = ReminderMakeUpRequest(reminder: reminder, date: missedDate)
@@ -141,17 +157,14 @@ struct ReminderDetailView: View {
                         reminderForCopying = reminder
                     }
 
+                    Divider()
+
                     Button("删除", systemImage: "trash", role: .destructive) {
                         reminderPendingDeletion = reminder
                     }
                 } label: {
                     Label("更多", systemImage: "ellipsis.circle")
                 }
-            }
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if hasAction(for: reminder) {
-                bottomActions(for: reminder)
             }
         }
         .alert(
@@ -172,53 +185,6 @@ struct ReminderDetailView: View {
 
     private func statusText(for reminder: ReminderRecord) -> String {
         AppLocalization.string(reminder.checkInStatus().title)
-    }
-
-    private func hasAction(for reminder: ReminderRecord) -> Bool {
-        reminder.isTodayCompleted || reminder.canRestoreCompletion || reminder.canCheckIn()
-    }
-
-    @ViewBuilder
-    private func bottomActions(for reminder: ReminderRecord) -> some View {
-        bottomActionContainer {
-            if reminder.isTodayCompleted {
-                undoButton(for: reminder)
-            } else if reminder.canRestoreCompletion {
-                Button("恢复", systemImage: "arrow.uturn.backward") {
-                    setCompleted(reminder, isCompleted: false)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-            } else {
-                if reminder.canCheckIn() {
-                    Button("打卡", systemImage: "checkmark.circle.fill") {
-                        setCompleted(reminder, isCompleted: true)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .tint(.green)
-                }
-            }
-        }
-    }
-
-    private func bottomActionContainer<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        HStack(spacing: 12) {
-            content()
-        }
-        .frame(maxWidth: .infinity, alignment: .trailing)
-        .padding(.horizontal)
-        .padding(.vertical, 10)
-        .background(.bar)
-    }
-
-    private func undoButton(for reminder: ReminderRecord) -> some View {
-        Button("撤销打卡", systemImage: "arrow.uturn.backward.circle") {
-            undoTodayCheckIn(reminder)
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.large)
-        .tint(.orange)
     }
 
     private func deleteReminder(id: String) {

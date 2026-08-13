@@ -100,13 +100,18 @@ struct FoodEntryDetailView: View {
         .listStyle(.insetGrouped)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
-                Button(AppLocalization.string("删除"), systemImage: "trash", role: .destructive) {
-                    isConfirmingDeletion = true
-                }
-                .tint(.red)
+                Menu {
+                    Button(AppLocalization.string("编辑"), systemImage: "square.and.pencil") {
+                        entryForEditing = entry
+                    }
 
-                Button(AppLocalization.string("编辑"), systemImage: "square.and.pencil") {
-                    entryForEditing = entry
+                    Divider()
+
+                    Button(AppLocalization.string("删除"), systemImage: "trash", role: .destructive) {
+                        isConfirmingDeletion = true
+                    }
+                } label: {
+                    Label(AppLocalization.string("更多"), systemImage: "ellipsis.circle")
                 }
             }
         }

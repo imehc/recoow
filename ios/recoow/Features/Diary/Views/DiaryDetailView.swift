@@ -114,13 +114,18 @@ struct DiaryDetailView: View {
                 .listStyle(.insetGrouped)
                 .toolbar {
                     ToolbarItemGroup(placement: .topBarTrailing) {
-                        Button(AppLocalization.string("删除"), systemImage: "trash") {
-                            entryPendingDeletion = entry
-                        }
-                        .tint(.red)
+                        Menu {
+                            Button(AppLocalization.string("编辑"), systemImage: "square.and.pencil") {
+                                showEditSheet(entry)
+                            }
 
-                        Button(AppLocalization.string("编辑"), systemImage: "square.and.pencil") {
-                            showEditSheet(entry)
+                            Divider()
+
+                            Button(AppLocalization.string("删除"), systemImage: "trash", role: .destructive) {
+                                entryPendingDeletion = entry
+                            }
+                        } label: {
+                            Label(AppLocalization.string("更多"), systemImage: "ellipsis.circle")
                         }
                     }
                 }

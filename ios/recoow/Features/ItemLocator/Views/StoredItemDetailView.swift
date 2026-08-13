@@ -80,13 +80,18 @@ struct StoredItemDetailView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
-                Button("删除", systemImage: "trash", role: .destructive) {
-                    requestDelete(item)
-                }
-                .tint(.red)
+                Menu {
+                    Button("编辑", systemImage: "square.and.pencil") {
+                        editingItem = item
+                    }
 
-                Button("编辑", systemImage: "square.and.pencil") {
-                    editingItem = item
+                    Divider()
+
+                    Button("删除", systemImage: "trash", role: .destructive) {
+                        requestDelete(item)
+                    }
+                } label: {
+                    Label("更多", systemImage: "ellipsis.circle")
                 }
             }
         }

@@ -4,6 +4,7 @@ struct BillDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var viewModel: BillsViewModel
     @State private var billForEditing: BillRecord?
+    @State private var billPendingCopy: BillRecord?
     @State private var billPendingDeletion: BillRecord?
     @State private var billPendingRefund: BillRecord?
 
@@ -23,6 +24,11 @@ struct BillDetailView: View {
         .sheet(item: $billForEditing) { bill in
             NavigationStack {
                 BillFormView(bill: bill, viewModel: viewModel)
+            }
+        }
+        .sheet(item: $billPendingCopy) { bill in
+            NavigationStack {
+                BillFormView(bill: nil, viewModel: viewModel, prefillBill: bill)
             }
         }
         .sheet(item: $billPendingRefund) { bill in
@@ -150,19 +156,35 @@ struct BillDetailView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
-                Button("删除", systemImage: "trash", role: .destructive) {
-                    billPendingDeletion = bill
+                if bill.isGroupBuy, bill.lifecycleState == .normal {
+                    Button("核销", systemImage: "checkmark.seal") {
+                        redeem(bill)
+                    }
                 }
-                .tint(.red)
 
-                Button("编辑", systemImage: "square.and.pencil") {
-                    billForEditing = bill
+                Menu {
+                    Button("编辑", systemImage: "square.and.pencil") {
+                        billForEditing = bill
+                    }
+
+                    Button("复制", systemImage: "doc.on.doc") {
+                        duplicateBill(bill)
+                    }
+
+                    if bill.lifecycleState == .normal {
+                        Button("退款", systemImage: "arrow.uturn.backward") {
+                            billPendingRefund = bill
+                        }
+                    }
+
+                    Divider()
+
+                    Button("删除", systemImage: "trash", role: .destructive) {
+                        billPendingDeletion = bill
+                    }
+                } label: {
+                    Label("更多", systemImage: "ellipsis.circle")
                 }
-            }
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if hasSettlementAction(for: bill) {
-                settlementBottomActions(for: bill)
             }
         }
         .alert(
@@ -181,57 +203,11 @@ struct BillDetailView: View {
         }
     }
 
-    // MARK: - Settlement bottom actions (check-in task style)
-
-    private func hasSettlementAction(for bill: BillRecord) -> Bool {
-        bill.lifecycleState == .normal
-    }
-
-    @ViewBuilder
-    private func settlementBottomActions(for bill: BillRecord) -> some View {
-        if bill.isGroupBuy {
-            bottomActionContainer {
-                Button("退款", systemImage: "arrow.uturn.backward") {
-                    billPendingRefund = bill
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-                .tint(.orange)
-
-                Button("核销", systemImage: "checkmark.circle.fill") {
-                    redeem(bill)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .tint(.green)
-            }
-        } else {
-            bottomActionContainer {
-                Button("退款", systemImage: "arrow.uturn.backward") {
-                    billPendingRefund = bill
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-                .tint(.orange)
-            }
-        }
-    }
-
-    private func bottomActionContainer<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        HStack(spacing: 12) {
-            content()
-        }
-        .frame(maxWidth: .infinity, alignment: .trailing)
-        .padding(.horizontal)
-        .padding(.vertical, 10)
-        .background(.bar)
-    }
-
     // MARK: - Helpers
 
-    private func amountText(cents: Int64, voided: Bool) -> some View {
-        Text(AppFormatters.money(cents: cents))
-            .strikethrough(voided)
+    private func duplicateBill(_ bill: BillRecord) {
+        let draft = viewModel.makeDuplicateDraft(from: bill)
+        billPendingCopy = draft
     }
 
     private func redeem(_ bill: BillRecord) {
@@ -247,6 +223,11 @@ struct BillDetailView: View {
             await viewModel.deleteBill(id: id)
             dismiss()
         }
+    }
+
+    private func amountText(cents: Int64, voided: Bool) -> some View {
+        Text(AppFormatters.money(cents: cents))
+            .strikethrough(voided)
     }
 }
 

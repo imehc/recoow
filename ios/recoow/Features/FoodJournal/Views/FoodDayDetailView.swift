@@ -41,14 +41,17 @@ struct FoodDayDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
-                Button(AppLocalization.string("删除"), systemImage: "trash", role: .destructive) {
-                    isConfirmingDayDeletion = true
-                }
-                .disabled(viewModel.entries(for: dayStart).isEmpty)
-                .tint(.red)
-
                 Button(AppLocalization.string("添加饮食"), systemImage: "plus") {
                     presentedSheet = .addEntry(dayStart)
+                }
+
+                Menu {
+                    Button(AppLocalization.string("删除"), systemImage: "trash", role: .destructive) {
+                        isConfirmingDayDeletion = true
+                    }
+                    .disabled(viewModel.entries(for: dayStart).isEmpty)
+                } label: {
+                    Label(AppLocalization.string("更多"), systemImage: "ellipsis.circle")
                 }
             }
         }
