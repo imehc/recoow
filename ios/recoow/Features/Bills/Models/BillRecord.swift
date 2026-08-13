@@ -167,12 +167,13 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         }
     }
 
+    /// 储值充值入账余额按原价（面值）计算，而非实付金额。
     var storedValueBalanceDeltaCents: Int64 {
         guard storedValueAccountID != nil, deletedAt == nil, isVoided == false else { return 0 }
 
         switch billType {
         case .expense:
-            return finalAmountCents
+            return originalAmountCents
         case .storedValueUse:
             return -finalAmountCents
         case .income:
