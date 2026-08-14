@@ -52,6 +52,7 @@ private struct RemindersContent: View {
     @State private var reminderPendingDeletion: ReminderRecord?
     @State private var makeUpRequest: ReminderMakeUpRequest?
     @State private var earlyEndRequest: ReminderEarlyEndRequest?
+    @State private var pauseRequest: ReminderPauseRequest?
 
     let reminderImageTransition: Namespace.ID
 
@@ -111,6 +112,22 @@ private struct RemindersContent: View {
                                         Label("补签", systemImage: "calendar.badge.plus")
                                     }
                                     .tint(.orange)
+                                }
+
+                                if reminder.canPause {
+                                    Button {
+                                        pauseRequest = ReminderPauseRequest(reminder: reminder)
+                                    } label: {
+                                        Label("暂停", systemImage: "pause.circle")
+                                    }
+                                    .tint(.orange)
+                                } else if reminder.canResume {
+                                    Button {
+                                        resumeReminder(reminder)
+                                    } label: {
+                                        Label("继续", systemImage: "play.circle")
+                                    }
+                                    .tint(.green)
                                 }
 
                                 if reminder.canEndEarly {
@@ -190,6 +207,11 @@ private struct RemindersContent: View {
                 ReminderEarlyEndSheet(request: request, viewModel: viewModel)
             }
         }
+        .sheet(item: $pauseRequest) { request in
+            NavigationStack {
+                ReminderPauseSheet(request: request, viewModel: viewModel)
+            }
+        }
         .alert(
             reminderPendingDeletion.map { AppLocalization.format("删除“%@”？", $0.title) } ?? "",
             isPresented: .isPresent($reminderPendingDeletion),
@@ -237,6 +259,12 @@ private struct RemindersContent: View {
     private func undoTodayCheckIn(_ reminder: ReminderRecord) {
         Task {
             await viewModel.undoTodayCheckIn(reminder)
+        }
+    }
+
+    private func resumeReminder(_ reminder: ReminderRecord) {
+        Task {
+            await viewModel.resume(reminder)
         }
     }
 }

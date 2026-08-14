@@ -178,6 +178,26 @@ final class RemindersViewModel {
         await persist(record)
     }
 
+    func pause(_ reminder: ReminderRecord, reason: String) async {
+        var record = reminder
+        guard record.pause(reason: reason) else {
+            errorMessage = AppLocalization.string("请输入暂停原因")
+            return
+        }
+
+        await persist(record)
+    }
+
+    func resume(_ reminder: ReminderRecord) async {
+        var record = reminder
+        guard record.resume() else {
+            errorMessage = AppLocalization.string("恢复失败")
+            return
+        }
+
+        await persist(record)
+    }
+
     func deleteReminder(id: String) async {
         await deleteReminders(ids: [id])
     }

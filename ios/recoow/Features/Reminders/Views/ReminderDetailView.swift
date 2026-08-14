@@ -8,6 +8,8 @@ struct ReminderDetailView: View {
     @State private var reminderForCopying: ReminderRecord?
     @State private var reminderPendingDeletion: ReminderRecord?
     @State private var makeUpRequest: ReminderMakeUpRequest?
+    @State private var earlyEndRequest: ReminderEarlyEndRequest?
+    @State private var pauseRequest: ReminderPauseRequest?
 
     let reminderID: String
     let reminderImageTransition: Namespace.ID?
@@ -35,6 +37,16 @@ struct ReminderDetailView: View {
         .sheet(item: $makeUpRequest) { request in
             NavigationStack {
                 ReminderMakeUpSheet(request: request, viewModel: viewModel)
+            }
+        }
+        .sheet(item: $earlyEndRequest) { request in
+            NavigationStack {
+                ReminderEarlyEndSheet(request: request, viewModel: viewModel)
+            }
+        }
+        .sheet(item: $pauseRequest) { request in
+            NavigationStack {
+                ReminderPauseSheet(request: request, viewModel: viewModel)
             }
         }
         .task(id: reminderID) {
@@ -83,6 +95,15 @@ struct ReminderDetailView: View {
                 }
                 if let earlyEndReason = reminder.earlyEndReason, reminder.isEndedEarly {
                     LabeledContent("提前结束原因", value: earlyEndReason)
+                }
+                if reminder.isPaused, let pausedAt = reminder.pausedAt {
+                    LabeledContent(
+                        "暂停时间",
+                        value: AppFormatters.dateTime(milliseconds: pausedAt, locale: locale)
+                    )
+                }
+                if reminder.isPaused, let pauseReason = reminder.pauseReason {
+                    LabeledContent("暂停原因", value: pauseReason)
                 }
                 if let progressText = reminder.progressText {
                     LabeledContent("进度", value: progressText)
@@ -153,6 +174,22 @@ struct ReminderDetailView: View {
                         }
                     }
 
+                    if reminder.canPause {
+                        Button("暂停", systemImage: "pause.circle") {
+                            pauseRequest = ReminderPauseRequest(reminder: reminder)
+                        }
+                    } else if reminder.canResume {
+                        Button("继续", systemImage: "play.circle") {
+                            resumeReminder(reminder)
+                        }
+                    }
+
+                    if reminder.canEndEarly {
+                        Button("提前结束", systemImage: "stop.circle") {
+                            earlyEndRequest = ReminderEarlyEndRequest(reminder: reminder)
+                        }
+                    }
+
                     Button("复制", systemImage: "doc.on.doc") {
                         reminderForCopying = reminder
                     }
@@ -207,6 +244,12 @@ struct ReminderDetailView: View {
             await viewModel.undoTodayCheckIn(reminder)
         }
     }
+
+    private func resumeReminder(_ reminder: ReminderRecord) {
+        Task {
+            await viewModel.resume(reminder)
+        }
+    }
 }
 
 struct ReminderEarlyEndRequest: Identifiable {
@@ -233,7 +276,7 @@ struct ReminderEarlyEndSheet: View {
                     .lineLimit(3...6)
                     .focused($isReasonFocused)
             } header: {
-                Text("提前结束连续挑战")
+                Text("提前结束打卡任务")
             } footer: {
                 Text("结束后将停止后续打卡和提醒，已有打卡记录会保留。")
             }
@@ -274,6 +317,76 @@ struct ReminderEarlyEndSheet: View {
     private func endEarly() {
         Task {
             await viewModel.endEarly(request.reminder, reason: normalizedReason)
+            dismiss()
+        }
+    }
+}
+
+struct ReminderPauseRequest: Identifiable {
+    let reminder: ReminderRecord
+
+    var id: String { reminder.id }
+}
+
+struct ReminderPauseSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var reason = ""
+    @State private var isConfirmingPause = false
+    @FocusState private var isReasonFocused: Bool
+
+    let request: ReminderPauseRequest
+    let viewModel: RemindersViewModel
+
+    var body: some View {
+        Form {
+            Section {
+                LabeledContent("任务", value: request.reminder.title)
+
+                TextField("请输入暂停原因", text: $reason, axis: .vertical)
+                    .lineLimit(3...6)
+                    .focused($isReasonFocused)
+            } header: {
+                Text("暂停坚持目标")
+            } footer: {
+                Text("暂停期间将停止后续打卡和提醒，已有打卡记录会保留。")
+            }
+        }
+        .navigationTitle("暂停")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            isReasonFocused = true
+        }
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("取消") {
+                    dismiss()
+                }
+            }
+
+            ToolbarItem(placement: .confirmationAction) {
+                Button("暂停") {
+                    isConfirmingPause = true
+                }
+                .disabled(normalizedReason.isEmpty)
+            }
+        }
+        .alert("确认暂停？", isPresented: $isConfirmingPause) {
+            Button("暂停") {
+                pauseGoal()
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("暂停后可以随时继续，已有打卡记录会保留。")
+        }
+    }
+
+    private var normalizedReason: String {
+        reason.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func pauseGoal() {
+        Task {
+            await viewModel.pause(request.reminder, reason: normalizedReason)
             dismiss()
         }
     }

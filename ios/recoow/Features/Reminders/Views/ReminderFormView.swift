@@ -357,9 +357,13 @@ struct ReminderFormView: View {
         record.importedCompletedDays = normalizedImportedCompletedDays
         record.leadTimeMinutes = leadTime.rawValue
         record.isEnabled = isEnabled
-        if scheduleKind != .continuousDays {
+        if scheduleKind != .continuousDays && scheduleKind != .dailyGoal {
             record.endedEarlyAt = nil
             record.earlyEndReason = nil
+        }
+        if scheduleKind != .dailyGoal {
+            record.pausedAt = nil
+            record.pauseReason = nil
         }
         return record
     }

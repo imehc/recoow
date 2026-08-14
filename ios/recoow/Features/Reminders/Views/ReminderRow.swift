@@ -66,6 +66,13 @@ struct ReminderRow: View {
     }
 
     private var nextTimeText: String {
+        if reminder.isPaused, let pausedAt = reminder.pausedAt {
+            return AppLocalization.format(
+                "暂停于 %@",
+                AppFormatters.dateTime(milliseconds: pausedAt, locale: locale)
+            )
+        }
+
         if reminder.isEndedEarly, let endedEarlyAt = reminder.endedEarlyAt {
             return AppLocalization.format(
                 "提前结束于 %@",

@@ -12,7 +12,7 @@ final class ReminderNotificationService: @unchecked Sendable {
     func reschedule(_ reminder: ReminderRecord) async throws {
         cancel(reminderID: reminder.id)
 
-        guard reminder.isEnabled, reminder.isCompleted == false else { return }
+        guard reminder.isEnabled, reminder.isCompleted == false, reminder.isPaused == false else { return }
 
         let requests = notificationRequests(for: reminder)
         guard requests.isEmpty == false else { return }

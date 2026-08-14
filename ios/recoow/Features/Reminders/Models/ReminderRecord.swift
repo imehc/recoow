@@ -32,6 +32,9 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
     var completionRecordsRawValue: String?
     var endedEarlyAt: Int64?
     var earlyEndReason: String?
+    var pausedAt: Int64?
+    var pauseReason: String?
+    var totalPausedMilliseconds: Int64?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -60,6 +63,9 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         case completionRecordsRawValue = "completion_records"
         case endedEarlyAt = "ended_early_at"
         case earlyEndReason = "early_end_reason"
+        case pausedAt = "paused_at"
+        case pauseReason = "pause_reason"
+        case totalPausedMilliseconds = "total_paused_milliseconds"
     }
 
     var scheduledDate: Date {
@@ -133,22 +139,34 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
 
     var isCompleted: Bool {
         if scheduleKind == .dailyGoal {
-            return false
+            return isEndedEarly
         }
 
         return completedAt != nil || isProgressFullyCompleted || isEndedEarly
     }
 
     var isEndedEarly: Bool {
-        scheduleKind == .continuousDays && endedEarlyAt != nil
+        (scheduleKind == .continuousDays || scheduleKind == .dailyGoal) && endedEarlyAt != nil
     }
 
     var canEndEarly: Bool {
-        scheduleKind == .continuousDays && isCompleted == false
+        (scheduleKind == .continuousDays || scheduleKind == .dailyGoal) && isCompleted == false
+    }
+
+    var isPaused: Bool {
+        scheduleKind == .dailyGoal && pausedAt != nil
+    }
+
+    var canPause: Bool {
+        scheduleKind == .dailyGoal && isPaused == false && isCompleted == false
+    }
+
+    var canResume: Bool {
+        isPaused && isCompleted == false
     }
 
     var canRestoreCompletion: Bool {
-        isCompleted && scheduleKind != .continuousDays
+        isCompleted && scheduleKind != .continuousDays && isEndedEarly == false
     }
 
     var isUpcoming: Bool {
@@ -261,6 +279,10 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
             return .endedEarly
         }
 
+        if isPaused {
+            return .paused
+        }
+
         if isCompleted {
             return .completed
         }
@@ -291,6 +313,7 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
     func canCheckIn(on date: Date = Date(), calendar: Calendar = .current) -> Bool {
         guard isEnabled,
               isCompleted == false,
+              isPaused == false,
               occurrenceDate(on: date, calendar: calendar) != nil,
               isOccurrenceCompleted(on: date, calendar: calendar) == false else {
             return false
@@ -308,7 +331,7 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
     }
 
     func firstMissedCheckInDate(before date: Date = Date(), calendar: Calendar = .current) -> Date? {
-        guard (scheduleKind == .continuousDays || scheduleKind == .dailyGoal), isCompleted == false else { return nil }
+        guard (scheduleKind == .continuousDays || scheduleKind == .dailyGoal), isCompleted == false, isPaused == false else { return nil }
 
         let startDay = calendar.startOfDay(for: scheduledDate)
         let today = calendar.startOfDay(for: date)
@@ -401,7 +424,8 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
     }
 
     func elapsedGoalDays(on date: Date = Date(), calendar: Calendar = .current) -> Int {
-        numberOfDays(from: scheduledDate, through: max(date, scheduledDate), calendar: calendar)
+        let throughDate = pausedEndDate(on: date)
+        return numberOfDays(from: scheduledDate, through: max(throughDate, scheduledDate), calendar: calendar)
     }
 
     func occurrenceDates(
@@ -409,7 +433,7 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         from referenceDate: Date = Date(),
         calendar: Calendar = .current
     ) -> [Date] {
-        guard maxCount > 0, isCompleted == false else { return [] }
+        guard maxCount > 0, isCompleted == false, isPaused == false else { return [] }
 
         switch scheduleKind {
         case .single:
@@ -500,7 +524,10 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
             completedDateKeysRawValue: nil,
             completionRecordsRawValue: nil,
             endedEarlyAt: nil,
-            earlyEndReason: nil
+            earlyEndReason: nil,
+            pausedAt: nil,
+            pauseReason: nil,
+            totalPausedMilliseconds: nil
         )
     }
 
@@ -511,6 +538,27 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         endedEarlyAt = SyncableTimestamp.nowMilliseconds()
         earlyEndReason = normalizedReason
         completedAt = nil
+        pausedAt = nil
+        pauseReason = nil
+        return true
+    }
+
+    mutating func pause(reason: String) -> Bool {
+        let normalizedReason = reason.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard canPause, normalizedReason.isEmpty == false else { return false }
+
+        pausedAt = SyncableTimestamp.nowMilliseconds()
+        pauseReason = normalizedReason
+        return true
+    }
+
+    mutating func resume() -> Bool {
+        guard canResume, let pausedAt else { return false }
+
+        let now = SyncableTimestamp.nowMilliseconds()
+        totalPausedMilliseconds = (totalPausedMilliseconds ?? 0) + max(0, now - pausedAt)
+        self.pausedAt = nil
+        pauseReason = nil
         return true
     }
 
@@ -728,6 +776,20 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         let endDay = calendar.startOfDay(for: endDate)
         let days = calendar.dateComponents([.day], from: startDay, to: endDay).day ?? 0
         return max(1, days + 1)
+    }
+
+    private func pausedEndDate(on date: Date) -> Date {
+        let adjusted = date.addingTimeInterval(-Double(pausedDurationMilliseconds(nowMs: SyncableTimestamp.nowMilliseconds())) / 1000)
+        guard adjusted > scheduledDate else { return scheduledDate }
+        return adjusted
+    }
+
+    private func pausedDurationMilliseconds(nowMs: Int64) -> Int64 {
+        var total = totalPausedMilliseconds ?? 0
+        if isPaused, let pausedAt {
+            total += max(0, nowMs - pausedAt)
+        }
+        return total
     }
 
     private func isOccurrenceCompleted(on date: Date, calendar: Calendar = .current) -> Bool {
