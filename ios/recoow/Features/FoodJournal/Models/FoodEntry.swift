@@ -168,6 +168,22 @@ struct FoodEntry: Identifiable, Codable, Hashable, Sendable, FetchableRecord, Pe
         )
     }
 
+    /// 复制饮食记录：沿用食物、餐别、份量与备注，关联账单与照片属于原记录，不跟随复制。
+    nonisolated func duplicated(occurredAt: Int64, deviceID: String) -> FoodEntry {
+        let now = SyncableTimestamp.nowMilliseconds()
+        var copy = self
+        copy.id = UUID().uuidString
+        copy.createdAt = now
+        copy.updatedAt = now
+        copy.deletedAt = nil
+        copy.syncStatus = .pending
+        copy.deviceID = deviceID
+        copy.serverVersion = nil
+        copy.billIDs = []
+        copy.occurredAt = occurredAt
+        return copy
+    }
+
     nonisolated static func encodeBillIDs(_ ids: [String]) -> String {
         let normalizedIDs = normalizedBillIDs(ids)
         guard let data = try? JSONEncoder().encode(normalizedIDs) else { return "[]" }

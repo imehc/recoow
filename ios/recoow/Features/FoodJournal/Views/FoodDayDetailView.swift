@@ -7,6 +7,8 @@ struct FoodDayDetailView: View {
     @Bindable var billsViewModel: BillsViewModel
     @State private var presentedSheet: Sheet?
     @State private var entryPendingDeletion: FoodEntry?
+    @State private var mealCopyRequest: FoodMealCopyRequest?
+    @State private var copiedMealCount = 0
     @State private var isConfirmingDayDeletion = false
 
     let dayStart: Date
@@ -14,15 +16,15 @@ struct FoodDayDetailView: View {
 
     private enum Sheet: Identifiable {
         case addEntry(Date)
-        case editEntry(FoodEntry)
+        case copyEntry(FoodEntry)
         case editDayTitle(Date)
 
         var id: String {
             switch self {
             case .addEntry(let date):
                 "add:\(date.timeIntervalSince1970)"
-            case .editEntry(let entry):
-                "edit:\(entry.id)"
+            case .copyEntry(let entry):
+                "copy:\(entry.id)"
             case .editDayTitle(let date):
                 "title:\(date.timeIntervalSince1970)"
             }
@@ -67,13 +69,14 @@ struct FoodDayDetailView: View {
                         initialDate: date
                     )
                 }
-            case .editEntry(let entry):
+            case .copyEntry(let entry):
                 NavigationStack {
                     FoodEntryFormView(
-                        entry: entry,
-                        attachments: viewModel.attachments(for: entry.id),
+                        entry: nil,
+                        attachments: [],
                         viewModel: viewModel,
-                        billsViewModel: billsViewModel
+                        billsViewModel: billsViewModel,
+                        copying: entry
                     )
                 }
             case .editDayTitle(let date):
@@ -111,6 +114,22 @@ struct FoodDayDetailView: View {
         } message: { _ in
             Text(AppLocalization.string("删除后该记录会从历史中移除。"))
         }
+        .alert(
+            mealCopyRequest.map { AppLocalization.format("复制“%@”到今天？", $0.kind.localizedTitle) } ?? "",
+            isPresented: .isPresent($mealCopyRequest),
+            presenting: mealCopyRequest
+        ) { request in
+            Button(AppLocalization.string("复制")) {
+                copyMeal(request)
+            }
+            Button(AppLocalization.string("取消"), role: .cancel) {
+                mealCopyRequest = nil
+            }
+        } message: { request in
+            Text(AppLocalization.format("将复制 %d 条记录到今天，时间保持不变。", request.entries.count))
+        }
+        // 复制结果落在今天，当前页面看不到变化，用触感反馈确认已完成
+        .sensoryFeedback(.success, trigger: copiedMealCount)
     }
 
     private func list(for group: FoodDayGroup) -> some View {
@@ -160,7 +179,7 @@ struct FoodDayDetailView: View {
                 let entries = group.entries(for: kind)
 
                 if entries.isEmpty == false {
-                    Section(AppLocalization.string(kind.title)) {
+                    Section {
                         ForEach(entries) { entry in
                             NavigationLink {
                                 FoodEntryDetailView(
@@ -178,20 +197,26 @@ struct FoodDayDetailView: View {
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button {
+                                    presentedSheet = .copyEntry(entry)
+                                } label: {
+                                    Label(AppLocalization.string("复制"), systemImage: "doc.on.doc")
+                                }
+                                .tint(.blue)
+
+                                Button {
                                     entryPendingDeletion = entry
                                 } label: {
                                     Label(AppLocalization.string("删除"), systemImage: "trash")
                                 }
                                 .tint(.red)
-
-                                Button {
-                                    presentedSheet = .editEntry(entry)
-                                } label: {
-                                    Label(AppLocalization.string("编辑"), systemImage: "square.and.pencil")
-                                }
-                                .tint(.blue)
                             }
                         }
+                    } header: {
+                        FoodMealSectionHeader(
+                            kind: kind,
+                            entryCount: entries.count,
+                            onCopyToToday: canCopyToToday ? { requestMealCopy(kind: kind, entries: entries) } : nil
+                        )
                     }
                 }
             }
@@ -208,6 +233,11 @@ struct FoodDayDetailView: View {
 
     private var dayTitle: String {
         viewModel.dayTitle(for: dayStart) ?? dateTitle
+    }
+
+    /// 只有查看过去的日期时才提供“复制到今天”，今天本身没有复制目标。
+    private var canCopyToToday: Bool {
+        Calendar.current.isDateInToday(dayStart) == false
     }
 
     private var mealKindsText: String {
@@ -252,6 +282,60 @@ struct FoodDayDetailView: View {
             await viewModel.deleteEntry(id: entry.id)
         }
     }
+
+    private func requestMealCopy(kind: FoodMealKind, entries: [FoodEntry]) {
+        mealCopyRequest = FoodMealCopyRequest(kind: kind, entries: entries)
+    }
+
+    private func copyMeal(_ request: FoodMealCopyRequest) {
+        mealCopyRequest = nil
+
+        Task {
+            if await viewModel.duplicateEntries(request.entries) {
+                copiedMealCount += 1
+            }
+        }
+    }
+}
+
+private struct FoodMealCopyRequest: Identifiable {
+    let kind: FoodMealKind
+    let entries: [FoodEntry]
+
+    var id: String { kind.rawValue }
+}
+
+private struct FoodMealSectionHeader: View {
+    let kind: FoodMealKind
+    let entryCount: Int
+    let onCopyToToday: (() -> Void)?
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(AppLocalization.string(kind.title))
+
+            if entryCount > 1 {
+                Text(AppLocalization.format("%d 条", entryCount))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 12)
+
+            if let onCopyToToday {
+                Button {
+                    onCopyToToday()
+                } label: {
+                    MetadataItemView(titleKey: "复制到今天", systemImage: "doc.on.doc")
+                        .font(.footnote.weight(.semibold))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.brown)
+                .accessibilityLabel(AppLocalization.format("复制“%@”到今天", kind.localizedTitle))
+            }
+        }
+        .textCase(nil)
+    }
 }
 
 private struct FoodDayTitleFormView: View {
@@ -283,8 +367,8 @@ private struct FoodDayTitleFormView: View {
             }
 
             ToolbarItem(placement: .confirmationAction) {
+                // 保存按钮不随输入启用/禁用：输入首字时切换 disabled 会重建键盘工具栏，中文输入的拼写会被打断
                 Button(AppLocalization.string("保存"), action: save)
-                    .disabled(hasChanges == false)
             }
         }
     }

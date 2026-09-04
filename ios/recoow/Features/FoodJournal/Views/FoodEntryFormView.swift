@@ -17,9 +17,11 @@ struct FoodEntryFormView: View {
     @State private var photoErrorMessage: String?
     @State private var attachmentDragCoordinator = MediaAttachmentDragCoordinator()
     @State private var draftID: String
+    @State private var suggestions: [FoodEntrySuggestion]
     @FocusState private var focusedField: String?
 
     let entry: FoodEntry?
+    let isCopy: Bool
     let viewModel: FoodJournalViewModel
     let billsViewModel: BillsViewModel
 
@@ -39,27 +41,37 @@ struct FoodEntryFormView: View {
         attachments: [MediaAttachment],
         viewModel: FoodJournalViewModel,
         billsViewModel: BillsViewModel,
+        copying template: FoodEntry? = nil,
         initialDate: Date = Date()
     ) {
         self.entry = entry
+        self.isCopy = entry == nil && template != nil
         self.viewModel = viewModel
         self.billsViewModel = billsViewModel
 
-        let initialOccurredDate = entry?.occurredDate ?? Self.defaultOccurredDate(for: initialDate)
-        _title = State(initialValue: entry?.title ?? "")
-        _mealKind = State(initialValue: entry?.foodMealKind ?? Self.defaultMealKind(for: initialOccurredDate))
-        _portion = State(initialValue: entry?.portion ?? "")
-        _note = State(initialValue: entry?.note ?? "")
+        // 复制饮食时日期取复制当天，时间沿用被复制的记录
+        let source = entry ?? template
+        let initialOccurredDate: Date
+        if entry == nil, let template {
+            initialOccurredDate = viewModel.copiedOccurredDate(for: template, on: initialDate)
+        } else {
+            initialOccurredDate = entry?.occurredDate ?? Self.defaultOccurredDate(for: initialDate)
+        }
+
+        _title = State(initialValue: source?.title ?? "")
+        _mealKind = State(initialValue: source?.foodMealKind ?? Self.defaultMealKind(for: initialOccurredDate))
+        _portion = State(initialValue: source?.portion ?? "")
+        _note = State(initialValue: source?.note ?? "")
         _occurredDate = State(initialValue: initialOccurredDate)
         _selectedAttachments = State(initialValue: attachments)
         _selectedBillIDs = State(initialValue: entry?.billIDs ?? [])
         _draftID = State(initialValue: entry?.id ?? UUID().uuidString)
+        // 常用饮食只在打开表单时取一次：输入过程中列表结构保持稳定，避免中文输入被打断
+        _suggestions = State(initialValue: viewModel.recentFoodSuggestions(excluding: entry?.id))
     }
 
     var body: some View {
         Form {
-            let suggestions = viewModel.recentFoodSuggestions(excluding: entry?.id)
-
             if suggestions.isEmpty == false {
                 Section(AppLocalization.string("常用饮食")) {
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -183,7 +195,7 @@ struct FoodEntryFormView: View {
             MediaAttachmentDragLayer(coordinator: attachmentDragCoordinator)
         }
         .dismissesKeyboardOnTap(focusedField: $focusedField)
-        .navigationTitle(AppLocalization.string(entry == nil ? "添加饮食" : "编辑饮食"))
+        .navigationTitle(AppLocalization.string(navigationTitleKey))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -191,8 +203,8 @@ struct FoodEntryFormView: View {
             }
 
             ToolbarItem(placement: .confirmationAction) {
+                // 保存按钮不随标题启用/禁用：输入首字时切换 disabled 会重建键盘工具栏，中文输入的拼写会被打断
                 Button(AppLocalization.string("保存"), action: save)
-                    .disabled(isSaveDisabled)
             }
         }
         .sheet(item: $presentedSheet) { sheet in
@@ -233,6 +245,14 @@ struct FoodEntryFormView: View {
         }
     }
 
+    private var navigationTitleKey: String {
+        if isCopy {
+            return "复制饮食"
+        }
+
+        return entry == nil ? "添加饮食" : "编辑饮食"
+    }
+
     private var foodEntryID: String {
         entry?.id ?? draftID
     }
@@ -249,10 +269,6 @@ struct FoodEntryFormView: View {
     private var normalizedNote: String? {
         let value = note.trimmingCharacters(in: .whitespacesAndNewlines)
         return value.isEmpty ? nil : value
-    }
-
-    private var isSaveDisabled: Bool {
-        trimmedTitle.isEmpty
     }
 
     private var photoAttachments: [MediaAttachment] {
@@ -375,6 +391,11 @@ struct FoodEntryFormView: View {
     }
 
     private func save() {
+        guard trimmedTitle.isEmpty == false else {
+            focusedField = "title"
+            return
+        }
+
         var record = entry ?? viewModel.makeEntry(
             title: trimmedTitle,
             mealKind: mealKind,

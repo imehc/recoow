@@ -51,6 +51,33 @@ final class FoodJournalRepository: @unchecked Sendable {
         }
     }
 
+    /// 批量新增饮食记录（复制餐别时使用），同一事务内写入以避免中途失败留下半份数据。
+    func saveEntries(_ entries: [FoodEntry]) throws -> [FoodEntry] {
+        guard entries.isEmpty == false else { return [] }
+
+        return try database.writer.write { db in
+            var savedEntries: [FoodEntry] = []
+
+            for entry in entries {
+                var record = entry
+                let exists = try FoodEntry.fetchOne(db, key: record.id) != nil
+
+                if exists {
+                    record.updatedAt = SyncableTimestamp.nowMilliseconds()
+                    record.syncStatus = .pending
+                    try record.update(db)
+                } else {
+                    try record.insert(db)
+                }
+
+                try appendChange(db: db, record: record, operation: exists ? .update : .insert)
+                savedEntries.append(record)
+            }
+
+            return savedEntries
+        }
+    }
+
     func deleteEntry(id: String) throws {
         try deleteEntries(ids: [id])
     }

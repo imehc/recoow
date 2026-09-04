@@ -878,3 +878,8 @@
 "暂停后可以随时继续，已有打卡记录会保留。" = "You can continue anytime. Existing check-in records will be kept.";
 "暂停期间将停止后续打卡和提醒，已有打卡记录会保留。" = "Check-ins and reminders will pause. Existing check-in records will be kept.";
 "恢复失败" = "Failed to resume";
+"复制饮食" = "Copy Food";
+"复制到今天" = "Copy to Today";
+"复制“%@”到今天" = "Copy “%@” to Today";
+"复制“%@”到今天？" = "Copy “%@” to Today?";
+"将复制 %d 条记录到今天，时间保持不变。" = "%d records will be copied to today, keeping their original times.";

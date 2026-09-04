@@ -5,6 +5,7 @@ struct FoodEntryDetailView: View {
     @Bindable var viewModel: FoodJournalViewModel
     @Bindable var billsViewModel: BillsViewModel
     @State private var entryForEditing: FoodEntry?
+    @State private var entryForCopying: FoodEntry?
     @State private var isConfirmingDeletion = false
     @State private var previewAttachment: MediaAttachment?
 
@@ -28,6 +29,17 @@ struct FoodEntryDetailView: View {
                     attachments: attachments,
                     viewModel: viewModel,
                     billsViewModel: billsViewModel
+                )
+            }
+        }
+        .sheet(item: $entryForCopying) { entry in
+            NavigationStack {
+                FoodEntryFormView(
+                    entry: nil,
+                    attachments: [],
+                    viewModel: viewModel,
+                    billsViewModel: billsViewModel,
+                    copying: entry
                 )
             }
         }
@@ -103,6 +115,10 @@ struct FoodEntryDetailView: View {
                 Menu {
                     Button(AppLocalization.string("编辑"), systemImage: "square.and.pencil") {
                         entryForEditing = entry
+                    }
+
+                    Button(AppLocalization.string("复制"), systemImage: "doc.on.doc") {
+                        entryForCopying = entry
                     }
 
                     Divider()

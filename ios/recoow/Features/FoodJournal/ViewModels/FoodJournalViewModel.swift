@@ -225,6 +225,45 @@ final class FoodJournalViewModel {
         }
     }
 
+    /// 复制饮食的时间：日期取复制当天，时分秒沿用原记录。
+    func copiedOccurredDate(for entry: FoodEntry, on day: Date = Date()) -> Date {
+        let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: entry.occurredDate)
+        return calendar.date(
+            bySettingHour: timeComponents.hour ?? 0,
+            minute: timeComponents.minute ?? 0,
+            second: timeComponents.second ?? 0,
+            of: day
+        ) ?? day
+    }
+
+    func makeDuplicateDraft(from entry: FoodEntry, on day: Date = Date()) -> FoodEntry {
+        entry.duplicated(
+            occurredAt: Self.milliseconds(for: copiedOccurredDate(for: entry, on: day)),
+            deviceID: repository.deviceID
+        )
+    }
+
+    /// 按餐别复制：把整个餐别的饮食复制到目标日期，仅日期变化，时间保持不变。
+    func duplicateEntries(_ entries: [FoodEntry], on day: Date = Date()) async -> Bool {
+        guard entries.isEmpty == false else { return true }
+
+        let drafts = entries.map { makeDuplicateDraft(from: $0, on: day) }
+
+        do {
+            let savedEntries = try repository.saveEntries(drafts)
+            for savedEntry in savedEntries {
+                upsertEntry(savedEntry)
+                attachmentsByEntryID[savedEntry.id] = []
+            }
+            errorMessage = nil
+            await syncEngine.enqueueScan()
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
     func saveDayTitle(dayStart: Date, title: String) async -> Bool {
         let normalizedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let dayStartAt = Self.milliseconds(for: calendar.startOfDay(for: dayStart))
