@@ -169,6 +169,33 @@ final class ItemLocatorRepository: @unchecked Sendable {
         }
     }
 
+    func observeItemsForStatistics() -> AsyncStream<Result<[StoredItem], Error>> {
+        AsyncStream { continuation in
+            let observation = ValueObservation.tracking { db in
+                try StoredItem
+                    .filter(Column("deleted_at") == nil)
+                    .order(Column("updated_at").desc)
+                    .selectingAllColumns(except: ["image_data"], db: db)
+                    .fetchAll(db)
+            }
+
+            let cancellable = observation.start(
+                in: database.reader,
+                scheduling: .immediate,
+                onError: { error in
+                    continuation.yield(.failure(error))
+                },
+                onChange: { items in
+                    continuation.yield(.success(items))
+                }
+            )
+
+            continuation.onTermination = { @Sendable _ in
+                cancellable.cancel()
+            }
+        }
+    }
+
     private func appendChange(db: Database, record: ItemCategory, operation: ChangeOperation) throws {
         try changeLogRepository.append(
             db: db,

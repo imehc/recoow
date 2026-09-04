@@ -7,7 +7,7 @@ struct PhotoSquareImageView: View {
 
     var body: some View {
         Group {
-            if let imageData, let image = UIImage(data: imageData) {
+            if let imageData, let image = ThumbnailImageLoader.image(data: imageData, preferredPixelSize: preferredPixelSize) {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
@@ -23,5 +23,10 @@ struct PhotoSquareImageView: View {
         .aspectRatio(1, contentMode: .fit)
         .clipShape(.rect(cornerRadius: AppDesign.cornerRadius))
         .accessibilityHidden(true)
+    }
+
+    private var preferredPixelSize: Int {
+        let bounds = UIScreen.main.bounds
+        return max(1, min(Int((bounds.width * UIScreen.main.scale).rounded()), 1536))
     }
 }

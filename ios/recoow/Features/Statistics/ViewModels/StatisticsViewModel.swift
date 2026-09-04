@@ -280,7 +280,7 @@ final class StatisticsViewModel {
         observationTasks.append(Task { [weak self] in
             guard let self else { return }
 
-            for await result in decisionRepository.observeChoiceRecords() {
+            for await result in decisionRepository.observeChoiceRecordsForStatistics() {
                 switch result {
                 case .success(let records):
                     self.decisionRecords = records
@@ -296,7 +296,7 @@ final class StatisticsViewModel {
         observationTasks.append(Task { [weak self] in
             guard let self else { return }
 
-            for await result in itemLocatorRepository.observeItems() {
+            for await result in itemLocatorRepository.observeItemsForStatistics() {
                 switch result {
                 case .success(let items):
                     self.items = items
@@ -312,7 +312,7 @@ final class StatisticsViewModel {
         observationTasks.append(Task { [weak self] in
             guard let self else { return }
 
-            for await result in reminderRepository.observeReminders() {
+            for await result in reminderRepository.observeRemindersForStatistics() {
                 switch result {
                 case .success(let reminders):
                     self.reminders = reminders

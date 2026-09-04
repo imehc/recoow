@@ -8,7 +8,7 @@ struct PhotoThumbnailView: View {
 
     var body: some View {
         Group {
-            if let imageData, let image = UIImage(data: imageData) {
+            if let imageData, let image = ThumbnailImageLoader.image(data: imageData, preferredPixelSize: preferredPixelSize) {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
@@ -23,5 +23,10 @@ struct PhotoThumbnailView: View {
         .frame(width: size, height: size)
         .clipShape(.rect(cornerRadius: AppDesign.iconCornerRadius))
         .accessibilityHidden(true)
+    }
+
+    private var preferredPixelSize: Int {
+        let scale = UIScreen.main.scale
+        return max(1, min(Int((size * scale * 2).rounded()), 1024))
     }
 }

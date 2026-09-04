@@ -140,6 +140,33 @@ final class ReminderRepository: @unchecked Sendable {
         }
     }
 
+    func observeRemindersForStatistics() -> AsyncStream<Result<[ReminderRecord], Error>> {
+        AsyncStream { continuation in
+            let observation = ValueObservation.tracking { db in
+                try ReminderRecord
+                    .filter(Column("deleted_at") == nil)
+                    .order(Column("scheduled_at").desc)
+                    .selectingAllColumns(except: ["image_data"], db: db)
+                    .fetchAll(db)
+            }
+
+            let cancellable = observation.start(
+                in: database.reader,
+                scheduling: .immediate,
+                onError: { error in
+                    continuation.yield(.failure(error))
+                },
+                onChange: { reminders in
+                    continuation.yield(.success(reminders))
+                }
+            )
+
+            continuation.onTermination = { @Sendable _ in
+                cancellable.cancel()
+            }
+        }
+    }
+
     private func appendChange(db: Database, record: ReminderRecord, operation: ChangeOperation) throws {
         try changeLogRepository.append(
             db: db,

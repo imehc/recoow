@@ -45,7 +45,7 @@ struct MediaAttachmentRow: View {
     private var thumbnail: some View {
         switch attachment.kind {
         case .photo:
-            if let image = UIImage(data: attachment.resolvedData) {
+            if let image = ThumbnailImageLoader.image(data: attachment.resolvedData, preferredPixelSize: preferredPixelSize) {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
@@ -57,6 +57,12 @@ struct MediaAttachmentRow: View {
         case .audio:
             fallbackThumbnail
         }
+    }
+
+    private var preferredPixelSize: Int {
+        let scale = UIScreen.main.scale
+        let size = AppDesign.mediaAttachmentThumbnailSize
+        return max(1, min(Int((size * scale * 2).rounded()), 1024))
     }
 
     private var fallbackThumbnail: some View {

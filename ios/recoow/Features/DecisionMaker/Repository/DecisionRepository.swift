@@ -245,6 +245,33 @@ final class DecisionRepository: @unchecked Sendable {
         }
     }
 
+    func observeChoiceRecordsForStatistics() -> AsyncStream<Result<[DecisionChoiceRecord], Error>> {
+        AsyncStream { continuation in
+            let observation = ValueObservation.tracking { db in
+                try DecisionChoiceRecord
+                    .filter(Column("deleted_at") == nil)
+                    .order(Column("selected_at").desc)
+                    .selectingAllColumns(except: ["option_image_data"], db: db)
+                    .fetchAll(db)
+            }
+
+            let cancellable = observation.start(
+                in: database.reader,
+                scheduling: .immediate,
+                onError: { error in
+                    continuation.yield(.failure(error))
+                },
+                onChange: { records in
+                    continuation.yield(.success(records))
+                }
+            )
+
+            continuation.onTermination = { @Sendable _ in
+                cancellable.cancel()
+            }
+        }
+    }
+
     private func appendChange(db: Database, record: DecisionCollection, operation: ChangeOperation) throws {
         try changeLogRepository.append(
             db: db,
