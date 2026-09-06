@@ -1,13 +1,25 @@
 import SwiftUI
 import UIKit
+import Observation
+
+@Observable
+private final class FoodEntryFormDraft {
+    var title: String
+    var portion: String
+    var note: String
+
+    init(title: String, portion: String, note: String) {
+        self.title = title
+        self.portion = portion
+        self.note = note
+    }
+}
 
 struct FoodEntryFormView: View {
     @Environment(AppContainer.self) private var container
     @Environment(\.dismiss) private var dismiss
-    @State private var title: String
     @State private var mealKind: FoodMealKind
-    @State private var portion: String
-    @State private var note: String
+    @State private var draft: FoodEntryFormDraft
     @State private var occurredDate: Date
     @State private var selectedAttachments: [MediaAttachment]
     @State private var selectedBillIDs: [String]
@@ -58,10 +70,12 @@ struct FoodEntryFormView: View {
             initialOccurredDate = entry?.occurredDate ?? Self.defaultOccurredDate(for: initialDate)
         }
 
-        _title = State(initialValue: source?.title ?? "")
+        _draft = State(initialValue: FoodEntryFormDraft(
+            title: source?.title ?? "",
+            portion: source?.portion ?? "",
+            note: source?.note ?? ""
+        ))
         _mealKind = State(initialValue: source?.foodMealKind ?? Self.defaultMealKind(for: initialOccurredDate))
-        _portion = State(initialValue: source?.portion ?? "")
-        _note = State(initialValue: source?.note ?? "")
         _occurredDate = State(initialValue: initialOccurredDate)
         _selectedAttachments = State(initialValue: attachments)
         _selectedBillIDs = State(initialValue: entry?.billIDs ?? [])
@@ -71,6 +85,8 @@ struct FoodEntryFormView: View {
     }
 
     var body: some View {
+        @Bindable var draft = draft
+
         Form {
             if suggestions.isEmpty == false {
                 Section(AppLocalization.string("常用饮食")) {
@@ -92,7 +108,7 @@ struct FoodEntryFormView: View {
 
             Section(AppLocalization.string("基础信息")) {
                 LabeledContent(AppLocalization.string("食物")) {
-                    TextField(AppLocalization.string("请输入食物"), text: $title)
+                    TextField(AppLocalization.string("请输入食物"), text: $draft.title)
                         .multilineTextAlignment(.trailing)
                         .focused($focusedField, equals: "title")
                 }
@@ -113,7 +129,7 @@ struct FoodEntryFormView: View {
 
             Section(AppLocalization.string("份量与备注")) {
                 LabeledContent(AppLocalization.string("份量")) {
-                    TextField(AppLocalization.string("请输入份量"), text: $portion)
+                    TextField(AppLocalization.string("请输入份量"), text: $draft.portion)
                         .multilineTextAlignment(.trailing)
                         .focused($focusedField, equals: "portion")
                 }
@@ -123,7 +139,7 @@ struct FoodEntryFormView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
 
-                    TextField(AppLocalization.string("请输入备注"), text: $note, axis: .vertical)
+                    TextField(AppLocalization.string("请输入备注"), text: $draft.note, axis: .vertical)
                         .lineLimit(3...)
                         .focused($focusedField, equals: "note")
                 }
@@ -194,7 +210,9 @@ struct FoodEntryFormView: View {
         .overlay {
             MediaAttachmentDragLayer(coordinator: attachmentDragCoordinator)
         }
-        .dismissesKeyboardOnTap(focusedField: $focusedField)
+        // Use Form's native scroll dismissal here. The shared window-level tap
+        // recognizer can interfere with the first marked-text event of Pinyin.
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle(AppLocalization.string(navigationTitleKey))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -258,16 +276,16 @@ struct FoodEntryFormView: View {
     }
 
     private var trimmedTitle: String {
-        title.trimmingCharacters(in: .whitespacesAndNewlines)
+        draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var normalizedPortion: String? {
-        let value = portion.trimmingCharacters(in: .whitespacesAndNewlines)
+        let value = draft.portion.trimmingCharacters(in: .whitespacesAndNewlines)
         return value.isEmpty ? nil : value
     }
 
     private var normalizedNote: String? {
-        let value = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        let value = draft.note.trimmingCharacters(in: .whitespacesAndNewlines)
         return value.isEmpty ? nil : value
     }
 
@@ -292,9 +310,9 @@ struct FoodEntryFormView: View {
     }
 
     private func applySuggestion(_ suggestion: FoodEntrySuggestion) {
-        title = suggestion.title
+        draft.title = suggestion.title
         mealKind = suggestion.mealKind
-        portion = suggestion.portion ?? ""
+        draft.portion = suggestion.portion ?? ""
     }
 
     private func showAttachmentPreview(_ attachment: MediaAttachment) {
