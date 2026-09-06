@@ -49,6 +49,7 @@ struct RemindersView: View {
 private struct RemindersContent: View {
     @Bindable var viewModel: RemindersViewModel
     @State private var isShowingAddReminder = false
+    @State private var isShowingHistory = false
     @State private var reminderPendingDeletion: ReminderRecord?
     @State private var makeUpRequest: ReminderMakeUpRequest?
     @State private var earlyEndRequest: ReminderEarlyEndRequest?
@@ -81,116 +82,40 @@ private struct RemindersContent: View {
                     Button("添加打卡任务", systemImage: "plus", action: showAddReminder)
                 }
             } else {
-                if viewModel.upcomingReminders.isEmpty == false {
+                if viewModel.activeReminders.isEmpty == false {
                     Section("进行中") {
-                        ForEach(viewModel.upcomingReminders) { reminder in
-                            NavigationLink(value: ReminderRoute(id: reminder.id)) {
-                                ReminderRow(
-                                    reminder: reminder,
-                                    reminderImageTransition: reminderImageTransition
-                                )
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                if reminder.isTodayCompleted {
-                                    Button {
-                                        undoTodayCheckIn(reminder)
-                                    } label: {
-                                        Label("撤销打卡", systemImage: "arrow.uturn.backward.circle")
-                                    }
-                                    .tint(.orange)
-                                } else if reminder.canCheckIn() {
-                                    Button {
-                                        completeReminder(reminder)
-                                    } label: {
-                                        Label("打卡", systemImage: "checkmark.circle")
-                                    }
-                                    .tint(.green)
-                                } else if let missedDate = reminder.firstMissedCheckInDate() {
-                                    Button {
-                                        makeUpRequest = ReminderMakeUpRequest(reminder: reminder, date: missedDate)
-                                    } label: {
-                                        Label("补签", systemImage: "calendar.badge.plus")
-                                    }
-                                    .tint(.orange)
-                                }
-
-                                if reminder.canPause {
-                                    Button {
-                                        pauseRequest = ReminderPauseRequest(reminder: reminder)
-                                    } label: {
-                                        Label("暂停", systemImage: "pause.circle")
-                                    }
-                                    .tint(.orange)
-                                } else if reminder.canResume {
-                                    Button {
-                                        resumeReminder(reminder)
-                                    } label: {
-                                        Label("继续", systemImage: "play.circle")
-                                    }
-                                    .tint(.green)
-                                }
-
-                                if reminder.canEndEarly {
-                                    Button {
-                                        earlyEndRequest = ReminderEarlyEndRequest(reminder: reminder)
-                                    } label: {
-                                        Label("提前结束", systemImage: "stop.circle")
-                                    }
-                                    .tint(.orange)
-                                }
-
-                                Button {
-                                    requestDeleteReminder(reminder)
-                                } label: {
-                                    Label("删除", systemImage: "trash")
-                                }
-                                .tint(.red)
-                            }
+                        ForEach(viewModel.activeReminders) { reminder in
+                            activeRow(reminder)
                         }
                     }
                 }
 
-                if viewModel.pastReminders.isEmpty == false {
-                    Section("已完成") {
-                        ForEach(viewModel.pastReminders) { reminder in
-                            NavigationLink(value: ReminderRoute(id: reminder.id)) {
-                                ReminderRow(
-                                    reminder: reminder,
-                                    reminderImageTransition: reminderImageTransition
-                                )
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                if reminder.isTodayCompleted {
-                                    Button {
-                                        undoTodayCheckIn(reminder)
-                                    } label: {
-                                        Label("撤销打卡", systemImage: "arrow.uturn.backward.circle")
-                                    }
-                                    .tint(.orange)
-                                } else if reminder.canRestoreCompletion {
-                                    Button {
-                                        reopenReminder(reminder)
-                                    } label: {
-                                        Label("恢复", systemImage: "arrow.uturn.backward")
-                                    }
-                                    .tint(.blue)
-                                }
-
-                                Button {
-                                    requestDeleteReminder(reminder)
-                                } label: {
-                                    Label("删除", systemImage: "trash")
-                                }
-                                .tint(.red)
-                            }
+                if viewModel.pausedReminders.isEmpty == false {
+                    Section("已暂停") {
+                        ForEach(viewModel.pausedReminders) { reminder in
+                            pausedRow(reminder)
                         }
                     }
                 }
             }
         }
         .listStyle(.insetGrouped)
+        .navigationDestination(isPresented: $isShowingHistory) {
+            RemindersHistoryView(
+                viewModel: viewModel,
+                reminderImageTransition: reminderImageTransition
+            )
+        }
         .toolbar {
-            Button("添加打卡任务", systemImage: "plus", action: showAddReminder)
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button {
+                    isShowingHistory = true
+                } label: {
+                    Label(AppLocalization.string("历史"), systemImage: "clock.arrow.circlepath")
+                }
+
+                Button("添加打卡任务", systemImage: "plus", action: showAddReminder)
+            }
         }
         .sheet(isPresented: $isShowingAddReminder) {
             NavigationStack {
@@ -228,6 +153,108 @@ private struct RemindersContent: View {
         }
     }
 
+    @ViewBuilder
+    private func activeRow(_ reminder: ReminderRecord) -> some View {
+        NavigationLink(value: ReminderRoute(id: reminder.id)) {
+            ReminderRow(
+                reminder: reminder,
+                reminderImageTransition: reminderImageTransition
+            )
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            if reminder.isTodayCompleted {
+                Button {
+                    undoTodayCheckIn(reminder)
+                } label: {
+                    Label("撤销打卡", systemImage: "arrow.uturn.backward.circle")
+                }
+                .tint(.orange)
+            } else if reminder.canCheckIn() {
+                Button {
+                    completeReminder(reminder)
+                } label: {
+                    Label("打卡", systemImage: "checkmark.circle")
+                }
+                .tint(.green)
+            } else if let missedDate = reminder.firstMissedCheckInDate() {
+                Button {
+                    makeUpRequest = ReminderMakeUpRequest(reminder: reminder, date: missedDate)
+                } label: {
+                    Label("补签", systemImage: "calendar.badge.plus")
+                }
+                .tint(.orange)
+            }
+
+            if reminder.canPause {
+                Button {
+                    pauseRequest = ReminderPauseRequest(reminder: reminder)
+                } label: {
+                    Label("暂停", systemImage: "pause.circle")
+                }
+                .tint(.orange)
+            } else if reminder.canResume {
+                Button {
+                    resumeReminder(reminder)
+                } label: {
+                    Label("继续", systemImage: "play.circle")
+                }
+                .tint(.green)
+            }
+
+            if reminder.canEndEarly {
+                Button {
+                    earlyEndRequest = ReminderEarlyEndRequest(reminder: reminder)
+                } label: {
+                    Label("提前结束", systemImage: "stop.circle")
+                }
+                .tint(.orange)
+            }
+
+            Button {
+                requestDeleteReminder(reminder)
+            } label: {
+                Label("删除", systemImage: "trash")
+            }
+            .tint(.red)
+        }
+    }
+
+    @ViewBuilder
+    private func pausedRow(_ reminder: ReminderRecord) -> some View {
+        NavigationLink(value: ReminderRoute(id: reminder.id)) {
+            ReminderRow(
+                reminder: reminder,
+                reminderImageTransition: reminderImageTransition
+            )
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            if reminder.canResume {
+                Button {
+                    resumeReminder(reminder)
+                } label: {
+                    Label("继续", systemImage: "play.circle")
+                }
+                .tint(.green)
+            }
+
+            if reminder.canEndEarly {
+                Button {
+                    earlyEndRequest = ReminderEarlyEndRequest(reminder: reminder)
+                } label: {
+                    Label("提前结束", systemImage: "stop.circle")
+                }
+                .tint(.orange)
+            }
+
+            Button {
+                requestDeleteReminder(reminder)
+            } label: {
+                Label("删除", systemImage: "trash")
+            }
+            .tint(.red)
+        }
+    }
+
     private func showAddReminder() {
         isShowingAddReminder = true
     }
@@ -247,12 +274,6 @@ private struct RemindersContent: View {
     private func completeReminder(_ reminder: ReminderRecord) {
         Task {
             await viewModel.setCompleted(reminder, isCompleted: true)
-        }
-    }
-
-    private func reopenReminder(_ reminder: ReminderRecord) {
-        Task {
-            await viewModel.setCompleted(reminder, isCompleted: false)
         }
     }
 

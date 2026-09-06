@@ -27,9 +27,15 @@ final class RemindersViewModel {
         observationTask?.cancel()
     }
 
-    var upcomingReminders: [ReminderRecord] {
+    var activeReminders: [ReminderRecord] {
         reminders
-            .filter { $0.isCompleted == false }
+            .filter { $0.isCompleted == false && $0.isPaused == false }
+            .sorted(by: activeReminderOrder)
+    }
+
+    var pausedReminders: [ReminderRecord] {
+        reminders
+            .filter { $0.isCompleted == false && $0.isPaused }
             .sorted(by: stableReminderOrder)
     }
 
@@ -272,6 +278,29 @@ final class RemindersViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func activeReminderOrder(lhs: ReminderRecord, rhs: ReminderRecord) -> Bool {
+        let lhsTier = activeReminderTier(lhs)
+        let rhsTier = activeReminderTier(rhs)
+
+        if lhsTier != rhsTier {
+            return lhsTier < rhsTier
+        }
+
+        return stableReminderOrder(lhs: lhs, rhs: rhs)
+    }
+
+    private func activeReminderTier(_ reminder: ReminderRecord) -> Int {
+        if reminder.isTodayCompleted {
+            return 1
+        }
+
+        if reminder.needsCheckInToday {
+            return 0
+        }
+
+        return 2
     }
 
     private func stableReminderOrder(lhs: ReminderRecord, rhs: ReminderRecord) -> Bool {
