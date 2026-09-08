@@ -7,7 +7,7 @@ struct RemindersView: View {
 
     var body: some View {
         Group {
-            if let viewModel {
+            if let viewModel, viewModel.hasLoadedReminders {
                 RemindersContent(
                     viewModel: viewModel,
                     reminderImageTransition: reminderImageTransition
@@ -100,6 +100,12 @@ private struct RemindersContent: View {
             }
         }
         .listStyle(.insetGrouped)
+        .sensoryFeedback(.success, trigger: viewModel.checkInSuccessTick)
+        // 顺序只在列表出现时归位：首次进入、以及从详情/历史页返回。重排发生在转场之下，用户看不到跳动，
+        // 而每次看到列表时待打卡的任务都在最上面。打卡当下那一行原地变状态，不产生位移。
+        .onAppear {
+            viewModel.settleActiveOrder()
+        }
         .navigationDestination(isPresented: $isShowingHistory) {
             RemindersHistoryView(
                 viewModel: viewModel,

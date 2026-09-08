@@ -21,8 +21,8 @@ final class ReminderRepository: @unchecked Sendable {
         deviceIdentifier.value
     }
 
-    func saveReminder(_ reminder: ReminderRecord) throws -> ReminderRecord {
-        try database.writer.write { db in
+    func saveReminder(_ reminder: ReminderRecord) async throws -> ReminderRecord {
+        try await database.writer.write { db in
             var record = reminder
             let previous = try ReminderRecord.fetchOne(db, key: record.id)
             let exists = previous != nil
@@ -36,10 +36,10 @@ final class ReminderRepository: @unchecked Sendable {
                 try record.insert(db)
             }
 
-            if hasAuthoredChanges(previous: previous, current: record) {
-                try appendChange(db: db, record: record, operation: operation)
+            if self.hasAuthoredChanges(previous: previous, current: record) {
+                try self.appendChange(db: db, record: record, operation: operation)
             }
-            try synchronizeCompletions(db: db, previous: previous, current: record)
+            try self.synchronizeCompletions(db: db, previous: previous, current: record)
             return record
         }
     }
