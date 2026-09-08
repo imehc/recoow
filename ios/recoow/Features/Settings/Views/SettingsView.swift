@@ -6,6 +6,7 @@ enum SettingsNavigationRoute: Hashable {
     case homeTools
     case data
     case mediaLibrary
+    case cloudSync
 }
 
 struct SettingsView: View {
@@ -55,6 +56,20 @@ struct SettingsView: View {
 
         Form {
             Section {
+                NavigationLink(value: SettingsNavigationRoute.cloudSync) {
+                    SettingsCategoryRow(
+                        titleKey: "云同步",
+                        subtitleKey: "绑定服务器并手动备份到后台",
+                        systemImage: "icloud.and.arrow.up",
+                        tint: .purple,
+                        language: language
+                    )
+                }
+            } header: {
+                Text("同步与备份")
+            }
+
+            Section {
                 NavigationLink(value: SettingsNavigationRoute.display) {
                     SettingsCategoryRow(
                         titleKey: "显示与语言",
@@ -100,6 +115,8 @@ struct SettingsView: View {
                 dataSettingsPage
             case .mediaLibrary:
                 MediaAssetLibraryManagementView(repository: container.mediaAssetRepository)
+            case .cloudSync:
+                CloudSyncSettingsView()
             }
         }
     }
@@ -530,6 +547,7 @@ struct SettingsView: View {
                 }
                 recordLastImport(schemaVersion: result.metadata.databaseSchemaVersion)
                 transferSuccessMessage = successMessage(for: result, mode: mode)
+                await container.syncEngine.enqueueScan()
                 await refreshStorageUsage()
             } catch {
                 transferErrorMessage = error.localizedDescription

@@ -46,6 +46,7 @@ extension AppDatabase {
             var deletedRowCount = 0
 
             for statement in SoftDeletedCleanupStatement.all {
+                if SyncEntityCatalog.tables.contains(statement.table) { continue }
                 deletedRowCount += try countRows(db: db, table: statement.table, condition: statement.condition)
                 try db.execute(sql: "DELETE FROM \(statement.table) WHERE \(statement.condition)")
             }

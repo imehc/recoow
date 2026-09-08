@@ -17,7 +17,9 @@ final class AppDataTransferService: @unchecked Sendable {
         "track_segments",
         "decision_choice_records",
         "reminders",
+        "reminder_completions",
         "stored_value_accounts",
+        "stored_value_adjustments",
         "bills",
         "food_entries",
         "food_day_records",
@@ -68,6 +70,8 @@ final class AppDataTransferService: @unchecked Sendable {
         mode: AppDataImportMode,
         scopes: Set<AppDataImportScope>
     ) throws -> AppDataImportResult {
+        database.beginDataImport()
+        defer { database.endDataImport() }
         let localURL = try copyToTemporaryLocation(sourceURL)
         defer {
             try? FileManager.default.removeItem(at: localURL)
@@ -93,6 +97,16 @@ final class AppDataTransferService: @unchecked Sendable {
             }
 
             try MediaAssetRepository.restoreInlineAssetsToObjectStore(database: database)
+            try database.writer.write { db in
+                try SyncAggregateProjection.refresh(db: db)
+                for scope in try String.fetchAll(db, sql: "SELECT scope FROM sync_targets") {
+                    try FullSyncRepository.seed(db: db, scope: scope)
+                }
+                for table in ["reminders", "anniversaries"] {
+                    try db.execute(sql: "INSERT OR REPLACE INTO sync_notification_jobs (table_name, entity_id, version) SELECT ?, id, updated_at FROM \"\(table)\"",
+                                   arguments: [table])
+                }
+            }
             // 备份用 inline_data 承载媒体，导入后清空这些列需要压实库文件，设置页才会显示真实占用。
             try database.settleDatabaseFilesAfterImport()
             try database.verifyIntegrity()
@@ -129,6 +143,8 @@ final class AppDataTransferService: @unchecked Sendable {
 
     nonisolated private func normalizeReplacedDatabaseSyncState() throws {
         try database.writer.write { db in
+            try db.execute(sql: "DELETE FROM sync_targets")
+            try db.execute(sql: "DELETE FROM sync_notification_jobs")
             if try db.tableExists(Self.changeLogTableName) {
                 try db.execute(sql: "DELETE FROM \(Self.quotedIdentifier(Self.changeLogTableName))")
             }
@@ -139,8 +155,8 @@ final class AppDataTransferService: @unchecked Sendable {
 
                 try db.execute(sql: """
                     UPDATE \(Self.quotedIdentifier(tableName))
-                    SET \(Self.quotedIdentifier("sync_status")) = ?
-                    """, arguments: [SyncStatus.synced.rawValue])
+                    SET \(Self.quotedIdentifier("sync_status")) = ?, server_version = NULL
+                    """, arguments: [SyncStatus.pending.rawValue])
             }
         }
     }
@@ -597,25 +613,6 @@ final class AppDataTransferService: @unchecked Sendable {
     }
 
     nonisolated private static var syncableTableNames: [String] {
-        [
-            "decision_collections",
-            "decision_options",
-            "item_categories",
-            "stored_items",
-            "tracks",
-            "track_points",
-            "track_segments",
-            "decision_choice_records",
-            "reminders",
-            "bills",
-            "food_entries",
-            "food_day_records",
-            "anniversaries",
-            "diary_entries",
-            "diary_tags",
-            "diary_links",
-            "media_assets",
-            "media_attachments"
-        ]
+        SyncEntityCatalog.entities.map(\.table)
     }
 }

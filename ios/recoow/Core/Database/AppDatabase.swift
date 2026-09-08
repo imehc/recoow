@@ -5,6 +5,11 @@ import GRDB
 final class AppDatabase: @unchecked Sendable {
     nonisolated let dbQueue: DatabaseQueue
     nonisolated let databaseURL: URL?
+    nonisolated private let syncAccess = SyncDatabaseAccess()
+
+    nonisolated var syncAccessToken: UUID? { syncAccess.token }
+    nonisolated func beginDataImport() { syncAccess.beginImport() }
+    nonisolated func endDataImport() { syncAccess.endImport() }
 
     nonisolated var reader: DatabaseReader { dbQueue }
     nonisolated var writer: DatabaseWriter { dbQueue }
@@ -12,6 +17,20 @@ final class AppDatabase: @unchecked Sendable {
     private init(dbQueue: DatabaseQueue, databaseURL: URL? = nil) throws {
         self.dbQueue = dbQueue
         self.databaseURL = databaseURL
+        if let databaseURL {
+            let needsBackup = try dbQueue.read { db in
+                guard try db.tableExists("grdb_migrations") else { return false }
+                return try Bool.fetchOne(db, sql: "SELECT NOT EXISTS(SELECT 1 FROM grdb_migrations WHERE identifier = 'v34_full_sync_schema')") ?? false
+            }
+            if needsBackup {
+                let directory = databaseURL.deletingLastPathComponent().appending(path: "SafetyBackups", directoryHint: .isDirectory)
+                try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                let backupURL = directory.appending(path: "before-v34-\(UUID().uuidString).sqlite")
+                let backup = try DatabaseQueue(path: backupURL.path(percentEncoded: false))
+                defer { try? backup.close() }
+                try dbQueue.backup(to: backup)
+            }
+        }
         try AppMigrator.migrate(dbQueue)
     }
 
@@ -79,4 +98,13 @@ final class AppDatabase: @unchecked Sendable {
             }
         }
     }
+}
+
+nonisolated private final class SyncDatabaseAccess: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: UUID? = UUID()
+
+    var token: UUID? { lock.withLock { value } }
+    func beginImport() { lock.withLock { value = nil } }
+    func endImport() { lock.withLock { value = UUID() } }
 }

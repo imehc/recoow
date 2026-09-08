@@ -8,6 +8,8 @@ final class AppContainer {
     @ObservationIgnored let database: AppDatabase
     @ObservationIgnored let syncEngine: any SyncEngine
     @ObservationIgnored let deviceIdentifier: DeviceIdentifier
+    @ObservationIgnored let changeLogRepository: ChangeLogRepository
+    @ObservationIgnored let cloudSyncConfig: RecoowSyncConfig
     @ObservationIgnored let locationService: LocationService
     @ObservationIgnored let trackRepository: TrackRepository
     @ObservationIgnored let decisionRepository: DecisionRepository
@@ -33,6 +35,8 @@ final class AppContainer {
         database: AppDatabase,
         syncEngine: any SyncEngine,
         deviceIdentifier: DeviceIdentifier,
+        changeLogRepository: ChangeLogRepository,
+        cloudSyncConfig: RecoowSyncConfig,
         locationService: LocationService,
         trackRepository: TrackRepository,
         decisionRepository: DecisionRepository,
@@ -56,6 +60,8 @@ final class AppContainer {
         self.database = database
         self.syncEngine = syncEngine
         self.deviceIdentifier = deviceIdentifier
+        self.changeLogRepository = changeLogRepository
+        self.cloudSyncConfig = cloudSyncConfig
         self.locationService = locationService
         self.trackRepository = trackRepository
         self.decisionRepository = decisionRepository
@@ -86,7 +92,8 @@ final class AppContainer {
             database: database,
             deviceIdentifier: deviceIdentifier,
             featureVisibilitySettings: FeatureVisibilitySettings(),
-            appPreferences: AppPreferences()
+            appPreferences: AppPreferences(),
+            cloudSyncConfig: RecoowSyncConfig()
         )
     }
 
@@ -175,11 +182,13 @@ final class AppContainer {
         do {
             let deviceIdentifier = DeviceIdentifier(defaults: .standard, key: "preview_device_id")
             let database = try AppDatabase.makeInMemory()
+            let previewSyncDefaults = UserDefaults(suiteName: "recoow_sync_preview") ?? .standard
             return try makeContainer(
                 database: database,
                 deviceIdentifier: deviceIdentifier,
                 featureVisibilitySettings: FeatureVisibilitySettings(defaults: nil),
-                appPreferences: AppPreferences(defaults: nil)
+                appPreferences: AppPreferences(defaults: nil),
+                cloudSyncConfig: RecoowSyncConfig(defaults: previewSyncDefaults)
             )
         } catch {
             fatalError("Preview AppContainer 初始化失败: \(error)")
@@ -190,10 +199,11 @@ final class AppContainer {
         database: AppDatabase,
         deviceIdentifier: DeviceIdentifier,
         featureVisibilitySettings: FeatureVisibilitySettings,
-        appPreferences: AppPreferences
+        appPreferences: AppPreferences,
+        cloudSyncConfig: RecoowSyncConfig
     ) throws -> AppContainer {
         let changeLogRepository = ChangeLogRepository(database: database)
-        let syncEngine = NoopSyncEngine(changeLogRepository: changeLogRepository)
+        let cloudSyncAPI = RecoowAPIClient(config: cloudSyncConfig)
         let trackRepository = TrackRepository(
             database: database,
             changeLogRepository: changeLogRepository,
@@ -218,6 +228,14 @@ final class AppContainer {
             database: database,
             changeLogRepository: changeLogRepository,
             deviceIdentifier: deviceIdentifier
+        )
+
+        let notificationScheduler = LocalNotificationScheduler()
+        let syncEngine: any SyncEngine = RemoteSyncEngine(
+            database: database,
+            config: cloudSyncConfig,
+            api: cloudSyncAPI,
+            scheduler: notificationScheduler
         )
         let mediaAssetRepository = MediaAssetRepository(
             database: database,
@@ -248,7 +266,6 @@ final class AppContainer {
         )
         let historyRepository = HistoryRepository(database: database)
         let dataTransferService = AppDataTransferService(database: database)
-        let notificationScheduler = LocalNotificationScheduler()
         let reminderNotificationService = ReminderNotificationService(scheduler: notificationScheduler)
         let anniversaryNotificationService = AnniversaryNotificationService(scheduler: notificationScheduler)
         let locationService = LocationService()
@@ -262,6 +279,8 @@ final class AppContainer {
             database: database,
             syncEngine: syncEngine,
             deviceIdentifier: deviceIdentifier,
+            changeLogRepository: changeLogRepository,
+            cloudSyncConfig: cloudSyncConfig,
             locationService: locationService,
             trackRepository: trackRepository,
             decisionRepository: decisionRepository,

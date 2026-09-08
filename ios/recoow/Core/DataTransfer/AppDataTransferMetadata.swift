@@ -172,9 +172,9 @@ enum AppDataImportScope: String, CaseIterable, Identifiable, Hashable, Sendable 
         case .locationTracker:
             ["tracks", "track_points", "track_segments"]
         case .reminders:
-            ["reminders"]
+            ["reminders", "reminder_completions"]
         case .bills:
-            ["stored_value_accounts", "bills"]
+            ["stored_value_accounts", "stored_value_adjustments", "bills"]
         case .foodJournal:
             ["food_entries", "food_day_records", "media_assets"]
         case .diary:

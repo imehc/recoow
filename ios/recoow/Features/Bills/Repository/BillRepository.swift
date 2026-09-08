@@ -26,6 +26,7 @@ final class BillRepository: @unchecked Sendable {
             var record = bill
             let existingBill = try BillRecord.fetchOne(db, key: record.id)
             let operation: ChangeOperation = existingBill == nil ? .insert : .update
+            try prepareBalanceEffects(db: db, previous: existingBill, record: &record)
 
             if existingBill != nil {
                 record.updatedAt = SyncableTimestamp.nowMilliseconds()
@@ -35,7 +36,7 @@ final class BillRepository: @unchecked Sendable {
                 try record.insert(db)
             }
 
-            try applyStoredValueBalanceChange(db: db, oldBill: existingBill, newBill: record)
+            try SyncAggregateProjection.refreshBalances(db: db)
             try appendChange(db: db, record: record, operation: operation)
             return record
         }
@@ -44,7 +45,8 @@ final class BillRepository: @unchecked Sendable {
     func saveStoredValueAccount(_ account: StoredValueAccount) throws -> StoredValueAccount {
         try database.writer.write { db in
             var record = account
-            let exists = try StoredValueAccount.fetchOne(db, key: record.id) != nil
+            let existing = try StoredValueAccount.fetchOne(db, key: record.id)
+            let exists = existing != nil
             let operation: ChangeOperation = exists ? .update : .insert
 
             if exists {
@@ -56,6 +58,20 @@ final class BillRepository: @unchecked Sendable {
             }
 
             try appendChange(db: db, record: record, operation: operation)
+            let adjustment = record.balanceCents.subtractingReportingOverflow(existing?.balanceCents ?? 0)
+            guard !adjustment.overflow else { throw CloudAPIError.syncRejected("储值调整金额超出范围") }
+            if !exists || adjustment.partialValue != 0 {
+                let entry = StoredValueAdjustment(
+                    id: exists ? UUID().uuidString : "opening:" + record.id,
+                    createdAt: record.updatedAt, updatedAt: record.updatedAt, deletedAt: nil, syncStatus: .pending,
+                    deviceID: deviceIdentifier.value, serverVersion: nil, accountID: record.id,
+                    amountCents: adjustment.partialValue, reason: exists ? "manual" : "opening"
+                )
+                try entry.insert(db)
+                try changeLogRepository.append(db: db, table: StoredValueAdjustment.databaseTableName, entityID: entry.id,
+                                               operation: .insert, payload: entry, clientTimestampMilliseconds: entry.updatedAt)
+            }
+            try SyncAggregateProjection.refreshBalances(db: db)
             return record
         }
     }
@@ -106,13 +122,14 @@ final class BillRepository: @unchecked Sendable {
                 }
 
                 let deletedAt = SyncableTimestamp.nowMilliseconds()
-                let oldBill = bill
                 bill.deletedAt = deletedAt
                 bill.updatedAt = deletedAt
                 bill.syncStatus = .pending
 
+                let previous = try BillRecord.fetchOne(db, key: bill.id)
+                try prepareBalanceEffects(db: db, previous: previous, record: &bill)
                 try bill.update(db)
-                try applyStoredValueBalanceChange(db: db, oldBill: oldBill, newBill: bill)
+                try SyncAggregateProjection.refreshBalances(db: db)
                 try appendChange(db: db, record: bill, operation: .delete)
             }
         }
@@ -209,6 +226,24 @@ final class BillRepository: @unchecked Sendable {
         }
     }
 
+    private func prepareBalanceEffects(db: Database, previous: BillRecord?, record: inout BillRecord) throws {
+        var effects = try StoredValueBalanceEffects.decode(previous?.storedValueEffectsRawValue)
+        var deltas: [String: Int64] = [:]
+        if let previous, let accountID = previous.storedValueAccountID {
+            let delta = Int64.zero.subtractingReportingOverflow(previous.storedValueBalanceDeltaCents)
+            guard !delta.overflow else { throw CloudAPIError.syncRejected("储值余额超出范围") }
+            try StoredValueBalanceEffects.adding(delta.partialValue, accountID: accountID, to: &deltas)
+        }
+        if let accountID = record.storedValueAccountID {
+            try StoredValueBalanceEffects.adding(record.storedValueBalanceDeltaCents, accountID: accountID, to: &deltas)
+        }
+        for (accountID, amount) in deltas {
+            guard let account = try StoredValueAccount.fetchOne(db, key: accountID), account.deletedAt == nil else { continue }
+            try StoredValueBalanceEffects.adding(amount, accountID: accountID, to: &effects)
+        }
+        record.storedValueEffectsRawValue = try StoredValueBalanceEffects.encode(effects)
+    }
+
     private func appendChange(db: Database, record: BillRecord, operation: ChangeOperation) throws {
         try changeLogRepository.append(
             db: db,
@@ -231,29 +266,76 @@ final class BillRepository: @unchecked Sendable {
         )
     }
 
-    private func applyStoredValueBalanceChange(db: Database, oldBill: BillRecord?, newBill: BillRecord) throws {
-        var deltasByAccountID: [String: Int64] = [:]
+    // MARK: - 远端回写（pull）
 
-        if let oldBill,
-           let accountID = oldBill.storedValueAccountID {
-            deltasByAccountID[accountID, default: 0] -= oldBill.storedValueBalanceDeltaCents
+    /// 把一条服务端拉取到的变更按 LWW 合并进本地，返回是否真的采纳了远端。
+    func applyRemoteChange(db: Database, update: RemoteRowUpdate) throws -> Bool {
+        switch update.table {
+        case StoredValueAccount.databaseTableName:
+            return try applyRemoteStoredValueAccount(db: db, update: update)
+        case BillRecord.databaseTableName:
+            return try applyRemoteBill(db: db, update: update)
+        default:
+            throw CloudAPIError.invalidResponse("账单仓库不支持实体 \(update.table)")
         }
+    }
 
-        if let accountID = newBill.storedValueAccountID {
-            deltasByAccountID[accountID, default: 0] += newBill.storedValueBalanceDeltaCents
+    private func applyRemoteStoredValueAccount(db: Database, update: RemoteRowUpdate) throws -> Bool {
+        let existing = try StoredValueAccount.fetchOne(db, key: update.id)
+        if let existing, try changeLogRepository.remoteWins(db: db, update: update, over: existing) == false {
+            return false
         }
-
-        for (accountID, deltaCents) in deltasByAccountID where deltaCents != 0 {
-            guard var account = try StoredValueAccount.fetchOne(db, key: accountID),
-                  account.deletedAt == nil else {
-                continue
-            }
-
-            account.balanceCents += deltaCents
-            account.updatedAt = SyncableTimestamp.nowMilliseconds()
-            account.syncStatus = .pending
-            try account.update(db)
-            try appendChange(db: db, record: account, operation: .update)
+        var record: StoredValueAccount
+        if update.isDeleted {
+            guard let existing else { return false }
+            record = existing
+        } else {
+            record = try update.decodeRecord(StoredValueAccount.self)
         }
+        record.updatedAt = update.updatedAtMs
+        record.deletedAt = update.deletedAtMs
+        record.syncStatus = .synced
+        record.serverVersion = update.version
+        record.deviceID = update.deviceID
+
+        if existing == nil {
+            try record.insert(db)
+        } else {
+            try record.update(db)
+        }
+        try changeLogRepository.resolvePending(
+            db: db, table: update.table, entityID: update.id, serverVersion: update.version
+        )
+        return true
+    }
+
+    private func applyRemoteBill(db: Database, update: RemoteRowUpdate) throws -> Bool {
+        let existing = try BillRecord.fetchOne(db, key: update.id)
+        if let existing, try changeLogRepository.remoteWins(db: db, update: update, over: existing) == false {
+            return false
+        }
+        var record: BillRecord
+        if update.isDeleted {
+            guard let existing else { return false }
+            record = existing
+        } else {
+            record = try update.decodeRecord(BillRecord.self)
+            record.imageData = existing?.imageData
+        }
+        record.updatedAt = update.updatedAtMs
+        record.deletedAt = update.deletedAtMs
+        record.syncStatus = .synced
+        record.serverVersion = update.version
+        record.deviceID = update.deviceID
+
+        if existing == nil {
+            try record.insert(db)
+        } else {
+            try record.update(db)
+        }
+        try changeLogRepository.resolvePending(
+            db: db, table: update.table, entityID: update.id, serverVersion: update.version
+        )
+        return true
     }
 }

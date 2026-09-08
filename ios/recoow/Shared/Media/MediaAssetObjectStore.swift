@@ -82,7 +82,7 @@ nonisolated final class MediaAssetObjectStore: @unchecked Sendable {
         let storageKeys = try allStorageKeys()
         var removedCount = 0
 
-        for storageKey in storageKeys where retainedStorageKeys.contains(storageKey) == false {
+        for storageKey in storageKeys where retainedStorageKeys.contains(storageKey) == false && !storageKey.hasPrefix("sync/") {
             try remove(storageKey: storageKey)
             removedCount += 1
         }
@@ -107,11 +107,11 @@ nonisolated final class MediaAssetObjectStore: @unchecked Sendable {
 
     private func url(for storageKey: String) throws -> URL {
         // 对象存储只接受相对 key，避免未来从同步数据恢复时写出沙盒外路径。
-        let safeKey = storageKey
-            .split(separator: "/")
-            .filter { $0 != "." && $0 != ".." }
-            .joined(separator: "/")
-        return try storageRootURL(create: true).appending(path: safeKey)
+        guard !storageKey.isEmpty, !storageKey.hasPrefix("/"), !storageKey.contains(".."), !storageKey.contains("\\"),
+              storageKey.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || "/._-".contains($0)) }) else {
+            throw CocoaError(.fileReadInvalidFileName)
+        }
+        return try storageRootURL(create: true).appending(path: storageKey)
     }
 
     private func storageRootURL(create: Bool) throws -> URL {

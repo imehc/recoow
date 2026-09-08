@@ -24,7 +24,8 @@ final class ReminderRepository: @unchecked Sendable {
     func saveReminder(_ reminder: ReminderRecord) throws -> ReminderRecord {
         try database.writer.write { db in
             var record = reminder
-            let exists = try ReminderRecord.fetchOne(db, key: record.id) != nil
+            let previous = try ReminderRecord.fetchOne(db, key: record.id)
+            let exists = previous != nil
             let operation: ChangeOperation = exists ? .update : .insert
 
             if exists {
@@ -35,7 +36,10 @@ final class ReminderRepository: @unchecked Sendable {
                 try record.insert(db)
             }
 
-            try appendChange(db: db, record: record, operation: operation)
+            if hasAuthoredChanges(previous: previous, current: record) {
+                try appendChange(db: db, record: record, operation: operation)
+            }
+            try synchronizeCompletions(db: db, previous: previous, current: record)
             return record
         }
     }
@@ -75,6 +79,7 @@ final class ReminderRepository: @unchecked Sendable {
                 }
 
                 let dateKeys = Set(targets.map(\.dateKey))
+                let previous = reminder
                 var didChange = false
 
                 for dateKey in dateKeys {
@@ -87,7 +92,7 @@ final class ReminderRepository: @unchecked Sendable {
                 reminder.syncStatus = .pending
 
                 try reminder.update(db)
-                try appendChange(db: db, record: reminder, operation: .update)
+                try synchronizeCompletions(db: db, previous: previous, current: reminder)
                 savedReminders.append(reminder)
             }
 
@@ -167,6 +172,39 @@ final class ReminderRepository: @unchecked Sendable {
         }
     }
 
+    private func synchronizeCompletions(db: Database, previous: ReminderRecord?, current: ReminderRecord) throws {
+        let before = Dictionary((previous?.completionRecords ?? []).map { ($0.dateKey, $0) }, uniquingKeysWith: { _, latest in latest })
+        let after = Dictionary(current.completionRecords.map { ($0.dateKey, $0) }, uniquingKeysWith: { _, latest in latest })
+        for dateKey in Set(before.keys).union(after.keys) where before[dateKey] != after[dateKey] {
+            let identifier = current.id + ":" + dateKey
+            let existing = try ReminderCompletionRecord.fetchOne(db, key: identifier)
+            let detail = after[dateKey] ?? before[dateKey]!
+            let entry = ReminderCompletionRecord(
+                id: identifier, createdAt: existing?.createdAt ?? current.updatedAt, updatedAt: current.updatedAt,
+                deletedAt: after[dateKey] == nil ? current.updatedAt : nil, syncStatus: .pending,
+                deviceID: deviceIdentifier.value, serverVersion: existing?.serverVersion,
+                reminderID: current.id, dateKey: dateKey, completedAt: detail.completedAt, kind: detail.kindRawValue, note: detail.note
+            )
+            try entry.save(db)
+            try changeLogRepository.append(db: db, table: ReminderCompletionRecord.databaseTableName, entityID: entry.id,
+                                           operation: after[dateKey] == nil ? .delete : (existing == nil ? .insert : .update),
+                                           payload: entry, clientTimestampMilliseconds: entry.updatedAt)
+        }
+    }
+
+    private func hasAuthoredChanges(previous: ReminderRecord?, current: ReminderRecord) -> Bool {
+        guard var previous else { return true }
+        if previous.completionRecords != current.completionRecords {
+            previous.completedAt = current.completedAt
+        }
+        previous.updatedAt = current.updatedAt
+        previous.syncStatus = current.syncStatus
+        previous.serverVersion = current.serverVersion
+        previous.completionRecordsRawValue = current.completionRecordsRawValue
+        previous.completedDateKeysRawValue = current.completedDateKeysRawValue
+        return previous != current
+    }
+
     private func appendChange(db: Database, record: ReminderRecord, operation: ChangeOperation) throws {
         try changeLogRepository.append(
             db: db,
@@ -176,5 +214,45 @@ final class ReminderRepository: @unchecked Sendable {
             payload: record,
             clientTimestampMilliseconds: record.updatedAt
         )
+    }
+
+    // MARK: - 远端回写（pull）
+
+    /// 把一条服务端拉取到的 reminders 变更按 LWW 合并进本地，返回是否真的采纳了远端。
+    func applyRemoteChange(db: Database, update: RemoteRowUpdate) throws -> Bool {
+        guard update.table == ReminderRecord.databaseTableName else {
+            throw CloudAPIError.invalidResponse("提醒仓库不支持实体 \(update.table)")
+        }
+        return try applyRemoteReminder(db: db, update: update)
+    }
+
+    private func applyRemoteReminder(db: Database, update: RemoteRowUpdate) throws -> Bool {
+        let existing = try ReminderRecord.fetchOne(db, key: update.id)
+        if let existing, try changeLogRepository.remoteWins(db: db, update: update, over: existing) == false {
+            return false
+        }
+        var record: ReminderRecord
+        if update.isDeleted {
+            guard let existing else { return false }
+            record = existing
+        } else {
+            record = try update.decodeRecord(ReminderRecord.self)
+            record.imageData = existing?.imageData
+        }
+        record.updatedAt = update.updatedAtMs
+        record.deletedAt = update.deletedAtMs
+        record.syncStatus = .synced
+        record.serverVersion = update.version
+        record.deviceID = update.deviceID
+
+        if existing == nil {
+            try record.insert(db)
+        } else {
+            try record.update(db)
+        }
+        try changeLogRepository.resolvePending(
+            db: db, table: update.table, entityID: update.id, serverVersion: update.version
+        )
+        return true
     }
 }

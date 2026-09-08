@@ -73,6 +73,7 @@ struct AppRoot: View {
         .task {
             await container.notificationScheduler.clearBadge()
             await container.locationTrackerViewModel.pauseInterruptedRecordingIfNeeded()
+            await container.syncEngine.enqueueScan()
         }
         .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {
@@ -80,6 +81,7 @@ struct AppRoot: View {
                 Task {
                     await container.notificationScheduler.clearBadge()
                     await container.locationTrackerViewModel.pauseInterruptedRecordingIfNeeded()
+                    await container.syncEngine.enqueueScan()
                 }
             case .background:
                 container.locationTrackerViewModel.prepareForSuspension()

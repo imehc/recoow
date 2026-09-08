@@ -1,1 +1,12 @@
 **/.DS_Store
+# 云同步后端运行时数据
+backend/data/
+/data/
+/restored-data/
+/recoow-backup.sql
+/backend/recoow-backup.sql
+/docs/*.md
+/schema/
+/ios/recoow/Core/Sync/SyncEntityCatalog.generated.swift
+**/__pycache__/
+/dist/

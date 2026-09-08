@@ -32,6 +32,7 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
     var redeemedAt: Int64?
     var refundReason: String?
     var storedValueAccountID: String?
+    var storedValueEffectsRawValue: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -60,6 +61,7 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         case redeemedAt = "redeemed_at"
         case refundReason = "refund_reason"
         case storedValueAccountID = "stored_value_account_id"
+        case storedValueEffectsRawValue = "stored_value_effects"
     }
 
     var occurredDate: Date {
