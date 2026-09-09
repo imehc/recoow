@@ -446,9 +446,12 @@ struct BillFormView: View {
     }
 
     private func expenseAmountValuesFromOriginalAmount(originalCents: Int64) -> (original: Int64, discount: Int64, final: Int64)? {
-        switch amountCompanionField {
-        case "discountRate":
+        // 修改原价时保持折扣（折扣率）不变，联动实付与优惠金额。
+        if discountRateFraction != nil {
             return expenseAmountValuesFromDiscountRate(originalCents: originalCents)
+        }
+
+        switch amountCompanionField {
         case "discountAmount":
             return expenseAmountValuesFromDiscountAmount(originalCents: originalCents)
         case "finalAmount":
@@ -590,17 +593,19 @@ struct BillFormView: View {
             return
         }
 
-        switch amountCompanionField {
-        case "discountRate" where discountRateFraction != nil:
+        // 修改原价时保持折扣（折扣率）不变，联动实付（与优惠金额）。
+        if discountRateFraction != nil {
             syncAmountsFromDiscountRate()
+            return
+        }
+
+        switch amountCompanionField {
         case "discountAmount" where discountAmountCents != nil:
             syncAmountsFromDiscountAmount()
         case "finalAmount" where finalAmountCents != nil:
             syncAmountsFromFinalAmount()
         default:
-            if discountRateFraction != nil {
-                syncAmountsFromDiscountRate()
-            } else if discountAmountCents != nil {
+            if discountAmountCents != nil {
                 syncAmountsFromDiscountAmount()
             } else if finalAmountCents != nil {
                 syncAmountsFromFinalAmount()
