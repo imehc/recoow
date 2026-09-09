@@ -13,13 +13,13 @@ struct AnniversaryRow: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(anniversary.title)
-                        .font(.headline)
+                        .font(AppDesign.rowTitleFont)
                         .lineLimit(2)
 
                     Spacer(minLength: 8)
 
                     Text(countdownText)
-                        .font(.headline)
+                        .font(AppDesign.rowTitleFont)
                         .foregroundStyle(anniversary.category.tint)
                 }
 

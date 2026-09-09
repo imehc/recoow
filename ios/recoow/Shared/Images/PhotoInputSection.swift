@@ -33,7 +33,7 @@ struct PhotoInputSection: View {
                         Button(action: onEditPhoto) {
                             Label("编辑", systemImage: "slider.horizontal.3")
                         }
-                        .tint(.blue)
+                        .tint(AppPalette.accent)
                     }
                 }
             }

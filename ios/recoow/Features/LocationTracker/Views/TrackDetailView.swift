@@ -169,8 +169,9 @@ struct TrackDetailView: View {
                 }
             }
         }
+        .appFormStyle()
         .navigationTitle(track?.name ?? AppLocalization.string("轨迹详情"))
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -181,14 +182,14 @@ struct TrackDetailView: View {
                 }
             }
         }
-        .sheet(item: $editingTrack) { track in
+        .appSheet(item: $editingTrack) { track in
             NavigationStack {
                 TrackEditView(track: track) { updatedTrack in
                     self.track = updatedTrack
                 }
             }
         }
-        .sheet(item: $segmentEditorRequest) { request in
+        .appSheet(item: $segmentEditorRequest) { request in
             if let segment = segments.first(where: { $0.id == request.segmentID }) {
                 switch request.mode {
                 case .split:
@@ -1676,8 +1677,9 @@ private struct TrackSegmentSplitEditorSheet: View {
                 }
             }
         }
+        .appFormStyle()
         .navigationTitle(AppLocalization.string("拆分分段"))
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button(AppLocalization.string("取消")) {
@@ -1795,8 +1797,9 @@ private struct TrackSegmentBoundaryEditorSheet: View {
                 }
             }
         }
+        .appFormStyle()
         .navigationTitle(AppLocalization.string("调整边界"))
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button(AppLocalization.string("取消")) {

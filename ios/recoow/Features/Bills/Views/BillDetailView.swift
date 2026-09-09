@@ -20,18 +20,18 @@ struct BillDetailView: View {
             }
         }
         .navigationTitle("账单详情")
-        .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $billForEditing) { bill in
+        .appNavigationStyle()
+        .appSheet(item: $billForEditing) { bill in
             NavigationStack {
                 BillFormView(bill: bill, viewModel: viewModel)
             }
         }
-        .sheet(item: $billPendingCopy) { bill in
+        .appSheet(item: $billPendingCopy) { bill in
             NavigationStack {
                 BillFormView(bill: nil, viewModel: viewModel, prefillBill: bill)
             }
         }
-        .sheet(item: $billPendingRefund) { bill in
+        .appSheet(item: $billPendingRefund) { bill in
             RefundReasonSheet(bill: bill, viewModel: viewModel)
         }
         .task(id: billID) {
@@ -154,6 +154,7 @@ struct BillDetailView: View {
                 }
             }
         }
+        .appGroupedListStyle()
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 if bill.isGroupBuy, bill.lifecycleState == .normal {
@@ -247,8 +248,9 @@ struct RefundReasonSheet: View {
                         .lineLimit(3...)
                 }
             }
+            .appFormStyle()
             .navigationTitle("退款")
-            .navigationBarTitleDisplayMode(.inline)
+            .appNavigationStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") {

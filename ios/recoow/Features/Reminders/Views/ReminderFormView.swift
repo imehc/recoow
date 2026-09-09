@@ -155,9 +155,10 @@ struct ReminderFormView: View {
                 coordinator: photoInputCoordinator
             )
         }
+        .appFormStyle()
         .dismissesKeyboardOnTap(focusedField: $focusedField)
         .navigationTitle(AppLocalization.string(isCopy ? "复制打卡任务" : (reminder == nil ? "添加打卡任务" : "编辑打卡任务")))
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .editablePhotoInputPresentation(
             coordinator: photoInputCoordinator,
             imageData: $imageData,
@@ -289,7 +290,7 @@ struct ReminderFormView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
-                .tint(selectedWeekdays.contains(weekday) ? .purple : .secondary)
+                .tint(selectedWeekdays.contains(weekday) ? AppPalette.accent : AppPalette.secondaryInk)
             }
         }
     }

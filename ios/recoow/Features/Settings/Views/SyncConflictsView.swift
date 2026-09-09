@@ -23,9 +23,11 @@ struct SyncConflictsView: View {
             }
             if let errorMessage { Text(errorMessage).foregroundStyle(.red) }
         }
+        .appGroupedListStyle()
         .navigationTitle("同步冲突")
+        .appNavigationStyle()
         .task { reload() }
-        .sheet(item: $selection) { conflict in
+        .appSheet(item: $selection) { conflict in
             NavigationStack {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
@@ -37,7 +39,9 @@ struct SyncConflictsView: View {
                         Button("使用云端状态", role: .destructive) { resolve(conflict, keepLocal: false) }
                     }.padding()
                 }
+                .appPageStyle()
                 .navigationTitle("确认冲突")
+                .appNavigationStyle()
                 .toolbar { Button("取消") { selection = nil } }
             }
         }

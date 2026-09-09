@@ -214,16 +214,17 @@ struct BillFormView: View {
                 }
             }
         }
+        .appFormStyle()
         .dismissesKeyboardOnTap(focusedField: $focusedField)
         .navigationTitle(bill == nil ? "添加账单" : "编辑账单")
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .editablePhotoInputPresentation(
             coordinator: photoInputCoordinator,
             imageData: $imageData,
             imageAssetID: $imageAssetID,
             mediaAssetRepository: container.mediaAssetRepository
         )
-        .sheet(isPresented: $showsStoredValueAccountForm) {
+        .appSheet(isPresented: $showsStoredValueAccountForm) {
             StoredValueAccountFormView(viewModel: viewModel) { account in
                 selectedStoredValueAccountID = account.id
                 if billType == .expense {
@@ -902,9 +903,10 @@ struct StoredValueAccountFormView: View {
                     }
                 }
             }
+            .appFormStyle()
             .dismissesKeyboardOnTap(focusedField: $focusedField)
             .navigationTitle(account == nil ? "添加储值账户" : "编辑储值账户")
-            .navigationBarTitleDisplayMode(.inline)
+            .appNavigationStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消", action: dismiss.callAsFunction)

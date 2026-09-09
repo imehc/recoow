@@ -2,6 +2,7 @@ import Charts
 import SwiftUI
 
 struct StatisticsBillSection: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Binding var selectedPeriod: StatisticsBillPeriod
 
     let hasBills: Bool
@@ -16,7 +17,7 @@ struct StatisticsBillSection: View {
     let viewBills: () -> Void
 
     var body: some View {
-        Section("账单统计") {
+        Section {
             Picker("周期", selection: $selectedPeriod) {
                 ForEach(StatisticsBillPeriod.allCases) { period in
                     Text(AppLocalization.string(period.title)).tag(period)
@@ -72,8 +73,8 @@ struct StatisticsBillSection: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(AppLocalization.string("收支趋势"))
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .font(AppDesign.metadataFont.weight(.medium))
+                        .foregroundStyle(AppPalette.secondaryInk)
 
                     Chart(points) { point in
                         BarMark(
@@ -94,8 +95,8 @@ struct StatisticsBillSection: View {
                     }
                     .frame(height: 132)
                     .chartForegroundStyleScale([
-                        AppLocalization.string("支出"): Color.red,
-                        AppLocalization.string("收入"): Color.green
+                        AppLocalization.string("支出"): AppPalette.red,
+                        AppLocalization.string("收入"): AppPalette.green
                     ])
                     .chartYAxis {
                         AxisMarks(position: .leading)
@@ -117,21 +118,21 @@ struct StatisticsBillSection: View {
                     .padding(.vertical, 2)
                 }
             }
+        } header: {
+            Text("账单统计")
+                .appSectionHeaderStyle()
         }
     }
 
     private var columns: [GridItem] {
-        [
-            GridItem(.flexible(), spacing: 12),
-            GridItem(.flexible(), spacing: 12)
-        ]
+        AppDesign.metricColumns(for: dynamicTypeSize)
     }
 
     private var shareColumns: [GridItem] {
         let count = [hasExpenseShare, hasIncomeShare].filter { $0 }.count
         return Array(
             repeating: GridItem(.flexible(), spacing: 12),
-            count: max(1, count)
+            count: dynamicTypeSize.isAccessibilitySize ? 1 : max(1, count)
         )
     }
 

@@ -10,6 +10,7 @@ struct LocationTrackerView: View {
             detailRoute: $detailRoute
         )
         .navigationTitle(AppLocalization.string("轨迹记录"))
+        .appNavigationStyle()
         .toolbar(.hidden, for: .tabBar)
         .navigationDestination(item: $detailRoute) { route in
             TrackDetailView(trackID: route.id)

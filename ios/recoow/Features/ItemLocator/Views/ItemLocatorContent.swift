@@ -75,13 +75,13 @@ struct ItemLocatorContent: View {
                             } label: {
                                 Label("编辑", systemImage: "square.and.pencil")
                             }
-                            .tint(.blue)
+                            .tint(AppPalette.accent)
                         }
                     }
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .appGroupedListStyle()
         .searchable(text: $viewModel.searchText, prompt: "搜索物品、位置、备注")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -92,7 +92,7 @@ struct ItemLocatorContent: View {
                 Button("添加物品", systemImage: "plus", action: showNewItem)
             }
         }
-        .sheet(item: $presentedSheet) { sheet in
+        .appSheet(item: $presentedSheet) { sheet in
             switch sheet {
             case .newItem:
                 NavigationStack {

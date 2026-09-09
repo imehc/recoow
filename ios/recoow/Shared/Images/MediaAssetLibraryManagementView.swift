@@ -38,8 +38,9 @@ struct MediaAssetLibraryManagementView: View {
 
     var body: some View {
         content
+        .appPageStyle()
         .navigationTitle(selectionTitle)
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar {
             if isSelectionMode {
                 ToolbarItem(placement: .cancellationAction) {

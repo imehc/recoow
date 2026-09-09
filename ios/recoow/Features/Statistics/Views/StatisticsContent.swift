@@ -61,9 +61,9 @@ struct StatisticsContent: View {
             )
         }
         .id(locale.identifier)
-        .listStyle(.insetGrouped)
+        .appGroupedListStyle(topContentMargin: AppDesign.tabContentTopMargin)
         .reportsTabBarVisibilityWhenScrolling($tabBarVisibility)
-        .sheet(item: $billDetailContext) { context in
+        .appSheet(item: $billDetailContext) { context in
             if let billsViewModel {
                 StatisticsBillDetailSheet(viewModel: billsViewModel, context: context)
             } else {

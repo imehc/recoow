@@ -111,7 +111,7 @@ struct DiaryDetailView: View {
                         }
                     }
                 }
-                .listStyle(.insetGrouped)
+                .appGroupedListStyle()
                 .toolbar {
                     ToolbarItemGroup(placement: .topBarTrailing) {
                         Menu {
@@ -148,8 +148,8 @@ struct DiaryDetailView: View {
             }
         }
         .navigationTitle(AppLocalization.string("日记详情"))
-        .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $presentedSheet) { sheet in
+        .appNavigationStyle()
+        .appSheet(item: $presentedSheet) { sheet in
             presentedSheetView(sheet)
         }
         .fullScreenCover(item: $previewPhotoAttachment) { attachment in
@@ -263,13 +263,9 @@ private struct DiaryMoodChipView: View {
                 .lineLimit(1)
         }
         .font(.footnote.weight(.medium))
-        .foregroundStyle(mood.tint)
+        .foregroundStyle(AppPalette.resolvedTint(mood.tint))
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(mood.tint.opacity(0.12), in: Capsule())
-        .overlay {
-            Capsule()
-                .strokeBorder(mood.tint.opacity(0.2), lineWidth: 1)
-        }
+        .background(AppPalette.background, in: .rect(cornerRadius: AppDesign.iconCornerRadius))
     }
 }

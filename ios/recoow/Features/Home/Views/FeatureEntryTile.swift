@@ -6,38 +6,46 @@ struct FeatureEntryTile: View {
     var status: ToolHomeStatus?
 
     var body: some View {
-        HStack(spacing: 12) {
-            FeatureIconView(route: module.route)
+        HStack(spacing: HomeStyle.rowSpacing) {
+            FeatureIconView(route: module.route, size: HomeStyle.iconSize)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(module.titleKey)
-                    .font(.headline)
+                    .font(AppDesign.rowTitleFont)
+                    .foregroundStyle(AppPalette.ink)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                Text(module.subtitleKey)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                detail
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-            Spacer(minLength: 8)
-
-            if let status {
-                if let systemImage = status.systemImage {
-                    MetadataItemView(title: status.title, systemImage: systemImage)
-                        .font(.footnote)
-                        .foregroundStyle(status.tint)
-                } else {
-                    Text(status.title)
-                        .font(.footnote)
-                        .foregroundStyle(status.tint)
-                }
-            } else if isActive {
-                MetadataItemView(titleKey: "记录中", systemImage: "dot.radiowaves.left.and.right")
-                    .font(.footnote)
-                    .foregroundStyle(.green)
-            }
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, HomeStyle.rowPadding)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(.rect)
         .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private var detail: some View {
+        if let status {
+            HomeStatusLabel(title: Text(status.title), systemImage: status.systemImage, tint: status.tint)
+        } else if isActive {
+            HomeStatusLabel(
+                title: Text("记录中"),
+                systemImage: "dot.radiowaves.left.and.right",
+                tint: AppPalette.green
+            )
+        } else {
+            Text(module.subtitleKey)
+                .font(AppDesign.rowSubtitleFont)
+                .foregroundStyle(AppPalette.secondaryInk)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct StatisticsOverviewSection: View {
     @Environment(\.locale) private var locale
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     let totalRecordCount: Int
     let todayRecordCount: Int
@@ -9,13 +10,13 @@ struct StatisticsOverviewSection: View {
     let latestRecordDate: Date?
 
     var body: some View {
-        Section("概览") {
+        Section {
             LazyVGrid(columns: columns, spacing: 12) {
                 StatisticsMetricTile(
                     title: AppLocalization.string("总记录"),
                     value: AppLocalization.format("%d 条", totalRecordCount),
                     systemImage: "tray.full.fill",
-                    tint: .blue
+                    tint: AppPalette.accent
                 )
 
                 StatisticsMetricTile(
@@ -40,14 +41,14 @@ struct StatisticsOverviewSection: View {
                 )
             }
             .padding(.vertical, 2)
+        } header: {
+            Text("概览")
+                .appSectionHeaderStyle()
         }
     }
 
     private var columns: [GridItem] {
-        [
-            GridItem(.flexible(), spacing: 12),
-            GridItem(.flexible(), spacing: 12)
-        ]
+        AppDesign.metricColumns(for: dynamicTypeSize)
     }
 
     private var latestRecordText: String {

@@ -18,6 +18,7 @@ struct FoodJournalView: View {
             }
         }
         .navigationTitle(AppLocalization.string("饮食记录"))
+        .appNavigationStyle()
         .navigationDestination(for: FoodJournalRoute.self) { route in
             if let viewModel, let billsViewModel {
                 FoodDayDetailView(
@@ -114,12 +115,12 @@ private struct FoodJournalContent: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .appGroupedListStyle()
         .searchable(text: $viewModel.searchText, prompt: Text(AppLocalization.string("搜索饮食记录")))
         .toolbar {
             Button(AppLocalization.string("添加饮食"), systemImage: "plus", action: showAddEntry)
         }
-        .sheet(item: $presentedSheet) { sheet in
+        .appSheet(item: $presentedSheet) { sheet in
             switch sheet {
             case .addEntry:
                 NavigationStack {

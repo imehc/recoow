@@ -90,17 +90,17 @@ struct DecisionOptionsContent: View {
                                 } label: {
                                     Label("编辑", systemImage: "square.and.pencil")
                                 }
-                                .tint(.blue)
+                                .tint(AppPalette.accent)
                             }
                     }
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .appGroupedListStyle()
         .toolbar {
             Button("添加选项", systemImage: "plus", action: showNewOption)
         }
-        .sheet(item: $presentedSheet) { sheet in
+        .appSheet(item: $presentedSheet) { sheet in
             NavigationStack {
                 switch sheet {
                 case .newOption:

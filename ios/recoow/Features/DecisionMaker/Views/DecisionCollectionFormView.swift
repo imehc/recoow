@@ -36,9 +36,10 @@ struct DecisionCollectionFormView: View {
                 }
             }
         }
+        .appFormStyle()
         .dismissesKeyboardOnTap(focusedField: $focusedField)
         .navigationTitle(collection == nil ? "添加集合" : "编辑集合")
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("取消", action: cancel)

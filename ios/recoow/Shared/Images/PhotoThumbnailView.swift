@@ -14,10 +14,10 @@ struct PhotoThumbnailView: View {
                     .scaledToFill()
             } else {
                 Image(systemName: systemImage)
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: size * 0.46, weight: .medium))
+                    .foregroundStyle(AppPalette.neutral)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(.secondary.opacity(0.10))
+                    .background(AppPalette.background)
             }
         }
         .frame(width: size, height: size)

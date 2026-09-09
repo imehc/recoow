@@ -39,9 +39,9 @@ struct FoodBillSelectionView: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .appGroupedListStyle()
         .navigationTitle(AppLocalization.string("选择账单"))
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .searchable(text: $searchText, prompt: Text(AppLocalization.string("搜索账单")))
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
@@ -127,7 +127,7 @@ struct FoodSelectedBillRow: View {
 
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(AppPalette.accent)
                     .imageScale(.large)
             }
         }
@@ -156,8 +156,7 @@ struct FoodSelectedBillRow: View {
             AppIconTileView(
                 systemImage: "receipt",
                 tint: .teal,
-                size: AppDesign.compactIconSize,
-                backgroundOpacity: 0.12
+                size: AppDesign.compactIconSize
             )
         }
     }

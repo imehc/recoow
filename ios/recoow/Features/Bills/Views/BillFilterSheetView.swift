@@ -38,8 +38,9 @@ struct BillFilterSheetView: View {
                 }
             }
         }
+        .appFormStyle()
         .navigationTitle("筛选")
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("清除筛选", systemImage: "xmark.circle", action: clearFilters)

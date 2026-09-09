@@ -12,7 +12,7 @@ struct DecisionChoiceRecordRow: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(record.optionTitle)
-                    .font(.headline)
+                    .font(AppDesign.rowTitleFont)
                     .lineLimit(2)
 
                 if showsCollectionTitle {
@@ -41,6 +41,8 @@ struct DecisionChoiceRecordRow: View {
             } else {
                 PhotoThumbnailView(imageData: imageData, systemImage: "sparkles", size: thumbnailSize)
             }
+        } else {
+            AppIconTileView(systemImage: "shuffle", tint: AppPalette.amber, size: thumbnailSize)
         }
     }
 }

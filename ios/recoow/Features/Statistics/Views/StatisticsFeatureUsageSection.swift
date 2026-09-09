@@ -4,10 +4,13 @@ struct StatisticsFeatureUsageSection: View {
     let summaries: [StatisticsFeatureSummary]
 
     var body: some View {
-        Section("各板块") {
+        Section {
             ForEach(summaries) { summary in
                 StatisticsFeatureUsageRow(summary: summary)
             }
+        } header: {
+            Text("各板块")
+                .appSectionHeaderStyle()
         }
     }
 }

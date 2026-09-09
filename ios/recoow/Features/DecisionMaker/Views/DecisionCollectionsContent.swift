@@ -55,17 +55,17 @@ struct DecisionCollectionsContent: View {
                             } label: {
                                 Label("编辑", systemImage: "square.and.pencil")
                             }
-                            .tint(.blue)
+                            .tint(AppPalette.accent)
                         }
                     }
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .appGroupedListStyle()
         .toolbar {
             Button("添加集合", systemImage: "plus", action: showNewCollection)
         }
-        .sheet(item: $presentedSheet) { sheet in
+        .appSheet(item: $presentedSheet) { sheet in
             NavigationStack {
                 switch sheet {
                 case .newCollection:

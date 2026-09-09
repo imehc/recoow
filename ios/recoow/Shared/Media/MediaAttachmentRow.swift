@@ -66,11 +66,11 @@ struct MediaAttachmentRow: View {
     }
 
     private var fallbackThumbnail: some View {
-        Image(systemName: attachment.kind.systemImage)
-            .font(.headline)
-            .foregroundStyle(.blue)
-            .frame(width: AppDesign.mediaAttachmentThumbnailSize, height: AppDesign.mediaAttachmentThumbnailSize)
-            .background(Color.blue.opacity(0.12), in: .rect(cornerRadius: AppDesign.iconCornerRadius))
+        AppIconTileView(
+            systemImage: attachment.kind.systemImage,
+            tint: AppPalette.accent,
+            size: AppDesign.mediaAttachmentThumbnailSize
+        )
     }
 
     @ViewBuilder

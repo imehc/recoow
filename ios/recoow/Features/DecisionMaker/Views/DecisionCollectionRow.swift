@@ -4,10 +4,12 @@ struct DecisionCollectionRow: View {
     let collection: DecisionCollection
 
     var body: some View {
-        Label {
+        HStack(spacing: 12) {
+            AppIconTileView(systemImage: "shuffle", tint: AppPalette.amber, size: AppDesign.listIconSize)
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(collection.title)
-                    .font(.headline)
+                    .font(AppDesign.rowTitleFont)
 
                 if let note = collection.note, note.isEmpty == false {
                     Text(note)
@@ -16,9 +18,6 @@ struct DecisionCollectionRow: View {
                         .lineLimit(2)
                 }
             }
-        } icon: {
-            Image(systemName: "shuffle")
-                .foregroundStyle(.orange)
         }
         .padding(.vertical, 4)
     }

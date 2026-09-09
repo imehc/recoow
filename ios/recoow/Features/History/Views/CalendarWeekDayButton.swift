@@ -71,7 +71,7 @@ struct CalendarWeekDayButton: View {
 
     private var foregroundStyle: some ShapeStyle {
         if isSelected {
-            return AnyShapeStyle(.white)
+            return AnyShapeStyle(AppPalette.accentForeground)
         }
 
         if isToday {
@@ -87,34 +87,26 @@ struct CalendarWeekDayButton: View {
         }
 
         if hasEntries {
-            return AnyShapeStyle(Color.accentColor.opacity(0.12))
+            return AnyShapeStyle(AppPalette.background)
         }
 
-        return AnyShapeStyle(Color(.secondarySystemGroupedBackground))
+        return AnyShapeStyle(AppPalette.surface)
     }
 
     private var borderStyle: some ShapeStyle {
-        if isSelected {
-            return AnyShapeStyle(Color.accentColor.opacity(0.7))
-        }
-
-        if hasEntries {
-            return AnyShapeStyle(Color.accentColor.opacity(0.55))
-        }
-
-        return AnyShapeStyle(Color.accentColor.opacity(0.45))
+        AnyShapeStyle(AppPalette.accent)
     }
 
     private var countBackgroundStyle: some ShapeStyle {
         if isSelected {
-            return AnyShapeStyle(.white.opacity(0.22))
+            return AnyShapeStyle(AppPalette.accentForeground.opacity(0.16))
         }
 
         return AnyShapeStyle(Color.accentColor.opacity(0.16))
     }
 
     private var borderWidth: CGFloat {
-        if isSelected || isToday || hasEntries {
+        if isToday && isSelected == false {
             return 1
         }
 

@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct FoodJournalSummarySection: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     let hasEntries: Bool
     let dayCount: Int
     let todayEntryCount: Int
@@ -13,7 +15,7 @@ struct FoodJournalSummarySection: View {
 
     var body: some View {
         Section(AppLocalization.string("概览")) {
-            HStack(spacing: 12) {
+            LazyVGrid(columns: AppDesign.metricColumns(for: dynamicTypeSize), spacing: AppDesign.gridSpacing) {
                 CompactSummaryMetricView(
                     title: AppLocalization.string("记录天数"),
                     value: hasEntries ? AppLocalization.format("%d 天", dayCount) : "--",
@@ -27,9 +29,6 @@ struct FoodJournalSummarySection: View {
                     systemImage: "fork.knife",
                     tint: .brown
                 )
-            }
-
-            HStack(spacing: 12) {
                 CompactSummaryMetricView(
                     title: AppLocalization.string("今日餐别"),
                     value: AppLocalization.format("%d 类", todayMealKindCount),
@@ -109,7 +108,7 @@ private struct FoodJournalStatPill: View {
         HStack(spacing: 6) {
             Image(systemName: systemImage)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(tint)
+                .foregroundStyle(AppPalette.resolvedTint(tint))
                 .accessibilityHidden(true)
 
             Text(title)
@@ -122,10 +121,6 @@ private struct FoodJournalStatPill: View {
         .font(.caption)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(tint.opacity(0.1), in: .rect(cornerRadius: AppDesign.cornerRadius))
-        .overlay {
-            RoundedRectangle(cornerRadius: AppDesign.cornerRadius)
-                .stroke(tint.opacity(0.18), lineWidth: 1)
-        }
+        .background(AppPalette.background, in: .rect(cornerRadius: AppDesign.iconCornerRadius))
     }
 }

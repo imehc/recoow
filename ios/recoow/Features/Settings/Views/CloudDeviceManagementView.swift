@@ -69,8 +69,9 @@ struct CloudDeviceManagementView: View {
                 }
             }
         }
+        .appGroupedListStyle()
         .navigationTitle("设备管理")
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar(.hidden, for: .tabBar)
         .onAppear(perform: refresh)
         .alert("新的配对码", isPresented: .isPresent($pairingCode), presenting: pairingCode) { _ in

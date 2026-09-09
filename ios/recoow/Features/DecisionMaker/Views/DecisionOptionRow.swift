@@ -10,7 +10,7 @@ struct DecisionOptionRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(option.title)
-                        .font(.headline)
+                        .font(AppDesign.rowTitleFont)
 
                     if option.isEnabled == false {
                         Text("停用")

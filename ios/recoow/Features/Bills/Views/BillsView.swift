@@ -17,6 +17,7 @@ struct BillsView: View {
             }
         }
         .navigationTitle("记一笔")
+        .appNavigationStyle()
         .navigationDestination(for: BillRoute.self) { route in
             if let viewModel {
                 BillDetailView(
@@ -125,7 +126,7 @@ private struct BillsContent: View {
                             } label: {
                                 Label("复制", systemImage: "doc.on.doc")
                             }
-                            .tint(.blue)
+                            .tint(AppPalette.accent)
 
                             Button {
                                 requestDeleteBill(bill)
@@ -141,7 +142,7 @@ private struct BillsContent: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .appGroupedListStyle()
         .searchable(text: $viewModel.searchText, prompt: "搜索账单")
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
@@ -157,7 +158,7 @@ private struct BillsContent: View {
                 Button("记一笔", systemImage: "plus", action: showAddBill)
             }
         }
-        .sheet(item: $presentedSheet) { sheet in
+        .appSheet(item: $presentedSheet) { sheet in
             switch sheet {
             case .addBill:
                 NavigationStack {
@@ -192,7 +193,7 @@ private struct BillsContent: View {
         } message: { _ in
             Text(AppLocalization.string("删除后该记录会从历史中移除。"))
         }
-        .sheet(item: $billPendingRefund) { bill in
+        .appSheet(item: $billPendingRefund) { bill in
             RefundReasonSheet(bill: bill, viewModel: viewModel)
         }
     }
@@ -207,7 +208,7 @@ private struct BillsContent: View {
                 } label: {
                     Label("核销", systemImage: "checkmark.seal")
                 }
-                .tint(.green)
+                .tint(AppPalette.green)
             }
 
             Button {
@@ -215,7 +216,7 @@ private struct BillsContent: View {
             } label: {
                 Label("退款", systemImage: "arrow.uturn.backward")
             }
-            .tint(.orange)
+            .tint(AppPalette.amber)
         case .redeemed, .expired, .refunded:
             EmptyView()
         }
@@ -320,9 +321,9 @@ private struct StoredValueAccountManagementView: View {
                     }
                 }
             }
-            .listStyle(.insetGrouped)
+            .appGroupedListStyle()
             .navigationTitle("储值账户")
-            .navigationBarTitleDisplayMode(.inline)
+            .appNavigationStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("完成", action: dismiss.callAsFunction)
@@ -332,7 +333,7 @@ private struct StoredValueAccountManagementView: View {
                     Button("添加储值账户", systemImage: "plus", action: showAddAccount)
                 }
             }
-            .sheet(item: $presentedSheet) { sheet in
+            .appSheet(item: $presentedSheet) { sheet in
                 Group {
                     switch sheet {
                     case .add:
@@ -401,7 +402,7 @@ private struct StoredValueAccountManagementRow: View {
             } label: {
                 Label("编辑", systemImage: "square.and.pencil")
             }
-            .tint(.blue)
+            .tint(AppPalette.accent)
 
             if canDelete {
                 Button(role: .destructive) {
@@ -419,12 +420,11 @@ private struct StoredValueAccountBalanceRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: account.accountKind.systemImage)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 32, height: 32)
-                .background(.orange.gradient, in: .rect(cornerRadius: AppDesign.iconCornerRadius))
-                .accessibilityHidden(true)
+            AppIconTileView(
+                systemImage: account.accountKind.systemImage,
+                tint: AppPalette.amber,
+                size: AppDesign.formIconSize
+            )
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(account.name)

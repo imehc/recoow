@@ -20,19 +20,19 @@ struct ReminderStatusTag: View {
     private var tint: Color {
         switch status {
         case .completed, .checkedInToday:
-            return .green
+            return AppPalette.green
         case .endedEarly, .paused:
-            return .orange
+            return AppPalette.amber
         case .ready:
-            return .purple
+            return AppPalette.lavender
         case .broken:
-            return .red
+            return AppPalette.red
         case .disabled:
             return .secondary
         case .upcoming:
-            return .blue
+            return AppPalette.blue
         case .ended:
-            return .orange
+            return AppPalette.amber
         }
     }
 

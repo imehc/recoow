@@ -38,9 +38,10 @@ struct ItemCategoryFormView: View {
                 }
             }
         }
+        .appFormStyle()
         .dismissesKeyboardOnTap(focusedField: $focusedField)
         .navigationTitle(category == nil ? "添加分类" : "编辑分类")
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("取消", action: cancel)

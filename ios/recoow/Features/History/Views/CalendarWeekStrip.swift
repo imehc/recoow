@@ -47,7 +47,7 @@ struct CalendarWeekStrip: View {
             }
         }
         .padding(.vertical, 4)
-        .sheet(isPresented: $isShowingDateSelection) {
+        .appSheet(isPresented: $isShowingDateSelection) {
             CalendarDateSelectionSheet(
                 selectedDate: selectedDate,
                 selectDate: selectSpecificDate

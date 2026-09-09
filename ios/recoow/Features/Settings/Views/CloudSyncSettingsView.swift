@@ -36,8 +36,9 @@ struct CloudSyncSettingsView: View {
                 unbindSection
             }
         }
+        .appFormStyle()
         .navigationTitle(AppLocalization.string("云同步", language: language))
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar(.hidden, for: .tabBar)
         .onAppear(perform: reload)
         .alert("请保存恢复密钥", isPresented: .isPresent($recoveryKeyToShow), presenting: recoveryKeyToShow) { _ in

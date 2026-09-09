@@ -9,18 +9,19 @@ struct MetricTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             MetadataItemView(title: title, systemImage: systemImage)
-                .font(.footnote)
+                .font(AppDesign.metadataFont)
                 .foregroundStyle(.secondary)
 
             Text(value)
-                .font(.headline)
+                .font(AppDesign.rowTitleFont)
+                .monospacedDigit()
                 .lineLimit(2)
                 .minimumScaleFactor(0.75)
                 .foregroundStyle(.primary)
         }
         .frame(maxWidth: .infinity, minHeight: 74, alignment: .leading)
         .padding(12)
-        .background(tint.opacity(0.1), in: .rect(cornerRadius: AppDesign.cornerRadius))
+        .background(AppPalette.background, in: .rect(cornerRadius: AppDesign.iconCornerRadius))
     }
 }
 
@@ -32,33 +33,26 @@ struct CompactSummaryMetricView: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 8) {
-            Image(systemName: systemImage)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(tint)
-                .frame(width: AppDesign.compactMetricIconSize, height: AppDesign.compactMetricIconSize)
-                .background(tint.opacity(0.13), in: .rect(cornerRadius: AppDesign.iconCornerRadius))
+            AppIconTileView(systemImage: systemImage, tint: tint, size: AppDesign.compactMetricIconSize)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.caption)
+                    .font(AppDesign.summaryTitleFont)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Text(value)
-                    .font(.subheadline)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.68)
+                    .font(AppDesign.summaryValueFont)
+                    .monospacedDigit()
+                    .foregroundStyle(AppPalette.ink)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
             }
         }
         .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
         .padding(.horizontal, 9)
         .padding(.vertical, 7)
-        .background(.background, in: .rect(cornerRadius: AppDesign.cornerRadius))
-        .overlay {
-            RoundedRectangle(cornerRadius: AppDesign.cornerRadius)
-                .stroke(tint.opacity(0.16), lineWidth: 1)
-        }
+        .background(AppPalette.background, in: .rect(cornerRadius: AppDesign.iconCornerRadius))
+        .accessibilityElement(children: .combine)
     }
 }

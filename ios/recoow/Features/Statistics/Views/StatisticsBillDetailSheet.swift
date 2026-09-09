@@ -36,8 +36,9 @@ struct StatisticsBillDetailSheet: View {
                     }
                 }
             }
-            .listStyle(.insetGrouped)
+            .appGroupedListStyle()
             .navigationTitle(AppLocalization.string(context.titleKey))
+            .appNavigationStyle()
             .navigationDestination(for: BillRoute.self) { route in
                 BillDetailView(
                     viewModel: viewModel,

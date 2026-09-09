@@ -7,11 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A83400000000000000000001 = {isa = PBXBuildFile; fileRef = A83400000000000000000002; };
 		3ABF80402FE16600003C5066 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 3ABF80412FE16600003C5066 /* GRDB */; };
 		3ABF805A2FE90000003C5066 /* recoowWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3ABF80502FE90000003C5066 /* recoowWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		3ABF80602FEA0000003C5066 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3ABF805F2FEA0000003C5066 /* AppIntents.framework */; };
 		3ABF80612FEF0000003C5066 /* Lightbox in Frameworks */ = {isa = PBXBuildFile; productRef = 3ABF80622FEF0000003C5066 /* Lightbox */; };
+		A83400000000000000000001 /* SyncEntityCatalog.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83400000000000000000002 /* SyncEntityCatalog.generated.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -39,18 +39,18 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		A83400000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SyncEntityCatalog.generated.swift; path = recoow/Core/Sync/SyncEntityCatalog.generated.swift; sourceTree = SOURCE_ROOT; };
 		3ABF802C2FE1551D003C5066 /* recoow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = recoow.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3ABF80502FE90000003C5066 /* recoowWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = recoowWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		3ABF805F2FEA0000003C5066 /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
+		A83400000000000000000002 /* SyncEntityCatalog.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SyncEntityCatalog.generated.swift; path = recoow/Core/Sync/SyncEntityCatalog.generated.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
 		3ABF805D2FE90000003C5066 /* Exceptions for "recoow" folder in "recoow" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Info.plist,
 				Core/Sync/SyncEntityCatalog.generated.swift,
+				Info.plist,
 			);
 			target = 3ABF802B2FE1551D003C5066 /* recoow */;
 		};
@@ -106,7 +106,7 @@
 		3A08EFCD2FEF8C3100B2B34D /* Recovered References */ = {
 			isa = PBXGroup;
 			children = (
-				A83400000000000000000002,
+				A83400000000000000000002 /* SyncEntityCatalog.generated.swift */,
 				3ABF805F2FEA0000003C5066 /* AppIntents.framework */,
 			);
 			name = "Recovered References";
@@ -138,7 +138,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 3ABF80372FE1551E003C5066 /* Build configuration list for PBXNativeTarget "recoow" */;
 			buildPhases = (
-				A83400000000000000000003,
+				A83400000000000000000003 /* Generate Sync Contracts */,
 				3ABF80282FE1551D003C5066 /* Sources */,
 				3ABF80292FE1551D003C5066 /* Frameworks */,
 				3ABF802A2FE1551D003C5066 /* Resources */,
@@ -243,12 +243,35 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		A83400000000000000000003 /* Generate Sync Contracts */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"$(SRCROOT)/../scripts/sync-models.xcfilelist",
+			);
+			inputPaths = (
+				"$(SRCROOT)/../scripts",
+			);
+			name = "Generate Sync Contracts";
+			outputPaths = (
+				"$(SRCROOT)/recoow/Core/Sync/SyncEntityCatalog.generated.swift",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -eu\nPYTHONDONTWRITEBYTECODE=1 RECOOW_SYNC_MODEL_INPUTS=\"$SRCROOT/../scripts/sync-models.xcfilelist\" /usr/bin/python3 \"$SRCROOT/../scripts/generate_sync_registry.py\" --write\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		3ABF80282FE1551D003C5066 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A83400000000000000000001,
+				A83400000000000000000001 /* SyncEntityCatalog.generated.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -260,20 +283,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-		A83400000000000000000003 = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = ();
-			inputPaths = ("$(SRCROOT)/../scripts");
-			inputFileListPaths = ("$(SRCROOT)/../scripts/sync-models.xcfilelist");
-			name = "Generate Sync Contracts";
-			outputPaths = ("$(SRCROOT)/recoow/Core/Sync/SyncEntityCatalog.generated.swift");
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "set -eu\nPYTHONDONTWRITEBYTECODE=1 RECOOW_SYNC_MODEL_INPUTS=\"$SRCROOT/../scripts/sync-models.xcfilelist\" /usr/bin/python3 \"$SRCROOT/../scripts/generate_sync_registry.py\" --write\n";
-		};
 
 /* Begin PBXTargetDependency section */
 		3ABF805C2FE90000003C5066 /* PBXTargetDependency */ = {

@@ -46,9 +46,9 @@ struct DiaryLinkSelectionView: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .appGroupedListStyle()
         .navigationTitle(AppLocalization.format("关联%@", sourceType.localizedTitle))
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .searchable(text: $searchText, prompt: Text(AppLocalization.string("搜索记录")))
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {

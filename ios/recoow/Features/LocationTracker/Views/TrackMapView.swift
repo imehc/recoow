@@ -127,7 +127,7 @@ struct TrackMapView: View {
 
                 if let first = displayCoordinates.first {
                     Marker(AppLocalization.string("起点"), systemImage: "play.fill", coordinate: first)
-                        .tint(.green)
+                        .tint(AppPalette.green)
                 }
 
                 if let last = displayCoordinates.last, displayCoordinates.count > 1 {

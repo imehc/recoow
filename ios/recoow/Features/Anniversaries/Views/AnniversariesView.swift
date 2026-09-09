@@ -15,6 +15,7 @@ struct AnniversariesView: View {
             }
         }
         .navigationTitle("纪念日")
+        .appNavigationStyle()
         .navigationDestination(for: AnniversaryRoute.self) { route in
             if let viewModel {
                 AnniversaryDetailView(viewModel: viewModel, anniversaryID: route.id)
@@ -105,11 +106,11 @@ private struct AnniversariesContent: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .appGroupedListStyle()
         .toolbar {
             Button("添加纪念日", systemImage: "plus", action: showAddAnniversary)
         }
-        .sheet(isPresented: $isShowingAddAnniversary) {
+        .appSheet(isPresented: $isShowingAddAnniversary) {
             NavigationStack {
                 AnniversaryFormView(anniversary: nil, viewModel: viewModel)
             }

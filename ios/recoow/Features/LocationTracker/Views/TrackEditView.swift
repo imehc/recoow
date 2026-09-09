@@ -46,9 +46,10 @@ struct TrackEditView: View {
                 }
             }
         }
+        .appFormStyle()
         .dismissesKeyboardOnTap(focusedField: $focusedField)
         .navigationTitle(AppLocalization.string("编辑轨迹"))
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button(AppLocalization.string("取消"), action: cancel)

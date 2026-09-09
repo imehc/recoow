@@ -18,7 +18,7 @@ struct FoodJournalHistoryEntryRow: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(titleText)
-                        .font(.headline)
+                        .font(AppDesign.rowTitleFont)
                         .lineLimit(2)
 
                     Spacer(minLength: 8)

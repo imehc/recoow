@@ -38,7 +38,7 @@ struct ToolModule: Identifiable, Hashable {
             ToolHomeState(
                 isActive: context.isLocationRecording || context.isLocationPaused,
                 status: context.isLocationPaused
-                    ? ToolHomeStatus(title: AppLocalization.string("已暂停"), systemImage: "pause.circle", tint: .orange)
+                    ? ToolHomeStatus(title: AppLocalization.string("已暂停"), systemImage: "pause.circle", tint: AppPalette.amber)
                     : nil
             )
         case .reminders where context.todayCheckInCount > 0:
@@ -46,13 +46,13 @@ struct ToolModule: Identifiable, Hashable {
                 status: ToolHomeStatus(
                     title: AppLocalization.format("%d 个待打卡", context.todayCheckInCount),
                     systemImage: "checkmark.circle",
-                    tint: .purple
+                    tint: AppPalette.lavender
                 )
             )
         case .anniversaries:
             ToolHomeState(
                 status: context.anniversaryStatusTitle.map {
-                    ToolHomeStatus(title: $0, systemImage: "calendar", tint: .pink)
+                    ToolHomeStatus(title: $0, systemImage: "calendar", tint: AppPalette.rose)
                 }
             )
         case .decisionMaker, .itemLocator, .bills, .foodJournal, .diary, .reminders:

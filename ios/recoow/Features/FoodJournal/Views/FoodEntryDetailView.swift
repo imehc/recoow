@@ -21,8 +21,8 @@ struct FoodEntryDetailView: View {
             }
         }
         .navigationTitle(AppLocalization.string("饮食详情"))
-        .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $entryForEditing) { entry in
+        .appNavigationStyle()
+        .appSheet(item: $entryForEditing) { entry in
             NavigationStack {
                 FoodEntryFormView(
                     entry: entry,
@@ -32,7 +32,7 @@ struct FoodEntryDetailView: View {
                 )
             }
         }
-        .sheet(item: $entryForCopying) { entry in
+        .appSheet(item: $entryForCopying) { entry in
             NavigationStack {
                 FoodEntryFormView(
                     entry: nil,
@@ -109,7 +109,7 @@ struct FoodEntryDetailView: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .appGroupedListStyle()
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Menu {

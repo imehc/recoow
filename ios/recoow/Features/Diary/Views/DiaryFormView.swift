@@ -140,12 +140,13 @@ struct DiaryFormView: View {
                 )
             }
         }
+        .appFormStyle()
         .overlay {
             MediaAttachmentDragLayer(coordinator: attachmentDragCoordinator)
         }
         .dismissesKeyboardOnTap(focusedField: $focusedField)
         .navigationTitle(AppLocalization.string(entry == nil ? "写日记" : "编辑日记"))
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button(AppLocalization.string("取消"), action: cancel)
@@ -157,7 +158,7 @@ struct DiaryFormView: View {
             }
 
         }
-        .sheet(item: $presentedSheet) { sheet in
+        .appSheet(item: $presentedSheet) { sheet in
             switch sheet {
             case .source(let sourceType):
                 NavigationStack {
@@ -317,7 +318,7 @@ struct DiaryFormView: View {
                 } else {
                     FormRowIconButton(
                         systemImage: "location",
-                        tint: .blue,
+                        tint: AppPalette.accent,
                         accessibilityLabel: locationText == nil ? AppLocalization.string("选择当前位置") : AppLocalization.string("更新位置"),
                         action: captureCurrentLocation
                     )

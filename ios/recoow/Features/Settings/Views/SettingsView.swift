@@ -67,6 +67,7 @@ struct SettingsView: View {
                 }
             } header: {
                 Text("同步与备份")
+                    .appSectionHeaderStyle()
             }
 
             Section {
@@ -101,10 +102,13 @@ struct SettingsView: View {
                 }
             } header: {
                 Text(AppLocalization.string("设置分类", language: language))
+                    .appSectionHeaderStyle()
             }
         }
+        .appFormStyle(topContentMargin: AppDesign.tabContentTopMargin)
         .reportsTabBarVisibilityWhenScrolling($tabBarVisibility)
         .navigationTitle(AppLocalization.string("设置", language: language))
+        .appNavigationStyle()
         .navigationDestination(for: SettingsNavigationRoute.self) { route in
             switch route {
             case .display:
@@ -125,8 +129,9 @@ struct SettingsView: View {
         Form {
             AppPreferencesSection(preferences: container.appPreferences)
         }
+        .appFormStyle()
         .navigationTitle(AppLocalization.string("显示与语言", language: container.appPreferences.language))
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar(.hidden, for: .tabBar)
     }
 
@@ -143,8 +148,9 @@ struct SettingsView: View {
                 Text(AppLocalization.string("管理首页显示的工具入口", language: container.appPreferences.language))
             }
         }
+        .appFormStyle()
         .navigationTitle(AppLocalization.string("主页功能入口", language: container.appPreferences.language))
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar(.hidden, for: .tabBar)
     }
 
@@ -254,8 +260,9 @@ struct SettingsView: View {
                 Text(AppLocalization.string("存储优化说明"))
             }
         }
+        .appFormStyle()
         .navigationTitle(AppLocalization.string("数据与备份", language: container.appPreferences.language))
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar(.hidden, for: .tabBar)
         .alert(AppLocalization.string("永久删除已删除的数据？"), isPresented: $isConfirmingDeletedDataCleanup) {
             Button(AppLocalization.string("清除"), role: .destructive, action: clearDeletedData)
@@ -332,7 +339,7 @@ struct SettingsView: View {
         } message: { message in
             Text(message)
         }
-        .sheet(isPresented: importPreviewPresence) {
+        .appSheet(isPresented: importPreviewPresence) {
             if let importPreview {
                 AppDataImportOptionsSheet(
                     preview: importPreview,
@@ -678,18 +685,21 @@ private struct SettingsCategoryRow: View {
     let language: AppLanguagePreference
 
     var body: some View {
-        Label {
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: 12) {
+            AppIconTileView(systemImage: systemImage, tint: tint, size: AppDesign.rowIconSize)
+
+            VStack(alignment: .leading, spacing: 4) {
                 Text(AppLocalization.string(titleKey, language: language))
+                    .font(AppDesign.rowTitleFont)
+                    .foregroundStyle(AppPalette.ink)
 
                 Text(AppLocalization.string(subtitleKey, language: language))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .font(AppDesign.rowSubtitleFont)
+                    .foregroundStyle(AppPalette.secondaryInk)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-        } icon: {
-            Image(systemName: systemImage)
-                .foregroundStyle(tint)
         }
+        .padding(.vertical, 4)
     }
 }
 
@@ -809,7 +819,9 @@ private struct AppDataImportOptionsSheet: View {
                     }
                 }
             }
+            .appFormStyle()
             .navigationTitle(AppLocalization.string("导入备份"))
+            .appNavigationStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(AppLocalization.string("取消"), action: onCancel)

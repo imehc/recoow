@@ -22,7 +22,7 @@ struct ReminderIconSelectionView: View {
                                 .overlay {
                                     if selection == icon.rawValue {
                                         RoundedRectangle(cornerRadius: AppDesign.iconCornerRadius)
-                                            .stroke(.purple, lineWidth: 2)
+                                            .stroke(AppPalette.accent, lineWidth: 2)
                                     }
                                 }
                         }
@@ -45,10 +45,11 @@ struct ReminderIconSelectionView: View {
             }
         }
         .dismissesKeyboardOnTap(focusedField: $focusedField)
-        .contentMargins(.horizontal, 20, for: .scrollContent)
-        .contentMargins(.vertical, 18, for: .scrollContent)
+        .contentMargins(.horizontal, AppDesign.pagePadding, for: .scrollContent)
+        .contentMargins(.vertical, 12, for: .scrollContent)
+        .appPageStyle()
         .navigationTitle("选择图标")
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
     }
 
     private var normalizedCustomIcon: String {

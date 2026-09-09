@@ -89,9 +89,10 @@ struct StoredItemFormView: View {
                 }
             }
         }
+        .appFormStyle()
         .dismissesKeyboardOnTap(focusedField: $focusedField)
         .navigationTitle(item == nil ? "添加物品" : "编辑物品")
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .editablePhotoInputPresentation(
             coordinator: photoInputCoordinator,
             imageData: $imageData,

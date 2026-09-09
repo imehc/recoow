@@ -37,8 +37,9 @@ struct MediaAssetLibraryPickerView: View {
                 }
             }
         }
+        .appPageStyle()
         .navigationTitle(AppLocalization.string("素材"))
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .overlay(alignment: .bottom) {
             if let errorMessage {
                 Text(errorMessage)

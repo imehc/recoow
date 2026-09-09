@@ -19,7 +19,7 @@ struct MediaAttachmentPreviewView: View {
                     ContentUnavailableView(AppLocalization.string("无法预览语音"), systemImage: "waveform")
                 }
                 .navigationTitle(attachment.displayTitle)
-                .navigationBarTitleDisplayMode(.inline)
+                .appNavigationStyle()
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
                         Button(AppLocalization.string("完成"), action: close)

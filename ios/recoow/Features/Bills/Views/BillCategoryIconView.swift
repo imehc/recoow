@@ -5,11 +5,6 @@ struct BillCategoryIconView: View {
     let size: CGFloat
 
     var body: some View {
-        Image(systemName: category.systemImage)
-            .font(.system(size: size * 0.42, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(width: size, height: size)
-            .background(.teal.gradient, in: .rect(cornerRadius: AppDesign.iconCornerRadius))
-            .accessibilityHidden(true)
+        AppIconTileView(systemImage: category.systemImage, tint: AppPalette.teal, size: size)
     }
 }

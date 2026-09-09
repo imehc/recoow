@@ -26,7 +26,7 @@ struct HistoryFilterMenu: View {
         } label: {
             Label("筛选", systemImage: filterButtonImage)
         }
-        .tint(isFiltering ? .blue : nil)
+        .tint(isFiltering ? AppPalette.accent : nil)
     }
 
     private var filterButtonImage: String {

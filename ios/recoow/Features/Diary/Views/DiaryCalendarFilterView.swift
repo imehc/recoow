@@ -34,8 +34,9 @@ struct DiaryCalendarFilterView: View {
                     }
                 }
             }
+            .appFormStyle()
             .navigationTitle(AppLocalization.string("日历"))
-            .navigationBarTitleDisplayMode(.inline)
+            .appNavigationStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(AppLocalization.string("清除")) {

@@ -7,8 +7,8 @@ struct StatisticsBillIncomeShareChart: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(AppLocalization.string("收入分类占比"))
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .font(AppDesign.metadataFont.weight(.medium))
+                .foregroundStyle(AppPalette.secondaryInk)
 
             Chart(points) { point in
                 SectorMark(

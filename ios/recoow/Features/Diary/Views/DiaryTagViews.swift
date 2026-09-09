@@ -58,7 +58,7 @@ struct DiaryTagSelectionView: View {
                         } label: {
                             Label(AppLocalization.string("编辑"), systemImage: "square.and.pencil")
                         }
-                        .tint(.blue)
+                        .tint(AppPalette.accent)
                     }
                 }
             }
@@ -76,9 +76,9 @@ struct DiaryTagSelectionView: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .appGroupedListStyle()
         .navigationTitle(AppLocalization.string("选择标签"))
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button(AppLocalization.string("完成"), action: close)
@@ -90,7 +90,7 @@ struct DiaryTagSelectionView: View {
         }
         .presentationDetents([.height(preferredPresentationHeight)])
         .presentationDragIndicator(.visible)
-        .sheet(item: $presentedSheet) { sheet in
+        .appSheet(item: $presentedSheet) { sheet in
             NavigationStack {
                 switch sheet {
                 case .newTag:
@@ -255,9 +255,10 @@ struct DiaryTagFormView: View {
                 }
             }
         }
+        .appFormStyle()
         .dismissesKeyboardOnTap(focusedField: $focusedField)
         .navigationTitle(AppLocalization.string(tag == nil ? "添加标签" : "编辑标签"))
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button(AppLocalization.string("取消"), action: cancel)
@@ -336,13 +337,9 @@ private struct DiaryTagChipView: View {
             }
         }
         .font(.footnote.weight(.medium))
-        .foregroundStyle(Color.accentColor)
+        .foregroundStyle(AppPalette.accent)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(Color.accentColor.opacity(0.12), in: Capsule())
-        .overlay {
-            Capsule()
-                .strokeBorder(Color.accentColor.opacity(0.2), lineWidth: 1)
-        }
+        .background(AppPalette.background, in: .rect(cornerRadius: AppDesign.iconCornerRadius))
     }
 }

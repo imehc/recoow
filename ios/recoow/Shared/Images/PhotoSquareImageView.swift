@@ -14,9 +14,9 @@ struct PhotoSquareImageView: View {
             } else {
                 Image(systemName: systemImage)
                     .font(.largeTitle)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppPalette.neutral)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(.secondary.opacity(0.10))
+                    .background(AppPalette.background)
             }
         }
         .frame(maxWidth: .infinity)

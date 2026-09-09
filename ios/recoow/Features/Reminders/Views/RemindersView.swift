@@ -17,6 +17,7 @@ struct RemindersView: View {
             }
         }
         .navigationTitle("打卡任务")
+        .appNavigationStyle()
         .navigationDestination(for: ReminderRoute.self) { route in
             if let viewModel {
                 ReminderDetailView(
@@ -99,7 +100,7 @@ private struct RemindersContent: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .appGroupedListStyle()
         .sensoryFeedback(.success, trigger: viewModel.checkInSuccessTick)
         // 顺序只在列表出现时归位：首次进入、以及从详情/历史页返回。重排发生在转场之下，用户看不到跳动，
         // 而每次看到列表时待打卡的任务都在最上面。打卡当下那一行原地变状态，不产生位移。
@@ -123,22 +124,22 @@ private struct RemindersContent: View {
                 Button("添加打卡任务", systemImage: "plus", action: showAddReminder)
             }
         }
-        .sheet(isPresented: $isShowingAddReminder) {
+        .appSheet(isPresented: $isShowingAddReminder) {
             NavigationStack {
                 ReminderFormView(reminder: nil, viewModel: viewModel)
             }
         }
-        .sheet(item: $makeUpRequest) { request in
+        .appSheet(item: $makeUpRequest) { request in
             NavigationStack {
                 ReminderMakeUpSheet(request: request, viewModel: viewModel)
             }
         }
-        .sheet(item: $earlyEndRequest) { request in
+        .appSheet(item: $earlyEndRequest) { request in
             NavigationStack {
                 ReminderEarlyEndSheet(request: request, viewModel: viewModel)
             }
         }
-        .sheet(item: $pauseRequest) { request in
+        .appSheet(item: $pauseRequest) { request in
             NavigationStack {
                 ReminderPauseSheet(request: request, viewModel: viewModel)
             }
@@ -174,21 +175,21 @@ private struct RemindersContent: View {
                 } label: {
                     Label("撤销打卡", systemImage: "arrow.uturn.backward.circle")
                 }
-                .tint(.orange)
+                .tint(AppPalette.amber)
             } else if reminder.canCheckIn() {
                 Button {
                     completeReminder(reminder)
                 } label: {
                     Label("打卡", systemImage: "checkmark.circle")
                 }
-                .tint(.green)
+                .tint(AppPalette.green)
             } else if let missedDate = reminder.firstMissedCheckInDate() {
                 Button {
                     makeUpRequest = ReminderMakeUpRequest(reminder: reminder, date: missedDate)
                 } label: {
                     Label("补签", systemImage: "calendar.badge.plus")
                 }
-                .tint(.orange)
+                .tint(AppPalette.amber)
             }
 
             if reminder.canPause {
@@ -197,14 +198,14 @@ private struct RemindersContent: View {
                 } label: {
                     Label("暂停", systemImage: "pause.circle")
                 }
-                .tint(.orange)
+                .tint(AppPalette.amber)
             } else if reminder.canResume {
                 Button {
                     resumeReminder(reminder)
                 } label: {
                     Label("继续", systemImage: "play.circle")
                 }
-                .tint(.green)
+                .tint(AppPalette.green)
             }
 
             if reminder.canEndEarly {
@@ -213,7 +214,7 @@ private struct RemindersContent: View {
                 } label: {
                     Label("提前结束", systemImage: "stop.circle")
                 }
-                .tint(.orange)
+                .tint(AppPalette.amber)
             }
 
             Button {
@@ -240,7 +241,7 @@ private struct RemindersContent: View {
                 } label: {
                     Label("继续", systemImage: "play.circle")
                 }
-                .tint(.green)
+                .tint(AppPalette.green)
             }
 
             if reminder.canEndEarly {
@@ -249,7 +250,7 @@ private struct RemindersContent: View {
                 } label: {
                     Label("提前结束", systemImage: "stop.circle")
                 }
-                .tint(.orange)
+                .tint(AppPalette.amber)
             }
 
             Button {

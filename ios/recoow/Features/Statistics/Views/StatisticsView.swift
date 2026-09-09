@@ -29,6 +29,7 @@ struct StatisticsView: View {
             }
         }
         .navigationTitle(AppLocalization.string("统计", language: language))
+        .appNavigationStyle()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink(value: StatisticsNavigationRoute.history) {

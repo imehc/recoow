@@ -40,7 +40,7 @@ struct FoodDayDetailView: View {
             }
         }
         .navigationTitle(dayTitle)
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button(AppLocalization.string("添加饮食"), systemImage: "plus") {
@@ -57,7 +57,7 @@ struct FoodDayDetailView: View {
                 }
             }
         }
-        .sheet(item: $presentedSheet) { sheet in
+        .appSheet(item: $presentedSheet) { sheet in
             switch sheet {
             case .addEntry(let date):
                 NavigationStack {
@@ -201,7 +201,7 @@ struct FoodDayDetailView: View {
                                 } label: {
                                     Label(AppLocalization.string("复制"), systemImage: "doc.on.doc")
                                 }
-                                .tint(.blue)
+                                .tint(AppPalette.accent)
 
                                 Button {
                                     entryPendingDeletion = entry
@@ -221,7 +221,7 @@ struct FoodDayDetailView: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .appGroupedListStyle()
     }
 
     private var dateTitle: String {
@@ -359,8 +359,9 @@ private struct FoodDayTitleFormView: View {
                 TextField(AppLocalization.string("请输入标题"), text: $title)
             }
         }
+        .appFormStyle()
         .navigationTitle(AppLocalization.string(currentTitle == nil ? "设置标题" : "编辑标题"))
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button(AppLocalization.string("取消"), action: cancel)

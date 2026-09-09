@@ -27,14 +27,14 @@ struct RemindersHistoryView: View {
                             } label: {
                                 Label("撤销打卡", systemImage: "arrow.uturn.backward.circle")
                             }
-                            .tint(.orange)
+                            .tint(AppPalette.amber)
                         } else if reminder.canRestoreCompletion {
                             Button {
                                 restoreReminder(reminder)
                             } label: {
                                 Label("恢复", systemImage: "arrow.uturn.backward")
                             }
-                            .tint(.blue)
+                            .tint(AppPalette.accent)
                         }
 
                         Button {
@@ -47,8 +47,9 @@ struct RemindersHistoryView: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .appGroupedListStyle()
         .navigationTitle(AppLocalization.string("历史"))
+        .appNavigationStyle()
         .navigationDestination(for: ReminderRoute.self) { route in
             ReminderDetailView(
                 viewModel: viewModel,

@@ -13,6 +13,7 @@ struct DecisionCollectionsView: View {
             }
         }
         .navigationTitle("选什么")
+        .appNavigationStyle()
         .navigationDestination(for: DecisionCollectionRoute.self) { route in
             DecisionOptionsView(collectionID: route.id)
         }

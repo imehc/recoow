@@ -13,7 +13,7 @@ struct DiaryRow: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(entry.title)
-                        .font(.headline)
+                        .font(AppDesign.rowTitleFont)
                         .lineLimit(2)
 
                     Spacer(minLength: 8)
@@ -48,8 +48,7 @@ struct DiaryMoodIconView: View {
         AppIconTileView(
             systemImage: mood.systemImage,
             tint: mood.tint,
-            size: size,
-            backgroundOpacity: 0.12
+            size: size
         )
     }
 }

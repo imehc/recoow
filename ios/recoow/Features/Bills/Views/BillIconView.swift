@@ -5,12 +5,7 @@ struct BillIconView: View {
     let size: CGFloat
 
     var body: some View {
-        Image(systemName: systemImage)
-            .font(.system(size: size * 0.42, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(width: size, height: size)
-            .background(tint.gradient, in: .rect(cornerRadius: AppDesign.iconCornerRadius))
-            .accessibilityHidden(true)
+        AppIconTileView(systemImage: systemImage, tint: tint, size: size)
     }
 
     private var systemImage: String {
@@ -27,11 +22,11 @@ struct BillIconView: View {
     private var tint: Color {
         switch bill.billType {
         case .expense:
-            .teal
+            AppPalette.teal
         case .income:
-            .green
+            AppPalette.green
         case .storedValueUse:
-            .orange
+            AppPalette.amber
         }
     }
 }

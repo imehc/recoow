@@ -15,7 +15,7 @@ struct ReminderIconPickerRow: View {
             Spacer()
         }
         .padding(.vertical, 6)
-        .sheet(isPresented: $isShowingIconSelection) {
+        .appSheet(isPresented: $isShowingIconSelection) {
             NavigationStack {
                 ReminderIconSelectionView(selection: $selection)
             }

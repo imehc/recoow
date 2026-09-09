@@ -10,28 +10,30 @@ struct StatisticsFeatureUsageRow: View {
             AppIconTileView(
                 systemImage: summary.route.systemImage,
                 tint: summary.route.tint,
-                size: AppDesign.compactIconSize,
-                backgroundOpacity: 0.12
+                size: AppDesign.compactIconSize
             )
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(summary.route.titleKey)
-                    .font(.headline)
+                    .font(AppDesign.rowTitleFont)
+                    .foregroundStyle(AppPalette.ink)
 
                 Text(latestText)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .font(AppDesign.metadataFont)
+                    .foregroundStyle(AppPalette.secondaryInk)
             }
 
             Spacer(minLength: 12)
 
             VStack(alignment: .trailing, spacing: 4) {
                 Text(AppLocalization.format("%d 条", summary.count))
-                    .font(.headline)
+                    .font(AppDesign.rowTitleFont)
+                    .monospacedDigit()
+                    .foregroundStyle(AppPalette.ink)
 
                 Text(AppLocalization.format("今日 %d 条", summary.todayCount))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .font(AppDesign.metadataFont)
+                    .foregroundStyle(AppPalette.secondaryInk)
             }
         }
         .padding(.vertical, 4)

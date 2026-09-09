@@ -6,14 +6,15 @@ struct AppIconTileView: View {
     let tint: Color
     var size: CGFloat = AppDesign.listIconSize
     var foregroundColor: Color?
-    var backgroundOpacity = 0.14
+    var backgroundOpacity = 1.0
 
     var body: some View {
         Image(systemName: systemImage)
-            .font(.system(size: size * 0.42, weight: .semibold))
-            .foregroundStyle(foregroundColor ?? tint)
+            .font(.system(size: size * 0.46, weight: .medium))
+            .symbolRenderingMode(.monochrome)
+            .foregroundStyle(foregroundColor ?? AppPalette.iconForeground(for: tint))
             .frame(width: size, height: size)
-            .background(tint.opacity(backgroundOpacity), in: .rect(cornerRadius: AppDesign.iconCornerRadius))
+            .background(AppPalette.resolvedTint(tint).opacity(backgroundOpacity), in: .rect(cornerRadius: AppDesign.iconCornerRadius))
             .accessibilityHidden(true)
     }
 }
@@ -26,8 +27,7 @@ struct FormRowIconView: View {
         AppIconTileView(
             systemImage: systemImage,
             tint: tint,
-            size: AppDesign.formIconSize,
-            backgroundOpacity: 0.12
+            size: AppDesign.formIconSize
         )
     }
 }
@@ -46,7 +46,7 @@ struct FormRowIconButton: View {
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(tint)
+        .foregroundStyle(AppPalette.resolvedTint(tint))
         .accessibilityLabel(accessibilityLabel)
     }
 }
@@ -62,12 +62,12 @@ struct FormInfoLabelView: View {
         HStack(spacing: 10) {
             Image(systemName: systemImage)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(tint)
+                .foregroundStyle(AppPalette.resolvedTint(tint))
                 .frame(width: 20, height: 20)
                 .accessibilityHidden(true)
 
             Text(AppLocalization.string(title))
-                .foregroundStyle(Color(.label))
+                .foregroundStyle(AppPalette.ink)
         }
     }
 }

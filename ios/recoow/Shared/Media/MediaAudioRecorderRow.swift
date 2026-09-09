@@ -38,7 +38,7 @@ struct MediaAudioRecorderRow: View {
             } else {
                 FormRowIconButton(
                     systemImage: "mic.fill",
-                    tint: .blue,
+                    tint: AppPalette.accent,
                     accessibilityLabel: AppLocalization.string("录制语音"),
                     action: onToggleRecording
                 )
@@ -50,7 +50,7 @@ struct MediaAudioRecorderRow: View {
     }
 
     private var tint: Color {
-        recorder.isRecording ? .red : .blue
+        recorder.isRecording ? AppPalette.red : AppPalette.accent
     }
 
     private var recordingTrailingContent: some View {

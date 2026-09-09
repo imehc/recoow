@@ -28,13 +28,13 @@ struct FoodDayGroupRow: View {
             VStack(alignment: .leading, spacing: 7) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(titleText)
-                        .font(.headline)
+                        .font(AppDesign.rowTitleFont)
                         .lineLimit(1)
 
                     Spacer(minLength: 8)
 
                     Text(AppLocalization.format("%d 条", group.entryCount))
-                        .font(.headline)
+                        .font(AppDesign.rowTitleFont)
                         .foregroundStyle(.brown)
                 }
 

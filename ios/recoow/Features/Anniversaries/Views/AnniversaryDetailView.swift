@@ -18,8 +18,8 @@ struct AnniversaryDetailView: View {
             }
         }
         .navigationTitle("纪念日详情")
-        .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $anniversaryForEditing) { anniversary in
+        .appNavigationStyle()
+        .appSheet(item: $anniversaryForEditing) { anniversary in
             NavigationStack {
                 AnniversaryFormView(anniversary: anniversary, viewModel: viewModel)
             }
@@ -72,6 +72,7 @@ struct AnniversaryDetailView: View {
                 }
             }
         }
+        .appGroupedListStyle()
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Menu {

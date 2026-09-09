@@ -19,11 +19,15 @@ struct CalendarDateSelectionSheet: View {
             VStack {
                 DatePicker(AppLocalization.string("日期"), selection: $draftDate, displayedComponents: .date)
                     .datePickerStyle(.graphical)
+                    .padding(4)
+                    .background(AppPalette.surface, in: .rect(cornerRadius: AppDesign.cornerRadius))
             }
             .padding(.horizontal)
             .padding(.bottom)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .appPageStyle()
             .navigationTitle(AppLocalization.string("选择日期"))
-            .navigationBarTitleDisplayMode(.inline)
+            .appNavigationStyle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(AppLocalization.string("取消"), action: dismiss.callAsFunction)

@@ -58,7 +58,7 @@ struct ItemCategoriesView: View {
                         }
                     } icon: {
                         Image(systemName: "folder")
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(AppPalette.accent)
                     }
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
@@ -72,14 +72,14 @@ struct ItemCategoriesView: View {
                         } label: {
                             Label("编辑", systemImage: "square.and.pencil")
                         }
-                        .tint(.blue)
+                        .tint(AppPalette.accent)
                     }
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .appGroupedListStyle()
         .navigationTitle("分类")
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("完成", action: close)
@@ -89,7 +89,7 @@ struct ItemCategoriesView: View {
                 Button("添加分类", systemImage: "plus", action: showNewCategory)
             }
         }
-        .sheet(item: $presentedSheet) { sheet in
+        .appSheet(item: $presentedSheet) { sheet in
             NavigationStack {
                 switch sheet {
                 case .newCategory:

@@ -84,9 +84,10 @@ struct AnniversaryFormView: View {
                 Toggle("启用通知", isOn: $isEnabled)
             }
         }
+        .appFormStyle()
         .dismissesKeyboardOnTap(focusedField: $focusedField)
         .navigationTitle(AppLocalization.string(anniversary == nil ? "添加纪念日" : "编辑纪念日"))
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("取消", action: cancel)

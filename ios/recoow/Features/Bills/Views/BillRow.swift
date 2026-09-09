@@ -16,13 +16,13 @@ struct BillRow: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(bill.title)
-                        .font(.headline)
+                        .font(AppDesign.rowTitleFont)
                         .lineLimit(2)
 
                     Spacer(minLength: 8)
 
                     Text(bill.displayAmount)
-                        .font(.headline)
+                        .font(AppDesign.rowTitleFont)
                         .strikethrough(bill.isVoided)
                         .foregroundStyle(bill.billType.amountTint)
                 }

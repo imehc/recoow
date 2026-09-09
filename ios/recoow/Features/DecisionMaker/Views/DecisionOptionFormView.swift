@@ -85,9 +85,10 @@ struct DecisionOptionFormView: View {
                 Toggle("启用", isOn: $isEnabled)
             }
         }
+        .appFormStyle()
         .dismissesKeyboardOnTap(focusedField: $focusedField)
         .navigationTitle(option == nil ? "添加选项" : "编辑选项")
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("取消", action: cancel)

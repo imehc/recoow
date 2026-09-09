@@ -19,8 +19,8 @@ struct StoredItemDetailView: View {
             }
         }
         .navigationTitle(viewModel.item(id: itemID)?.title ?? "物品详情")
-        .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $editingItem) { item in
+        .appNavigationStyle()
+        .appSheet(item: $editingItem) { item in
             NavigationStack {
                 StoredItemFormView(item: item, viewModel: viewModel)
             }
@@ -78,6 +78,7 @@ struct StoredItemDetailView: View {
                 LabeledContent("更新时间", value: AppFormatters.dateTime(milliseconds: item.updatedAt))
             }
         }
+        .appFormStyle()
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Menu {

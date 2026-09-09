@@ -11,7 +11,7 @@ struct DecisionChoiceRecordDetailView: View {
     var body: some View {
         content
             .navigationTitle(record?.optionTitle ?? "选择记录")
-            .navigationBarTitleDisplayMode(.inline)
+            .appNavigationStyle()
             .navigationTransitionIfAvailable(sourceID: recordID, in: choiceRecordImageTransition)
             .task(id: recordID) {
                 load()
@@ -47,6 +47,7 @@ struct DecisionChoiceRecordDetailView: View {
                     }
                 }
             }
+            .appFormStyle()
         } else if let errorMessage {
             ContentUnavailableView(errorMessage, systemImage: "exclamationmark.triangle")
         } else {

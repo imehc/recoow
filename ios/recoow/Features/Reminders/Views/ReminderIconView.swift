@@ -7,12 +7,12 @@ struct ReminderIconView: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: AppDesign.iconCornerRadius)
-                .fill(.purple.opacity(0.14))
+                .fill(memoryIcon.contains(".") ? AppPalette.lavender : AppPalette.background)
 
             if memoryIcon.contains(".") {
                 Image(systemName: memoryIcon)
-                    .font(.system(size: size * 0.42, weight: .semibold))
-                    .foregroundStyle(.purple)
+                    .font(.system(size: size * 0.46, weight: .medium))
+                    .foregroundStyle(.white)
             } else {
                 Text(memoryIcon.isEmpty ? "🔔" : memoryIcon)
                     .font(.system(size: size * 0.48))

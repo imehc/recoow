@@ -10,11 +10,13 @@ struct StoredItemRow: View {
             if item.hasImage {
                 PhotoThumbnailView(imageData: item.resolvedImageData, systemImage: "shippingbox")
                     .matchedTransitionSource(id: item.id, in: itemImageTransition)
+            } else {
+                AppIconTileView(systemImage: "shippingbox.fill", tint: AppPalette.blue)
             }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.title)
-                    .font(.headline)
+                    .font(AppDesign.rowTitleFont)
                     .lineLimit(2)
 
                 Text(item.location)

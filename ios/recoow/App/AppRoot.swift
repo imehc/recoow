@@ -65,6 +65,7 @@ struct AppRoot: View {
                 .toolbar(rootTabBarVisibility(path: settingsPath, requested: settingsTabBarVisibility), for: .tabBar)
             }
         }
+        .tint(AppPalette.accent)
         .environment(\.locale, language.locale)
         .preferredColorScheme(container.appPreferences.colorScheme)
         .onOpenURL { url in

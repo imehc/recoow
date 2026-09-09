@@ -14,18 +14,21 @@ struct FeatureVisibilityToggleRow: View {
 
     var body: some View {
         Toggle(isOn: $isVisible) {
-            Label {
-                VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 12) {
+                AppIconTileView(systemImage: route.systemImage, tint: route.tint, size: AppDesign.rowIconSize)
+
+                VStack(alignment: .leading, spacing: 4) {
                     Text(route.titleKey)
+                        .font(AppDesign.rowTitleFont)
+                        .foregroundStyle(AppPalette.ink)
 
                     Text(route.subtitleKey)
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppPalette.secondaryInk)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-            } icon: {
-                Image(systemName: route.systemImage)
-                    .foregroundStyle(route.tint)
             }
+            .padding(.vertical, 4)
         }
         .onChange(of: isVisible) { _, newValue in
             settings.setVisible(newValue, for: route)

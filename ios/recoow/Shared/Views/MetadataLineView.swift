@@ -11,7 +11,7 @@ struct MetadataLineView<Content: View>: View {
         HStack(spacing: AppDesign.metadataGroupSpacing) {
             content
         }
-        .font(.footnote)
+        .font(AppDesign.metadataFont)
         .foregroundStyle(.secondary)
         .lineLimit(1)
     }

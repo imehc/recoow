@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct BillSummarySection: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     let hasBills: Bool
     let todayTotalCents: Int64
     let todayIncomeCents: Int64
@@ -15,7 +17,7 @@ struct BillSummarySection: View {
     var body: some View {
         Section("概览") {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 10) {
+                LazyVGrid(columns: AppDesign.metricColumns(for: dynamicTypeSize), spacing: AppDesign.gridSpacing) {
                     BillSummaryMetricView(
                         title: AppLocalization.string("今日支出"),
                         value: summaryValue(cents: todayTotalCents),
@@ -106,7 +108,7 @@ private struct BillSummaryPillView: View {
         HStack(spacing: 7) {
             Image(systemName: systemImage)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(tint)
+                .foregroundStyle(AppPalette.resolvedTint(tint))
                 .frame(width: 16)
                 .accessibilityHidden(true)
 
@@ -126,11 +128,7 @@ private struct BillSummaryPillView: View {
         .frame(minWidth: 98, minHeight: 38, alignment: .leading)
         .padding(.horizontal, 9)
         .padding(.vertical, 6)
-        .background(tint.opacity(0.08), in: .rect(cornerRadius: AppDesign.cornerRadius))
-        .overlay {
-            RoundedRectangle(cornerRadius: AppDesign.cornerRadius)
-                .stroke(tint.opacity(0.13), lineWidth: 1)
-        }
+        .background(AppPalette.background, in: .rect(cornerRadius: AppDesign.iconCornerRadius))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(title)，\(value)")
     }

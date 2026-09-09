@@ -12,12 +12,14 @@ struct StoredItemHistoryEntryRow: View {
             if item.hasImage {
                 PhotoThumbnailView(imageData: item.resolvedImageData, systemImage: "shippingbox", size: AppDesign.historyIconSize)
                     .matchedTransitionSource(id: item.id, in: itemImageTransition)
+            } else {
+                AppIconTileView(systemImage: "shippingbox.fill", tint: AppPalette.blue, size: AppDesign.historyIconSize)
             }
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(item.title)
-                        .font(.headline)
+                        .font(AppDesign.rowTitleFont)
                         .lineLimit(2)
 
                     Spacer(minLength: 8)

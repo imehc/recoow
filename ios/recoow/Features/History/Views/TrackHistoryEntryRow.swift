@@ -13,7 +13,7 @@ struct TrackHistoryEntryRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(track.name)
-                    .font(.headline)
+                    .font(AppDesign.rowTitleFont)
                     .lineLimit(2)
 
                 Spacer(minLength: 8)

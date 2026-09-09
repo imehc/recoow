@@ -23,28 +23,28 @@ struct ReminderDetailView: View {
             }
         }
         .navigationTitle("打卡任务详情")
-        .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $reminderForEditing) { reminder in
+        .appNavigationStyle()
+        .appSheet(item: $reminderForEditing) { reminder in
             NavigationStack {
                 ReminderFormView(reminder: reminder, viewModel: viewModel)
             }
         }
-        .sheet(item: $reminderForCopying) { reminder in
+        .appSheet(item: $reminderForCopying) { reminder in
             NavigationStack {
                 ReminderFormView(reminder: nil, copying: reminder, viewModel: viewModel)
             }
         }
-        .sheet(item: $makeUpRequest) { request in
+        .appSheet(item: $makeUpRequest) { request in
             NavigationStack {
                 ReminderMakeUpSheet(request: request, viewModel: viewModel)
             }
         }
-        .sheet(item: $earlyEndRequest) { request in
+        .appSheet(item: $earlyEndRequest) { request in
             NavigationStack {
                 ReminderEarlyEndSheet(request: request, viewModel: viewModel)
             }
         }
-        .sheet(item: $pauseRequest) { request in
+        .appSheet(item: $pauseRequest) { request in
             NavigationStack {
                 ReminderPauseSheet(request: request, viewModel: viewModel)
             }
@@ -145,6 +145,7 @@ struct ReminderDetailView: View {
                 }
             }
         }
+        .appGroupedListStyle()
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 if reminder.canCheckIn() {
@@ -281,8 +282,9 @@ struct ReminderEarlyEndSheet: View {
                 Text("结束后将停止后续打卡和提醒，已有打卡记录会保留。")
             }
         }
+        .appFormStyle()
         .navigationTitle("提前结束")
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .onAppear {
             isReasonFocused = true
         }
@@ -351,8 +353,9 @@ struct ReminderPauseSheet: View {
                 Text("暂停期间将停止后续打卡和提醒，已有打卡记录会保留。")
             }
         }
+        .appFormStyle()
         .navigationTitle("暂停")
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .onAppear {
             isReasonFocused = true
         }
@@ -424,8 +427,9 @@ struct ReminderMakeUpSheet: View {
                     .lineLimit(3...)
             }
         }
+        .appFormStyle()
         .navigationTitle("补签")
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("取消") {

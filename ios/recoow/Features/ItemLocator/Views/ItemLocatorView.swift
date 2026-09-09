@@ -14,6 +14,7 @@ struct ItemLocatorView: View {
             }
         }
         .navigationTitle("在哪里")
+        .appNavigationStyle()
         .navigationDestination(for: StoredItemRoute.self) { route in
             if let viewModel {
                 StoredItemDetailView(

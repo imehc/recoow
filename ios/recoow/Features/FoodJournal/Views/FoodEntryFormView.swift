@@ -180,8 +180,7 @@ struct FoodEntryFormView: View {
                             AppIconTileView(
                                 systemImage: "receipt",
                                 tint: .teal,
-                                size: AppDesign.compactIconSize,
-                                backgroundOpacity: 0.12
+                                size: AppDesign.compactIconSize
                             )
 
                             Text(AppLocalization.format("账单同步中 %d", missingSelectedBillCount))
@@ -207,6 +206,7 @@ struct FoodEntryFormView: View {
                 )
             }
         }
+        .appFormStyle()
         .overlay {
             MediaAttachmentDragLayer(coordinator: attachmentDragCoordinator)
         }
@@ -214,7 +214,7 @@ struct FoodEntryFormView: View {
         // recognizer can interfere with the first marked-text event of Pinyin.
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle(AppLocalization.string(navigationTitleKey))
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button(AppLocalization.string("取消"), action: cancel)
@@ -225,7 +225,7 @@ struct FoodEntryFormView: View {
                 Button(AppLocalization.string("保存"), action: save)
             }
         }
-        .sheet(item: $presentedSheet) { sheet in
+        .appSheet(item: $presentedSheet) { sheet in
             switch sheet {
             case .billSelection:
                 NavigationStack {

@@ -8,8 +8,7 @@ struct DiaryLinkRow: View {
             AppIconTileView(
                 systemImage: link.sourceIcon,
                 tint: link.type.tint,
-                size: AppDesign.compactIconSize,
-                backgroundOpacity: 0.12
+                size: AppDesign.compactIconSize
             )
 
             VStack(alignment: .leading, spacing: 4) {
@@ -46,8 +45,7 @@ struct DiaryLinkedRecordRow: View {
             AppIconTileView(
                 systemImage: record.systemImage,
                 tint: record.sourceType.tint,
-                size: AppDesign.compactIconSize,
-                backgroundOpacity: 0.12
+                size: AppDesign.compactIconSize
             )
 
             VStack(alignment: .leading, spacing: 4) {
@@ -68,7 +66,7 @@ struct DiaryLinkedRecordRow: View {
 
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(AppPalette.accent)
                     .imageScale(.large)
             }
         }
@@ -131,8 +129,7 @@ struct DiaryBillLinkRow: View {
             AppIconTileView(
                 systemImage: link.sourceIcon,
                 tint: link.type.tint,
-                size: AppDesign.compactIconSize,
-                backgroundOpacity: 0.12
+                size: AppDesign.compactIconSize
             )
         }
     }

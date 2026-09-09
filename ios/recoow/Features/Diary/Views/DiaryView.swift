@@ -22,6 +22,7 @@ struct DiaryView: View {
             }
         }
         .navigationTitle(AppLocalization.string("日记"))
+        .appNavigationStyle()
         .navigationDestination(for: DiaryRoute.self) { route in
             if let viewModel {
                 DiaryDetailView(
@@ -213,7 +214,7 @@ private struct DiaryContent: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .appGroupedListStyle()
         .searchable(text: $viewModel.searchText, prompt: Text(AppLocalization.string("搜索日记")))
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -242,7 +243,7 @@ private struct DiaryContent: View {
                 }
             }
         }
-        .sheet(isPresented: $isShowingAddSheet) {
+        .appSheet(isPresented: $isShowingAddSheet) {
             NavigationStack {
                 DiaryFormView(
                     entry: nil,
@@ -252,7 +253,7 @@ private struct DiaryContent: View {
                 )
             }
         }
-        .sheet(isPresented: $isShowingCalendarSheet) {
+        .appSheet(isPresented: $isShowingCalendarSheet) {
             DiaryCalendarFilterView(viewModel: viewModel)
         }
         .alert(
@@ -290,6 +291,8 @@ private struct DiaryContent: View {
 }
 
 private struct DiarySummarySection: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     let hasEntries: Bool
     let entryCount: Int
     let todayEntryCount: Int
@@ -303,7 +306,7 @@ private struct DiarySummarySection: View {
                     title: AppLocalization.string("日记数量"),
                     value: entryCountText,
                     systemImage: "book.closed.fill",
-                    tint: .blue
+                    tint: AppPalette.accent
                 )
 
                 CompactSummaryMetricView(
@@ -331,10 +334,7 @@ private struct DiarySummarySection: View {
     }
 
     private var columns: [GridItem] {
-        [
-            GridItem(.flexible(), spacing: 10),
-            GridItem(.flexible(), spacing: 10)
-        ]
+        AppDesign.metricColumns(for: dynamicTypeSize)
     }
 
     private var entryCountText: String {

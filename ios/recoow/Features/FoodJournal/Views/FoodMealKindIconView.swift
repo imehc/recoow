@@ -8,8 +8,7 @@ struct FoodMealKindIconView: View {
         AppIconTileView(
             systemImage: kind.systemImage,
             tint: kind.tint,
-            size: size,
-            backgroundOpacity: 0.14
+            size: size
         )
     }
 }

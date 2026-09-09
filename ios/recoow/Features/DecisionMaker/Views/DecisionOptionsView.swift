@@ -19,7 +19,7 @@ struct DecisionOptionsView: View {
             }
         }
         .navigationTitle(viewModel?.collection?.title ?? "选什么")
-        .navigationBarTitleDisplayMode(.inline)
+        .appNavigationStyle()
         .navigationDestination(for: DecisionChoiceRecordRoute.self) { route in
             DecisionChoiceRecordDetailView(
                 recordID: route.id,

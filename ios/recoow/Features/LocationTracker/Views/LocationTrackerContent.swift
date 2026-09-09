@@ -88,12 +88,13 @@ struct LocationTrackerContent: View {
                     .buttonStyle(.plain)
                 } else {
                     Button(action: startRecording) {
-                        actionLabel(title: AppLocalization.string("开始记录"), systemImage: "play.fill", tint: .blue)
+                        actionLabel(title: AppLocalization.string("开始记录"), systemImage: "play.fill", tint: AppPalette.accent)
                     }
                     .buttonStyle(.plain)
                 }
             }
         }
+        .appFormStyle()
         .alert(AppLocalization.string("定位权限未开启"), isPresented: $viewModel.isShowingLocationPermissionSettingsPrompt) {
             Button(AppLocalization.string("打开设置")) {
                 openAppSettings()
@@ -109,15 +110,15 @@ struct LocationTrackerContent: View {
         HStack(spacing: 8) {
             Image(systemName: systemImage)
                 .symbolRenderingMode(.monochrome)
-                .foregroundStyle(.white)
+                .foregroundStyle(AppPalette.iconForeground(for: tint))
 
             Text(title)
-                .foregroundStyle(.white)
+                .foregroundStyle(AppPalette.iconForeground(for: tint))
         }
-        .font(.body)
+        .font(AppDesign.rowTitleFont)
         .frame(maxWidth: .infinity)
-        .frame(height: 32)
-        .background(tint, in: .rect(cornerRadius: AppDesign.cornerRadius))
+        .frame(minHeight: 44)
+        .background(AppPalette.resolvedTint(tint), in: .rect(cornerRadius: AppDesign.iconCornerRadius))
         .contentShape(.rect)
     }
 

@@ -86,21 +86,21 @@ enum ToolRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     var tint: Color {
         switch self {
         case .locationTracker:
-            .green
+            AppPalette.green
         case .decisionMaker:
-            .orange
+            AppPalette.amber
         case .itemLocator:
-            .blue
+            AppPalette.blue
         case .reminders:
-            .purple
+            AppPalette.lavender
         case .bills:
-            .teal
+            AppPalette.teal
         case .foodJournal:
-            .brown
+            AppPalette.clay
         case .diary:
-            .mint
+            AppPalette.accent
         case .anniversaries:
-            .pink
+            AppPalette.rose
         }
     }
 }
