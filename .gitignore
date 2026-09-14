@@ -10,3 +10,4 @@ backend/data/
 /ios/recoow/Core/Sync/SyncEntityCatalog.generated.swift
 **/__pycache__/
 /dist/
+/server/
