@@ -1,0 +1,573 @@
+<!-- Build source. Run build_preview.py to generate ../decision-scene-preview.html. -->
+<div id="recoow-decision-scene" aria-label="选什么：可变数量的三维选择盘" data-render-state="loading">
+  <div class="rds-app">
+    <div class="rds-nav"><span><span class="rds-back-full">选什么</span><span class="rds-back-short">返回</span></span><strong>今天吃什么</strong><button type="button" class="rds-add">添加</button></div>
+    <div class="rds-content">
+      <section class="rds-scene" aria-label="拖动转盘进行选择">
+        <p class="rds-status">拖动浏览 · 轻甩或点中心抽选</p>
+        <div class="rds-stage">
+          <canvas aria-label="三维选择盘，左右慢拖浏览，快速甩动后松手抽选。也可以点转盘中央抽选。"></canvas>
+          <div class="rds-labels" aria-hidden="true"></div>
+          <button type="button" class="rds-start" aria-label="开始抽选">抽选</button>
+          <p class="rds-loading">正在准备选择盘…</p>
+        </div>
+        <p class="rds-empty" hidden>添加至少一个启用的选项后即可抽选。</p>
+      </section>
+      <section class="rds-dock" aria-label="当前选项和候选列表">
+        <div class="rds-dock-header">
+          <div class="rds-focus"><span class="rds-focus-role">当前浏览</span><strong class="rds-focus-name"></strong></div>
+          <button type="button" class="rds-drawer-toggle" aria-expanded="false" aria-controls="rds-candidates"><span class="rds-count"></span><span class="rds-drawer-action">展开</span></button>
+        </div>
+        <div id="rds-candidates" class="rds-drawer" aria-hidden="true" inert>
+          <p class="rds-list-hint">点选可在盘中查看</p>
+          <div class="rds-options" aria-label="候选项列表"></div>
+          <p class="rds-rule">只从启用的候选项中抽选，权重越高越容易被选中。</p>
+        </div>
+      </section>
+    </div>
+    <dialog class="rds-sheet" aria-labelledby="rds-sheet-title">
+      <form>
+        <div class="rds-sheet-nav"><button type="button" class="rds-cancel">取消</button><strong id="rds-sheet-title">添加选项</strong><button type="submit">保存</button></div>
+        <div class="rds-fields">
+          <label>名称<input name="title" type="text" required maxlength="120" autocomplete="off" placeholder="例如：饺子"></label>
+          <label>权重<input name="weight" type="number" min="1" max="10000" step="1" required value="1"></label>
+          <label class="rds-switch">启用<input name="enabled" type="checkbox" checked></label>
+        </div>
+      </form>
+    </dialog>
+  </div>
+  <div class="rds-a11y" role="status" aria-live="polite" aria-atomic="true"></div>
+</div>
+<style>
+#recoow-decision-scene{color-scheme:light dark;--rds-background:light-dark(#F4F5F7,#111214);--rds-surface:light-dark(#FFFFFF,#1F2024);--rds-ink:light-dark(#1C2026,#F3F4F6);--rds-secondary:light-dark(#696F79,#A7ABB4);--rds-accent:light-dark(#3E70E3,#98B3FF);--rds-onaccent:light-dark(#FFFFFF,#141A2C);--rds-line:light-dark(#E5E7EB,#34363B);--rds-scale:1;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:calc(17px * var(--rds-scale));line-height:1.45;color:var(--rds-ink);}
+#recoow-decision-scene *{box-sizing:border-box;}
+#recoow-decision-scene [hidden]{display:none!important;}
+#recoow-decision-scene .rds-app{max-width:430px;margin:0 auto;background:var(--rds-background);border-radius:14px;overflow:hidden;}
+#recoow-decision-scene strong{font-weight:500;}
+#recoow-decision-scene button,#recoow-decision-scene input{font:inherit;}
+#recoow-decision-scene button{cursor:pointer;min-height:44px;min-width:44px;}
+#recoow-decision-scene button:disabled{cursor:default;}
+#recoow-decision-scene .rds-nav{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;padding:4px 16px;background:var(--rds-surface);min-height:52px;}
+#recoow-decision-scene .rds-nav>span{font-size:.88235em;color:var(--rds-accent);}
+#recoow-decision-scene .rds-back-short{display:none;}
+#recoow-decision-scene[data-large-type="true"] .rds-back-full{display:none;}
+#recoow-decision-scene[data-large-type="true"] .rds-back-short{display:inline;}
+#recoow-decision-scene .rds-nav>strong{text-align:center;overflow-wrap:anywhere;}
+#recoow-decision-scene .rds-add{justify-self:end;}
+#recoow-decision-scene .rds-nav button,#recoow-decision-scene .rds-sheet-nav button{border:0;background:transparent;color:var(--rds-accent);padding:8px 0;}
+#recoow-decision-scene .rds-content{padding:0;}
+#recoow-decision-scene .rds-scene{padding:16px 0 0;}
+#recoow-decision-scene .rds-status{font-size:.88235em;color:var(--rds-secondary);text-align:center;padding:0 16px;margin:0;min-height:1.45em;}
+#recoow-decision-scene .rds-stage{height:440px;position:relative;transition:height .22s ease;}
+#recoow-decision-scene[data-drawer="open"] .rds-stage{height:240px;}
+#recoow-decision-scene canvas{display:block;width:100%;height:100%;touch-action:pan-y;cursor:grab;}
+#recoow-decision-scene canvas:active{cursor:grabbing;}
+#recoow-decision-scene .rds-labels{position:absolute;inset:0;pointer-events:none;}
+#recoow-decision-scene .rds-model-label{position:absolute;transform:translate(-50%,-50%);padding:1px 5px;border-radius:4px;background:var(--rds-surface);font-size:.7647em;max-width:6.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--rds-ink);}
+#recoow-decision-scene .rds-loading{position:absolute;inset:42% 20px auto;margin:0;color:var(--rds-secondary);text-align:center;font-size:.88235em;}
+#recoow-decision-scene .rds-dock{position:relative;margin:0 12px 12px;background:var(--rds-surface);border-radius:24px;overflow:hidden;}
+#recoow-decision-scene .rds-dock-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;}
+#recoow-decision-scene .rds-focus{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
+#recoow-decision-scene .rds-focus-role{font-size:.7647em;color:var(--rds-secondary);}
+#recoow-decision-scene .rds-focus-name{overflow-wrap:anywhere;}
+#recoow-decision-scene .rds-drawer-toggle{display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex-shrink:0;padding:4px 0;border:0;background:transparent;color:var(--rds-ink);font-size:.7647em;}
+#recoow-decision-scene .rds-drawer-action{color:var(--rds-accent);}
+#recoow-decision-scene .rds-start{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:block;border:0;border-radius:50%;width:64px;height:44px;padding:0;background:transparent;color:var(--rds-onaccent);font-size:.88235em;font-weight:500;white-space:nowrap;}
+#recoow-decision-scene .rds-start:disabled{opacity:.55;}
+#recoow-decision-scene[data-render-state="loading"] .rds-start,#recoow-decision-scene[data-render-state="fallback"] .rds-start{top:68%;background:var(--rds-accent);border-radius:10px;width:auto;min-width:88px;padding:8px 16px;}
+#recoow-decision-scene .rds-rule{font-size:.7647em;color:var(--rds-secondary);margin:12px 16px 14px;}
+#recoow-decision-scene .rds-empty{font-size:.88235em;color:var(--rds-secondary);padding:0 16px;margin:12px 0 0;text-align:center;}
+#recoow-decision-scene .rds-drawer{height:0;overflow-y:auto;overscroll-behavior:contain;visibility:hidden;border-top:0 solid var(--rds-line);transition:height .22s ease,visibility 0s .22s;}
+#recoow-decision-scene[data-drawer="open"] .rds-drawer{height:200px;visibility:visible;border-top-width:1px;transition:height .22s ease,visibility 0s;}
+#recoow-decision-scene .rds-list-hint{font-size:.7647em;color:var(--rds-secondary);margin:12px 16px 4px;}
+#recoow-decision-scene .rds-options{background:var(--rds-surface);}
+#recoow-decision-scene .rds-option{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:10px 14px;text-align:left;border:0;background:transparent;color:var(--rds-ink);}
+#recoow-decision-scene .rds-option+.rds-option{border-top:1px solid var(--rds-line);}
+#recoow-decision-scene .rds-option>span:first-child{flex:1;min-width:0;overflow-wrap:anywhere;font-weight:500;}
+#recoow-decision-scene .rds-option small{display:block;color:var(--rds-secondary);font-size:.7647em;font-weight:400;margin-top:2px;}
+#recoow-decision-scene .rds-option>.rds-option-state{font-size:.7647em;color:var(--rds-secondary);text-align:right;max-width:40%;}
+#recoow-decision-scene .rds-option[aria-pressed="true"]>.rds-option-state{color:var(--rds-accent);}
+#recoow-decision-scene .rds-options-empty{font-size:.88235em;color:var(--rds-secondary);padding:16px;margin:0;}
+#recoow-decision-scene .rds-sheet{width:calc(100% - 32px);max-width:430px;border:0;border-radius:24px;background:var(--rds-background);color:var(--rds-ink);padding:0;font:inherit;}
+#recoow-decision-scene .rds-sheet::backdrop{background:rgb(0 0 0 / .24);}
+#recoow-decision-scene .rds-sheet-nav{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:8px 16px;background:var(--rds-surface);}
+#recoow-decision-scene .rds-sheet-nav>button:first-child{justify-self:start;}
+#recoow-decision-scene .rds-sheet-nav>button:last-child{justify-self:end;}
+#recoow-decision-scene .rds-fields{display:grid;gap:14px;padding:20px 16px 24px;}
+#recoow-decision-scene .rds-fields label{display:grid;gap:8px;}
+#recoow-decision-scene .rds-fields input{width:100%;min-width:0;padding:10px;border:1px solid var(--rds-line);border-radius:10px;background:var(--rds-surface);color:var(--rds-ink);}
+#recoow-decision-scene .rds-fields label.rds-switch{display:flex;align-items:center;justify-content:space-between;min-height:44px;}
+#recoow-decision-scene .rds-switch input{width:24px;height:24px;accent-color:var(--rds-accent);}
+#recoow-decision-scene .rds-a11y{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
+#recoow-decision-scene[data-large-type="true"] .rds-model-label{display:none;}
+#recoow-decision-scene[data-reduce-motion="true"] .rds-stage,#recoow-decision-scene[data-reduce-motion="true"] .rds-drawer{transition:none;}
+@media(max-width:360px){#recoow-decision-scene .rds-stage{height:410px;}#recoow-decision-scene[data-drawer="open"] .rds-stage{height:210px;}#recoow-decision-scene .rds-nav{grid-template-columns:auto minmax(0,1fr) auto;}}
+@media(prefers-reduced-motion:reduce){#recoow-decision-scene .rds-stage,#recoow-decision-scene .rds-drawer{transition:none;}}
+</style>
+<script type="application/json" id="rds-scene-data">__SCENE_DATA__</script>
+<script>
+(() => {
+  const root = document.getElementById('recoow-decision-scene');
+  const query = selector => root.querySelector(selector);
+  const canvas = query('canvas'), stage = query('.rds-stage'), list = query('.rds-options');
+  const status = query('.rds-status'), focusRole = query('.rds-focus-role'), focusName = query('.rds-focus-name');
+  const start = query('.rds-start'), drawerToggle = query('.rds-drawer-toggle'), drawer = query('.rds-drawer');
+  const announcer = query('.rds-a11y'), labels = query('.rds-labels'), loading = query('.rds-loading');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const systemDark = matchMedia('(prefers-color-scheme: dark)');
+  const settings = { count:10, models:'mixed', appearance:'system', type:'standard', duration:2.8, motion:'system' };
+  const aliases = __ASSET_ALIASES__;
+  const modelKeys = new Set(__MODEL_KEYS__);
+  const initialTitles = ['火锅','串串','麻辣烫','烧烤','汉堡','面条','轻食','寿司','三明治','家里做'];
+  let allOptions = initialTitles.map((title,index) => ({ id:'example-'+index, title, weight:1, isEnabled:true }));
+  let options = allOptions.slice();
+  let cursor = 0, viewed = 0, selected = -1, busy = false, drag = null, lift = 0, buttonDepression = 0;
+  let animation = 0, animationFinish = null, lastPass = 0, rowButtons = [];
+  let THREE, renderer, scene, camera, turntable, drawButton, actionCap, raycaster, resizeObserver;
+  let templatePad, ringLimit = 10, slots = [], templates = new Map(), materials = new Set();
+  let modelScheme = settings.models, lastCount = settings.count, loaded = false, failed = false, accentColor;
+  const tau = Math.PI * 2, mod = (n,m) => ((n % m) + m) % m;
+  const noMotion = () => settings.motion === 'reduce' || reduced.matches;
+  const nearest = () => options.length ? mod(Math.round(cursor), options.length) : -1;
+
+  function resolveModel(option) {
+    if (settings.models === 'default') return 'default';
+    if (option.modelKey && modelKeys.has(option.modelKey)) return option.modelKey;
+    const key = aliases[option.title.normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase()];
+    return modelKeys.has(key) ? key : 'default';
+  }
+
+  function weightedIndex(candidates, random = Math.random) {
+    const total = candidates.reduce((sum, option) => sum + Math.max(1,Math.trunc(Number(option.weight) || 1)), 0);
+    let target = random() * total;
+    for (let index=0;index<candidates.length;index++) {
+      target -= Math.max(1,Math.trunc(Number(candidates[index].weight) || 1));
+      if (target < 0) return index;
+    }
+    return candidates.length-1;
+  }
+
+  function setBusy(value) {
+    busy = value;
+    root.dataset.phase = value ? 'spinning' : (selected >= 0 ? 'result' : 'browsing');
+    start.disabled = value || !options.length;
+    drawerToggle.disabled = value;
+    query('.rds-add').disabled = value;
+    rowButtons.forEach(({button, enabled}) => button.disabled = value || !enabled);
+  }
+
+  function updateFocus(index, role='当前浏览', announce=false) {
+    viewed = index;
+    focusRole.textContent = role;
+    focusName.textContent = index >= 0 ? options[index].title : '还没有可选项';
+    rowButtons.forEach(({button, id, enabled}) => {
+      const active = index >= 0 && options[index].id === id;
+      button.setAttribute('aria-pressed', String(active));
+      button.lastChild.textContent = enabled ? (active ? (role === '本次结果' ? '已选中' : '正在查看') : '查看') : '未启用';
+    });
+    if (announce && index >= 0) announcer.textContent = role + '：' + options[index].title;
+  }
+
+  function idleStatus() {
+    if (!options.length) return '还没有启用的候选项';
+    if (options.length === 1) return '当前只有一个候选项';
+    return '拖动浏览 · 轻甩或点中心抽选';
+  }
+
+  function resetSelection() {
+    selected = -1; lift = 0;
+    start.textContent = '抽选';
+    start.setAttribute('aria-label','开始抽选');
+    status.textContent = idleStatus();
+    setBusy(false);
+  }
+
+  function stopAnimation() {
+    cancelAnimationFrame(animation);
+    animation = 0;
+    animationFinish = null;
+  }
+
+  function setDrawer(expanded) {
+    root.dataset.drawer=expanded?'open':'closed';
+    drawer.inert=!expanded;
+    drawer.setAttribute('aria-hidden',String(!expanded));
+    drawerToggle.setAttribute('aria-expanded',String(expanded));
+    query('.rds-drawer-action').textContent=expanded?'收起':'展开';
+  }
+
+  function animate(duration, frame, done) {
+    stopAnimation();
+    const began = performance.now();
+    const finish = () => { animation = 0; animationFinish = null; frame(1); done(); };
+    animationFinish = finish;
+    if (duration <= 0 || document.hidden) { finish(); return; }
+    function tick(now) {
+      const t = Math.min(1,(now-began)/duration);
+      frame(t);
+      if (t < 1) animation = requestAnimationFrame(tick);
+      else { animation = 0; animationFinish = null; done(); }
+    }
+    animation = requestAnimationFrame(tick);
+  }
+
+  function browse(index, announcement=true) {
+    if (busy || index < 0 || !options.length) return;
+    resetSelection();
+    const current = mod(cursor,options.length);
+    const delta = mod(index-current+options.length/2,options.length)-options.length/2;
+    const from = cursor, target = cursor + delta;
+    updateFocus(index,'当前浏览',announcement);
+    animate(noMotion()?0:340,t => {
+      cursor = from + (target-from)*(1-Math.pow(1-t,3));
+      draw();
+    },() => { cursor=target; updateFocus(index); draw(); });
+  }
+
+  function reveal(index) {
+    selected = index;
+    status.textContent = '已选好';
+    start.textContent = '再选';
+    start.setAttribute('aria-label','再选一次');
+    updateFocus(index,'本次结果',true);
+    // Keep inputs locked until the lift settles so one gesture starts one draw.
+    animate(noMotion()?0:260,t => {
+      lift = .20 * (1-Math.pow(1-t,3));
+      draw();
+    },() => { setBusy(false); draw(); });
+  }
+
+  function spin(direction=1, intensity=0, fromGesture=false) {
+    if (busy || !options.length) return;
+    stopAnimation();
+    resetSelection();
+    setDrawer(false);
+    setBusy(true);
+    start.textContent = '···';
+    start.setAttribute('aria-label','正在抽选');
+    buttonDepression=.025;
+    announcer.textContent = '正在抽选';
+    const index = weightedIndex(options);
+    const from = cursor, count = options.length;
+    let target = index + (direction > 0 ? Math.ceil((cursor-index)/count) : Math.floor((cursor-index)/count)) * count;
+    const travel = Math.min(count,ringLimit) * (1.8 + Math.min(intensity,1)*.5);
+    while (direction * (target-cursor) < travel) target += direction * count;
+    if (count === 1 || noMotion()) target = index;
+    const duration = (count === 1 || noMotion() || failed) ? 0 : settings.duration*1000 + Math.min(intensity,1)*180;
+    animate(duration,t => {
+      buttonDepression=.025*Math.max(0,1-t/.15);
+      const p = fromGesture ? 1-Math.pow(1-t,4) : 1-Math.pow(1-t,5)*(1+5*t);
+      cursor = from + (target-from)*p;
+      const message = t < .20 ? '开始转动…' : t < .60 ? '正在抽选…' : '慢慢停下…';
+      status.textContent = message;
+      const now = performance.now();
+      if (now-lastPass > 95 || t === 1) { updateFocus(nearest(),'正在经过'); lastPass=now; }
+      draw();
+    },() => { cursor=target; reveal(index); });
+  }
+
+  function renderRows() {
+    list.replaceChildren(); rowButtons=[];
+    for (const option of allOptions) {
+      const button = document.createElement('button');
+      button.type='button'; button.className='rds-option';
+      const title = document.createElement('span'); title.textContent=option.title;
+      if (option.weight > 1) { const note=document.createElement('small'); note.textContent='权重 '+option.weight; title.append(note); }
+      const state = document.createElement('span'); state.className='rds-option-state';
+      button.append(title,state);
+      button.addEventListener('click',() => browse(options.findIndex(item=>item.id===option.id)));
+      list.append(button);
+      rowButtons.push({button,id:option.id,enabled:option.isEnabled});
+    }
+    if (!allOptions.length) { const message=document.createElement('p');message.className='rds-options-empty';message.textContent='还没有候选项';list.append(message); }
+  }
+
+  function setOptions(nextOptions) {
+    stopAnimation(); drag=null; cursor=0;
+    allOptions = nextOptions.map((option,index) => ({...option,id:option.id ?? 'option-'+index,weight:Math.max(1,Math.trunc(Number(option.weight)||1)),isEnabled:option.isEnabled!==false}));
+    options = allOptions.filter(option=>option.isEnabled);
+    resetSelection(); renderRows();
+    query('.rds-count').textContent = '候选项 '+allOptions.length;
+    drawerToggle.setAttribute('aria-label','候选项 '+allOptions.length+' 个，其中 '+options.length+' 个已启用');
+    query('.rds-empty').hidden = options.length>0;
+    updateFocus(options.length?0:-1);
+    setBusy(false);
+    if (loaded) rebuildSlots();
+    draw();
+  }
+
+  function newModel(key) {
+    const template = templates.get(key) || templates.get('default');
+    const model = template.clone(true);
+    model.position.set(0,.074,0);
+    return model;
+  }
+
+  function rebuildSlots() {
+    slots.forEach(slot => {
+      scene.remove(slot.anchor);
+      slot.pad.material.dispose();
+      materials.delete(slot.pad.material);
+    });
+    slots=[]; labels.replaceChildren();
+    const count = Math.min(options.length,ringLimit);
+    for(let i=0;i<count;i++) {
+      const anchor = new THREE.Group();
+      const pad=templatePad.clone();
+      pad.material=templatePad.material.clone();
+      pad.material.userData={...templatePad.material.userData};
+      materials.add(pad.material);
+      anchor.add(pad); scene.add(anchor);
+      const label=document.createElement('span');label.className='rds-model-label';labels.append(label);
+      slots.push({anchor,pad,label,model:null,key:null,optionIndex:-1,models:new Map()});
+    }
+    applyTheme();
+  }
+
+  function positionSlots() {
+    if (!slots.length) return;
+    const count=options.length, visibleCount=slots.length, virtual=count>visibleCount;
+    const pitch=tau/visibleCount;
+    const radius=count<3?1.18:1.50;
+    const size=visibleCount>8?.85:1;
+    const first=virtual ? Math.floor(cursor)-Math.floor((visibleCount-1)/2) : 0;
+    for(let offset=0;offset<visibleCount;offset++) {
+      const logical=first+offset;
+      const slot=slots[virtual?mod(logical,visibleCount):offset];
+      const index=mod(logical,count), option=options[index], key=resolveModel(option);
+      if(slot.key!==key) {
+        if(slot.model)slot.anchor.remove(slot.model);
+        if(!slot.models.has(key))slot.models.set(key,newModel(key));
+        slot.model=slot.models.get(key);slot.anchor.add(slot.model);slot.key=key;
+      }
+      slot.optionIndex=index;
+      const angle=count===1?0:(logical-cursor)*pitch;
+      const wrapped=mod(angle+Math.PI,tau)-Math.PI;
+      // Reuse only the slot at the far side; the complete pool remains browsable.
+      const seam=virtual?THREE.MathUtils.smoothstep(Math.PI-Math.abs(wrapped),0,.32):1;
+      slot.anchor.position.set(Math.sin(angle)*radius,.324+(index===selected?lift:0),Math.cos(angle)*radius);
+      slot.anchor.rotation.y=angle;
+      slot.anchor.scale.setScalar(size*seam);
+      slot.anchor.userData.optionIndex=index;
+      const appearance = darkAppearance()?'darkColor':'lightColor';
+      slot.pad.material.color.set(index===selected?accentColor:slot.pad.material.userData[appearance]);
+      slot.label.textContent=option.title;
+      slot.anchor.updateMatrixWorld(true);
+      const point=new THREE.Vector3(0,-.01,.48).applyMatrix4(slot.anchor.matrixWorld);
+      point.project(camera);
+      slot.label.style.left=((point.x+1)*stage.clientWidth/2)+'px';
+      slot.label.style.top=((1-point.y)*stage.clientHeight/2+9)+'px';
+      slot.label.hidden=busy || Math.cos(angle)<.43 || count===1 || settings.type==='large';
+      slot.label.style.zIndex=String(Math.round(Math.cos(angle)*100)+100);
+    }
+    turntable.rotation.y=-cursor*pitch;
+  }
+
+  function draw() {
+    if (!loaded) return;
+    positionSlots();
+    const buttonScale=(settings.type==='large'?76:60)/(.746*stage.clientWidth/(camera.right-camera.left));
+    drawButton.scale.set(buttonScale,1,buttonScale);
+    actionCap.position.y=.374-buttonDepression;
+    drawButton.updateMatrixWorld(true);
+    const center=new THREE.Vector3(0,.405-buttonDepression,0).applyMatrix4(drawButton.matrixWorld).project(camera);
+    start.style.left=((center.x+1)*stage.clientWidth/2)+'px';
+    start.style.top=((1-center.y)*stage.clientHeight/2)+'px';
+    renderer.render(scene,camera);
+  }
+
+  function darkAppearance() { return settings.appearance==='dark' || (settings.appearance==='system' && systemDark.matches); }
+  function resolvedColor(name) {
+    const probe=document.createElement('span');probe.style.color='var('+name+')';root.append(probe);
+    const color=getComputedStyle(probe).color;probe.remove();return color;
+  }
+
+  function applyTheme() {
+    root.style.colorScheme=settings.appearance==='system'?'light dark':settings.appearance;
+    root.style.setProperty('--rds-scale',settings.type==='large'?'1.65':'1');
+    root.dataset.largeType=String(settings.type==='large');
+    root.dataset.reduceMotion=String(noMotion());
+    accentColor=resolvedColor('--rds-accent');
+    if (!loaded) return;
+    const key=darkAppearance()?'darkColor':'lightColor';
+    for(const material of materials) {
+      if(material.userData[key])material.color.set(material.userData[key]);
+    }
+    draw();
+  }
+
+  function resize() {
+    if (!loaded) return;
+    const width=stage.clientWidth,height=stage.clientHeight;
+    const limit=width<340?8:10;
+    const horizontal=Math.max(4.96,3.6*width/height);
+    camera.left=-horizontal/2;camera.right=horizontal/2;
+    camera.top=horizontal/2*height/width;camera.bottom=-camera.top;
+    camera.updateProjectionMatrix();
+    camera.updateMatrixWorld(true);
+    renderer.setSize(width,height,false);
+    if(limit!==ringLimit){ringLimit=limit;rebuildSlots();}
+    draw();
+  }
+
+  function raycastChoice(event) {
+    if (!loaded) return -1;
+    const rect=canvas.getBoundingClientRect();
+    const pointer=new THREE.Vector2((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);
+    raycaster.setFromCamera(pointer,camera);
+    for(const hit of raycaster.intersectObjects(slots.map(slot=>slot.anchor),true)) {
+      let object=hit.object;
+      while(object && object.userData.optionIndex===undefined)object=object.parent;
+      if(object)return object.userData.optionIndex;
+    }
+    return -1;
+  }
+
+  canvas.addEventListener('pointerdown',event => {
+    if(busy || drag || !options.length || (event.pointerType==='mouse' && event.button!==0))return;
+    stopAnimation();
+    drag={id:event.pointerId,x:event.clientX,y:event.clientY,cursor,horizontal:false,samples:[{x:event.clientX,time:event.timeStamp}]};
+    // Capture keeps a fast gesture coherent when it crosses an overlay or the edge.
+    // touch-action: pan-y still lets the browser cancel for vertical page scrolling.
+    canvas.setPointerCapture(event.pointerId);
+  });
+  canvas.addEventListener('pointermove',event => {
+    if(!drag || drag.id!==event.pointerId)return;
+    const dx=event.clientX-drag.x,dy=event.clientY-drag.y;
+    if(!drag.horizontal) {
+      if(Math.abs(dy)>10 && Math.abs(dy)>Math.abs(dx)){
+        drag=null;
+        if(canvas.hasPointerCapture(event.pointerId))canvas.releasePointerCapture(event.pointerId);
+        return;
+      }
+      if(Math.abs(dx)<8 || Math.abs(dx)<Math.abs(dy)*1.2)return;
+      drag.horizontal=true;resetSelection();
+    }
+    cursor=drag.cursor-dx/Math.max(48,stage.clientWidth/6);
+    drag.samples.push({x:event.clientX,time:event.timeStamp});
+    drag.samples=drag.samples.filter(sample=>event.timeStamp-sample.time<100);
+    updateFocus(nearest());status.textContent='慢拖浏览 · 快速甩动后松手抽选';draw();
+  });
+  canvas.addEventListener('pointerup',event => {
+    if(!drag || drag.id!==event.pointerId)return;
+    const gesture=drag;drag=null;
+    if(canvas.hasPointerCapture(event.pointerId))canvas.releasePointerCapture(event.pointerId);
+    if(!gesture.horizontal){const index=raycastChoice(event);if(index>=0)browse(index);return;}
+    const samples=gesture.samples.filter(sample=>event.timeStamp-sample.time<=100);
+    const first=samples[0];
+    const velocity=first?(event.clientX-first.x)/Math.max(1,event.timeStamp-first.time):0;
+    if(Math.abs(velocity)>.42 && Math.abs(event.clientX-gesture.x)>24)spin(-Math.sign(velocity),Math.min(Math.abs(velocity)/1.7,1),true);
+    else browse(nearest());
+  });
+  function cancelDrag(){if(!drag)return;const horizontal=drag.horizontal;drag=null;if(horizontal)browse(nearest(),false);}
+  canvas.addEventListener('pointercancel',cancelDrag);
+  canvas.addEventListener('lostpointercapture',cancelDrag);
+  start.addEventListener('click',()=>spin());
+  start.addEventListener('pointerdown',()=>{if(!busy){buttonDepression=.025;draw();}});
+  start.addEventListener('pointercancel',()=>{buttonDepression=0;draw();});
+  start.addEventListener('pointerleave',()=>{if(!busy){buttonDepression=0;draw();}});
+  drawerToggle.addEventListener('click',()=>setDrawer(root.dataset.drawer!=='open'));
+  document.addEventListener('visibilitychange',()=>{if(document.hidden && animationFinish){const finish=animationFinish;stopAnimation();finish();}});
+
+  const dialog=query('.rds-sheet'), form=dialog.querySelector('form');
+  query('.rds-add').addEventListener('click',()=>{form.reset();dialog.showModal();});
+  query('.rds-cancel').addEventListener('click',()=>dialog.close());
+  form.addEventListener('submit',event=>{
+    event.preventDefault();
+    const name=form.elements.namedItem('title');
+    const title=name.value.trim();
+    if(!title){name.setCustomValidity('请输入名称');name.reportValidity();return;}
+    name.setCustomValidity('');
+    const option={id:'custom-'+crypto.randomUUID(),title,weight:Number(form.elements.namedItem('weight').value),isEnabled:form.elements.namedItem('enabled').checked};
+    setOptions([...allOptions,option]);
+    settings.count=lastCount=allOptions.length;
+    dialog.close();
+    setDrawer(false);
+    const index=options.findIndex(item=>item.id===option.id);if(index>=0)browse(index);
+  });
+  form.elements.namedItem('title').addEventListener('input',event=>event.target.setCustomValidity(''));
+
+  function renderSettings() {
+    if(settings.count!==lastCount) {
+      const count=Math.max(0,Math.round(settings.count));
+      const sample=Array.from({length:count},(_,i)=>allOptions[i] || {id:'extra-'+i,title:initialTitles[i] || '自定义选项 '+(i+1),weight:1,isEnabled:true});
+      lastCount=count;setOptions(sample);
+    }
+    if(settings.models!==modelScheme){modelScheme=settings.models;if(loaded)rebuildSlots();}
+    applyTheme();
+    if(noMotion() && animationFinish){const finish=animationFinish;stopAnimation();finish();}
+  }
+  systemDark.addEventListener('change',applyTheme);
+  reduced.addEventListener('change',renderSettings);
+  setOptions(allOptions);
+  setDrawer(false);
+  applyTheme();
+  if(globalThis.Tweak) {
+    const tweak=new Tweak({container:root,onChange:renderSettings});
+    tweak.addSlider(settings,'count',{label:'候选项数量',min:0,max:40,step:1,unit:'个'});
+    tweak.addSelect(settings,'models',{label:'模型方案',options:[{label:'预制模型 + 通用立牌',value:'mixed'},{label:'全部使用通用立牌',value:'default'}]});
+    tweak.addSelect(settings,'appearance',{label:'外观',options:[{label:'跟随系统',value:'system'},{label:'浅色',value:'light'},{label:'深色',value:'dark'}]});
+    tweak.addSelect(settings,'type',{label:'字号',options:[{label:'标准',value:'standard'},{label:'大字体',value:'large'}]});
+    tweak.addSelect(settings,'motion',{label:'动画',options:[{label:'跟随系统',value:'system'},{label:'减少动态效果',value:'reduce'}]});
+    tweak.addSlider(settings,'duration',{label:'抽选时长',min:2,max:3.6,step:.2,unit:'秒'});
+  }
+
+  // Local review hooks; this prototype does not read or write the app database.
+  root.preview={settings,setOptions,browse,spin,renderSettings,setDrawer,resolveModel,weightedIndex,getState:()=>({count:options.length,visible:slots.length,viewed,selected,busy,cursor,loaded,failed,models:slots.map(slot=>({index:slot.optionIndex,key:slot.key})),render:renderer?.info.render})};
+
+  async function boot() {
+    try {
+      const libraries=await Promise.all([import('https://esm.sh/three@0.170.0'),import('https://esm.sh/three@0.170.0/examples/jsm/loaders/GLTFLoader.js')]);
+      THREE=libraries[0];
+      const payload=JSON.parse(document.getElementById('rds-scene-data').textContent);
+      const compressed=Uint8Array.from(atob(payload.data),character=>character.charCodeAt(0));
+      const bytes=await new Response(new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+      const gltf=await new libraries[1].GLTFLoader().parseAsync(bytes,'');
+      renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,powerPreference:'low-power'});
+      renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+      renderer.setClearColor(0x000000,0);
+      renderer.outputColorSpace=THREE.SRGBColorSpace;
+      renderer.toneMapping=THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure=1;
+      renderer.shadowMap.enabled=true;
+      renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+      scene=new THREE.Scene();scene.add(gltf.scene);
+      camera=new THREE.OrthographicCamera(-2.48,2.48,2,-2,.1,40);
+      camera.position.set(0,6.4,7.8);camera.lookAt(0,.36,0);
+      const hemi=new THREE.HemisphereLight(0xffffff,0x667080,1.5);scene.add(hemi);
+      const key=new THREE.DirectionalLight(0xffffff,2.7);key.position.set(-3,7,5);key.castShadow=true;
+      key.shadow.mapSize.set(1024,1024);key.shadow.camera.left=-3;key.shadow.camera.right=3;key.shadow.camera.top=3;key.shadow.camera.bottom=-3;key.shadow.normalBias=.012;
+      scene.add(key);
+      const fill=new THREE.DirectionalLight(0xe8eeff,.8);fill.position.set(4,4,-3);scene.add(fill);
+      gltf.scene.traverse(object=>{
+        if(object.userData.modelRoot)templates.set(object.userData.assetKey,object);
+        if(object.isMesh){object.castShadow=true;object.receiveShadow=true;materials.add(object.material);}
+      });
+      turntable=gltf.scene.getObjectByName('Turntable');
+      drawButton=gltf.scene.getObjectByName('DrawButton');
+      actionCap=gltf.scene.getObjectByName('ActionCap');
+      const capMaterial=new THREE.MeshBasicMaterial({color:actionCap.material.color.clone()});
+      capMaterial.userData={...actionCap.material.userData};
+      capMaterial.toneMapped=false;
+      actionCap.material=capMaterial;
+      materials.add(capMaterial);
+      const anchors=turntable.children.filter(object=>object.userData.optionSlot!==undefined);
+      templatePad=anchors[0].children.find(object=>object.isMesh);
+      for(const anchor of anchors)turntable.remove(anchor);
+      raycaster=new THREE.Raycaster();
+      if(!templates.has('default') || !templatePad)throw new Error('Missing fallback prefab');
+      loaded=true;root.dataset.renderState='ready';loading.hidden=true;
+      ringLimit=stage.clientWidth<340?8:10;
+      rebuildSlots();resize();
+      resizeObserver=new ResizeObserver(resize);resizeObserver.observe(stage);
+      canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();loaded=false;failed=true;root.dataset.renderState='fallback';loading.hidden=false;loading.textContent='场景暂不可用，仍可点抽选';start.style.removeProperty('left');start.style.removeProperty('top');labels.replaceChildren();});
+      canvas.addEventListener('webglcontextrestored',()=>{loaded=true;failed=false;root.dataset.renderState='ready';loading.hidden=true;rebuildSlots();resize();});
+    } catch(error) {
+      failed=true;loaded=false;root.dataset.renderState='fallback';
+      loading.textContent='场景暂不可用，仍可点抽选';
+      console.error('Decision scene preview:',error);
+    }
+  }
+  boot();
+})();
+</script>

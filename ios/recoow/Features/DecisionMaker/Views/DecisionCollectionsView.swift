@@ -18,6 +18,7 @@ struct DecisionCollectionsView: View {
             DecisionOptionsView(collectionID: route.id)
         }
         .task {
+            DecisionSceneAssets.shared.prewarmStage()
             if viewModel == nil {
                 let model = DecisionCollectionsViewModel(
                     repository: container.decisionRepository,

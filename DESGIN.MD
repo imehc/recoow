@@ -156,6 +156,15 @@ List {
 .navigationTitle("统计")
 ```
 
+### 选什么的场景页面
+
+- 候选页使用非 AR 的 3D 内容画布，保留原生导航。抽选按钮放在转盘中心，并保留原生按钮的可访问性和最小 44 pt 点击区域。
+- 底部抽屉显示当前候选、候选列表和历史记录；列表独立滚动，展开时场景在剩余区域重新构图，不将场景推离屏幕。候选数量与展开箭头同行排列。
+- 拖动与点击模型用于浏览，快速甩动或中心按钮触发原有权重抽选及自动保存；动画不改变概率。减少动态效果时直接揭晓，页面不可见时停止动画。
+- 场景与候选数量分离，使用有限可见位置循环呈现完整候选池；未知或尚未加载的模型显示默认立牌。
+- 集合页提前准备空场景、底座和默认模型，食物模型按需加载并缓存。原生文字、照片详情、表单及确认弹窗继续使用共享样式和系统语义字号。
+- iOS 运行时资源统一放在 `ios/recoow/Resources/DecisionModels/`，USDZ 和清单纳入 Git，普通构建无需 Blender；更新模型时运行 `make decision-models-ios` 重新导出。GLB、Blender 源文件与生成脚本放在仓库根目录下的 `assets/decision-scene/` 并纳入版本管理，供 iOS 与后续 Android 共用。生成命令放在根目录 `README.md`，详细文档放在 `docs/decision-scene/`，新增 Markdown 仅保留本地。
+
 ### Sheet
 
 - 使用 `.appSheet(isPresented:onDismiss:content:)` 或 `.appSheet(item:onDismiss:content:)`，不要在新页面重复编写通用 Sheet 外观。

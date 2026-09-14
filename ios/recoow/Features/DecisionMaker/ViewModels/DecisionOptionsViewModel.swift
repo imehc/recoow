@@ -107,7 +107,7 @@ final class DecisionOptionsViewModel {
         }
     }
 
-    func chooseRandomOption() async {
+    func chooseRandomOption(onSelection: (DecisionOption) -> Void = { _ in }) async {
         let candidates = enabledOptions
         guard candidates.isEmpty == false else {
             selectedOption = nil
@@ -125,13 +125,13 @@ final class DecisionOptionsViewModel {
             target -= max(1, option.weight)
 
             if target <= 0 {
-                await recordChoice(option)
+                await recordChoice(option, onSelection: onSelection)
                 return
             }
         }
 
         if let option = candidates.last {
-            await recordChoice(option)
+            await recordChoice(option, onSelection: onSelection)
         }
     }
 
@@ -154,7 +154,7 @@ final class DecisionOptionsViewModel {
         }
     }
 
-    private func recordChoice(_ option: DecisionOption) async {
+    private func recordChoice(_ option: DecisionOption, onSelection: (DecisionOption) -> Void) async {
         selectedOption = option
 
         let record = DecisionChoiceRecord.makeNew(
@@ -167,10 +167,13 @@ final class DecisionOptionsViewModel {
         do {
             selectedChoiceRecord = try repository.insertChoiceRecord(record)
             errorMessage = nil
+            // Present the locally committed outcome immediately; cloud sync may take longer than the animation.
+            onSelection(option)
             await syncEngine.enqueueScan()
         } catch {
             selectedChoiceRecord = nil
             errorMessage = error.localizedDescription
+            onSelection(option)
         }
     }
 }

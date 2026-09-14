@@ -1,0 +1,206 @@
+{
+  "version": 1,
+  "source": "Procedurally authored in Blender via MCP; no external assets",
+  "coordinateSystem": "glTF +Y up, +Z front; metres",
+  "fallback": "default",
+  "resolutionOrder": [
+    "explicit available asset key",
+    "normalized exact title alias",
+    "default"
+  ],
+  "aliases": {
+    "汉堡": "burger",
+    "burger": "burger",
+    "hamburger": "burger",
+    "面条": "noodles",
+    "拉面": "noodles",
+    "noodles": "noodles",
+    "ramen": "noodles",
+    "轻食": "salad",
+    "沙拉": "salad",
+    "salad": "salad",
+    "寿司": "sushi",
+    "sushi": "sushi",
+    "三明治": "sandwich",
+    "sandwich": "sandwich",
+    "火锅": "hotpot",
+    "鸳鸯锅": "hotpot",
+    "hotpot": "hotpot",
+    "hot pot": "hotpot",
+    "串串": "skewers",
+    "串串香": "skewers",
+    "麻辣烫": "malatang",
+    "malatang": "malatang",
+    "烧烤": "barbecue",
+    "烤串": "barbecue",
+    "烧烤串": "barbecue",
+    "bbq": "barbecue",
+    "barbecue": "barbecue",
+    "螺蛳粉": "luosifen",
+    "柳州螺蛳粉": "luosifen",
+    "螺狮粉": "luosifen",
+    "luosifen": "luosifen",
+    "snail rice noodles": "luosifen",
+    "干锅虾": "drypotshrimp",
+    "香辣干锅虾": "drypotshrimp",
+    "干锅香辣虾": "drypotshrimp",
+    "dry pot shrimp": "drypotshrimp",
+    "drypot shrimp": "drypotshrimp"
+  },
+  "assets": [
+    {
+      "key": "default",
+      "path": "option-default.glb",
+      "bytes": 18620,
+      "usdz": "option-default.usdz"
+    },
+    {
+      "key": "burger",
+      "path": "option-burger.glb",
+      "bytes": 52520,
+      "usdz": "option-burger.usdz"
+    },
+    {
+      "key": "noodles",
+      "path": "option-noodles.glb",
+      "bytes": 76708,
+      "usdz": "option-noodles.usdz"
+    },
+    {
+      "key": "salad",
+      "path": "option-salad.glb",
+      "bytes": 66660,
+      "usdz": "option-salad.usdz"
+    },
+    {
+      "key": "sushi",
+      "path": "option-sushi.glb",
+      "bytes": 58132,
+      "usdz": "option-sushi.usdz"
+    },
+    {
+      "key": "sandwich",
+      "path": "option-sandwich.glb",
+      "bytes": 14896,
+      "usdz": "option-sandwich.usdz"
+    },
+    {
+      "key": "hotpot",
+      "path": "option-hotpot.glb",
+      "bytes": 45280,
+      "usdz": "option-hotpot.usdz"
+    },
+    {
+      "key": "skewers",
+      "path": "option-skewers.glb",
+      "bytes": 64228,
+      "usdz": "option-skewers.usdz"
+    },
+    {
+      "key": "malatang",
+      "path": "option-malatang.glb",
+      "bytes": 62176,
+      "usdz": "option-malatang.usdz"
+    },
+    {
+      "key": "barbecue",
+      "path": "option-barbecue.glb",
+      "bytes": 113396,
+      "usdz": "option-barbecue.usdz"
+    },
+    {
+      "key": "luosifen",
+      "path": "option-luosifen.glb",
+      "bytes": 103792,
+      "usdz": "option-luosifen.usdz"
+    },
+    {
+      "key": "drypotshrimp",
+      "path": "option-drypotshrimp.glb",
+      "bytes": 115996,
+      "usdz": "option-drypotshrimp.usdz"
+    }
+  ],
+  "materials": {
+    "RD_Accent": {
+      "light": "#3E70E3",
+      "dark": "#98B3FF"
+    },
+    "RD_Base": {
+      "light": "#D9DEE7",
+      "dark": "#343943"
+    },
+    "RD_Bread": {
+      "light": "#EDDBAB",
+      "dark": "#EAD8B4"
+    },
+    "RD_Bun": {
+      "light": "#CFA469",
+      "dark": "#D4AF7C"
+    },
+    "RD_Card": {
+      "light": "#F7F8FB",
+      "dark": "#A8B1C2"
+    },
+    "RD_Cheese": {
+      "light": "#DAB875",
+      "dark": "#E2C893"
+    },
+    "RD_Deck": {
+      "light": "#EDF0F5",
+      "dark": "#454C59"
+    },
+    "RD_Leaf": {
+      "light": "#729565",
+      "dark": "#90AE7D"
+    },
+    "RD_LeafLight": {
+      "light": "#A1B785",
+      "dark": "#B1C498"
+    },
+    "RD_Line": {
+      "light": "#BEC6D3",
+      "dark": "#242930"
+    },
+    "RD_Nori": {
+      "light": "#425A4C",
+      "dark": "#678270"
+    },
+    "RD_Patty": {
+      "light": "#695045",
+      "dark": "#866657"
+    },
+    "RD_Rice": {
+      "light": "#F0EAD7",
+      "dark": "#E9E3D2"
+    },
+    "RD_Salmon": {
+      "light": "#D18B74",
+      "dark": "#DCA18D"
+    },
+    "RD_Shrimp": {
+      "light": "#DC9069",
+      "dark": "#E9AC83"
+    },
+    "RD_Surface": {
+      "light": "#FFFFFF",
+      "dark": "#505662"
+    },
+    "RD_Tomato": {
+      "light": "#B56454",
+      "dark": "#CB8270"
+    },
+    "RD_Wood": {
+      "light": "#BE9975",
+      "dark": "#CDAF8D"
+    }
+  },
+  "stage": {
+    "glb": "decision-stage.glb",
+    "usdz": "decision-stage.usdz"
+  },
+  "pad": {
+    "glb": "option-pad.glb",
+    "usdz": "option-pad.usdz"
+  }
+}
