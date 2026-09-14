@@ -50,13 +50,8 @@ struct RemindersHistoryView: View {
         .appGroupedListStyle()
         .navigationTitle(AppLocalization.string("历史"))
         .appNavigationStyle()
-        .navigationDestination(for: ReminderRoute.self) { route in
-            ReminderDetailView(
-                viewModel: viewModel,
-                reminderID: route.id,
-                reminderImageTransition: reminderImageTransition
-            )
-        }
+        // ReminderRoute 的 navigationDestination 只在 RemindersView 注册一次：同一 NavigationStack 里
+        // 重复注册同一类型属于未定义行为，会让详情入栈时渲染成上一层页面。
         .alert(
             reminderPendingDeletion.map { AppLocalization.format("删除“%@”？", $0.title) } ?? "",
             isPresented: .isPresent($reminderPendingDeletion),

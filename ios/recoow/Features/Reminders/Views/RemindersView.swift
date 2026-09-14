@@ -27,6 +27,14 @@ struct RemindersView: View {
                 )
             }
         }
+        .navigationDestination(for: RemindersHistoryRoute.self) { _ in
+            if let viewModel {
+                RemindersHistoryView(
+                    viewModel: viewModel,
+                    reminderImageTransition: reminderImageTransition
+                )
+            }
+        }
         .task {
             guard viewModel == nil else { return }
 
@@ -50,7 +58,6 @@ struct RemindersView: View {
 private struct RemindersContent: View {
     @Bindable var viewModel: RemindersViewModel
     @State private var isShowingAddReminder = false
-    @State private var isShowingHistory = false
     @State private var reminderPendingDeletion: ReminderRecord?
     @State private var makeUpRequest: ReminderMakeUpRequest?
     @State private var earlyEndRequest: ReminderEarlyEndRequest?
@@ -107,17 +114,9 @@ private struct RemindersContent: View {
         .onAppear {
             viewModel.settleActiveOrder()
         }
-        .navigationDestination(isPresented: $isShowingHistory) {
-            RemindersHistoryView(
-                viewModel: viewModel,
-                reminderImageTransition: reminderImageTransition
-            )
-        }
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
-                Button {
-                    isShowingHistory = true
-                } label: {
+                NavigationLink(value: RemindersHistoryRoute()) {
                     Label(AppLocalization.string("历史"), systemImage: "clock.arrow.circlepath")
                 }
 
