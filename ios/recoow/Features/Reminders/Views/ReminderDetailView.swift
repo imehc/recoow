@@ -197,7 +197,7 @@ struct ReminderDetailView: View {
 
                     Divider()
 
-                    Button("删除", systemImage: "trash", role: .destructive) {
+                    Button("删除", systemImage: "trash") {
                         reminderPendingDeletion = reminder
                     }
                 } label: {

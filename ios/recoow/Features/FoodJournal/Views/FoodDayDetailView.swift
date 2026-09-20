@@ -48,7 +48,7 @@ struct FoodDayDetailView: View {
                 }
 
                 Menu {
-                    Button(AppLocalization.string("删除"), systemImage: "trash", role: .destructive) {
+                    Button(AppLocalization.string("删除"), systemImage: "trash") {
                         isConfirmingDayDeletion = true
                     }
                     .disabled(viewModel.entries(for: dayStart).isEmpty)

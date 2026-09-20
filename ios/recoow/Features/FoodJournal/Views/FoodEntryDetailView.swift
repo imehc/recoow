@@ -123,7 +123,7 @@ struct FoodEntryDetailView: View {
 
                     Divider()
 
-                    Button(AppLocalization.string("删除"), systemImage: "trash", role: .destructive) {
+                    Button(AppLocalization.string("删除"), systemImage: "trash") {
                         isConfirmingDeletion = true
                     }
                 } label: {

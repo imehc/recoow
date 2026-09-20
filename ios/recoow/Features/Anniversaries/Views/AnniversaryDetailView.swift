@@ -82,7 +82,7 @@ struct AnniversaryDetailView: View {
 
                     Divider()
 
-                    Button("删除", systemImage: "trash", role: .destructive) {
+                    Button("删除", systemImage: "trash") {
                         anniversaryPendingDeletion = anniversary
                     }
                 } label: {

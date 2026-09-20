@@ -180,7 +180,7 @@ struct BillDetailView: View {
 
                     Divider()
 
-                    Button("删除", systemImage: "trash", role: .destructive) {
+                    Button("删除", systemImage: "trash") {
                         billPendingDeletion = bill
                     }
                 } label: {

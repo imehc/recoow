@@ -707,7 +707,7 @@ private struct MediaAssetManagementTile: View {
                         Button(AppLocalization.string("编辑"), systemImage: "slider.horizontal.3", action: onEdit)
                         Button(AppLocalization.string("替换"), systemImage: "arrow.triangle.2.circlepath", action: onReplace)
                         if item.referenceCount == 0 {
-                            Button(AppLocalization.string("删除"), systemImage: "trash", role: .destructive, action: onDelete)
+                            Button(AppLocalization.string("删除"), systemImage: "trash", action: onDelete)
                         }
                     } label: {
                         Image(systemName: "ellipsis")
