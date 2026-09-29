@@ -172,7 +172,7 @@ final class RemindersViewModel {
 
     func save(_ reminder: ReminderRecord) async {
         do {
-            let savedReminder = try await repository.saveReminder(reminder)
+            let savedReminder = try repository.saveReminder(reminder)
             upsertReminder(savedReminder)
             errorMessage = nil
             await syncEngine.enqueueScan()
@@ -330,7 +330,7 @@ final class RemindersViewModel {
         }
 
         do {
-            let savedReminder = try await repository.saveReminder(reminder)
+            let savedReminder = try repository.saveReminder(reminder)
             // 权威值（updatedAt / syncStatus 等）由数据库观察流稍后统一回填；此处不再手动 upsert，
             // 避免在动画进行中替换数组、把动画打断成瞬变。
             errorMessage = nil

@@ -167,18 +167,39 @@ struct BillFormView: View {
 
             if showsTransportFields {
                 Section("出行信息") {
-                    LabeledContent("起点") {
-                        TextField("请输入起点", text: $startLocation)
-                            .multilineTextAlignment(.trailing)
-                            .textInputAutocapitalization(.never)
-                            .focused($focusedField, equals: "startLocation")
-                    }
+                    VStack(spacing: 0) {
+                        // 起点
+                        LabeledContent("起点") {
+                            TextField("请输入起点", text: $startLocation)
+                                .multilineTextAlignment(.trailing)
+                                .textInputAutocapitalization(.never)
+                                .focused($focusedField, equals: "startLocation")
+                        }
 
-                    LabeledContent("终点") {
-                        TextField("请输入终点", text: $endLocation)
-                            .multilineTextAlignment(.trailing)
-                            .textInputAutocapitalization(.never)
-                            .focused($focusedField, equals: "endLocation")
+                        // 起点 / 终点之间的交换按钮
+                        ZStack {
+                            Divider()
+
+                            FormRowIconButton(
+                                systemImage: "arrow.up.arrow.down",
+                                tint: AppPalette.accent,
+                                accessibilityLabel: AppLocalization.string("交换起点和终点"),
+                                action: swapLocations
+                            )
+                            .background {
+                                Color(uiColor: .systemBackground)
+                                    .padding(.horizontal, 4)
+                            }
+                        }
+                        .frame(height: 32)
+
+                        // 终点
+                        LabeledContent("终点") {
+                            TextField("请输入终点", text: $endLocation)
+                                .multilineTextAlignment(.trailing)
+                                .textInputAutocapitalization(.never)
+                                .focused($focusedField, equals: "endLocation")
+                        }
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
@@ -296,6 +317,12 @@ struct BillFormView: View {
             .filter { $0.isEmpty == false }
 
         return lines.isEmpty ? nil : lines.joined(separator: "\n")
+    }
+
+    private func swapLocations() {
+        let start = startLocation
+        startLocation = endLocation
+        endLocation = start
     }
 
     private var showsTransportFields: Bool {

@@ -7,7 +7,7 @@ enum V32StoredValueRechargeBalanceBackfillSchema {
     nonisolated static func register(in migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v32_stored_value_recharge_original_balance_backfill") { db in
             let now = Int64(Date().timeIntervalSince1970 * 1000)
-            var encoder = JSONEncoder()
+            let encoder = JSONEncoder()
             encoder.outputFormatting = [.sortedKeys]
 
             let accounts = try StoredValueAccount

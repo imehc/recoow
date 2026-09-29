@@ -9,7 +9,7 @@ enum ChangeOperation: String, Codable, Sendable {
 }
 
 /// change_log 表记录。payload_json 保存业务表变更快照，保证进程被杀后仍可补偿同步。
-struct ChangeRecord: Identifiable, Codable, FetchableRecord, PersistableRecord, Sendable {
+nonisolated struct ChangeRecord: Identifiable, Codable, FetchableRecord, PersistableRecord, Sendable {
     static let databaseTableName = "change_log"
 
     var id: Int64?

@@ -7,6 +7,7 @@ enum BillCategory: String, CaseIterable, Identifiable, Codable, Sendable {
     case transport
     case groupBuy
     case housing
+    case utility
     case entertainment
     case medical
     case learning
@@ -27,6 +28,8 @@ enum BillCategory: String, CaseIterable, Identifiable, Codable, Sendable {
             "团购"
         case .housing:
             "住房"
+        case .utility:
+            "生活缴费"
         case .entertainment:
             "娱乐"
         case .medical:
@@ -60,6 +63,8 @@ enum BillCategory: String, CaseIterable, Identifiable, Codable, Sendable {
             "ticket.fill"
         case .housing:
             "house.fill"
+        case .utility:
+            "bolt.fill"
         case .entertainment:
             "gamecontroller.fill"
         case .medical:

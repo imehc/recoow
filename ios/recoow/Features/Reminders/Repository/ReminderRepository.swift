@@ -21,8 +21,8 @@ final class ReminderRepository: @unchecked Sendable {
         deviceIdentifier.value
     }
 
-    func saveReminder(_ reminder: ReminderRecord) async throws -> ReminderRecord {
-        try await database.writer.write { db in
+    func saveReminder(_ reminder: ReminderRecord) throws -> ReminderRecord {
+        try database.writer.write { db in
             var record = reminder
             let previous = try ReminderRecord.fetchOne(db, key: record.id)
             let exists = previous != nil

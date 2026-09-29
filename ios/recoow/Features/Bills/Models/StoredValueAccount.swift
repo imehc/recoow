@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-struct StoredValueAccount: Identifiable, Codable, Hashable, Sendable, FetchableRecord, PersistableRecord, SyncableRecord, ConflictComparableRecord {
+nonisolated struct StoredValueAccount: Identifiable, Codable, Hashable, Sendable, FetchableRecord, PersistableRecord, SyncableRecord, ConflictComparableRecord {
     static let databaseTableName = "stored_value_accounts"
 
     var id: String

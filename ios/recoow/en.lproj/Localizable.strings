@@ -344,11 +344,13 @@
 "请输入金额" = "Enter amount";
 "请输入起点" = "Enter start";
 "请输入终点" = "Enter end";
+"交换起点和终点" = "Swap start and end";
 "请输入线路" = "Enter lines";
 "餐饮" = "Dining";
 "购物" = "Shopping";
 "交通" = "Transport";
 "住房" = "Housing";
+"生活缴费" = "Utilities";
 "娱乐" = "Entertainment";
 "医疗" = "Medical";
 "学习" = "Learning";
