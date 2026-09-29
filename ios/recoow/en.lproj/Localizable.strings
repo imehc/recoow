@@ -407,6 +407,10 @@
 "本周账单" = "This Week's Bills";
 "本月账单" = "This Month's Bills";
 "本年账单" = "This Year's Bills";
+"支出账单" = "Expense Bills";
+"收入账单" = "Income Bills";
+"优惠账单" = "Discount Bills";
+"储值消费账单" = "Stored Value Bills";
 "账单数量" = "Bill Count";
 "平均每笔" = "Average";
 "记录数" = "Records";
@@ -418,6 +422,10 @@
 "清除筛选" = "Clear Filter";
 "当前筛选" = "Active Filter";
 "筛选" = "Filter";
+"排序" = "Sort";
+"按时间" = "By Date";
+"金额从大到小" = "Largest Amount First";
+"金额从小到大" = "Smallest Amount First";
 "暂无匹配记录" = "No Matching Records";
 "暂无统计数据" = "No Stats";
 "暂无账单统计" = "No Bill Stats";

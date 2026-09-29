@@ -14,7 +14,7 @@ struct StatisticsBillSection: View {
     let points: [StatisticsBillChartPoint]
     let categoryPoints: [StatisticsBillCategoryPoint]
     let incomeCategoryPoints: [StatisticsBillIncomeCategoryPoint]
-    let viewBills: () -> Void
+    let viewBills: (StatisticsBillMetric) -> Void
 
     var body: some View {
         Section {
@@ -29,45 +29,21 @@ struct StatisticsBillSection: View {
                 ContentUnavailableView("暂无账单统计", systemImage: "receipt")
             } else {
                 LazyVGrid(columns: columns, spacing: 12) {
-                    StatisticsMetricTile(
-                        title: AppLocalization.string("支出"),
-                        value: moneyOrPlaceholder(expenseTotalCents),
-                        systemImage: "arrow.up.right.circle.fill",
-                        tint: .red
-                    )
-
-                    StatisticsMetricTile(
-                        title: AppLocalization.string("收入"),
-                        value: moneyOrPlaceholder(incomeTotalCents),
-                        systemImage: "arrow.down.left.circle.fill",
-                        tint: .green
-                    )
-
-                    Button(action: viewBills) {
-                        StatisticsMetricTile(
-                            title: AppLocalization.string("账单数量"),
-                            value: AppLocalization.format("%d 条", periodBillCount),
-                            systemImage: "number",
-                            tint: .blue
-                        )
+                    ForEach(StatisticsBillMetric.allCases) { metric in
+                        Button {
+                            viewBills(metric)
+                        } label: {
+                            StatisticsMetricTile(
+                                title: metric.localizedTitle,
+                                value: value(for: metric),
+                                systemImage: metric.systemImage,
+                                tint: metric.tint
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isEmpty(metric))
+                        .accessibilityHint(AppLocalization.string("查看这些账单"))
                     }
-                    .buttonStyle(.plain)
-                    .disabled(periodBillCount == 0)
-                    .accessibilityHint(AppLocalization.string("查看这些账单"))
-
-                    StatisticsMetricTile(
-                        title: AppLocalization.string("优惠"),
-                        value: moneyOrPlaceholder(discountCents),
-                        systemImage: "tag.fill",
-                        tint: .orange
-                    )
-
-                    StatisticsMetricTile(
-                        title: AppLocalization.string("储值消费"),
-                        value: moneyOrPlaceholder(storedValueUseCents),
-                        systemImage: "wallet.pass.fill",
-                        tint: .purple
-                    )
                 }
                 .padding(.vertical, 2)
 
@@ -146,5 +122,33 @@ struct StatisticsBillSection: View {
 
     private func moneyOrPlaceholder(_ cents: Int64) -> String {
         periodBillCount == 0 ? "--" : AppFormatters.money(cents: cents)
+    }
+
+    private func cents(for metric: StatisticsBillMetric) -> Int64 {
+        switch metric {
+        case .expense:
+            expenseTotalCents
+        case .income:
+            incomeTotalCents
+        case .count:
+            0
+        case .discount:
+            discountCents
+        case .storedValueUse:
+            storedValueUseCents
+        }
+    }
+
+    private func value(for metric: StatisticsBillMetric) -> String {
+        switch metric {
+        case .count:
+            AppLocalization.format("%d 条", periodBillCount)
+        default:
+            moneyOrPlaceholder(cents(for: metric))
+        }
+    }
+
+    private func isEmpty(_ metric: StatisticsBillMetric) -> Bool {
+        metric == .count ? periodBillCount == 0 : cents(for: metric) == 0
     }
 }

@@ -72,10 +72,28 @@ struct StatisticsContent: View {
         }
     }
 
-    private func viewBills() {
+    private func viewBills(_ metric: StatisticsBillMetric) {
         billDetailContext = StatisticsBillDetailSheet.Context(
             titleKey: selectedBillPeriod.historyFilterTitleKey,
-            bills: viewModel.bills(for: selectedBillPeriod)
+            metric: metric,
+            metricTotalCents: totalCents(for: metric),
+            periodBills: viewModel.bills(for: selectedBillPeriod)
         )
+    }
+
+    // 与卡片数值同源，保证「卡片显示多少，详情页概览就是多少」。
+    private func totalCents(for metric: StatisticsBillMetric) -> Int64 {
+        switch metric {
+        case .expense:
+            viewModel.billExpenseTotalCents(for: selectedBillPeriod)
+        case .income:
+            viewModel.billIncomeTotalCents(for: selectedBillPeriod)
+        case .count:
+            0
+        case .discount:
+            viewModel.billDiscountTotalCents(for: selectedBillPeriod)
+        case .storedValueUse:
+            viewModel.billStoredValueUseTotalCents(for: selectedBillPeriod)
+        }
     }
 }
