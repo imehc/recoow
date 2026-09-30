@@ -210,15 +210,20 @@ final class RemindersViewModel {
         await persist(record)
     }
 
-    func makeUp(_ reminder: ReminderRecord, date: Date, note: String?) async {
+    func makeUp(_ reminder: ReminderRecord, dates: [Date], note: String?) async {
         var record = reminder
-        guard let missedDate = record.firstMissedCheckInDate(),
-              Calendar.current.isDate(missedDate, inSameDayAs: date) else {
-            errorMessage = AppLocalization.string("请先补签最早断签日期")
+        let allowedKeys = Set(record.missedCheckInDates().map { ReminderRecord.dateKey(for: $0) })
+        let targets = dates.filter { allowedKeys.contains(ReminderRecord.dateKey(for: $0)) }
+        guard targets.isEmpty == false else {
+            errorMessage = AppLocalization.string("当前没有可补签的日期")
             return
         }
 
-        record.markOccurrenceCompleted(on: date, kind: .makeUp, note: note)
+        guard record.markOccurrencesCompleted(targets, kind: .makeUp, note: note) > 0 else {
+            errorMessage = AppLocalization.string("当前没有可补签的日期")
+            return
+        }
+
         await persist(record)
     }
 

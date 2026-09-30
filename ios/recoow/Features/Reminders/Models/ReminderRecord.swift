@@ -271,7 +271,7 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
 
     var goalSummaryText: String? {
         guard scheduleKind == .dailyGoal else { return nil }
-        return AppLocalization.format("已坚持 %d 天，累计打卡 %d 天", elapsedGoalDays(), totalCheckInDays)
+        return AppLocalization.format("连续 %d 天，累计 %d 天", currentStreakDays(), totalCheckInDays)
     }
 
     func checkInStatus(on date: Date = Date(), calendar: Calendar = .current) -> ReminderCheckInStatus {
@@ -330,20 +330,14 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         firstMissedCheckInDate(before: date, calendar: calendar) != nil
     }
 
+    /// 最早的可补签日期。逐日提前退出，供打卡状态与打卡门控这类高频调用使用。
     func firstMissedCheckInDate(before date: Date = Date(), calendar: Calendar = .current) -> Date? {
-        guard (scheduleKind == .continuousDays || scheduleKind == .dailyGoal), isCompleted == false, isPaused == false else { return nil }
+        guard let window = missedCheckInWindow(calendar: calendar, before: date) else { return nil }
 
-        let startDay = calendar.startOfDay(for: scheduledDate)
-        let today = calendar.startOfDay(for: date)
-        guard let yesterday = calendar.date(byAdding: .day, value: -1, to: today) else { return nil }
-
-        let endDay = scheduleKind == .continuousDays ? continuousEndDay(calendar: calendar) : yesterday
-        let lastDayToCheck = min(yesterday, endDay)
-        guard lastDayToCheck >= startDay else { return nil }
-
-        var currentDay = startDay
-        while currentDay <= lastDayToCheck {
-            if isOccurrenceCompleted(on: currentDay, calendar: calendar) == false {
+        let completedKeys = completedDateKeys
+        var currentDay = window.startDay
+        while currentDay <= window.lastDay {
+            if completedKeys.contains(Self.dateKey(for: currentDay, calendar: calendar)) == false {
                 return currentDay
             }
 
@@ -356,11 +350,56 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         return nil
     }
 
+    var hasMissedCheckInDates: Bool {
+        firstMissedCheckInDate() != nil
+    }
+
+    /// 全部可补签日期：任务起始日到昨天（连续挑战不超出结束日）之间尚未打卡的日子，升序。
+    func missedCheckInDates(before date: Date = Date(), calendar: Calendar = .current) -> [Date] {
+        guard let window = missedCheckInWindow(calendar: calendar, before: date) else { return [] }
+
+        // completedDateKeys 每次读取都会重新解码 JSON，逐日扫描前先取一次集合。
+        let completedKeys = completedDateKeys
+        var missedDates: [Date] = []
+        var currentDay = window.startDay
+        while currentDay <= window.lastDay {
+            if completedKeys.contains(Self.dateKey(for: currentDay, calendar: calendar)) == false {
+                missedDates.append(currentDay)
+            }
+
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: currentDay) else {
+                break
+            }
+            currentDay = nextDay
+        }
+
+        return missedDates
+    }
+
+    private func missedCheckInWindow(
+        calendar: Calendar,
+        before date: Date
+    ) -> (startDay: Date, lastDay: Date)? {
+        guard (scheduleKind == .continuousDays || scheduleKind == .dailyGoal), isCompleted == false, isPaused == false else { return nil }
+
+        let startDay = calendar.startOfDay(for: scheduledDate)
+        let today = calendar.startOfDay(for: date)
+        guard let yesterday = calendar.date(byAdding: .day, value: -1, to: today) else { return nil }
+
+        let endDay = scheduleKind == .continuousDays ? continuousEndDay(calendar: calendar) : yesterday
+        let lastDay = min(yesterday, endDay)
+        guard lastDay >= startDay else { return nil }
+
+        return (startDay, lastDay)
+    }
+
     func currentStreakDays(on date: Date = Date(), calendar: Calendar = .current) -> Int {
         let startDay = calendar.startOfDay(for: scheduledDate)
+        // 与 missedCheckInDates 一样：把集合取出来，避免逐日重复解码 JSON。
+        let completedKeys = completedDateKeys
         var currentDay = calendar.startOfDay(for: date)
 
-        if isOccurrenceCompleted(on: currentDay, calendar: calendar) == false {
+        if completedKeys.contains(Self.dateKey(for: currentDay, calendar: calendar)) == false {
             guard let previousDay = calendar.date(byAdding: .day, value: -1, to: currentDay) else {
                 return 0
             }
@@ -373,7 +412,7 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
 
         var count = 0
         while currentDay >= startDay {
-            guard isOccurrenceCompleted(on: currentDay, calendar: calendar) else {
+            guard completedKeys.contains(Self.dateKey(for: currentDay, calendar: calendar)) else {
                 break
             }
 
@@ -588,6 +627,52 @@ struct ReminderRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecor
         } else if scheduleKind == .single || isProgressFullyCompleted {
             completedAt = SyncableTimestamp.nowMilliseconds()
         }
+    }
+
+    /// 批量打卡：跳过已有记录的日期，其余一次性写入，返回实际新增条数。
+    @discardableResult
+    mutating func markOccurrencesCompleted(
+        _ dates: [Date],
+        calendar: Calendar = .current,
+        kind: ReminderCheckInCompletionKind = .makeUp,
+        note: String? = nil
+    ) -> Int {
+        let normalizedNote = note?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedNote = (normalizedNote?.isEmpty == true) ? nil : normalizedNote
+
+        var records = completionRecords
+        var existingKeys = Set(records.map(\.dateKey))
+        var addedCount = 0
+
+        for date in dates {
+            guard let occurrenceDate = occurrenceDate(on: date, calendar: calendar) else { continue }
+
+            let dateKey = Self.dateKey(for: occurrenceDate, calendar: calendar)
+            guard existingKeys.contains(dateKey) == false else { continue }
+
+            records.append(
+                ReminderCheckInCompletion.make(
+                    dateKey: dateKey,
+                    kind: kind,
+                    note: trimmedNote
+                )
+            )
+            existingKeys.insert(dateKey)
+            addedCount += 1
+        }
+
+        guard addedCount > 0 else { return 0 }
+
+        completionRecordsRawValue = Self.rawValue(for: records)
+        completedDateKeysRawValue = Self.rawValue(for: Set(records.map(\.dateKey)))
+
+        if scheduleKind == .dailyGoal {
+            completedAt = nil
+        } else if scheduleKind == .single || isProgressFullyCompleted {
+            completedAt = SyncableTimestamp.nowMilliseconds()
+        }
+
+        return addedCount
     }
 
     mutating func clearCompletion() {

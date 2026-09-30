@@ -86,11 +86,16 @@ struct ReminderRow: View {
             } ?? AppLocalization.string("已完成")
         }
 
-        if let missedDate = reminder.firstMissedCheckInDate() {
-            return AppLocalization.format(
-                "需补签 %@",
-                AppFormatters.date(milliseconds: RemindersViewModel.milliseconds(for: missedDate), locale: locale)
-            )
+        let missedDates = reminder.missedCheckInDates()
+        if missedDates.isEmpty == false {
+            if missedDates.count == 1, let missedDate = missedDates.first {
+                return AppLocalization.format(
+                    "需补签 %@",
+                    AppFormatters.date(milliseconds: RemindersViewModel.milliseconds(for: missedDate), locale: locale)
+                )
+            }
+
+            return AppLocalization.format("需补签 %d 天", missedDates.count)
         }
 
         if let nextOccurrenceDate = reminder.nextOccurrenceDate {

@@ -169,9 +169,9 @@ struct ReminderDetailView: View {
                         }
                     }
 
-                    if let missedDate = reminder.firstMissedCheckInDate() {
+                    if reminder.hasMissedCheckInDates {
                         Button("补签", systemImage: "calendar.badge.plus") {
-                            makeUpRequest = ReminderMakeUpRequest(reminder: reminder, date: missedDate)
+                            makeUpRequest = ReminderMakeUpRequest(reminder: reminder)
                         }
                     }
 
@@ -397,38 +397,58 @@ struct ReminderPauseSheet: View {
 
 struct ReminderMakeUpRequest: Identifiable {
     let reminder: ReminderRecord
-    let date: Date
 
-    var id: String {
-        "\(reminder.id)-\(ReminderRecord.dateKey(for: date))"
-    }
+    var id: String { reminder.id }
 }
 
 struct ReminderMakeUpSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.locale) private var locale
+    @State private var selectedKeys: Set<String> = []
     @State private var note = ""
 
     let request: ReminderMakeUpRequest
     let viewModel: RemindersViewModel
 
+    private let months: [MakeUpMonth]
+
+    init(request: ReminderMakeUpRequest, viewModel: RemindersViewModel) {
+        self.request = request
+        self.viewModel = viewModel
+        self.months = MakeUpMonth.grouping(request.reminder.missedCheckInDates())
+    }
+
     var body: some View {
         Form {
-            Section("补签") {
-                LabeledContent(
-                    "日期",
-                    value: AppFormatters.date(
-                        milliseconds: RemindersViewModel.milliseconds(for: request.date),
-                        locale: locale
-                    )
-                )
+            Section {
+                ForEach(months) { month in
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(month.title(locale: locale))
+                            .appSectionHeaderStyle()
 
+                        LazyVGrid(
+                            columns: [GridItem(.adaptive(minimum: 56), spacing: AppDesign.gridSpacing)],
+                            spacing: AppDesign.gridSpacing
+                        ) {
+                            ForEach(month.days) { day in
+                                dayChip(day)
+                            }
+                        }
+                    }
+                }
+            } header: {
+                Text("补签日期")
+            } footer: {
+                Text("可选范围为任务起始日到昨天。")
+            }
+
+            Section {
                 TextField("补签备注", text: $note, axis: .vertical)
                     .lineLimit(3...)
             }
         }
         .appFormStyle()
-        .navigationTitle("补签")
+        .navigationTitle(navigationTitleText)
         .appNavigationStyle()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -437,27 +457,129 @@ struct ReminderMakeUpSheet: View {
                 }
             }
 
+            ToolbarItem(placement: .primaryAction) {
+                Button(AppLocalization.string(isAllSelected ? "取消全选" : "全选")) {
+                    toggleAllSelection()
+                }
+            }
+
             ToolbarItem(placement: .confirmationAction) {
                 Button("保存") {
                     save()
                 }
+                .disabled(selectedKeys.isEmpty)
             }
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
     }
 
+    private var navigationTitleText: String {
+        selectedKeys.isEmpty
+            ? AppLocalization.string("补签")
+            : AppLocalization.format("已选择 %d 天", selectedKeys.count)
+    }
+
+    private var allKeys: [String] {
+        months.flatMap { $0.days.map(\.key) }
+    }
+
+    private var isAllSelected: Bool {
+        allKeys.isEmpty == false && selectedKeys.count == allKeys.count
+    }
+
+    private func toggleAllSelection() {
+        selectedKeys = isAllSelected ? [] : Set(allKeys)
+    }
+
+    private func dayChip(_ day: MakeUpDay) -> some View {
+        let isSelected = selectedKeys.contains(day.key)
+
+        return Button {
+            if isSelected {
+                selectedKeys.remove(day.key)
+            } else {
+                selectedKeys.insert(day.key)
+            }
+        } label: {
+            VStack(spacing: 2) {
+                Text(String(day.dayNumber))
+                    .font(AppDesign.summaryValueFont)
+                    .monospacedDigit()
+                    .foregroundStyle(isSelected ? AppPalette.accent : AppPalette.ink)
+
+                Text(day.date.formatted(.dateTime.weekday(.narrow).locale(locale)))
+                    .font(AppDesign.summaryTitleFont)
+                    .foregroundStyle(isSelected ? AppPalette.accent : AppPalette.secondaryInk)
+            }
+            .frame(maxWidth: .infinity, minHeight: 44)
+        }
+        .buttonStyle(.bordered)
+        .tint(isSelected ? AppPalette.accent : AppPalette.secondaryInk)
+        .overlay {
+            if isSelected {
+                RoundedRectangle(cornerRadius: AppDesign.iconCornerRadius)
+                    .stroke(AppPalette.accent, lineWidth: 2)
+            }
+        }
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
     private func save() {
         let normalizedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        let dates = months.flatMap(\.days).filter { selectedKeys.contains($0.key) }.map(\.date)
 
         Task {
             await viewModel.makeUp(
                 request.reminder,
-                date: request.date,
+                dates: dates,
                 note: normalizedNote.isEmpty ? nil : normalizedNote
             )
             dismiss()
         }
+    }
+}
+
+private struct MakeUpDay: Identifiable {
+    let date: Date
+    let key: String
+    let dayNumber: Int
+
+    var id: String { key }
+}
+
+private struct MakeUpMonth: Identifiable {
+    let id: String
+    let titleDate: Date
+    var days: [MakeUpDay]
+
+    func title(locale: Locale) -> String {
+        titleDate.formatted(.dateTime.year().month(.wide).locale(locale))
+    }
+
+    /// 候选日期按起始日升序且逐日连续，因此只需和上一组比较年月。
+    static func grouping(_ dates: [Date], calendar: Calendar = .current) -> [MakeUpMonth] {
+        var months: [MakeUpMonth] = []
+
+        for date in dates {
+            let components = calendar.dateComponents([.year, .month, .day], from: date)
+            let year = components.year ?? 0
+            let month = components.month ?? 0
+            let id = "\(year)-\(month)"
+            let day = MakeUpDay(
+                date: date,
+                key: ReminderRecord.dateKey(for: date, calendar: calendar),
+                dayNumber: components.day ?? 0
+            )
+
+            if months.last?.id == id {
+                months[months.count - 1].days.append(day)
+            } else {
+                months.append(MakeUpMonth(id: id, titleDate: date, days: [day]))
+            }
+        }
+
+        return months
     }
 }
 

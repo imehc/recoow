@@ -182,9 +182,9 @@ private struct RemindersContent: View {
                     Label("打卡", systemImage: "checkmark.circle")
                 }
                 .tint(AppPalette.green)
-            } else if let missedDate = reminder.firstMissedCheckInDate() {
+            } else if reminder.hasMissedCheckInDates {
                 Button {
-                    makeUpRequest = ReminderMakeUpRequest(reminder: reminder, date: missedDate)
+                    makeUpRequest = ReminderMakeUpRequest(reminder: reminder)
                 } label: {
                     Label("补签", systemImage: "calendar.badge.plus")
                 }
