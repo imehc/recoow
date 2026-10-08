@@ -33,6 +33,7 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
     var refundReason: String?
     var storedValueAccountID: String?
     var storedValueEffectsRawValue: String? = nil
+    var utilityAccountNumber: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -62,6 +63,7 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         case refundReason = "refund_reason"
         case storedValueAccountID = "stored_value_account_id"
         case storedValueEffectsRawValue = "stored_value_effects"
+        case utilityAccountNumber = "utility_account_number"
     }
 
     var occurredDate: Date {
@@ -203,6 +205,7 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
         redeemedAt: Int64? = nil,
         refundReason: String? = nil,
         storedValueAccountID: String? = nil,
+        utilityAccountNumber: String? = nil,
         deviceID: String
     ) -> BillRecord {
         let now = SyncableTimestamp.nowMilliseconds()
@@ -232,7 +235,8 @@ struct BillRecord: Identifiable, Codable, Hashable, Sendable, FetchableRecord, P
             groupBuyValidUntil: groupBuyValidUntil,
             redeemedAt: redeemedAt,
             refundReason: refundReason,
-            storedValueAccountID: storedValueAccountID
+            storedValueAccountID: storedValueAccountID,
+            utilityAccountNumber: utilityAccountNumber
         )
     }
 

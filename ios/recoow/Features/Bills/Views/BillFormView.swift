@@ -17,6 +17,7 @@ struct BillFormView: View {
     @State private var startLocation: String
     @State private var endLocation: String
     @State private var transportLines: String
+    @State private var utilityAccountNumber: String
     @State private var note: String
     @State private var occurredDate: Date
     @State private var groupBuyValidUntil: Date
@@ -51,6 +52,7 @@ struct BillFormView: View {
         _startLocation = State(initialValue: initialBill?.startLocation ?? "")
         _endLocation = State(initialValue: initialBill?.endLocation ?? "")
         _transportLines = State(initialValue: initialBill?.transportLines ?? "")
+        _utilityAccountNumber = State(initialValue: initialBill?.utilityAccountNumber ?? "")
         _note = State(initialValue: initialBill?.note ?? "")
         _occurredDate = State(initialValue: initialBill?.occurredDate ?? Date())
         _groupBuyValidUntil = State(initialValue: initialBill?.groupBuyValidUntilDate ?? Date())
@@ -127,6 +129,18 @@ struct BillFormView: View {
                             Label(method.titleKey, systemImage: method.systemImage)
                                 .tag(method)
                         }
+                    }
+                }
+
+                if showsUtilityFields {
+                    LabeledContent("缴费号码") {
+                        TextField("请输入缴费号码", text: $utilityAccountNumber, axis: .vertical)
+                            .lineLimit(1...3)
+                            .keyboardType(.asciiCapable)
+                            .multilineTextAlignment(.trailing)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .focused($focusedField, equals: "utilityAccountNumber")
                     }
                 }
             }
@@ -319,6 +333,13 @@ struct BillFormView: View {
         return lines.isEmpty ? nil : lines.joined(separator: "\n")
     }
 
+    private var normalizedUtilityAccountNumber: String? {
+        guard showsUtilityFields else { return nil }
+
+        let value = utilityAccountNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
+    }
+
     private func swapLocations() {
         let start = startLocation
         startLocation = endLocation
@@ -331,6 +352,10 @@ struct BillFormView: View {
 
     private var showsGroupBuyFields: Bool {
         billType == .expense && category == .groupBuy
+    }
+
+    private var showsUtilityFields: Bool {
+        (billType == .expense || billType == .storedValueUse) && category == .utility
     }
 
     private var showsStoredValueSection: Bool {
@@ -777,7 +802,8 @@ struct BillFormView: View {
             occurredDate: occurredDate,
             imageData: imageReference.independentData,
             imageAssetID: imageReference.assetID,
-            storedValueAccountID: storedValueAccountIDForSave
+            storedValueAccountID: storedValueAccountIDForSave,
+            utilityAccountNumber: normalizedUtilityAccountNumber
         )
 
         record.title = trimmedTitle
@@ -791,6 +817,7 @@ struct BillFormView: View {
         record.startLocation = normalizedStartLocation
         record.endLocation = normalizedEndLocation
         record.transportLines = normalizedTransportLines
+        record.utilityAccountNumber = normalizedUtilityAccountNumber
         record.occurredAt = BillsViewModel.milliseconds(for: occurredDate)
         record.setImageReference(imageReference)
         record.groupBuyValidUntil = groupBuyValidUntilMilliseconds

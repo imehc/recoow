@@ -351,6 +351,10 @@
 "交通" = "Transport";
 "住房" = "Housing";
 "生活缴费" = "Utilities";
+"缴费号码" = "Utility account number";
+"请输入缴费号码" = "Enter account number";
+"复制缴费号码" = "Copy utility account number";
+"已复制缴费号码" = "Utility account number copied";
 "娱乐" = "Entertainment";
 "医疗" = "Medical";
 "学习" = "Learning";

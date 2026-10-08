@@ -193,7 +193,8 @@ final class BillsViewModel {
         imageAssetID: String? = nil,
         settlementStatus: BillSettlementStatus = .active,
         groupBuyValidUntil: Int64? = nil,
-        storedValueAccountID: String? = nil
+        storedValueAccountID: String? = nil,
+        utilityAccountNumber: String? = nil
     ) -> BillRecord {
         BillRecord.makeNew(
             title: title,
@@ -213,6 +214,7 @@ final class BillsViewModel {
             settlementStatus: settlementStatus,
             groupBuyValidUntil: groupBuyValidUntil,
             storedValueAccountID: storedValueAccountID,
+            utilityAccountNumber: utilityAccountNumber,
             deviceID: repository.deviceID
         )
     }

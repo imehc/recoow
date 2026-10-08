@@ -2,7 +2,7 @@ import GRDB
 
 /// 数据库迁移注册中心。所有版本按时间顺序追加，禁止修改已发布迁移。
 enum AppMigrator {
-    nonisolated static let currentSchemaVersion = 34
+    nonisolated static let currentSchemaVersion = 35
 
     nonisolated static func makeMigrator() -> DatabaseMigrator {
         var migrator = DatabaseMigrator()
@@ -40,6 +40,7 @@ enum AppMigrator {
         V32StoredValueRechargeBalanceBackfillSchema.register(in: &migrator)
         V33ReminderPauseSchema.register(in: &migrator)
         V34FullSyncSchema.register(in: &migrator)
+        V35BillUtilityAccountNumberSchema.register(in: &migrator)
         return migrator
     }
 
