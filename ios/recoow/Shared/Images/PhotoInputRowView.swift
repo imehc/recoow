@@ -46,7 +46,9 @@ struct PhotoInputRowView: View {
             Button(action: onSourceRequest) {
                 HStack(spacing: 14) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(AppLocalization.string(titleText ?? (hasImage ? "更换照片" : "选择照片")))
+                        Text(titleText ?? AppLocalization.string(hasImage ? "更换照片" : "选择照片"))
+                            .font(AppDesign.rowTitleFont)
+                            .fixedSize(horizontal: false, vertical: true)
                             .foregroundStyle(.primary)
 
                         Text(statusText)
@@ -68,7 +70,7 @@ struct PhotoInputRowView: View {
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(AppLocalization.string(accessibilityLabelText ?? (hasImage ? "更换图片" : "添加图片")))
+            .accessibilityLabel(accessibilityLabelText ?? AppLocalization.string(hasImage ? "更换图片" : "添加图片"))
             .accessibilityHint(AppLocalization.string(accessibilityHintText ?? "选择照片或拍照"))
             .disabled(isPreparingPhoto)
         }

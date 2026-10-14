@@ -51,7 +51,7 @@ struct StoredItemDetailView: View {
         Form {
             if item.hasImage {
                 Section {
-                    PhotoSquareImageView(imageData: item.resolvedImageData, systemImage: "shippingbox")
+                    PhotoSquareImageView(imageData: item.resolvedImageData, systemImage: "shippingbox", assetID: item.imageAssetID)
                         .padding(.vertical, 8)
                 }
             }

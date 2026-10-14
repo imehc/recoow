@@ -54,7 +54,7 @@ struct BillDetailView: View {
         List {
             if bill.hasImage {
                 Section("图片") {
-                    PhotoSquareImageView(imageData: bill.resolvedImageData, systemImage: "receipt.fill")
+                    PhotoSquareImageView(imageData: bill.resolvedImageData, systemImage: "receipt.fill", assetID: bill.imageAssetID)
                         .listRowInsets(EdgeInsets())
                         .listRowSeparator(.hidden)
                 }

@@ -68,6 +68,12 @@ struct AppRoot: View {
         .tint(AppPalette.accent)
         .environment(\.locale, language.locale)
         .preferredColorScheme(container.appPreferences.colorScheme)
+        .task {
+            for await result in container.mediaAssetRepository.observeImageTitles() {
+                guard !Task.isCancelled else { return }
+                container.mediaAssetTitles = (try? result.get()) ?? [:]
+            }
+        }
         .onOpenURL { url in
             handleDeepLink(url)
         }

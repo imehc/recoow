@@ -68,7 +68,7 @@ struct ReminderDetailView: View {
         List {
             if reminder.hasImage {
                 Section("图片") {
-                    PhotoSquareImageView(imageData: reminder.resolvedImageData, systemImage: "bell.fill")
+                    PhotoSquareImageView(imageData: reminder.resolvedImageData, systemImage: "bell.fill", assetID: reminder.imageAssetID)
                 }
             }
 

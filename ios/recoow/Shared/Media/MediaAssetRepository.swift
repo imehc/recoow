@@ -12,11 +12,14 @@ struct MediaAssetLibraryItem: Identifiable, Sendable {
 
 enum MediaAssetRepositoryError: LocalizedError {
     case assetStateChanged
+    case titleTooLong
 
     var errorDescription: String? {
         switch self {
         case .assetStateChanged:
             AppLocalization.string("素材状态已变化，请刷新后重试。")
+        case .titleTooLong:
+            AppLocalization.format("标题最多 %d 个字符", MediaAsset.maximumTitleLength)
         }
     }
 }
@@ -39,12 +42,13 @@ final class MediaAssetRepository: @unchecked Sendable {
         self.objectStore = objectStore
     }
 
+    // 手动序号相同时使用稳定次序，标题更新不会把素材挪到前面。
     func fetchImageAssets() throws -> [MediaAsset] {
         try database.reader.read { db in
             try MediaAsset
                 .filter(Column("kind") == "image")
                 .filter(Column("deleted_at") == nil)
-                .order(Column("sort_order").asc, Column("updated_at").desc, Column("created_at").desc)
+                .order(Column("sort_order").asc, Column("created_at").desc, Column("id").asc)
                 .fetchAll(db)
         }
     }
@@ -54,7 +58,7 @@ final class MediaAssetRepository: @unchecked Sendable {
             let assets = try MediaAsset
                 .filter(Column("kind") == "image")
                 .filter(Column("deleted_at") == nil)
-                .order(Column("sort_order").asc, Column("updated_at").desc, Column("created_at").desc)
+                .order(Column("sort_order").asc, Column("created_at").desc, Column("id").asc)
                 .fetchAll(db)
 
             return try assets.map { asset in
@@ -63,6 +67,48 @@ final class MediaAssetRepository: @unchecked Sendable {
                     referenceCount: try Self.referenceCount(db: db, assetID: asset.id)
                 )
             }
+        }
+    }
+
+    /// 只观察元信息，不加载图片文件或 inline_data；所有引用视图共用这一份索引。
+    func observeImageTitles() -> AsyncStream<Result<[String: String], Error>> {
+        AsyncStream { continuation in
+            let observation = ValueObservation.tracking { db in
+                let rows = try Row.fetchAll(db, sql: "SELECT id, title FROM media_assets WHERE kind = 'image' AND deleted_at IS NULL")
+                return Dictionary(uniqueKeysWithValues: rows.compactMap { row -> (String, String)? in
+                    guard let title = MediaAsset.normalizedTitle(row["title"]) else { return nil }
+                    return (row["id"], title)
+                })
+            }
+            let cancellable = observation.start(
+                in: database.reader,
+                scheduling: .immediate,
+                onError: { continuation.yield(.failure($0)) },
+                onChange: { continuation.yield(.success($0)) }
+            )
+            continuation.onTermination = { @Sendable _ in cancellable.cancel() }
+        }
+    }
+
+    func updateImageAssetTitle(id: String, title: String?) throws {
+        let title = MediaAsset.normalizedTitle(title)
+        guard (title?.count ?? 0) <= MediaAsset.maximumTitleLength else {
+            throw MediaAssetRepositoryError.titleTooLong
+        }
+        try database.writer.write { db in
+            guard var asset = try MediaAsset
+                .filter(Column("id") == id)
+                .filter(Column("kind") == "image")
+                .filter(Column("deleted_at") == nil)
+                .fetchOne(db) else {
+                throw MediaAssetRepositoryError.assetStateChanged
+            }
+            guard asset.title != title else { return }
+            asset.title = title
+            asset.updatedAt = SyncableTimestamp.nowMilliseconds()
+            asset.syncStatus = .pending
+            try asset.update(db)
+            try appendChange(db: db, record: asset, operation: .update)
         }
     }
 

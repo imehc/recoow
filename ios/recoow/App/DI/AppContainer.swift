@@ -30,6 +30,11 @@ final class AppContainer {
     @ObservationIgnored let featureVisibilitySettings: FeatureVisibilitySettings
     let appPreferences: AppPreferences
     var historyFilterRequest: HistoryFilter?
+    var mediaAssetTitles: [String: String] = [:]
+
+    func mediaAssetTitle(for assetID: String?) -> String? {
+        assetID.flatMap { mediaAssetTitles[$0] }
+    }
 
     init(
         database: AppDatabase,

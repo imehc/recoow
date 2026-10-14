@@ -77,6 +77,8 @@ nonisolated final class SyncMediaTransfer: @unchecked Sendable {
             references.removeValue(forKey: "inline_data")
         }
         for field in entity.fields where field.nullable && !field.binary && object[field.name] == nil {
+            // 升级前排队的素材快照没有 title，不能将缺失补为主动清空。
+            if table == "media_assets", field.name == "title" { continue }
             object[field.name] = NSNull()
         }
         if !references.isEmpty { object["_media"] = references }

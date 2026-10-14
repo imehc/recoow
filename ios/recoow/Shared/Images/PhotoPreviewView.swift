@@ -5,6 +5,9 @@ import UIKit
 @MainActor
 struct PhotoPreviewView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppContainer.self) private var container
+    @State private var currentPage: Int
+    @State private var captionHeight: CGFloat = 40
 
     private let previewItems: [PhotoPreviewDisplayItem]
     private let startIndex: Int
@@ -19,6 +22,7 @@ struct PhotoPreviewView: View {
         self.startIndex = initialID.flatMap { id in
             displayItems.firstIndex { $0.id == id }
         } ?? 0
+        _currentPage = State(initialValue: self.startIndex)
     }
 
     var body: some View {
@@ -26,17 +30,44 @@ struct PhotoPreviewView: View {
             if previewItems.isEmpty {
                 unavailableView
             } else {
-                LightboxPhotoPreviewController(
-                    items: previewItems,
-                    startIndex: startIndex,
-                    onDismiss: close
-                )
-                .ignoresSafeArea()
+                VStack(spacing: 0) {
+                    LightboxPhotoPreviewController(
+                        items: previewItems,
+                        startIndex: startIndex,
+                        onDismiss: close,
+                        onPageChange: { currentPage = $0 }
+                    )
+                    .ignoresSafeArea(edges: currentCaption == nil ? .all : [.top, .horizontal])
+
+                    if let caption = currentCaption {
+                        ScrollView {
+                            Text(caption)
+                                .font(AppDesign.rowSubtitleFont)
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .textSelection(.enabled)
+                                .padding(.horizontal, AppDesign.pagePadding)
+                                .padding(.vertical, 8)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { captionHeight = $0 }
+                        }
+                        .frame(height: min(captionHeight, 180))
+                    }
+                }
             }
         }
         .background(Color.black.ignoresSafeArea())
         .preferredColorScheme(.dark)
         .statusBarHidden(true)
+    }
+
+    private var currentCaption: String? {
+        guard previewItems.indices.contains(currentPage) else { return nil }
+        let item = previewItems[currentPage]
+        let assetTitle = container.mediaAssetTitle(for: item.assetID) ?? item.assetTitleFallback
+        let title = MediaAsset.normalizedTitle(item.title)
+        let parts = [title, assetTitle].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: "\n")
     }
 
     private var unavailableView: some View {
@@ -61,6 +92,7 @@ private struct LightboxPhotoPreviewController: UIViewControllerRepresentable {
     let items: [PhotoPreviewDisplayItem]
     let startIndex: Int
     let onDismiss: () -> Void
+    let onPageChange: (Int) -> Void
 
     func makeUIViewController(context: Context) -> LightboxController {
         configureLightboxStyle()
@@ -77,10 +109,11 @@ private struct LightboxPhotoPreviewController: UIViewControllerRepresentable {
 
     func updateUIViewController(_ uiViewController: LightboxController, context: Context) {
         context.coordinator.onDismiss = onDismiss
+        context.coordinator.onPageChange = onPageChange
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onDismiss: onDismiss)
+        Coordinator(onDismiss: onDismiss, onPageChange: onPageChange)
     }
 
     private func configureLightboxStyle() {
@@ -118,10 +151,12 @@ private struct LightboxPhotoPreviewController: UIViewControllerRepresentable {
 
     final class Coordinator: NSObject, LightboxControllerDismissalDelegate, LightboxControllerPageDelegate {
         var onDismiss: () -> Void
+        var onPageChange: (Int) -> Void
         private var didRequestDismiss = false
 
-        init(onDismiss: @escaping () -> Void) {
+        init(onDismiss: @escaping () -> Void, onPageChange: @escaping (Int) -> Void) {
             self.onDismiss = onDismiss
+            self.onPageChange = onPageChange
         }
 
         func lightboxControllerWillDismiss(_ controller: LightboxController) {
@@ -132,6 +167,7 @@ private struct LightboxPhotoPreviewController: UIViewControllerRepresentable {
 
         func lightboxController(_ controller: LightboxController, didMoveToPage page: Int) {
             didRequestDismiss = false
+            onPageChange(page)
         }
     }
 }
@@ -139,10 +175,16 @@ private struct LightboxPhotoPreviewController: UIViewControllerRepresentable {
 private struct PhotoPreviewDisplayItem: Identifiable {
     let id: String
     let image: UIImage
+    let title: String?
+    let assetID: String?
+    let assetTitleFallback: String?
 
     init?(item: PhotoPreviewItem) {
         guard let image = UIImage(data: item.imageData) else { return nil }
         self.id = item.id
         self.image = image
+        self.title = item.title
+        self.assetID = item.assetID
+        self.assetTitleFallback = item.assetTitleFallback
     }
 }

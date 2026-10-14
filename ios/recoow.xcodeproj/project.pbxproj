@@ -22,6 +22,7 @@
 			remoteGlobalIDString = 3ABF80552FE90000003C5066;
 			remoteInfo = recoowWidget;
 		};
+		A83600000000000000000005 /* PBXContainerItemProxy */ = {isa = PBXContainerItemProxy; containerPortal = 3ABF80242FE1551D003C5066; proxyType = 1; remoteGlobalIDString = 3ABF802B2FE1551D003C5066; remoteInfo = recoow; };
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -43,6 +44,7 @@
 		3ABF80502FE90000003C5066 /* recoowWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = recoowWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		3ABF805F2FEA0000003C5066 /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
 		A83400000000000000000002 /* SyncEntityCatalog.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SyncEntityCatalog.generated.swift; path = recoow/Core/Sync/SyncEntityCatalog.generated.swift; sourceTree = SOURCE_ROOT; };
+		A83600000000000000000001 /* recoowTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = recoowTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -80,6 +82,7 @@
 			path = recoowWidget;
 			sourceTree = "<group>";
 		};
+		A83600000000000000000002 /* recoowTests */ = {isa = PBXFileSystemSynchronizedRootGroup; path = recoowTests; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -100,6 +103,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A83600000000000000000003 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -117,6 +121,7 @@
 			children = (
 				3ABF802E2FE1551D003C5066 /* recoow */,
 				3ABF80512FE90000003C5066 /* recoowWidget */,
+				A83600000000000000000002 /* recoowTests */,
 				3ABF802D2FE1551D003C5066 /* Products */,
 				3A08EFCD2FEF8C3100B2B34D /* Recovered References */,
 			);
@@ -126,6 +131,7 @@
 			isa = PBXGroup;
 			children = (
 				3ABF802C2FE1551D003C5066 /* recoow.app */,
+				A83600000000000000000001 /* recoowTests.xctest */,
 				3ABF80502FE90000003C5066 /* recoowWidget.appex */,
 			);
 			name = Products;
@@ -183,6 +189,18 @@
 			productReference = 3ABF80502FE90000003C5066 /* recoowWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		A83600000000000000000007 /* recoowTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A83600000000000000000008;
+			buildPhases = (A83600000000000000000004, A83600000000000000000003, );
+			buildRules = ();
+			dependencies = (A83600000000000000000006, );
+			fileSystemSynchronizedGroups = (A83600000000000000000002, );
+			name = recoowTests;
+			productName = recoowTests;
+			productReference = A83600000000000000000001;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -222,6 +240,7 @@
 			targets = (
 				3ABF802B2FE1551D003C5066 /* recoow */,
 				3ABF80552FE90000003C5066 /* recoowWidget */,
+				A83600000000000000000007 /* recoowTests */,
 			);
 		};
 /* End PBXProject section */
@@ -282,6 +301,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A83600000000000000000004 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -290,6 +310,7 @@
 			target = 3ABF80552FE90000003C5066 /* recoowWidget */;
 			targetProxy = 3ABF805B2FE90000003C5066 /* PBXContainerItemProxy */;
 		};
+		A83600000000000000000006 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = 3ABF802B2FE1551D003C5066; targetProxy = A83600000000000000000005; };
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -552,6 +573,42 @@
 			};
 			name = Release;
 		};
+		A83600000000000000000009 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = Q4TGGJ5RKN;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks", );
+				PRODUCT_BUNDLE_IDENTIFIER = imehc.recoow.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/recoow.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/recoow";
+			};
+			name = Debug;
+		};
+		A8360000000000000000000A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = Q4TGGJ5RKN;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks", );
+				PRODUCT_BUNDLE_IDENTIFIER = imehc.recoow.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/recoow.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/recoow";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -582,6 +639,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		A83600000000000000000008 /* Test configurations */ = {isa = XCConfigurationList; buildConfigurations = (A83600000000000000000009, A8360000000000000000000A, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */

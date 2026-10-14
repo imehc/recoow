@@ -3,11 +3,13 @@ import UIKit
 import UniformTypeIdentifiers
 
 struct MediaAssetLibraryManagementView: View {
+    @Environment(AppContainer.self) private var container
     let repository: MediaAssetRepository
 
     @State private var items: [MediaAssetLibraryItem] = []
     @State private var photoPickerPurpose: PhotoPickerPurpose?
     @State private var editingAsset: MediaAsset?
+    @State private var titleEditingAsset: MediaAsset?
     @State private var deletionRequest: MediaAssetDeletionRequest?
     @State private var previewRequest: MediaAssetPreviewRequest?
     @State private var errorMessage: String?
@@ -74,6 +76,12 @@ struct MediaAssetLibraryManagementView: View {
         }
         .task {
             loadItems()
+        }
+        .onChange(of: container.mediaAssetTitles) { _, _ in
+            loadItems()
+        }
+        .appSheet(item: $titleEditingAsset) { asset in
+            MediaAssetTitleEditorView(asset: asset, repository: repository, onSave: loadItems)
         }
         .onChange(of: items.map(\.id)) { _, itemIDs in
             if let dragID = draggedItemID, itemIDs.contains(dragID) == false {
@@ -211,6 +219,7 @@ struct MediaAssetLibraryManagementView: View {
             onToggleSelection: { toggleSelection(for: item) },
             onUnavailableSelection: { showReferencedSelectionMessage() },
             onEdit: { editingAsset = item.asset },
+            onEditTitle: { titleEditingAsset = item.asset },
             onReplace: { photoPickerPurpose = .replace(item.asset) },
             onDelete: { requestDelete(item) }
         )
@@ -382,7 +391,8 @@ struct MediaAssetLibraryManagementView: View {
             return PhotoPreviewItem(
                 id: item.asset.id,
                 imageData: data,
-                title: AppLocalization.string("媒体素材")
+                assetID: item.asset.id,
+                assetTitleFallback: AppLocalization.string("未命名素材")
             )
         }
 
@@ -660,6 +670,7 @@ private struct MediaAssetLibraryDropDelegate: DropDelegate {
 }
 
 private struct MediaAssetManagementTile: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let item: MediaAssetLibraryItem
     let repository: MediaAssetRepository
     let isSelectionMode: Bool
@@ -671,6 +682,7 @@ private struct MediaAssetManagementTile: View {
     let onToggleSelection: () -> Void
     let onUnavailableSelection: () -> Void
     let onEdit: () -> Void
+    let onEditTitle: () -> Void
     let onReplace: () -> Void
     let onDelete: () -> Void
 
@@ -704,6 +716,7 @@ private struct MediaAssetManagementTile: View {
 
                 if isSelectionMode == false, showsMenu {
                     Menu {
+                        Button(AppLocalization.string(item.asset.title == nil ? "设置标题" : "修改标题"), systemImage: "character.cursor.ibeam", action: onEditTitle)
                         Button(AppLocalization.string("编辑"), systemImage: "slider.horizontal.3", action: onEdit)
                         Button(AppLocalization.string("替换"), systemImage: "arrow.triangle.2.circlepath", action: onReplace)
                         if item.referenceCount == 0 {
@@ -720,11 +733,33 @@ private struct MediaAssetManagementTile: View {
                 }
             }
 
-            Text(referenceText)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    titleCaption
+                    referenceCountLabel
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    titleCaption
+                    referenceCountLabel
+                }
+            }
         }
+    }
+
+    private var titleCaption: some View {
+        MediaAssetTitleView(
+            assetID: item.id,
+            fallback: AppLocalization.string("未命名素材"),
+            lineLimit: dynamicTypeSize.isAccessibilitySize ? 2 : 1
+        )
+    }
+
+    private var referenceCountLabel: some View {
+        Label("\(item.referenceCount)", systemImage: "link")
+            .font(AppDesign.metadataFont)
+            .foregroundStyle(AppPalette.secondaryInk)
+            .fixedSize()
+            .accessibilityLabel(referenceText)
     }
 
     private var referenceText: String {
@@ -744,7 +779,7 @@ private struct MediaAssetManagementTile: View {
                 : AppLocalization.string("选择素材")
         }
 
-        return AppLocalization.string("预览图片")
+        return AppLocalization.format("预览图片：%@", item.asset.displayTitle)
     }
 
     private var selectionBadge: some View {

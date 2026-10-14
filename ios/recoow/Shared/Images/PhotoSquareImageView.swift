@@ -4,8 +4,17 @@ import UIKit
 struct PhotoSquareImageView: View {
     let imageData: Data?
     let systemImage: String
+    var assetID: String? = nil
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            squareImage
+            MediaAssetTitleView(assetID: assetID, lineLimit: nil)
+                .padding(.horizontal, AppDesign.pagePadding)
+        }
+    }
+
+    private var squareImage: some View {
         Group {
             if let imageData, let image = ThumbnailImageLoader.image(data: imageData, preferredPixelSize: preferredPixelSize) {
                 Image(uiImage: image)

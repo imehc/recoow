@@ -2,15 +2,17 @@ import SwiftUI
 import UIKit
 
 struct MediaAssetLibraryPickerView: View {
+    @Environment(AppContainer.self) private var container
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let repository: MediaAssetRepository
     let onSelect: (MediaAsset) -> Void
 
     @State private var assets: [MediaAsset] = []
     @State private var errorMessage: String?
 
-    private let columns = [
-        GridItem(.adaptive(minimum: 96), spacing: 10)
-    ]
+    private var columns: [GridItem] {
+        [GridItem(.adaptive(minimum: dynamicTypeSize.isAccessibilitySize ? 160 : 96), spacing: 10, alignment: .top)]
+    }
 
     var body: some View {
         Group {
@@ -27,10 +29,14 @@ struct MediaAssetLibraryPickerView: View {
                             Button {
                                 onSelect(asset)
                             } label: {
-                                MediaAssetThumbnailView(asset: asset, repository: repository)
+                                VStack(alignment: .leading, spacing: 6) {
+                                    MediaAssetThumbnailView(asset: asset, repository: repository)
+                                    MediaAssetTitleView(assetID: asset.id, fallback: AppLocalization.string("未命名素材"))
+                                }
+                                .contentShape(.rect)
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel(AppLocalization.string("选择素材"))
+                            .accessibilityLabel(AppLocalization.format("选择素材：%@", container.mediaAssetTitle(for: asset.id) ?? AppLocalization.string("未命名素材")))
                         }
                     }
                     .padding(12)

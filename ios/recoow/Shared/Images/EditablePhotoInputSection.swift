@@ -22,7 +22,7 @@ struct EditablePhotoInputSection: View {
     }
 
     private func previewCurrentPhoto() {
-        coordinator.previewCurrentPhoto(imageData: resolvedImageData)
+        coordinator.previewCurrentPhoto(imageData: resolvedImageData, assetID: imageAssetID)
     }
 
     private func editCurrentPhoto() {

@@ -928,3 +928,14 @@
 "共 %d 项，%d 项参与抽选" = "%d options, %d enabled for picking";
 "候选项与历史" = "Options and History";
 "正在查看" = "Viewing";
+
+/* Media asset titles */
+"未命名素材" = "Untitled asset";
+"设置标题" = "Set title";
+"修改标题" = "Edit title";
+"素材标题" = "Asset title";
+"素材标题（选填）" = "Asset title (optional)";
+"标题最多 %d 个字符" = "Title must be %d characters or fewer";
+"预览图片：%@" = "Preview image: %@";
+"选择素材：%@" = "Select asset: %@";
+"更换图片：%@" = "Replace image: %@";

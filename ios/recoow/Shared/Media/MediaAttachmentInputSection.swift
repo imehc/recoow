@@ -117,7 +117,7 @@ struct MediaAttachmentPhotoGridView: View {
     private let dragActivationDistance: CGFloat = 12
 
     private var columns: [GridItem] {
-        Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+        Array(repeating: GridItem(.flexible(), spacing: 8, alignment: .top), count: 3)
     }
 
     var body: some View {
@@ -188,14 +188,6 @@ struct MediaAttachmentPhotoGridView: View {
             isDropTarget: isDropTarget
         )
         .opacity(isDragging ? 0.16 : 1)
-        .background(
-            GeometryReader { proxy in
-                Color.clear.preference(
-                    key: MediaAttachmentPhotoFramePreferenceKey.self,
-                    value: [photo.id: proxy.frame(in: .global)]
-                )
-            }
-        )
 
         if canDragPhotos {
             tile.highPriorityGesture(photoDragGesture(for: photo))
@@ -333,6 +325,7 @@ struct MediaAttachmentPhotoGridView: View {
 }
 
 private struct MediaAttachmentPhotoTile: View {
+    @Environment(AppContainer.self) private var container
     let attachment: MediaAttachment
     let onPreview: (MediaAttachment) -> Void
     let isEditable: Bool
@@ -352,11 +345,34 @@ private struct MediaAttachmentPhotoTile: View {
         Button {
             onPreview(attachment)
         } label: {
-            squareThumbnail
+            VStack(alignment: .leading, spacing: 6) {
+                squareThumbnail
+                    .background {
+                        GeometryReader { proxy in
+                            Color.clear.preference(
+                                key: MediaAttachmentPhotoFramePreferenceKey.self,
+                                value: [attachment.id: proxy.frame(in: .global)]
+                            )
+                        }
+                    }
+                if let title = MediaAsset.normalizedTitle(attachment.title) {
+                    Text(title)
+                        .font(AppDesign.rowSubtitleFont)
+                        .foregroundStyle(AppPalette.ink)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                MediaAssetTitleView(assetID: attachment.assetID)
+            }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(AppLocalization.string("预览照片"))
+        .accessibilityLabel(previewLabel)
         .accessibilityHint(isEditable ? AppLocalization.string("长按拖动可排序或删除") : "")
+    }
+
+    private var previewLabel: String {
+        let titles = [MediaAsset.normalizedTitle(attachment.title), container.mediaAssetTitle(for: attachment.assetID)].compactMap { $0 }
+        return titles.isEmpty ? AppLocalization.string("预览照片") : AppLocalization.format("预览图片：%@", titles.joined(separator: "，"))
     }
 
     private var squareThumbnail: some View {

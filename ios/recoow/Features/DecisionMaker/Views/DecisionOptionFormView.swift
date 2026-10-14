@@ -220,7 +220,7 @@ struct DecisionOptionFormView: View {
 
     private func previewCurrentPhoto() {
         guard let imageData = resolvedImageData else { return }
-        previewPhoto = PhotoPreviewItem(imageData: imageData)
+        previewPhoto = PhotoPreviewItem(imageData: imageData, assetID: imageAssetID)
     }
 
     private func cancelPhotoEditing() {

@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct PhotoInputSection: View {
+    @Environment(AppContainer.self) private var container
     @Binding var imageData: Data?
     @Binding var imageAssetID: String?
 
@@ -19,6 +20,8 @@ struct PhotoInputSection: View {
                 hasImage: hasImage,
                 systemImage: placeholderSystemImage,
                 isPreparingPhoto: isPreparingPhoto,
+                titleText: container.mediaAssetTitle(for: imageAssetID),
+                accessibilityLabelText: container.mediaAssetTitle(for: imageAssetID).map { AppLocalization.format("更换图片：%@", $0) },
                 onPreviewPhoto: onPreviewPhoto,
                 onSourceRequest: onSourceRequest,
                 onRemovePhoto: removeImage

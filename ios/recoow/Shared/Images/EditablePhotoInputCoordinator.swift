@@ -75,9 +75,9 @@ final class EditablePhotoInputCoordinator {
         isShowingPhotoEditor = false
     }
 
-    func previewCurrentPhoto(imageData: Data?) {
+    func previewCurrentPhoto(imageData: Data?, assetID: String? = nil) {
         guard let imageData else { return }
-        previewPhoto = PhotoPreviewItem(imageData: imageData)
+        previewPhoto = PhotoPreviewItem(imageData: imageData, assetID: assetID)
     }
 
     func cancelPhotoEditing() {

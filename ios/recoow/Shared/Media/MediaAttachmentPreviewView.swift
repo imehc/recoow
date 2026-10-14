@@ -41,7 +41,8 @@ struct MediaAttachmentPreviewView: View {
             PhotoPreviewItem(
                 id: attachment.id,
                 imageData: attachment.resolvedData,
-                title: attachment.displayTitle
+                title: MediaAsset.normalizedTitle(attachment.title),
+                assetID: attachment.assetID
             )
         }
     }
