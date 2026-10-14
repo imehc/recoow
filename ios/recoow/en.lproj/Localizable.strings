@@ -931,10 +931,12 @@
 
 /* Media asset titles */
 "未命名素材" = "Untitled asset";
+"搜索素材标题" = "Search asset titles";
+"没有匹配素材" = "No Matching Assets";
+"试试其他标题关键词" = "Try different title keywords";
 "设置标题" = "Set title";
 "修改标题" = "Edit title";
 "素材标题" = "Asset title";
-"素材标题（选填）" = "Asset title (optional)";
 "标题最多 %d 个字符" = "Title must be %d characters or fewer";
 "预览图片：%@" = "Preview image: %@";
 "选择素材：%@" = "Select asset: %@";

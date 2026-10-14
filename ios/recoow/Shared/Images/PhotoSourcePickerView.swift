@@ -43,7 +43,8 @@ struct PhotoSourcePickerView: View {
                         onSelect: { asset in
                             onMediaAssetPicked(asset)
                             close()
-                        }
+                        },
+                        onClose: close
                     )
                 }
             } else {

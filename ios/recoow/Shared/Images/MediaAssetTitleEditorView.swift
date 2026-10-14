@@ -29,7 +29,7 @@ struct MediaAssetTitleEditorView: View {
                         PhotoThumbnailView(imageData: repository.data(for: asset), systemImage: "photo", size: AppDesign.largeThumbnailSize)
                             .accessibilityHidden(true)
                         Divider()
-                        TextField(AppLocalization.string("素材标题（选填）"), text: $title, axis: .vertical)
+                        TextField(AppLocalization.string("素材标题"), text: $title, axis: .vertical)
                             .lineLimit(1...4)
                             .accessibilityIdentifier("mediaAssetTitleInput")
                     }
