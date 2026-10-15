@@ -276,9 +276,11 @@ struct DecisionOptionsContent: View {
                     .buttonStyle(.plain)
                     .disabled(scene.isBusy)
                     .swipeActions(edge: .trailing) {
-                        Button(role: .destructive) { requestDelete(option) } label: {
+                        Button { requestDelete(option) } label: {
                             Label("删除", systemImage: "trash")
                         }
+                        .tint(.red)
+
                         Button { presentedSheet = .editOption(option) } label: {
                             Label("编辑", systemImage: "square.and.pencil")
                         }
@@ -311,9 +313,10 @@ struct DecisionOptionsContent: View {
                         )
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) { requestDeleteHistory(record) } label: {
+                        Button { requestDeleteHistory(record) } label: {
                             Label("删除", systemImage: "trash")
                         }
+                        .tint(.red)
                     }
                 }
             }

@@ -44,11 +44,12 @@ struct DecisionCollectionsContent: View {
                             DecisionCollectionRow(collection: collection)
                         }
                         .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
+                            Button {
                                 requestDelete(collection)
                             } label: {
                                 Label("删除", systemImage: "trash")
                             }
+                            .tint(.red)
 
                             Button {
                                 presentedSheet = .editCollection(collection)

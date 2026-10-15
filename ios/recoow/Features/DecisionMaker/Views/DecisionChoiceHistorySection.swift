@@ -22,11 +22,12 @@ struct DecisionChoiceHistorySection: View {
                         DecisionChoiceRecordRow(record: record)
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
+                        Button {
                             requestDelete(record)
                         } label: {
                             Label("删除", systemImage: "trash")
                         }
+                        .tint(.red)
                     }
                 }
             }
