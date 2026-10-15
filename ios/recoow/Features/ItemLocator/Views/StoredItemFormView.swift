@@ -61,7 +61,6 @@ struct StoredItemFormView: View {
             EditablePhotoInputSection(
                 imageData: $imageData,
                 imageAssetID: $imageAssetID,
-                placeholderSystemImage: "shippingbox",
                 coordinator: photoInputCoordinator
             )
 

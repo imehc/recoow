@@ -151,7 +151,6 @@ struct ReminderFormView: View {
             EditablePhotoInputSection(
                 imageData: $imageData,
                 imageAssetID: $imageAssetID,
-                placeholderSystemImage: "bell.fill",
                 coordinator: photoInputCoordinator
             )
         }

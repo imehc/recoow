@@ -68,7 +68,6 @@ struct DecisionOptionFormView: View {
             PhotoInputSection(
                 imageData: $imageData,
                 imageAssetID: $imageAssetID,
-                placeholderSystemImage: "questionmark.circle",
                 isPreparingPhoto: isPreparingPhoto,
                 errorMessage: imageErrorMessage,
                 onPreviewPhoto: previewCurrentPhoto,

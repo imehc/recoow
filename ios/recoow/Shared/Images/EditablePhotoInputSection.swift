@@ -4,14 +4,12 @@ struct EditablePhotoInputSection: View {
     @Binding var imageData: Data?
     @Binding var imageAssetID: String?
 
-    let placeholderSystemImage: String
     let coordinator: EditablePhotoInputCoordinator
 
     var body: some View {
         PhotoInputSection(
             imageData: $imageData,
             imageAssetID: $imageAssetID,
-            placeholderSystemImage: placeholderSystemImage,
             isPreparingPhoto: coordinator.isPreparingPhoto,
             errorMessage: coordinator.imageErrorMessage,
             onPreviewPhoto: previewCurrentPhoto,

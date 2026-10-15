@@ -5,7 +5,8 @@ struct PhotoInputSection: View {
     @Binding var imageData: Data?
     @Binding var imageAssetID: String?
 
-    let placeholderSystemImage: String
+    static let placeholderSystemImage = "photo"
+
     let isPreparingPhoto: Bool
     let errorMessage: String?
     let onPreviewPhoto: () -> Void
@@ -18,7 +19,7 @@ struct PhotoInputSection: View {
             PhotoInputRowView(
                 imageData: resolvedImageData,
                 hasImage: hasImage,
-                systemImage: placeholderSystemImage,
+                systemImage: Self.placeholderSystemImage,
                 isPreparingPhoto: isPreparingPhoto,
                 titleText: container.mediaAssetTitle(for: imageAssetID),
                 accessibilityLabelText: container.mediaAssetTitle(for: imageAssetID).map { AppLocalization.format("更换图片：%@", $0) },

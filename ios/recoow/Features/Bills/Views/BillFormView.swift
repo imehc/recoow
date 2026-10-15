@@ -233,7 +233,6 @@ struct BillFormView: View {
             EditablePhotoInputSection(
                 imageData: $imageData,
                 imageAssetID: $imageAssetID,
-                placeholderSystemImage: "receipt",
                 coordinator: photoInputCoordinator
             )
 
