@@ -15,3 +15,6 @@ backend/data/
 /server/
 
 **/UserInterfaceState.xcuserstate
+
+# Xcode 每个用户的本地偏好（scheme 顺序、断点等），不纳入版本管理
+**/xcuserdata/
