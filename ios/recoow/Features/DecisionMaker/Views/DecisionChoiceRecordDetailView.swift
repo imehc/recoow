@@ -24,8 +24,10 @@ struct DecisionChoiceRecordDetailView: View {
             Form {
                 if let imageData = record.resolvedImageData {
                     Section {
-                        PhotoSquareImageView(imageData: imageData, systemImage: "sparkles", assetID: record.optionImageAssetID)
+                        PhotoSquareImageView(imageData: imageData, systemImage: "sparkles")
                             .padding(.vertical, 8)
+                    } header: {
+                        MediaAssetSectionHeader(assetID: record.optionImageAssetID)
                     }
                 }
 

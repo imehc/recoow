@@ -181,35 +181,24 @@ struct FoodEntryDetailView: View {
 }
 
 private struct FoodEntryReadonlyPhotoStrip: View {
-    @Environment(AppContainer.self) private var container
     let photos: [MediaAttachment]
     let onPreview: (MediaAttachment) -> Void
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: 10) {
+            HStack(spacing: 10) {
                 ForEach(photos) { photo in
                     Button {
                         onPreview(photo)
                     } label: {
-                        VStack(alignment: .leading, spacing: 6) {
-                            PhotoThumbnailView(
-                                imageData: photo.resolvedData,
-                                systemImage: "photo.fill",
-                                size: AppDesign.largeThumbnailSize
-                            )
-                            if let title = MediaAsset.normalizedTitle(photo.title) {
-                                Text(title)
-                                    .font(AppDesign.rowSubtitleFont)
-                                    .foregroundStyle(AppPalette.ink)
-                                    .lineLimit(2)
-                            }
-                            MediaAssetTitleView(assetID: photo.assetID)
-                        }
-                        .frame(width: AppDesign.largeThumbnailSize, alignment: .leading)
+                        PhotoThumbnailView(
+                            imageData: photo.resolvedData,
+                            systemImage: "photo.fill",
+                            size: AppDesign.largeThumbnailSize
+                        )
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(container.mediaAssetTitle(for: photo.assetID).map { AppLocalization.format("预览图片：%@", $0) } ?? AppLocalization.string("预览照片"))
+                    .accessibilityLabel(AppLocalization.string("预览照片"))
                 }
             }
             .padding(.vertical, 4)

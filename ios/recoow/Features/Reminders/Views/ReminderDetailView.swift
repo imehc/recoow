@@ -67,8 +67,10 @@ struct ReminderDetailView: View {
     private func form(for reminder: ReminderRecord) -> some View {
         List {
             if reminder.hasImage {
-                Section("图片") {
-                    PhotoSquareImageView(imageData: reminder.resolvedImageData, systemImage: "bell.fill", assetID: reminder.imageAssetID)
+                Section {
+                    PhotoSquareImageView(imageData: reminder.resolvedImageData, systemImage: "bell.fill")
+                } header: {
+                    MediaAssetSectionHeader(assetID: reminder.imageAssetID)
                 }
             }
 

@@ -53,10 +53,12 @@ struct BillDetailView: View {
     private func form(for bill: BillRecord) -> some View {
         List {
             if bill.hasImage {
-                Section("图片") {
-                    PhotoSquareImageView(imageData: bill.resolvedImageData, systemImage: "receipt.fill", assetID: bill.imageAssetID)
+                Section {
+                    PhotoSquareImageView(imageData: bill.resolvedImageData, systemImage: "receipt.fill")
                         .listRowInsets(EdgeInsets())
                         .listRowSeparator(.hidden)
+                } header: {
+                    MediaAssetSectionHeader(assetID: bill.imageAssetID)
                 }
             }
 
