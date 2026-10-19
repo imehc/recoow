@@ -238,7 +238,9 @@ final class MediaAssetRepository: @unchecked Sendable {
         }
     }
 
-    func data(for asset: MediaAsset) -> Data? {
+    /// 仅读取素材值和对象文件（`MediaAssetObjectStore` 已是 `nonisolated`），因此标记为非隔离，
+    /// 便于在 `Task.detached` 中加载缩略图而不阻塞主线程。
+    nonisolated func data(for asset: MediaAsset) -> Data? {
         if let data = objectStore.data(for: asset.storageKey) {
             return data
         }
