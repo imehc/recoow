@@ -125,8 +125,11 @@ struct ReminderDetailView: View {
 
             if reminder.completionRecords.isEmpty == false {
                 Section("打卡记录") {
-                    ForEach(reminder.completionRecords.reversed()) { completion in
-                        ReminderCompletionRecordRow(completion: completion)
+                    ReminderCheckInCalendarView(reminder: reminder) { date in
+                        makeUpRequest = ReminderMakeUpRequest(
+                            reminder: reminder,
+                            preselectedDateKeys: [ReminderRecord.dateKey(for: date)]
+                        )
                     }
                 }
             }
@@ -399,6 +402,7 @@ struct ReminderPauseSheet: View {
 
 struct ReminderMakeUpRequest: Identifiable {
     let reminder: ReminderRecord
+    var preselectedDateKeys: Set<String> = []
 
     var id: String { reminder.id }
 }
@@ -406,7 +410,7 @@ struct ReminderMakeUpRequest: Identifiable {
 struct ReminderMakeUpSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.locale) private var locale
-    @State private var selectedKeys: Set<String> = []
+    @State private var selectedKeys: Set<String>
     @State private var note = ""
 
     let request: ReminderMakeUpRequest
@@ -417,7 +421,12 @@ struct ReminderMakeUpSheet: View {
     init(request: ReminderMakeUpRequest, viewModel: RemindersViewModel) {
         self.request = request
         self.viewModel = viewModel
-        self.months = MakeUpMonth.grouping(request.reminder.missedCheckInDates())
+
+        let months = MakeUpMonth.grouping(request.reminder.missedCheckInDates())
+        self.months = months
+
+        let availableKeys = Set(months.flatMap { $0.days.map(\.key) })
+        _selectedKeys = State(initialValue: request.preselectedDateKeys.intersection(availableKeys))
     }
 
     var body: some View {
@@ -585,44 +594,3 @@ private struct MakeUpMonth: Identifiable {
     }
 }
 
-private struct ReminderCompletionRecordRow: View {
-    @Environment(\.locale) private var locale
-
-    let completion: ReminderCheckInCompletion
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                Label(
-                    AppLocalization.string(completion.kind.title),
-                    systemImage: completion.kind.systemImage
-                )
-                .font(.subheadline.weight(.semibold))
-
-                Spacer(minLength: 12)
-
-                Text(dateText)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
-            if let note = completion.note {
-                Text(note)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.vertical, 2)
-    }
-
-    private var dateText: String {
-        guard let date = ReminderRecord.date(fromDateKey: completion.dateKey) else {
-            return completion.dateKey
-        }
-
-        return AppFormatters.date(
-            milliseconds: RemindersViewModel.milliseconds(for: date),
-            locale: locale
-        )
-    }
-}
