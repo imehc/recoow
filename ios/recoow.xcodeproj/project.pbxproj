@@ -22,7 +22,13 @@
 			remoteGlobalIDString = 3ABF80552FE90000003C5066;
 			remoteInfo = recoowWidget;
 		};
-		A83600000000000000000005 /* PBXContainerItemProxy */ = {isa = PBXContainerItemProxy; containerPortal = 3ABF80242FE1551D003C5066; proxyType = 1; remoteGlobalIDString = 3ABF802B2FE1551D003C5066; remoteInfo = recoow; };
+		A83600000000000000000005 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3ABF80242FE1551D003C5066 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3ABF802B2FE1551D003C5066;
+			remoteInfo = recoow;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -82,7 +88,11 @@
 			path = recoowWidget;
 			sourceTree = "<group>";
 		};
-		A83600000000000000000002 /* recoowTests */ = {isa = PBXFileSystemSynchronizedRootGroup; path = recoowTests; sourceTree = "<group>"; };
+		A83600000000000000000002 /* recoowTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = recoowTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -103,7 +113,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A83600000000000000000003 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A83600000000000000000003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -191,14 +207,22 @@
 		};
 		A83600000000000000000007 /* recoowTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A83600000000000000000008;
-			buildPhases = (A83600000000000000000004, A83600000000000000000003, );
-			buildRules = ();
-			dependencies = (A83600000000000000000006, );
-			fileSystemSynchronizedGroups = (A83600000000000000000002, );
+			buildConfigurationList = A83600000000000000000008 /* Build configuration list for PBXNativeTarget "recoowTests" */;
+			buildPhases = (
+				A83600000000000000000004 /* Sources */,
+				A83600000000000000000003 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A83600000000000000000006 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A83600000000000000000002 /* recoowTests */,
+			);
 			name = recoowTests;
 			productName = recoowTests;
-			productReference = A83600000000000000000001;
+			productReference = A83600000000000000000001 /* recoowTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -301,7 +325,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A83600000000000000000004 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A83600000000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -310,7 +340,11 @@
 			target = 3ABF80552FE90000003C5066 /* recoowWidget */;
 			targetProxy = 3ABF805B2FE90000003C5066 /* PBXContainerItemProxy */;
 		};
-		A83600000000000000000006 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = 3ABF802B2FE1551D003C5066; targetProxy = A83600000000000000000005; };
+		A83600000000000000000006 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3ABF802B2FE1551D003C5066 /* recoow */;
+			targetProxy = A83600000000000000000005 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -581,7 +615,11 @@
 				DEVELOPMENT_TEAM = Q4TGGJ5RKN;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
-				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks", );
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = imehc.recoow.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -599,7 +637,11 @@
 				DEVELOPMENT_TEAM = Q4TGGJ5RKN;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
-				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks", );
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = imehc.recoow.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -639,7 +681,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A83600000000000000000008 /* Test configurations */ = {isa = XCConfigurationList; buildConfigurations = (A83600000000000000000009, A8360000000000000000000A, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A83600000000000000000008 /* Build configuration list for PBXNativeTarget "recoowTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A83600000000000000000009 /* Debug */,
+				A8360000000000000000000A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
