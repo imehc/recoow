@@ -6,8 +6,11 @@ package store
 type Store interface {
 	ConfigureSyncTables(tables []string) error
 	// ---- 账号与设备 ----
+	// InitAccount 新建一个全新账号（同一实例可存在多个账号，彼此数据隔离）。
 	InitAccount(recoveryKeyHash []byte) (Account, error)
-	GetAccount() (Account, error)
+	GetAccount(id string) (Account, error)
+	GetAccountByRecoveryKeyHash(recoveryKeyHash []byte) (Account, error)
+	CountAccounts() (int, error)
 	CreateDevice(accountID, name string, tokenHash []byte, isOwner bool) (Device, error)
 	GetDeviceByTokenHash(tokenHash []byte) (Device, error)
 	GetDevice(id string) (Device, error)

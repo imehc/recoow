@@ -35,7 +35,7 @@ nonisolated enum SyncRowApplier {
             try queueNotification(db: db, table: entity.table, id: update.id, version: update.version)
             return true
         }
-        guard var object = update.snapshot else { throw CloudAPIError.invalidResponse("\(entity.table) 缺少快照") }
+        guard var object = update.snapshot else { throw CloudAPIError.invalidResponse(AppLocalization.format("%@ 缺少快照", entity.table)) }
         object["id"] = update.id
         object["updated_at"] = update.updatedAtMs
         object["device_id"] = update.deviceID
@@ -43,7 +43,7 @@ nonisolated enum SyncRowApplier {
         object = try entity.upgrade(object, from: update.dataVersion)
         if entity.table == "media_assets", !update.isDeleted {
             guard let reference = (object["_media"] as? [String: Any])?["object"] as? [String: Any] else {
-                throw CloudAPIError.invalidResponse("素材缺少内容寻址引用")
+                throw CloudAPIError.invalidResponse(AppLocalization.string("素材缺少内容寻址引用"))
             }
             object["storage_key"] = try SyncMediaReference(object: reference).key
         }
@@ -54,9 +54,16 @@ nonisolated enum SyncRowApplier {
         }
         var names: [String] = []
         var values: [DatabaseValue] = []
+        var binaryFields: Set<String> = []
         for field in entity.fields where !field.derived && field.name != "server_version" {
             if field.binary {
-                if !exists && !field.nullable {
+                binaryFields.insert(field.name)
+                // 非空 BLOB 列必须出现在 INSERT 列清单里：SQLite 在解析 ON CONFLICT 之前就会
+                // 校验 NOT NULL，行已存在时省略该列同样报 `error 19: NOT NULL constraint failed`
+                // （media_attachments.data 曾因此在同步回写时整轮失败）。
+                // 这里用空 blob 占位，真实字节由随后的媒体下载任务写回；
+                // 下方 DO UPDATE 已排除二进制列，不会覆盖本地已有的真实内容。
+                if !field.nullable {
                     names.append(field.name)
                     values.append(Data().databaseValue)
                 }
@@ -78,7 +85,8 @@ nonisolated enum SyncRowApplier {
         values += [update.version.databaseValue, SyncStatus.synced.rawValue.databaseValue]
         let columns = names.map { "\"\($0)\"" }.joined(separator: ",")
         let placeholders = names.map { _ in "?" }.joined(separator: ",")
-        let setters = names.filter { $0 != "id" }.map { "\"\($0)\" = excluded.\"\($0)\"" }.joined(separator: ",")
+        let setters = names.filter { $0 != "id" && !binaryFields.contains($0) }
+            .map { "\"\($0)\" = excluded.\"\($0)\"" }.joined(separator: ",")
         try db.execute(sql: "INSERT INTO \"\(entity.table)\" (\(columns)) VALUES (\(placeholders)) ON CONFLICT(id) DO UPDATE SET \(setters)",
                        arguments: StatementArguments(values))
         if !update.isDeleted {

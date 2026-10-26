@@ -25,8 +25,10 @@ func snapshotReferencesMedia(snapshot json.RawMessage, key string) bool {
 	return false
 }
 
-func (storage *sqliteStore) scanReceipts(data *dumpData) error {
-	rows, err := storage.db.Query("SELECT account_id, mutation_id, request_hash, result_json FROM mutation_receipts ORDER BY account_id, mutation_id")
+func (storage *sqliteStore) scanReceipts(data *dumpData, accountID string) error {
+	rows, err := storage.db.Query(
+		"SELECT account_id, mutation_id, request_hash, result_json FROM mutation_receipts WHERE account_id = ? ORDER BY mutation_id",
+		accountID)
 	if err != nil {
 		return err
 	}

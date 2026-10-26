@@ -18,6 +18,8 @@ type initResponse struct {
 	AccountID   string `json:"accountId"`
 }
 
+// handleInitAccount 注册一个新账号（同一实例可注册多个，彼此数据隔离）。
+// 设置了 RECOOW_BOOTSTRAP_TOKEN 时需带对应令牌，RECOOW_MAX_ACCOUNTS 可限总量。
 func (s *Server) handleInitAccount(w http.ResponseWriter, r *http.Request) {
 	var req initRequest
 	if err := decodeJSON(w, r, &req); err != nil {
@@ -28,10 +30,21 @@ func (s *Server) handleInitAccount(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "invalid bootstrap token")
 		return
 	}
-	recoveryKey, token, deviceID, err := s.auth.InitAccount()
+	if s.cfg.MaxAccounts > 0 {
+		count, err := s.st.CountAccounts()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if count >= s.cfg.MaxAccounts {
+			writeError(w, http.StatusForbidden, "account quota exceeded")
+			return
+		}
+	}
+	accountID, recoveryKey, token, deviceID, err := s.auth.InitAccount()
 	if err != nil {
-		if err == store.ErrAccountExists {
-			writeError(w, http.StatusConflict, "account already initialized")
+		if err == store.ErrRecoveryKeyTaken {
+			writeError(w, http.StatusConflict, "recovery key already registered")
 			return
 		}
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -41,6 +54,36 @@ func (s *Server) handleInitAccount(w http.ResponseWriter, r *http.Request) {
 		RecoveryKey: recoveryKey,
 		DeviceToken: token,
 		DeviceID:    deviceID,
+		AccountID:   accountID,
+	})
+}
+
+type recoverRequest struct {
+	RecoveryKey string `json:"recoveryKey"`
+	DeviceName  string `json:"deviceName"`
+}
+
+// handleRecover 用恢复密钥把账号重新绑到一台新设备（换机 / 重装 / 丢机）。
+// 恢复密钥是账号的唯一凭据，因此这条路径不设注册闸门，但校验失败即拒绝。
+func (s *Server) handleRecover(w http.ResponseWriter, r *http.Request) {
+	var req recoverRequest
+	if err := decodeJSON(w, r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	accountID, token, deviceID, err := s.auth.Recover(req.RecoveryKey, req.DeviceName)
+	if err != nil {
+		if err == auth.ErrUnauthorized {
+			writeError(w, http.StatusUnauthorized, "invalid recovery key")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, pairResponse{
+		DeviceToken: token,
+		DeviceID:    deviceID,
+		AccountID:   accountID,
 	})
 }
 

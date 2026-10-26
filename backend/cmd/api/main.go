@@ -58,8 +58,10 @@ func main() {
 		IdleTimeout:       60 * time.Second,
 	}
 
-	if _, err := st.GetAccount(); errors.Is(err, store.ErrNoAccount) {
-		log.Info("尚未初始化账号，请调用 POST /api/account/init 完成引导")
+	if count, err := st.CountAccounts(); err == nil && count == 0 {
+		log.Info("尚未注册任何账号，客户端可调用 POST /api/account/init 注册")
+	} else if err == nil {
+		log.Info("已注册账号数", "accounts", count)
 	}
 
 	go func() {

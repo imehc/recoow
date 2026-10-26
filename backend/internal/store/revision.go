@@ -214,7 +214,8 @@ func changeFromRow(row Row) Change {
 		operation = OpDelete
 	}
 	return Change{
-		Table: row.Table, ID: row.ID, Version: row.Version, DataVersion: row.DataVersion,
+		AccountID: row.AccountID,
+		Table:     row.Table, ID: row.ID, Version: row.Version, DataVersion: row.DataVersion,
 		UpdatedAtMs: row.UpdatedAtMs, DeviceID: row.DeviceID, Operation: operation,
 		Deleted: row.DeletedAtMs != 0, DeletedAtMs: row.DeletedAtMs, Snapshot: bytes.Clone(row.Snapshot),
 	}

@@ -233,7 +233,7 @@ func TestSQLiteExportRestore(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := st.(SQLDumper).ExportSQL(&buf); err != nil {
+	if err := st.(SQLDumper).ExportSQL(&buf, acc); err != nil {
 		t.Fatal(err)
 	}
 	sqlText := buf.String()
@@ -262,7 +262,7 @@ func TestSQLiteExportRestore(t *testing.T) {
 	if _, err := st2.db.ExecContext(st2.ctx, sqlText); err != nil {
 		t.Fatalf("回放导出 SQL: %v", err)
 	}
-	acc2, err := st2.GetAccount()
+	acc2, err := st2.GetAccount(acc)
 	if err != nil {
 		t.Fatal(err)
 	}

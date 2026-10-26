@@ -14,6 +14,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -103,42 +104,78 @@ func parseRFC3339(s string) (time.Time, error) {
 
 // ---- 账号 ----
 
+// InitAccount 新建一个账号：同一实例允许多个账号并存，各自拥有独立的
+// 行镜像、变更日志、媒体索引与版本号空间。
 func (s *sqliteStore) InitAccount(recoveryKeyHash []byte) (Account, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	var exists int
-	if err := s.db.QueryRowContext(s.ctx, "SELECT COUNT(*) FROM account").Scan(&exists); err != nil {
-		return Account{}, fmt.Errorf("查询账号: %w", err)
+	tx, err := s.db.BeginTx(s.ctx, nil)
+	if err != nil {
+		return Account{}, fmt.Errorf("开启事务: %w", err)
 	}
-	if exists > 0 {
-		return Account{}, ErrAccountExists
-	}
+	defer tx.Rollback()
+
 	a := Account{
 		ID:              newID(),
 		RecoveryKeyHash: recoveryKeyHash,
 		CreatedAt:       time.Now().UTC(),
 		NextVersion:     1,
 	}
-	if _, err := s.db.ExecContext(s.ctx,
+	if _, err := tx.ExecContext(s.ctx,
 		"INSERT INTO account (id, recovery_key_hash, created_at, next_version) VALUES (?, ?, ?, ?)",
 		a.ID, hex.EncodeToString(recoveryKeyHash), rfc3339(a.CreatedAt), a.NextVersion); err != nil {
+		if strings.Contains(err.Error(), "UNIQUE") {
+			return Account{}, ErrRecoveryKeyTaken
+		}
 		return Account{}, fmt.Errorf("写入账号: %w", err)
+	}
+	if _, err := tx.ExecContext(s.ctx,
+		"INSERT OR IGNORE INTO sync_metadata (account_id, generation) VALUES (?, ?)", a.ID, newID()); err != nil {
+		return Account{}, fmt.Errorf("写入同步元数据: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return Account{}, fmt.Errorf("提交事务: %w", err)
 	}
 	return a, nil
 }
 
-func (s *sqliteStore) GetAccount() (Account, error) {
+func (s *sqliteStore) GetAccount(id string) (Account, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.getAccountLocked(s.db)
+	return s.getAccountLocked(s.db, id)
 }
 
-func (s *sqliteStore) getAccountLocked(q querier) (Account, error) {
+func (s *sqliteStore) GetAccountByRecoveryKeyHash(recoveryKeyHash []byte) (Account, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var id string
+	err := s.db.QueryRowContext(s.ctx,
+		"SELECT id FROM account WHERE recovery_key_hash = ?", hex.EncodeToString(recoveryKeyHash)).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Account{}, ErrNoAccount
+	}
+	if err != nil {
+		return Account{}, fmt.Errorf("读取账号: %w", err)
+	}
+	return s.getAccountLocked(s.db, id)
+}
+
+func (s *sqliteStore) CountAccounts() (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var count int
+	if err := s.db.QueryRowContext(s.ctx, "SELECT COUNT(*) FROM account").Scan(&count); err != nil {
+		return 0, fmt.Errorf("统计账号: %w", err)
+	}
+	return count, nil
+}
+
+func (s *sqliteStore) getAccountLocked(q querier, id string) (Account, error) {
 	var a Account
 	var hash, created string
 	err := q.QueryRowContext(s.ctx,
-		"SELECT id, recovery_key_hash, created_at, next_version FROM account").
+		"SELECT id, recovery_key_hash, created_at, next_version FROM account WHERE id = ?", id).
 		Scan(&a.ID, &hash, &created, &a.NextVersion)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Account{}, ErrNoAccount
@@ -341,12 +378,13 @@ func (s *sqliteStore) pushOneTx(tx *sql.Tx, accountID string, it PushItem) (Push
 		return rejectedPushResult(it, PushInvalidOperation), nil
 	}
 
-	current := Row{Table: it.Table, ID: it.ID}
+	current := Row{Table: it.Table, ID: it.ID, AccountID: accountID}
 	var currentSnapshot sql.NullString
 	err := tx.QueryRowContext(
 		s.ctx,
 		`SELECT updated_at_ms, device_id, version, deleted_at_ms, snapshot
-		 FROM row_state WHERE table_name = ? AND id = ?`,
+		 FROM row_state WHERE account_id = ? AND table_name = ? AND id = ?`,
+		accountID,
 		it.Table,
 		it.ID,
 	).Scan(
@@ -397,16 +435,16 @@ func (s *sqliteStore) pushOneTx(tx *sql.Tx, accountID string, it PushItem) (Push
 		return PushResult{}, fmt.Errorf("推进版本号: %w", err)
 	}
 	if _, err := tx.ExecContext(s.ctx,
-		`INSERT INTO row_state (table_name, id, snapshot, updated_at_ms, device_id, deleted_at_ms, version) VALUES (?, ?, ?, ?, ?, ?, ?)
-		 ON CONFLICT (table_name, id) DO UPDATE SET
+		`INSERT INTO row_state (account_id, table_name, id, snapshot, updated_at_ms, device_id, deleted_at_ms, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT (account_id, table_name, id) DO UPDATE SET
 			snapshot = excluded.snapshot, updated_at_ms = excluded.updated_at_ms,
 			device_id = excluded.device_id, deleted_at_ms = excluded.deleted_at_ms, version = excluded.version`,
-		it.Table, it.ID, snapshot, it.UpdatedAtMs, it.DeviceID, deletedAt, nextVersion); err != nil {
+		accountID, it.Table, it.ID, snapshot, it.UpdatedAtMs, it.DeviceID, deletedAt, nextVersion); err != nil {
 		return PushResult{}, fmt.Errorf("写入行状态: %w", err)
 	}
 	if _, err := tx.ExecContext(s.ctx,
-		`INSERT INTO change_log (version, table_name, id, operation, updated_at_ms, device_id, deleted, deleted_at_ms, snapshot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		nextVersion, it.Table, it.ID, op, it.UpdatedAtMs, it.DeviceID, boolInt(deleted), deletedAt, snapshot); err != nil {
+		`INSERT INTO change_log (account_id, version, table_name, id, operation, updated_at_ms, device_id, deleted, deleted_at_ms, snapshot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		accountID, nextVersion, it.Table, it.ID, op, it.UpdatedAtMs, it.DeviceID, boolInt(deleted), deletedAt, snapshot); err != nil {
 		return PushResult{}, fmt.Errorf("写入变更日志: %w", err)
 	}
 	return PushResult{
@@ -426,7 +464,7 @@ func (s *sqliteStore) Pull(accountID string, cursor int64, limit int) ([]Change,
 	}
 	rows, err := s.db.QueryContext(s.ctx,
 		`SELECT version, table_name, id, operation, updated_at_ms, device_id, deleted, deleted_at_ms, snapshot, data_version
-		 FROM change_log WHERE version > ? ORDER BY version LIMIT ?`, cursor, limit)
+		 FROM change_log WHERE account_id = ? AND version > ? ORDER BY version LIMIT ?`, accountID, cursor, limit)
 	if err != nil {
 		return nil, 0, fmt.Errorf("查询变更日志: %w", err)
 	}
@@ -443,6 +481,7 @@ func (s *sqliteStore) Pull(accountID string, cursor int64, limit int) ([]Change,
 			&deleted, &deletedAt, &snap, &ch.DataVersion); err != nil {
 			return nil, 0, fmt.Errorf("扫描变更日志: %w", err)
 		}
+		ch.AccountID = accountID
 		ch.Operation = Operation(op)
 		ch.Deleted = deleted != 0
 		ch.DeletedAtMs = deletedAt
@@ -469,7 +508,7 @@ func (s *sqliteStore) Rows(accountID, table string) ([]Row, error) {
 	}
 	rows, err := s.db.QueryContext(s.ctx,
 		`SELECT id, snapshot, updated_at_ms, device_id, deleted_at_ms, version, data_version
-		 FROM row_state WHERE table_name = ? AND deleted_at_ms = 0 ORDER BY id`, table)
+		 FROM row_state WHERE account_id = ? AND table_name = ? AND deleted_at_ms = 0 ORDER BY id`, accountID, table)
 	if err != nil {
 		return nil, fmt.Errorf("查询行状态: %w", err)
 	}
@@ -483,6 +522,7 @@ func (s *sqliteStore) Rows(accountID, table string) ([]Row, error) {
 			return nil, fmt.Errorf("扫描行状态: %w", err)
 		}
 		r.Table = table
+		r.AccountID = accountID
 		if snap.Valid && snap.String != "" {
 			r.Snapshot = json.RawMessage(snap.String)
 		}
@@ -509,17 +549,17 @@ func (s *sqliteStore) PutMedia(accountID, key, checksum, contentType string, siz
 		return ErrConflict
 	}
 	var previous string
-	if err := s.db.QueryRow("SELECT checksum FROM media_objects WHERE key = ?", key).Scan(&previous); err == nil && previous != checksum {
+	if err := s.db.QueryRow("SELECT checksum FROM media_objects WHERE account_id = ? AND key = ?", accountID, key).Scan(&previous); err == nil && previous != checksum {
 		return ErrConflict
 	} else if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
 	if _, err := s.db.ExecContext(s.ctx,
-		`INSERT INTO media_objects (key, checksum, size, content_type, created_at) VALUES (?, ?, ?, ?, ?)
-		 ON CONFLICT (key) DO UPDATE SET
+		`INSERT INTO media_objects (account_id, key, checksum, size, content_type, created_at) VALUES (?, ?, ?, ?, ?, ?)
+		 ON CONFLICT (account_id, key) DO UPDATE SET
 			checksum = excluded.checksum, size = excluded.size,
 			content_type = excluded.content_type, created_at = excluded.created_at`,
-		key, checksum, size, contentType, rfc3339(time.Now().UTC())); err != nil {
+		accountID, key, checksum, size, contentType, rfc3339(time.Now().UTC())); err != nil {
 		return fmt.Errorf("写入媒体索引: %w", err)
 	}
 	return nil
@@ -534,7 +574,7 @@ func (s *sqliteStore) GetMedia(accountID, key string) (MediaObject, error) {
 	var m MediaObject
 	var created string
 	err := s.db.QueryRowContext(s.ctx,
-		"SELECT key, checksum, size, content_type, created_at FROM media_objects WHERE key = ?", key).
+		"SELECT key, checksum, size, content_type, created_at FROM media_objects WHERE account_id = ? AND key = ?", accountID, key).
 		Scan(&m.Key, &m.Checksum, &m.Size, &m.ContentType, &created)
 	if errors.Is(err, sql.ErrNoRows) {
 		return MediaObject{}, ErrNotFound
@@ -542,6 +582,7 @@ func (s *sqliteStore) GetMedia(accountID, key string) (MediaObject, error) {
 	if err != nil {
 		return MediaObject{}, fmt.Errorf("读取媒体索引: %w", err)
 	}
+	m.AccountID = accountID
 	if m.CreatedAt, err = parseRFC3339(created); err != nil {
 		return MediaObject{}, fmt.Errorf("created_at 解析: %w", err)
 	}
@@ -556,13 +597,13 @@ func (s *sqliteStore) DeleteMedia(accountID, key string) error {
 	}
 	var references int
 	if err := s.db.QueryRow(`SELECT COUNT(*) FROM change_log, json_each(change_log.snapshot, '$._media') AS media
-		WHERE json_extract(media.value, '$.key') = ?`, key).Scan(&references); err != nil {
+		WHERE change_log.account_id = ? AND json_extract(media.value, '$.key') = ?`, accountID, key).Scan(&references); err != nil {
 		return err
 	}
 	if references > 0 {
 		return ErrConflict
 	}
-	res, err := s.db.ExecContext(s.ctx, "DELETE FROM media_objects WHERE key = ?", key)
+	res, err := s.db.ExecContext(s.ctx, "DELETE FROM media_objects WHERE account_id = ? AND key = ?", accountID, key)
 	if err != nil {
 		return fmt.Errorf("删除媒体索引: %w", err)
 	}
@@ -582,44 +623,46 @@ func (s *sqliteStore) Save() error { return nil }
 
 func (s *sqliteStore) Close() error { return s.db.Close() }
 
-// ExportSQL 把当前整库状态导出为可移植 SQL（含建表与全部数据）。
-func (s *sqliteStore) ExportSQL(w io.Writer) error {
+// ExportSQL 把指定账号的全部状态导出为可移植 SQL（含建表与全部数据）。
+// 多账号实例里各账号互不可见，因此导出必须以账号为界。
+func (s *sqliteStore) ExportSQL(w io.Writer, accountID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	d := dumpData{}
-	if acc, err := s.getAccountLocked(s.db); err == nil {
+	if acc, err := s.getAccountLocked(s.db, accountID); err == nil {
 		d.Account = &acc
 	} else if !errors.Is(err, ErrNoAccount) {
 		return err
 	}
-	if err := s.scanDevices(&d); err != nil {
+	if err := s.scanDevices(&d, accountID); err != nil {
 		return err
 	}
-	if err := s.scanRowState(&d); err != nil {
+	if err := s.scanRowState(&d, accountID); err != nil {
 		return err
 	}
-	if err := s.scanChangeLog(&d); err != nil {
+	if err := s.scanChangeLog(&d, accountID); err != nil {
 		return err
 	}
-	if err := s.scanMedia(&d); err != nil {
+	if err := s.scanMedia(&d, accountID); err != nil {
 		return err
 	}
 	if d.Account != nil {
-		state, err := s.syncStateLocked(d.Account.ID)
+		state, err := s.syncStateLocked(accountID)
 		if err != nil {
 			return err
 		}
 		d.Dataset = &state
 	}
-	if err := s.scanReceipts(&d); err != nil {
+	if err := s.scanReceipts(&d, accountID); err != nil {
 		return err
 	}
 	return writeSQLDump(w, d)
 }
 
-func (s *sqliteStore) scanDevices(d *dumpData) error {
-	rows, err := s.db.QueryContext(s.ctx, "SELECT "+deviceColumns+" FROM devices ORDER BY id")
+func (s *sqliteStore) scanDevices(d *dumpData, accountID string) error {
+	rows, err := s.db.QueryContext(s.ctx,
+		"SELECT "+deviceColumns+" FROM devices WHERE account_id = ? ORDER BY id", accountID)
 	if err != nil {
 		return fmt.Errorf("导出设备: %w", err)
 	}
@@ -634,15 +677,16 @@ func (s *sqliteStore) scanDevices(d *dumpData) error {
 	return rows.Err()
 }
 
-func (s *sqliteStore) scanRowState(d *dumpData) error {
+func (s *sqliteStore) scanRowState(d *dumpData, accountID string) error {
 	rows, err := s.db.QueryContext(s.ctx,
-		"SELECT table_name, id, snapshot, updated_at_ms, device_id, deleted_at_ms, version, data_version FROM row_state ORDER BY table_name, id")
+		`SELECT table_name, id, snapshot, updated_at_ms, device_id, deleted_at_ms, version, data_version
+		 FROM row_state WHERE account_id = ? ORDER BY table_name, id`, accountID)
 	if err != nil {
 		return fmt.Errorf("导出行状态: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var r Row
+		r := Row{AccountID: accountID}
 		var snap sql.NullString
 		if err := rows.Scan(&r.Table, &r.ID, &snap, &r.UpdatedAtMs, &r.DeviceID, &r.DeletedAtMs, &r.Version, &r.DataVersion); err != nil {
 			return fmt.Errorf("扫描行状态导出: %w", err)
@@ -655,16 +699,16 @@ func (s *sqliteStore) scanRowState(d *dumpData) error {
 	return rows.Err()
 }
 
-func (s *sqliteStore) scanChangeLog(d *dumpData) error {
+func (s *sqliteStore) scanChangeLog(d *dumpData, accountID string) error {
 	rows, err := s.db.QueryContext(s.ctx,
 		`SELECT version, table_name, id, operation, updated_at_ms, device_id, deleted, deleted_at_ms, snapshot, data_version
-		 FROM change_log ORDER BY version`)
+		 FROM change_log WHERE account_id = ? ORDER BY version`, accountID)
 	if err != nil {
 		return fmt.Errorf("导出变更日志: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var ch Change
+		ch := Change{AccountID: accountID}
 		var op string
 		var deleted int64
 		var snap sql.NullString
@@ -682,15 +726,15 @@ func (s *sqliteStore) scanChangeLog(d *dumpData) error {
 	return rows.Err()
 }
 
-func (s *sqliteStore) scanMedia(d *dumpData) error {
+func (s *sqliteStore) scanMedia(d *dumpData, accountID string) error {
 	rows, err := s.db.QueryContext(s.ctx,
-		"SELECT key, checksum, size, content_type, created_at FROM media_objects ORDER BY key")
+		"SELECT key, checksum, size, content_type, created_at FROM media_objects WHERE account_id = ? ORDER BY key", accountID)
 	if err != nil {
 		return fmt.Errorf("导出媒体索引: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var m MediaObject
+		m := MediaObject{AccountID: accountID}
 		var created string
 		if err := rows.Scan(&m.Key, &m.Checksum, &m.Size, &m.ContentType, &created); err != nil {
 			return fmt.Errorf("扫描媒体导出: %w", err)

@@ -1,4 +1,4 @@
-.PHONY: generate check-generated test backend decision-models-ios ios-build
+.PHONY: generate check-generated test backend backend-package decision-models-ios ios-build
 
 BLENDER ?= $(if $(wildcard /Applications/Blender.app/Contents/MacOS/Blender),/Applications/Blender.app/Contents/MacOS/Blender,blender)
 
@@ -23,6 +23,9 @@ backend: generate
 	mkdir -p dist/schema
 	python3 scripts/generate_sync_schema.py --output dist/schema
 	cd backend && go build -o ../dist/recoow-api ./cmd/api
+
+backend-package:
+	bash scripts/package-backend.sh
 
 # 更新共享模型后重新导出 iOS 资源；导出产物与源文件一同纳入 Git。
 decision-models-ios:

@@ -45,7 +45,7 @@ nonisolated final class FullSyncRepository: @unchecked Sendable {
 
     func requireCurrent() throws {
         guard database.syncAccessToken != nil, isCurrent() else {
-            throw CloudAPIError.syncRejected("连接或本地数据库已改变，未应用旧同步任务")
+            throw CloudAPIError.syncRejected(AppLocalization.string("连接或本地数据库已改变，未应用旧同步任务"))
         }
     }
 
@@ -62,7 +62,7 @@ nonisolated final class FullSyncRepository: @unchecked Sendable {
                 VALUES (?, ?, ?, ?, ?)
                 """, arguments: [scope, connectionID, capabilities.accountId, capabilities.dataset.generation, capabilities.dataset.head])
             guard var target = try SyncTarget.fetchOne(db, sql: "SELECT * FROM sync_targets WHERE scope = ?", arguments: [scope]) else {
-                throw CloudAPIError.syncRejected("同步状态无法创建")
+                throw CloudAPIError.syncRejected(AppLocalization.string("同步状态无法创建"))
             }
             if target.receivedCursor > capabilities.dataset.head || target.receivedCursor < capabilities.dataset.minCursor {
                 try Self.reset(db: db, scope: scope, watermark: capabilities.dataset.head)
@@ -81,7 +81,7 @@ nonisolated final class FullSyncRepository: @unchecked Sendable {
     func target(scope: String) throws -> SyncTarget {
         try database.reader.read { db in
             guard let target = try SyncTarget.fetchOne(db, sql: "SELECT * FROM sync_targets WHERE scope = ?", arguments: [scope]) else {
-                throw CloudAPIError.syncRejected("同步状态已改变，请重新同步")
+                throw CloudAPIError.syncRejected(AppLocalization.string("同步状态已改变，请重新同步"))
             }
             return target
         }
@@ -173,7 +173,7 @@ nonisolated final class FullSyncRepository: @unchecked Sendable {
                     baseVersion = previous["server_version"]
                 }
                 guard let updatedAt = object["updated_at"] as? Int64, let deviceID = object["device_id"] as? String else {
-                    throw CloudAPIError.syncRejected("本地 \(table)/\(entityID) 缺少同步元数据")
+                    throw CloudAPIError.syncRejected(AppLocalization.format("本地 %@/%@ 缺少同步元数据", table, entityID))
                 }
                 let item = CloudPushItem(table: table, id: entityID, operation: row["operation"], updatedAtMs: updatedAt,
                                          deviceID: deviceID, snapshot: object, mutationID: row["mutation_id"],
@@ -214,7 +214,7 @@ nonisolated final class FullSyncRepository: @unchecked Sendable {
                                        arguments: [SyncStatus.conflicted.rawValue, canonical.id])
                     }
                 } else {
-                    throw CloudAPIError.invalidResponse("v2 回执缺少权威快照")
+                    throw CloudAPIError.invalidResponse(AppLocalization.string("v2 回执缺少权威快照"))
                 }
             }
             try SyncAggregateProjection.refresh(db: db, scope: scope)
@@ -255,7 +255,7 @@ nonisolated final class FullSyncRepository: @unchecked Sendable {
 
     static func object(_ json: String) throws -> [String: Any] {
         guard let object = try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any] else {
-            throw CloudAPIError.invalidResponse("快照不是对象")
+            throw CloudAPIError.invalidResponse(AppLocalization.string("快照不是对象"))
         }
         return object
     }
@@ -271,7 +271,7 @@ nonisolated final class FullSyncRepository: @unchecked Sendable {
               let deviceID = object["deviceId"] as? String, let snapshot = object["snapshot"] as? [String: Any],
               let mutationID = object["mutationId"] as? String, let base = object["baseVersion"] as? Int64,
               let version = object["dataVersion"] as? Int else {
-            throw CloudAPIError.syncRejected("持久化的上传请求损坏")
+            throw CloudAPIError.syncRejected(AppLocalization.string("持久化的上传请求损坏"))
         }
         return CloudPushItem(table: table, id: id, operation: operation, updatedAtMs: timestamp, deviceID: deviceID,
                              snapshot: snapshot, mutationID: mutationID, baseVersion: base, dataVersion: version)

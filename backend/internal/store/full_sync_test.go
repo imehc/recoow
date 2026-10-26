@@ -380,7 +380,7 @@ func TestFullSyncReceiptsSurviveRestartAndExport(test *testing.T) {
 		test.Fatal("restart lost original receipt")
 	}
 	var dump bytes.Buffer
-	if err := storage.(SQLDumper).ExportSQL(&dump); err != nil {
+	if err := storage.(SQLDumper).ExportSQL(&dump, accountID); err != nil {
 		test.Fatal(err)
 	}
 	restored, err := NewSQLiteStore(test.TempDir())

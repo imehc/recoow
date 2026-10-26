@@ -45,7 +45,7 @@ nonisolated struct SyncEntityDefinition {
 
     func upgrade(_ snapshot: [String: Any], from version: Int) throws -> [String: Any] {
         guard version > 0, version <= self.version else {
-            throw CloudAPIError.invalidResponse("\(table) 契约版本 \(version) 不受支持，请更新客户端")
+            throw CloudAPIError.invalidResponse(AppLocalization.format("%@ 契约版本 %d 不受支持，请更新客户端", table, version))
         }
         var result = snapshot
         for field in fields where !field.binary && !field.derived {
@@ -53,11 +53,11 @@ nonisolated struct SyncEntityDefinition {
                 result[field.name] = try JSONSerialization.jsonObject(with: Data(defaultJSON.utf8), options: [.fragmentsAllowed])
             }
             guard let value = result[field.name] else {
-                if field.required { throw CloudAPIError.invalidResponse("\(table).\(field.name) 缺少必填值") }
+                if field.required { throw CloudAPIError.invalidResponse(AppLocalization.format("%@.%@ 缺少必填值", table, field.name)) }
                 continue
             }
             if value is NSNull {
-                guard field.nullable else { throw CloudAPIError.invalidResponse("\(table).\(field.name) 不可为空") }
+                guard field.nullable else { throw CloudAPIError.invalidResponse(AppLocalization.format("%@.%@ 不可为空", table, field.name)) }
                 continue
             }
             let valid: Bool
@@ -73,9 +73,9 @@ nonisolated struct SyncEntityDefinition {
             case .blob:
                 valid = false
             }
-            guard valid else { throw CloudAPIError.invalidResponse("\(table).\(field.name) 类型不正确") }
+            guard valid else { throw CloudAPIError.invalidResponse(AppLocalization.format("%@.%@ 类型不正确", table, field.name)) }
             if !field.enumValues.isEmpty, let text = value as? String, !field.enumValues.contains(text) {
-                throw CloudAPIError.invalidResponse("\(table).\(field.name) 枚举不受支持")
+                throw CloudAPIError.invalidResponse(AppLocalization.format("%@.%@ 枚举不受支持", table, field.name))
             }
             if field.jsonText, let text = value as? String {
                 _ = try JSONSerialization.jsonObject(with: Data(text.utf8), options: [.fragmentsAllowed])
@@ -91,7 +91,7 @@ extension SyncEntityCatalog {
 
     nonisolated static func entity(_ table: String) throws -> SyncEntityDefinition {
         guard let entity = entities.first(where: { $0.table == table }) else {
-            throw CloudAPIError.invalidResponse("未知同步实体 \(table)，数据已保留在 inbox")
+            throw CloudAPIError.invalidResponse(AppLocalization.format("未知同步实体 %@，数据已保留在 inbox", table))
         }
         return entity
     }

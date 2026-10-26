@@ -31,7 +31,7 @@ func fullSyncEnvironment(test *testing.T, registry *schema.Registry) (*testEnv, 
 	}
 	environment := &testEnv{handler: server.Handler(), st: storage}
 	token, _ := environment.initAccount(test)
-	account, _ := storage.GetAccount()
+	account, _ := storage.GetAccount(environment.accountID)
 	dataset, err := storage.SyncState(account.ID)
 	if err != nil {
 		test.Fatal(err)
@@ -159,7 +159,7 @@ func TestFullSyncGeneratedContractsAndAllEntities(test *testing.T) {
 			test.Fatal("contract dependency graph cannot be initialized")
 		}
 	}
-	account, _ := environment.st.GetAccount()
+	account, _ := environment.st.GetAccount(environment.accountID)
 	state, _ := environment.st.SyncState(account.ID)
 	seen := map[string]bool{}
 	after := int64(0)
@@ -288,7 +288,7 @@ func TestFullSyncRejectsUnsafeRequestsWithoutWrites(test *testing.T) {
 			}
 		})
 	}
-	account, _ := environment.st.GetAccount()
+	account, _ := environment.st.GetAccount(environment.accountID)
 	state, _ := environment.st.SyncState(account.ID)
 	if state != dataset {
 		test.Fatal("rejected request changed the dataset")

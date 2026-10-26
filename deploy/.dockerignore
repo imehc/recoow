@@ -1,0 +1,8 @@
+**
+!Dockerfile
+!recoow-api-linux-amd64
+!recoow-api-linux-arm64
+!schema/
+!schema/*.json
+**/._*
+**/.DS_Store

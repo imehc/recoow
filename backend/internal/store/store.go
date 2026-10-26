@@ -1,8 +1,9 @@
 // 包 store 定义持久化状态模型与仓储契约（recoow 云同步后端核心）。
 //
 // 设计刻意与具体数据库解耦：同步引擎只面向 Store 接口，本包提供单进程
-// SQLite 实现（纯 Go 驱动、单文件落库，适合个人自托管部署），内存实现
-// 供测试使用；未来如需多租户/中心化部署，可用 Postgres 适配器实现同一接口。
+// SQLite 实现（纯 Go 驱动、单文件落库，适合自托管部署），内存实现供测试
+// 使用。所有数据集以 account_id 分区，同一实例可承载多个互不可见的账号；
+// 未来如需中心化部署，可用 Postgres 适配器实现同一接口。
 package store
 
 import (
@@ -57,9 +58,11 @@ var ErrNotFound = errors.New("not found")
 var ErrConflict = errors.New("conflict")
 
 var (
-	ErrAccountExists = errors.New("account already exists")
-	ErrNoAccount     = errors.New("no account exists")
-	ErrDeviceExists  = errors.New("device already exists")
+	ErrAccountExists    = errors.New("account already exists")
+	ErrRecoveryKeyTaken = errors.New("recovery key already registered")
+	ErrNoAccount        = errors.New("no account exists")
+	ErrDeviceExists     = errors.New("device already exists")
+	ErrAccountQuota     = errors.New("account quota exceeded")
 )
 
 // Account 表示一份由多台设备共享的逻辑数据集。
@@ -126,7 +129,9 @@ type PushResult struct {
 }
 
 // Change 是账号级 changelog 中的一条记录（也是 pull 的数据来源）。
+// AccountID 只用于服务端内部隔离，不进入客户端契约。
 type Change struct {
+	AccountID   string          `json:"-"`
 	DataVersion int             `json:"dataVersion,omitempty"`
 	Version     int64           `json:"version"`
 	Table       string          `json:"table"`
@@ -139,8 +144,9 @@ type Change struct {
 	Snapshot    json.RawMessage `json:"snapshot,omitempty"`
 }
 
-// Row 表示 (table, id) 当前胜出的镜像行状态。
+// Row 表示 (account, table, id) 当前胜出的镜像行状态。
 type Row struct {
+	AccountID   string          `json:"-"`
 	DataVersion int             `json:"dataVersion,omitempty"`
 	Table       string          `json:"table"`
 	ID          string          `json:"id"`
@@ -153,6 +159,7 @@ type Row struct {
 
 // MediaObject 记录某账号下已存储的一段媒体。
 type MediaObject struct {
+	AccountID   string    `json:"-"`
 	Key         string    `json:"key"` // 账号内逻辑 key，如 media/<uuid>.<ext>
 	Checksum    string    `json:"checksum"`
 	Size        int64     `json:"size"`

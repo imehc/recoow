@@ -71,7 +71,7 @@ nonisolated struct RemoteRowUpdate: @unchecked Sendable {
 
     func decodeRecord<Record: Decodable>(_ type: Record.Type) throws -> Record {
         guard var object = snapshot, !isDeleted else {
-            throw CloudAPIError.invalidResponse("\(table)/\(id) 缺少存活行快照")
+            throw CloudAPIError.invalidResponse(AppLocalization.format("%@/%@ 缺少存活行快照", table, id))
         }
         object["id"] = id
         object["updated_at"] = updatedAtMs
@@ -83,7 +83,7 @@ nonisolated struct RemoteRowUpdate: @unchecked Sendable {
             let data = try JSONSerialization.data(withJSONObject: object)
             return try JSONDecoder().decode(type, from: data)
         } catch {
-            throw CloudAPIError.invalidResponse("\(table)/\(id) 无法解码：\(error.localizedDescription)")
+            throw CloudAPIError.invalidResponse(AppLocalization.format("%@/%@ 无法解码：%@", table, id, error.localizedDescription))
         }
     }
 }
@@ -194,7 +194,7 @@ final class ChangeLogRepository: @unchecked Sendable {
         try database.writer.write { db in
             for ack in acks {
                 guard allowedTables.contains(ack.table) else {
-                    throw CloudAPIError.invalidResponse("不支持确认实体 \(ack.table)")
+                    throw CloudAPIError.invalidResponse(AppLocalization.format("不支持确认实体 %@", ack.table))
                 }
                 if var canonicalRow = ack.canonicalRow {
                     canonicalRow.acknowledgedChangeLogID = ack.changeLogID
@@ -236,7 +236,7 @@ final class ChangeLogRepository: @unchecked Sendable {
             var appliedCount = 0
             for update in updates {
                 guard allowedTables.contains(update.table) else {
-                    throw CloudAPIError.invalidResponse("本客户端尚不支持实体 \(update.table)，已保留同步游标")
+                    throw CloudAPIError.invalidResponse(AppLocalization.format("本客户端尚不支持实体 %@，已保留同步游标", update.table))
                 }
                 if try applyRemote(db, update) { appliedCount += 1 }
             }
@@ -273,7 +273,7 @@ final class ChangeLogRepository: @unchecked Sendable {
                 """,
             arguments: [
                 SyncableTimestamp.nowMilliseconds(),
-                "服务端状态已确认或取代此变更（版本 \(serverVersion)）",
+                AppLocalization.format("服务端状态已确认或取代此变更（版本 %d）", serverVersion),
                 table, entityID
             ]
         )

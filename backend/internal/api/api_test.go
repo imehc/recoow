@@ -28,17 +28,22 @@ func testManifests() []schema.Manifest {
 }
 
 type testEnv struct {
-	handler http.Handler
-	st      store.Store
+	handler   http.Handler
+	st        store.Store
+	accountID string
 }
 
 func newEnv(t *testing.T) *testEnv {
+	t.Helper()
+	return newEnvWithConfig(t, config.Config{BootstrapToken: "bootstrap-secret"})
+}
+
+func newEnvWithConfig(t *testing.T, cfg config.Config) *testEnv {
 	t.Helper()
 	st, err := store.NewSQLiteStore(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg := config.Config{BootstrapToken: "bootstrap-secret"}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	reg, err := schema.NewFromManifests(testManifests())
 	if err != nil {
@@ -91,6 +96,7 @@ func (e *testEnv) initAccount(t *testing.T) (ownerToken, recoveryKey string) {
 		t.Fatalf("init status=%d body=%s", resp.Code, data)
 	}
 	out := decode[initResponse](t, data)
+	e.accountID = out.AccountID
 	return out.DeviceToken, out.RecoveryKey
 }
 
@@ -114,8 +120,14 @@ func TestFullSyncLifecycle(t *testing.T) {
 	if recoveryKey == "" || ownerToken == "" {
 		t.Fatal("expected recovery key + token")
 	}
-	if resp, _ := e.request(t, http.MethodPost, "/api/account/init", "", map[string]string{"bootstrapToken": "bootstrap-secret"}); resp.Code != http.StatusConflict {
-		t.Fatalf("expected 409 second init, got %d", resp.Code)
+	// 多账号：同一实例可以再注册一个账号，两个账号互不干扰。
+	resp2, secondData := e.request(t, http.MethodPost, "/api/account/init", "", map[string]string{"bootstrapToken": "bootstrap-secret"})
+	if resp2.Code != http.StatusCreated {
+		t.Fatalf("expected 201 second init, got %d %s", resp2.Code, secondData)
+	}
+	second := decode[initResponse](t, secondData)
+	if second.AccountID == "" || second.AccountID == e.accountID {
+		t.Fatalf("expected a distinct account, got %q vs %q", second.AccountID, e.accountID)
 	}
 
 	_, data := e.request(t, http.MethodGet, "/api/devices", ownerToken, nil)

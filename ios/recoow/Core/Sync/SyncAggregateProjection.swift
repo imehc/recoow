@@ -22,7 +22,7 @@ nonisolated enum SyncAggregateProjection {
             )
             """, arguments: [scope, scope])
         if try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM stored_value_accounts WHERE typeof(balance_cents) != 'integer'") != 0 {
-            throw DatabaseError(message: "储值余额超出整数范围，未保存修改")
+            throw DatabaseError(message: AppLocalization.string("储值余额超出整数范围，未保存修改"))
         }
     }
 

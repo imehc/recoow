@@ -87,7 +87,7 @@ func Load(dir string) (*Registry, error) {
 	}
 	var files []string
 	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+		if e.IsDir() || strings.HasPrefix(e.Name(), "._") || !strings.HasSuffix(e.Name(), ".json") {
 			continue
 		}
 		files = append(files, filepath.Join(dir, e.Name()))

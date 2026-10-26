@@ -47,6 +47,7 @@ const deviceKey ctxKey = 0
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/account/init", s.handleInitAccount)
+	mux.HandleFunc("POST /api/account/recover", s.handleRecover)
 	mux.HandleFunc("POST /api/auth/pair", s.handlePair)
 
 	mux.Handle("GET /api/devices", s.authRequired(http.HandlerFunc(s.handleListDevices)))

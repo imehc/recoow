@@ -108,15 +108,15 @@ nonisolated enum CloudAPIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidURL:
-            return "服务器地址无效"
+            return AppLocalization.string("服务器地址无效")
         case .unconfigured:
-            return "尚未配置服务器或设备令牌"
+            return AppLocalization.string("尚未配置服务器或设备令牌")
         case .badStatus(let code, let message):
-            return "服务器返回 \(code)（\(message)）"
+            return AppLocalization.format("服务器返回 %d（%@）", code, message)
         case .transport(let detail):
-            return "网络错误：\(detail)"
+            return AppLocalization.format("网络错误：%@", detail)
         case .invalidResponse(let detail):
-            return "同步响应无效：\(detail)"
+            return AppLocalization.format("同步响应无效：%@", detail)
         case .syncRejected(let detail):
             return detail
         }
@@ -151,6 +151,19 @@ final class RecoowAPIClient: @unchecked Sendable {
     func initializeAccount() async throws -> CloudInitResponse {
         let body = try JSONSerialization.data(withJSONObject: [String: Any]())
         let data = try await send(path: "/api/account/init", method: "POST", body: body, auth: false)
+        return try decode(data)
+    }
+
+    /// 用恢复密钥把账号重新绑到本机（换机、重装或丢失绑定后找回）。
+    /// 服务端只校验密钥哈希，因此这条路径不受 RECOOW_MAX_ACCOUNTS 限制。
+    /// 密钥是 base64url 编码，原样透传（不调整大小写、不去除任何字符）。
+    func recover(recoveryKey: String, deviceName: String? = nil) async throws -> CloudPairResponse {
+        let payload: [String: Any] = [
+            "recoveryKey": recoveryKey.trimmingCharacters(in: .whitespacesAndNewlines),
+            "deviceName": deviceName ?? self.deviceName,
+        ]
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        let data = try await send(path: "/api/account/recover", method: "POST", body: body, auth: false)
         return try decode(data)
     }
 
@@ -203,7 +216,7 @@ final class RecoowAPIClient: @unchecked Sendable {
             throw CloudAPIError.transport(error.localizedDescription)
         }
         guard let http = response as? HTTPURLResponse else {
-            throw CloudAPIError.transport("无效的服务器响应")
+            throw CloudAPIError.transport(AppLocalization.string("无效的服务器响应"))
         }
         guard (200..<300).contains(http.statusCode) else {
             throw CloudAPIError.badStatus(http.statusCode, Self.errorMessage(from: data))
@@ -258,7 +271,7 @@ final class RecoowAPIClient: @unchecked Sendable {
         do {
             let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse else {
-                throw CloudAPIError.transport("无效的服务器响应")
+                throw CloudAPIError.transport(AppLocalization.string("无效的服务器响应"))
             }
             guard (200..<300).contains(http.statusCode) else {
                 let message = Self.errorMessage(from: data)
@@ -306,7 +319,7 @@ final class RecoowAPIClient: @unchecked Sendable {
         guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let message = object["error"] as? String
         else {
-            return "未知错误"
+            return AppLocalization.string("未知错误")
         }
         return message
     }
@@ -318,6 +331,6 @@ final class RecoowAPIClient: @unchecked Sendable {
             return name
         }
         #endif
-        return "iOS 设备"
+        return AppLocalization.string("iOS 设备")
     }
 }

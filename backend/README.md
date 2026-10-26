@@ -1,8 +1,11 @@
 # recoow 云同步后端（backend）
 
-个人多设备同步的 Go 后端，提供账号配对、全量快照、增量同步、修订冲突回执和媒体传输。
+Go 后端，提供账号配对、全量快照、增量同步、修订冲突回执和媒体传输。
 账号、设备、行快照、变更日志、回执和媒体索引使用 **SQLite**（纯 Go 驱动，无 CGO）；
-媒体字节单独按内容寻址存储。服务按单账号、多设备部署。
+媒体字节单独按内容寻址存储。
+
+**单实例支持多账号**：所有数据集按 `account_id` 分区，账号之间的行、变更日志、
+版本号空间、媒体索引与导出完全隔离；每个账号下仍可绑定多台设备。
 
 ## 生成、测试与构建
 
@@ -38,12 +41,15 @@ backend/
 - 数据库文件：`<RECOOW_DATA>/recoow.db`（SQLite，WAL 模式，随启动自动建表）。
 - 媒体字节：`<RECOOW_DATA>/media/<account>/<checksum>`，按内容寻址、可被多个 key 共享。
 - 升级存储结构前自动备份已有数据库到 `<RECOOW_DATA>/backups/`；备份失败则停止升级。
-- SQL 导出包含修订日志与回执，**不包含媒体文件**；完整备份还须保存 `media/` 目录。
+- 旧单账号库（`user_version=3`）首次启动会自动升级为多账号结构：三张数据集表重建、
+  现有数据回填到原账号，升级前自动落一份备份。
+- SQL 导出**只导出当前设备所属账号**，包含修订日志与回执，**不包含媒体文件**；
+  完整备份还须保存 `media/` 目录。
 - 不要直接删除墓碑、变更历史或仍被引用的媒体；它们用于离线设备恢复和冲突处理。
 - 恢复时停止服务，使用新目录，保留原数据目录以便回滚。SQL 回放目标为 SQLite：
 
 ```bash
-# 导出（设备 token 鉴权）
+# 导出（设备 token 鉴权，只含该账号）
 curl -s -o recoow-backup.sql "localhost:8080/api/export/sql" -H "authorization: Bearer $TOKEN"
 
 # 导入到全新目录，并另外恢复 media/ 到该目录
@@ -52,10 +58,14 @@ sqlite3 restored-data/recoow.db < recoow-backup.sql
 
 # 回退旧快照或替换数据集时更换世代，避免复用设备已经见过的版本号
 sqlite3 restored-data/recoow.db \
-  "UPDATE sync_metadata SET generation = lower(hex(randomblob(16))), min_cursor = 0 WHERE id = 1;"
+  "UPDATE sync_metadata SET generation = lower(hex(randomblob(16))), min_cursor = 0 WHERE account_id = '<账号 id>';"
 ```
 
 ## 运行
+
+生产打包、普通 Linux/systemd 部署、Docker 部署和完整实例导出迁移见 `deploy/README.md`。
+开发电脑执行 `bash scripts/package-backend.sh` 生成双架构运行包；运行包内的 `run.sh` 无需 Docker。
+`export.sh` 导出 SQLite/WAL、全部媒体及运行程序，适合整实例搬迁；下文 `/api/export/sql` 仅导出当前账号 SQL，不能代替整实例备份。
 
 ```bash
 # 仓库根目录
@@ -81,14 +91,20 @@ RECOOW_BOOTSTRAP_TOKEN='设置一个随机引导密钥' ./dist/recoow-api
 | `RECOOW_LISTEN` | `:8080` | 监听地址 |
 | `RECOOW_DATA` | `./data` | 数据目录：SQLite 库 `recoow.db` 与媒体 `media/` 落盘于此 |
 | `RECOOW_SCHEMA` | `../schema` | 字段清单目录 |
-| `RECOOW_BOOTSTRAP_TOKEN` | 空 | 若设置，初始化账号必须携带 |
+| `RECOOW_BOOTSTRAP_TOKEN` | 空 | 若设置，注册新账号必须携带（多账号场景的注册闸门） |
+| `RECOOW_MAX_ACCOUNTS` | `0` | 账号数量上限；`0` 表示不限制，超出时 `/api/account/init` 返回 403 |
 | `RECOOW_PAIRING_TTL` | `300` | 配对码有效期（秒） |
 | `RECOOW_CORS_ORIGINS` | 空 | 允许跨源访问 /api 的来源，逗号分隔；生产环境使用明确的来源地址 |
 | `RECOOW_TLS_CERT` / `RECOOW_TLS_KEY` | 空 | 提供即启用 HTTPS |
 
+对外开放注册时务必设置 `RECOOW_BOOTSTRAP_TOKEN` 或 `RECOOW_MAX_ACCOUNTS`，
+否则任何人都能在你的服务器上创建账号并占用磁盘。
+
 ## iOS 使用
 
 在设置的“云同步”中填写服务器地址并初始化或配对账号，然后启用“全量双向同步”并执行“立即同步”。
+初始化后可用恢复密钥走“找回账号”（`POST /api/account/recover`）把账号重新绑到新设备，
+该路径只校验密钥哈希，不受 `RECOOW_MAX_ACCOUNTS` 限制；密钥明文只在初始化响应中出现一次。
 开关按服务器与账号保存，默认关闭；升级不会自动开启同步。首次连接新数据集前自动保存本地完整备份，
 备份失败不会继续同步。仍建议升级前主动导出一份备份到 App 之外。
 
@@ -105,28 +121,32 @@ Web 等客户端可读取 `/api/schema` 获取契约，通过相同的同步接�
 
 | 方法与路径 | 鉴权 | 说明 |
 | --- | --- | --- |
-| `POST /api/account/init` | 引导 token | 初始化单账号，返回恢复密钥（仅一次）与主设备 token |
+| `POST /api/account/init` | 引导 token | 注册一个**新**账号，返回账号 id、恢复密钥（仅一次）与主设备 token |
+| `POST /api/account/recover` | 无 | 用恢复密钥把账号找回（换机/重装），签发新的主设备 token |
 | `POST /api/devices/pairing-code` | 主设备 | 生成一次性配对码 |
 | `POST /api/auth/pair` | 无 | 用配对码注册新设备，换取设备 token |
-| `GET/DELETE /api/devices...` | 设备 token | 设备列表 / 吊销 |
+| `GET/DELETE /api/devices...` | 设备 token | 设备列表 / 吊销（仅限本账号） |
 | `GET /api/schema` | 设备 token | 下发字段清单（含版本号），前端据此动态渲染 |
 | `GET /api/sync/capabilities` | 设备 token | 协议版本、契约版本、数据集世代和快照水位 |
 | `GET /api/sync/bootstrap?generation=&watermark=&after=&limit=` | 设备 token | 固定水位的全量分页快照，包含墓碑 |
 | `POST /api/sync/push` | 设备 token | 批量修订检查与幂等回执；冲突返回当前快照 |
 | `GET /api/sync/pull?generation=&cursor=&limit=` | 设备 token | 按游标增量拉取 |
 | `GET /api/rows/{table}` | 设备 token | 某张表的存活行（后台浏览） |
-| `GET /api/export` | 设备 token | 全量结构化导出 |
-| `GET /api/export/sql` | 设备 token | 整库 SQL 导出（DDL+INSERT，可回放重建/迁库） |
+| `GET /api/export` | 设备 token | 本账号全量结构化导出 |
+| `GET /api/export/sql` | 设备 token | 本账号 SQL 导出（DDL+INSERT，可回放重建/迁库） |
 | `PUT/GET/HEAD/DELETE /api/media/objects/{key}` | 设备 token | 媒体上传/下载/删除（按 checksum 去重） |
+
+除 `POST /api/account/init`、`POST /api/account/recover`、`POST /api/auth/pair` 外，
+所有接口都按 token 解析出的账号隔离；请求里没有、也不需要传 `account_id`。
 
 ## 一键引导（curl 示例）
 
 ```bash
-# 1) 初始化账号（主设备）
+# 1) 注册账号（主设备）
 curl -s -X POST localhost:8080/api/account/init \
   -H 'content-type: application/json' \
   -d '{"bootstrapToken":"<你的引导token>"}'
-# 返回 recoveryKey（请离线保存）与 deviceToken（记为 $OWNER）
+# 返回 accountId、recoveryKey（请离线保存）与 deviceToken（记为 $OWNER）
 
 # 2) 主设备生成配对码
 curl -s -X POST localhost:8080/api/devices/pairing-code \
@@ -136,6 +156,11 @@ curl -s -X POST localhost:8080/api/devices/pairing-code \
 curl -s -X POST localhost:8080/api/auth/pair \
   -H 'content-type: application/json' \
   -d '{"code":"<配对码>","deviceName":"iPad"}'
+
+# 3') 换机或重装：用恢复密钥直接找回账号，签发新的主设备 token
+curl -s -X POST localhost:8080/api/account/recover \
+  -H 'content-type: application/json' \
+  -d '{"recoveryKey":"<离线保存的恢复密钥>","deviceName":"新手机"}'
 
 # 4) 获取世代和契约，将 dataset.generation 记为 $GENERATION
 curl -s localhost:8080/api/sync/capabilities -H "authorization: Bearer $TOKEN"

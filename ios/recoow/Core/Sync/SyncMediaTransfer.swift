@@ -22,7 +22,7 @@ nonisolated struct SyncMediaReference: Codable, Sendable {
               let size = object["size"] as? Int64, let contentType = object["contentType"] as? String,
               checksum.count == 64, checksum.allSatisfy({ $0.isHexDigit && !$0.isUppercase }),
               key == "sync/" + checksum, size >= 0, size <= 200 * 1024 * 1024 else {
-            throw CloudAPIError.invalidResponse("媒体引用无效")
+            throw CloudAPIError.invalidResponse(AppLocalization.string("媒体引用无效"))
         }
         self.key = key
         self.checksum = checksum
@@ -32,7 +32,7 @@ nonisolated struct SyncMediaReference: Codable, Sendable {
 
     func verify(_ data: Data) throws {
         guard data.count == size, SyncMediaTransfer.checksum(data) == checksum else {
-            throw CloudAPIError.syncRejected("媒体完整性校验失败：\(key)")
+            throw CloudAPIError.syncRejected(AppLocalization.format("媒体完整性校验失败：%@", key))
         }
     }
 }
@@ -55,7 +55,7 @@ nonisolated final class SyncMediaTransfer: @unchecked Sendable {
         for field in entity.fields where field.binary {
             if let encoded = object[field.name] as? String, let bytes = Data(base64Encoded: encoded), !bytes.isEmpty, !deleted {
                 let reference = SyncMediaReference(data: bytes, contentType: contentType)
-                guard bytes.count <= 200 * 1024 * 1024 else { throw CloudAPIError.syncRejected("媒体超过 200 MiB") }
+                guard bytes.count <= 200 * 1024 * 1024 else { throw CloudAPIError.syncRejected(AppLocalization.string("媒体超过 200 MiB")) }
                 try MediaAssetObjectStore.shared.write(bytes, storageKey: reference.key)
                 references[field.name] = reference.object
             } else if object[field.name] == nil || object[field.name] is NSNull || object[field.name] as? String == "" {
@@ -66,11 +66,11 @@ nonisolated final class SyncMediaTransfer: @unchecked Sendable {
         if table == "media_assets", !deleted {
             guard let storageKey = object["storage_key"] as? String,
                   let bytes = MediaAssetObjectStore.shared.data(for: storageKey) else {
-                throw CloudAPIError.syncRejected("素材文件缺失，无法生成完整备份")
+                throw CloudAPIError.syncRejected(AppLocalization.string("素材文件缺失，无法生成完整备份"))
             }
             let reference = SyncMediaReference(data: bytes, contentType: contentType)
             guard object["checksum"] as? String == reference.checksum, object["byte_count"] as? Int64 == reference.size else {
-                throw CloudAPIError.syncRejected("素材元数据与实际文件不一致")
+                throw CloudAPIError.syncRejected(AppLocalization.string("素材元数据与实际文件不一致"))
             }
             try MediaAssetObjectStore.shared.write(bytes, storageKey: reference.key)
             references["object"] = reference.object
@@ -102,7 +102,7 @@ nonisolated final class SyncMediaTransfer: @unchecked Sendable {
         guard let references = snapshot["_media"] as? [String: Any] else { return }
         for (field, raw) in references {
             guard entity.fields.contains(where: { $0.name == field && $0.binary }) || (field == "object" && table == "media_assets") else {
-                throw CloudAPIError.invalidResponse("未知媒体字段 \(table).\(field)")
+                throw CloudAPIError.invalidResponse(AppLocalization.format("未知媒体字段 %@.%@", table, field))
             }
             if raw is NSNull {
                 if direction == "download", field != "object" {
@@ -111,7 +111,7 @@ nonisolated final class SyncMediaTransfer: @unchecked Sendable {
                 }
                 continue
             }
-            guard let object = raw as? [String: Any] else { throw CloudAPIError.invalidResponse("媒体描述格式错误") }
+            guard let object = raw as? [String: Any] else { throw CloudAPIError.invalidResponse(AppLocalization.string("媒体描述格式错误")) }
             let reference = try SyncMediaReference(object: object)
             let storageKey = field == "object" ? snapshot["storage_key"] as? String : nil
             try db.execute(sql: """
@@ -134,14 +134,16 @@ nonisolated final class SyncMediaTransfer: @unchecked Sendable {
         try SyncRowApplier.queueNotification(db: db, table: table, id: id, version: SyncableTimestamp.nowMilliseconds())
     }
 
-    func transfer(scope: String, direction: String, api: RecoowAPIClient, isCurrent: @escaping @Sendable () -> Bool) async throws -> Int {
+    func transfer(scope: String, direction: String, api: RecoowAPIClient, isCurrent: @escaping @Sendable () -> Bool,
+                  onProgress: (@Sendable (Int, Int) async -> Void)? = nil) async throws -> Int {
         let jobs = try await database.reader.read { db in
             try Row.fetchAll(db, sql: "SELECT * FROM sync_media_jobs WHERE scope = ? AND direction = ? AND state = 'pending' ORDER BY id",
                              arguments: [scope, direction])
         }
         var count = 0
+        var handled = 0
         for job in jobs {
-            guard isCurrent() else { throw CloudAPIError.syncRejected("连接已改变，已停止媒体传输") }
+            guard isCurrent() else { throw CloudAPIError.syncRejected(AppLocalization.string("连接已改变，已停止媒体传输")) }
             let identifier: Int64 = job["id"]
             let table: String = job["table_name"]
             let entityID: String = job["entity_id"]
@@ -152,7 +154,7 @@ nonisolated final class SyncMediaTransfer: @unchecked Sendable {
                 let bytes: Data
                 if direction == "upload" {
                     guard let data = MediaAssetObjectStore.shared.data(for: reference.key) else {
-                        throw CloudAPIError.syncRejected("待上传媒体文件缺失：\(reference.key)")
+                        throw CloudAPIError.syncRejected(AppLocalization.format("待上传媒体文件缺失：%@", reference.key))
                     }
                     try reference.verify(data)
                     try await api.uploadMedia(data, reference: reference)
@@ -164,9 +166,9 @@ nonisolated final class SyncMediaTransfer: @unchecked Sendable {
                     try reference.verify(bytes)
                     try MediaAssetObjectStore.shared.write(bytes, storageKey: reference.key)
                 }
-                guard isCurrent() else { throw CloudAPIError.syncRejected("连接已改变，保留媒体任务等待下次同步") }
+                guard isCurrent() else { throw CloudAPIError.syncRejected(AppLocalization.string("连接已改变，保留媒体任务等待下次同步")) }
                 try await database.writer.write { db in
-                    guard isCurrent() else { throw CloudAPIError.syncRejected("连接或本地数据库已改变，未写入媒体") }
+                    guard isCurrent() else { throw CloudAPIError.syncRejected(AppLocalization.string("连接或本地数据库已改变，未写入媒体")) }
                     if direction == "download", let shadow = try FullSyncRepository.shadow(db: db, scope: scope, table: table, id: entityID),
                        !shadow.isDeleted,
                        let current = (shadow.snapshot?["_media"] as? [String: Any])?[field] as? [String: Any],
@@ -188,6 +190,10 @@ nonisolated final class SyncMediaTransfer: @unchecked Sendable {
                         """, arguments: [SyncableTimestamp.nowMilliseconds() + 2000, error.localizedDescription, identifier])
                 }
                 throw error
+            }
+            handled += 1
+            if let onProgress {
+                await onProgress(handled, jobs.count)
             }
         }
         return count

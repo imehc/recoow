@@ -10,6 +10,7 @@ final class AppContainer {
     @ObservationIgnored let deviceIdentifier: DeviceIdentifier
     @ObservationIgnored let changeLogRepository: ChangeLogRepository
     @ObservationIgnored let cloudSyncConfig: RecoowSyncConfig
+    @ObservationIgnored let syncProgress: SyncProgressStore
     @ObservationIgnored let locationService: LocationService
     @ObservationIgnored let trackRepository: TrackRepository
     @ObservationIgnored let decisionRepository: DecisionRepository
@@ -42,6 +43,7 @@ final class AppContainer {
         deviceIdentifier: DeviceIdentifier,
         changeLogRepository: ChangeLogRepository,
         cloudSyncConfig: RecoowSyncConfig,
+        syncProgress: SyncProgressStore,
         locationService: LocationService,
         trackRepository: TrackRepository,
         decisionRepository: DecisionRepository,
@@ -67,6 +69,7 @@ final class AppContainer {
         self.deviceIdentifier = deviceIdentifier
         self.changeLogRepository = changeLogRepository
         self.cloudSyncConfig = cloudSyncConfig
+        self.syncProgress = syncProgress
         self.locationService = locationService
         self.trackRepository = trackRepository
         self.decisionRepository = decisionRepository
@@ -236,11 +239,13 @@ final class AppContainer {
         )
 
         let notificationScheduler = LocalNotificationScheduler()
+        let syncProgress = SyncProgressStore()
         let syncEngine: any SyncEngine = RemoteSyncEngine(
             database: database,
             config: cloudSyncConfig,
             api: cloudSyncAPI,
-            scheduler: notificationScheduler
+            scheduler: notificationScheduler,
+            progress: syncProgress
         )
         let mediaAssetRepository = MediaAssetRepository(
             database: database,
@@ -286,6 +291,7 @@ final class AppContainer {
             deviceIdentifier: deviceIdentifier,
             changeLogRepository: changeLogRepository,
             cloudSyncConfig: cloudSyncConfig,
+            syncProgress: syncProgress,
             locationService: locationService,
             trackRepository: trackRepository,
             decisionRepository: decisionRepository,

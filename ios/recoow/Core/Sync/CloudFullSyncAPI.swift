@@ -16,16 +16,16 @@ nonisolated struct CloudCapabilities: Decodable, Sendable {
     func validate(accountID: String) throws {
         guard protocolVersion == 2, accountId == accountID, !dataset.generation.isEmpty,
               dataset.head >= dataset.minCursor, dataset.minCursor >= 0 else {
-            throw CloudAPIError.syncRejected("服务端协议或账号不匹配，请先升级后端")
+            throw CloudAPIError.syncRejected(AppLocalization.string("服务端协议或账号不匹配，请先升级后端"))
         }
         for (table, version) in SyncEntityCatalog.contracts {
             guard contracts[table] == version else {
-                throw CloudAPIError.syncRejected("\(table) 数据契约不匹配，请更新客户端或后端")
+                throw CloudAPIError.syncRejected(AppLocalization.format("%@ 数据契约不匹配，请更新客户端或后端", table))
             }
         }
         guard Set(contracts.keys) == SyncEntityCatalog.tables,
               Set(["revision", "receipts", "bootstrap", "media", "unknown_fields", "projections"]).isSubset(of: Set(features)) else {
-            throw CloudAPIError.syncRejected("全量实体或协议能力不匹配，已停止同步以保护数据")
+            throw CloudAPIError.syncRejected(AppLocalization.string("全量实体或协议能力不匹配，已停止同步以保护数据"))
         }
     }
 }
@@ -54,7 +54,7 @@ extension RecoowAPIClient {
         guard let object = try JSONSerialization.jsonObject(with: response) as? [String: Any],
               object["checksum"] as? String == reference.checksum,
               object["size"] as? Int64 == reference.size else {
-            throw CloudAPIError.invalidResponse("媒体上传确认不匹配")
+            throw CloudAPIError.invalidResponse(AppLocalization.string("媒体上传确认不匹配"))
         }
     }
 

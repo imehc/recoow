@@ -1,0 +1,44 @@
+services:
+  recoow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: ${RECOOW_BASE_IMAGE:-alpine:3.24}
+    image: recoow-backend:latest
+    container_name: recoow
+    restart: unless-stopped
+    stop_grace_period: 30s
+    ports:
+      - "${RECOOW_BIND:-0.0.0.0}:${RECOOW_PORT:-8080}:8080"
+    environment:
+      RECOOW_LISTEN: 0.0.0.0:8080
+      RECOOW_DATA: /data
+      RECOOW_SCHEMA: /app/schema
+      # 注意：当前 iOS 客户端初始化时不发送该字段，设置后 App 内将无法注册。
+      # 仅自己使用时保持为空。
+      RECOOW_BOOTSTRAP_TOKEN: ${RECOOW_BOOTSTRAP_TOKEN:-}
+      RECOOW_MAX_ACCOUNTS: ${RECOOW_MAX_ACCOUNTS:-1}
+      RECOOW_PAIRING_TTL: ${RECOOW_PAIRING_TTL:-300}
+      RECOOW_CORS_ORIGINS: ${RECOOW_CORS_ORIGINS:-}
+      TZ: Asia/Shanghai
+    volumes:
+      # 命名卷：Docker 会自动继承镜像内 /data 的属主，无需手动 chown。
+      # 若想直接访问数据文件便于 tar 备份，改成下面注释里的 bind mount，
+      # 并先执行：mkdir -p ./data && sudo chown -R 10001:10001 ./data
+      - recoow-data:/data
+      # - ./data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -S -O /dev/null http://127.0.0.1:8080/api/schema 2>&1 | grep -Eq '^[[:space:]]*HTTP/[0-9.]+ 401([[:space:]]|$)'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  recoow-data:

@@ -38,25 +38,50 @@ func NewManager(st store.Store, ttl time.Duration) *Manager {
 	return &Manager{st: st, pairings: map[[32]byte]*pairingRequest{}, ttl: ttl}
 }
 
-// InitAccount 引导（单）账号，返回主设备的恢复密钥与设备令牌。恢复密钥只返回一次。
-func (m *Manager) InitAccount() (recoveryKey, token, deviceID string, err error) {
+// InitAccount 新建一个账号，返回账号 id、主设备的恢复密钥与设备令牌。
+// 恢复密钥只返回一次，服务端只保留其哈希。
+func (m *Manager) InitAccount() (accountID, recoveryKey, token, deviceID string, err error) {
 	recoveryKey, err = NewRecoveryKey()
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", "", err
+	}
+	token, err = NewDeviceToken()
+	if err != nil {
+		return "", "", "", "", err
+	}
+	acc, err := m.st.InitAccount(sha256sum(recoveryKey))
+	if err != nil {
+		return "", "", "", "", err
+	}
+	dev, err := m.st.CreateDevice(acc.ID, "本机（主设备）", HashToken(token), true)
+	if err != nil {
+		return "", "", "", "", err
+	}
+	return acc.ID, recoveryKey, token, dev.ID, nil
+}
+
+// Recover 用恢复密钥重建一台主设备：换机或重装后凭密钥把账号找回。
+// 恢复密钥即账号凭据，因此这里只校验其哈希、不再回传明文。
+func (m *Manager) Recover(recoveryKey, deviceName string) (accountID, token, deviceID string, err error) {
+	if recoveryKey == "" {
+		return "", "", "", ErrUnauthorized
+	}
+	acc, err := m.st.GetAccountByRecoveryKeyHash(sha256sum(recoveryKey))
+	if err != nil {
+		return "", "", "", ErrUnauthorized
 	}
 	token, err = NewDeviceToken()
 	if err != nil {
 		return "", "", "", err
 	}
-	acc, err := m.st.InitAccount(sha256sum(recoveryKey))
+	if deviceName == "" {
+		deviceName = "本机（主设备）"
+	}
+	dev, err := m.st.CreateDevice(acc.ID, deviceName, HashToken(token), true)
 	if err != nil {
 		return "", "", "", err
 	}
-	dev, err := m.st.CreateDevice(acc.ID, "本机（主设备）", HashToken(token), true)
-	if err != nil {
-		return "", "", "", err
-	}
-	return recoveryKey, token, dev.ID, nil
+	return acc.ID, token, dev.ID, nil
 }
 
 // IssuePairingCode 为待加入的新设备生成一条短期一次性配对码。

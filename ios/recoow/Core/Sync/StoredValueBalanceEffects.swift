@@ -10,7 +10,7 @@ nonisolated enum StoredValueBalanceEffects {
         let result = (effects[accountID] ?? 0).addingReportingOverflow(amount)
         guard !result.overflow else {
             throw NSError(domain: "StoredValueBalanceEffects", code: 1,
-                          userInfo: [NSLocalizedDescriptionKey: "储值余额超出范围，未保存修改"])
+                          userInfo: [NSLocalizedDescriptionKey: AppLocalization.string("储值余额超出范围，未保存修改")])
         }
         effects[accountID] = result.partialValue == 0 ? nil : result.partialValue
     }

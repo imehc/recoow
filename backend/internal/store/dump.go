@@ -11,21 +11,23 @@ import (
 	"time"
 )
 
-// SQLDumper 是能把自身全部状态导出为 SQL 语句流的存储实现。
+// SQLDumper 是能把某个账号的全部状态导出为 SQL 语句流的存储实现。
 // SQLite 与内存实现共用同一份渲染逻辑，保证导出格式稳定。
 type SQLDumper interface {
-	ExportSQL(w io.Writer) error
+	ExportSQL(w io.Writer, accountID string) error
 }
 
 // ddlStatements 描述存储结构（account/devices/row_state/change_log/media_objects）。
 // 运行时建表与 SQL 导出共用同一份 DDL，避免两处漂移。
+// 所有数据集表以 account_id 作分区键，同一实例可承载多个互不可见的账号。
 var ddlStatements = []string{
 	`CREATE TABLE IF NOT EXISTS account (
 		id                TEXT PRIMARY KEY,
-		recovery_key_hash TEXT NOT NULL,
+		recovery_key_hash TEXT NOT NULL UNIQUE,
 		created_at        TEXT NOT NULL,
 		next_version      INTEGER NOT NULL
 	)`,
+	`CREATE UNIQUE INDEX IF NOT EXISTS idx_account_recovery ON account (recovery_key_hash)`,
 	`CREATE TABLE IF NOT EXISTS devices (
 		id           TEXT PRIMARY KEY,
 		account_id   TEXT NOT NULL,
@@ -36,6 +38,7 @@ var ddlStatements = []string{
 		last_seen_at TEXT NOT NULL
 	)`,
 	`CREATE TABLE IF NOT EXISTS row_state (
+		account_id    TEXT NOT NULL,
 		table_name    TEXT NOT NULL,
 		id            TEXT NOT NULL,
 		snapshot      TEXT,
@@ -44,11 +47,12 @@ var ddlStatements = []string{
 		deleted_at_ms INTEGER NOT NULL,
 		version       INTEGER NOT NULL,
 		data_version  INTEGER NOT NULL DEFAULT 1,
-		PRIMARY KEY (table_name, id)
+		PRIMARY KEY (account_id, table_name, id)
 	)`,
-	`CREATE INDEX IF NOT EXISTS idx_row_state_live ON row_state (table_name, deleted_at_ms)`,
+	`CREATE INDEX IF NOT EXISTS idx_row_state_live ON row_state (account_id, table_name, deleted_at_ms)`,
 	`CREATE TABLE IF NOT EXISTS change_log (
-		version       INTEGER PRIMARY KEY,
+		account_id    TEXT NOT NULL,
+		version       INTEGER NOT NULL,
 		table_name    TEXT NOT NULL,
 		id            TEXT NOT NULL,
 		operation     TEXT NOT NULL,
@@ -57,18 +61,21 @@ var ddlStatements = []string{
 		deleted       INTEGER NOT NULL,
 		deleted_at_ms INTEGER NOT NULL,
 		snapshot      TEXT,
-		data_version  INTEGER NOT NULL DEFAULT 1
+		data_version  INTEGER NOT NULL DEFAULT 1,
+		PRIMARY KEY (account_id, version)
 	)`,
 	`CREATE TABLE IF NOT EXISTS media_objects (
-		key          TEXT PRIMARY KEY,
+		account_id   TEXT NOT NULL,
+		key          TEXT NOT NULL,
 		checksum     TEXT NOT NULL,
 		size         INTEGER NOT NULL,
 		content_type TEXT NOT NULL,
-		created_at   TEXT NOT NULL
+		created_at   TEXT NOT NULL,
+		PRIMARY KEY (account_id, key)
 	)`,
-	`CREATE INDEX IF NOT EXISTS idx_change_log_entity_version ON change_log (table_name, id, version)`,
+	`CREATE INDEX IF NOT EXISTS idx_change_log_entity_version ON change_log (account_id, table_name, id, version)`,
 	`CREATE TABLE IF NOT EXISTS sync_metadata (
-		id INTEGER PRIMARY KEY CHECK (id = 1),
+		account_id TEXT PRIMARY KEY,
 		generation TEXT NOT NULL,
 		min_cursor INTEGER NOT NULL DEFAULT 0
 	)`,
@@ -138,21 +145,21 @@ func writeSQLDump(w io.Writer, d dumpData) error {
 		}
 	}
 	for _, r := range rows {
-		if _, err := fmt.Fprintf(w, "INSERT INTO row_state (table_name, id, snapshot, updated_at_ms, device_id, deleted_at_ms, version) VALUES (%s, %s, %s, %d, %s, %d, %d);\n",
-			sqlStr(r.Table), sqlStr(r.ID), sqlSnap(r.Snapshot), r.UpdatedAtMs, sqlStr(r.DeviceID), r.DeletedAtMs, r.Version); err != nil {
+		if _, err := fmt.Fprintf(w, "INSERT INTO row_state (account_id, table_name, id, snapshot, updated_at_ms, device_id, deleted_at_ms, version) VALUES (%s, %s, %s, %s, %d, %s, %d, %d);\n",
+			sqlStr(r.AccountID), sqlStr(r.Table), sqlStr(r.ID), sqlSnap(r.Snapshot), r.UpdatedAtMs, sqlStr(r.DeviceID), r.DeletedAtMs, r.Version); err != nil {
 			return err
 		}
 	}
 	for _, ch := range log {
-		if _, err := fmt.Fprintf(w, "INSERT INTO change_log (version, table_name, id, operation, updated_at_ms, device_id, deleted, deleted_at_ms, snapshot) VALUES (%d, %s, %s, %s, %d, %s, %d, %d, %s);\n",
-			ch.Version, sqlStr(ch.Table), sqlStr(ch.ID), sqlStr(string(ch.Operation)), ch.UpdatedAtMs,
+		if _, err := fmt.Fprintf(w, "INSERT INTO change_log (account_id, version, table_name, id, operation, updated_at_ms, device_id, deleted, deleted_at_ms, snapshot) VALUES (%s, %d, %s, %s, %s, %d, %s, %d, %d, %s);\n",
+			sqlStr(ch.AccountID), ch.Version, sqlStr(ch.Table), sqlStr(ch.ID), sqlStr(string(ch.Operation)), ch.UpdatedAtMs,
 			sqlStr(ch.DeviceID), boolInt(ch.Deleted), ch.DeletedAtMs, sqlSnap(ch.Snapshot)); err != nil {
 			return err
 		}
 	}
 	for _, m := range media {
-		if _, err := fmt.Fprintf(w, "INSERT INTO media_objects (key, checksum, size, content_type, created_at) VALUES (%s, %s, %d, %s, %s);\n",
-			sqlStr(m.Key), sqlStr(m.Checksum), m.Size, sqlStr(m.ContentType), sqlStr(rfc3339(m.CreatedAt))); err != nil {
+		if _, err := fmt.Fprintf(w, "INSERT INTO media_objects (account_id, key, checksum, size, content_type, created_at) VALUES (%s, %s, %s, %d, %s, %s);\n",
+			sqlStr(m.AccountID), sqlStr(m.Key), sqlStr(m.Checksum), m.Size, sqlStr(m.ContentType), sqlStr(rfc3339(m.CreatedAt))); err != nil {
 			return err
 		}
 	}
@@ -160,8 +167,9 @@ func writeSQLDump(w io.Writer, d dumpData) error {
 	for _, row := range rows {
 		if _, err := fmt.Fprintf(
 			w,
-			"UPDATE row_state SET data_version = %d WHERE table_name = %s AND id = %s;\n",
+			"UPDATE row_state SET data_version = %d WHERE account_id = %s AND table_name = %s AND id = %s;\n",
 			max(1, row.DataVersion),
+			sqlStr(row.AccountID),
 			sqlStr(row.Table),
 			sqlStr(row.ID),
 		); err != nil {
@@ -169,12 +177,14 @@ func writeSQLDump(w io.Writer, d dumpData) error {
 		}
 	}
 	for _, change := range log {
-		if _, err := fmt.Fprintf(w, "UPDATE change_log SET data_version = %d WHERE version = %d;\n", max(1, change.DataVersion), change.Version); err != nil {
+		if _, err := fmt.Fprintf(w, "UPDATE change_log SET data_version = %d WHERE account_id = %s AND version = %d;\n",
+			max(1, change.DataVersion), sqlStr(change.AccountID), change.Version); err != nil {
 			return err
 		}
 	}
-	if d.Dataset != nil {
-		if _, err := fmt.Fprintf(w, "INSERT INTO sync_metadata (id, generation, min_cursor) VALUES (1, %s, %d) ON CONFLICT (id) DO UPDATE SET generation = excluded.generation, min_cursor = excluded.min_cursor;\n", sqlStr(d.Dataset.Generation), d.Dataset.MinCursor); err != nil {
+	if d.Dataset != nil && d.Account != nil {
+		if _, err := fmt.Fprintf(w, "INSERT INTO sync_metadata (account_id, generation, min_cursor) VALUES (%s, %s, %d) ON CONFLICT (account_id) DO UPDATE SET generation = excluded.generation, min_cursor = excluded.min_cursor;\n",
+			sqlStr(d.Account.ID), sqlStr(d.Dataset.Generation), d.Dataset.MinCursor); err != nil {
 			return err
 		}
 	}

@@ -83,6 +83,21 @@
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<false/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- 保留本地网络访问，并为当前自建服务器定向放行明文 HTTP。
+		     迁移至 HTTPS 后移除该 IP 例外；不开放 NSAllowsArbitraryLoads。 -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>1.95.182.78</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>需要使用相机拍摄图片以帮助记录日记、选项或物品位置</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

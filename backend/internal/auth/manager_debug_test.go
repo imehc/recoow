@@ -11,14 +11,14 @@ func TestManagerPairSingleUse(t *testing.T) {
 	st := store.NewMemoryStore()
 	m := NewManager(st, 0)
 
-	recoveryKey, _, _, err := m.InitAccount()
+	accID, recoveryKey, _, _, err := m.InitAccount()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if recoveryKey == "" {
 		t.Fatal("应返回恢复密钥")
 	}
-	acc, err := st.GetAccount()
+	acc, err := st.GetAccount(accID)
 	if err != nil {
 		t.Fatal(err)
 	}

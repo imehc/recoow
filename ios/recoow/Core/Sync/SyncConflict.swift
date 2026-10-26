@@ -38,10 +38,10 @@ extension FullSyncRepository {
             try requireCurrent()
             guard try Bool.fetchOne(db, sql: "SELECT EXISTS(SELECT 1 FROM sync_outbox WHERE scope = ? AND table_name = ? AND entity_id = ? AND status = 'conflict')",
                                     arguments: [scope, conflict.table, conflict.entityID]) == true else {
-                throw CloudAPIError.syncRejected("冲突状态已改变，请刷新列表")
+                throw CloudAPIError.syncRejected(AppLocalization.string("冲突状态已改变，请刷新列表"))
             }
             guard let remote = try Self.shadow(db: db, scope: scope, table: conflict.table, id: conflict.entityID) else {
-                throw CloudAPIError.syncRejected("缺少服务端冲突快照，请先同步")
+                throw CloudAPIError.syncRejected(AppLocalization.string("缺少服务端冲突快照，请先同步"))
             }
             try db.execute(sql: """
                 UPDATE sync_outbox SET status = ?, last_error = '用户已选择冲突解决方式；原始快照保留'
@@ -50,7 +50,7 @@ extension FullSyncRepository {
             if keepLocal {
                 let entity = try SyncEntityCatalog.entity(conflict.table)
                 guard let row = try Row.fetchOne(db, sql: "SELECT * FROM \"\(conflict.table)\" WHERE id = ?", arguments: [conflict.entityID]) else {
-                    throw CloudAPIError.syncRejected("本地记录不存在")
+                    throw CloudAPIError.syncRejected(AppLocalization.string("本地记录不存在"))
                 }
                 let object = SyncEntityCatalog.snapshot(row: row, entity: entity)
                 let payload = try SyncMediaTransfer.capturePayload(JSONSerialization.data(withJSONObject: object), table: conflict.table)
@@ -62,7 +62,7 @@ extension FullSyncRepository {
                                arguments: [SyncStatus.pending.rawValue, conflict.entityID])
             } else {
                 guard try SyncRowApplier.apply(db: db, scope: scope, update: remote) else {
-                    throw CloudAPIError.syncRejected("关联记录尚未恢复，未修改本地数据")
+                    throw CloudAPIError.syncRejected(AppLocalization.string("关联记录尚未恢复，未修改本地数据"))
                 }
             }
             try SyncAggregateProjection.refresh(db: db, scope: scope)

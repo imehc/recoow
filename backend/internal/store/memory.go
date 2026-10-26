@@ -11,36 +11,48 @@ import (
 )
 
 // memoryStore 是 Store 的纯内存实现（供测试与开发使用），不持久化。
+// 所有数据集按 account_id 分区，语义与 SQLite 实现一致。
 type memoryStore struct {
-	mu         sync.Mutex
-	account    *Account
-	devices    map[string]Device
-	rows       map[string]Row
-	media      map[string]MediaObject
-	log        []Change
-	generation string
-	receipts   map[string]mutationReceipt
-	tables     map[string]bool
+	mu          sync.Mutex
+	accounts    map[string]*Account
+	devices     map[string]Device
+	rows        map[string]Row
+	media       map[string]MediaObject
+	log         []Change
+	generations map[string]string
+	receipts    map[string]mutationReceipt
+	tables      map[string]bool
 }
 
 // NewMemoryStore 返回不做持久化的 Store（供测试 / 开发用）。
 func NewMemoryStore() Store {
 	return &memoryStore{
-		devices: map[string]Device{}, rows: map[string]Row{}, media: map[string]MediaObject{},
-		generation: newID(), receipts: map[string]mutationReceipt{}, log: []Change{},
-		tables: maps.Clone(SyncableTables),
+		accounts: map[string]*Account{}, devices: map[string]Device{},
+		rows: map[string]Row{}, media: map[string]MediaObject{},
+		generations: map[string]string{}, receipts: map[string]mutationReceipt{},
+		log: []Change{}, tables: maps.Clone(SyncableTables),
 	}
 }
 
-func rowKey(table, id string) string { return table + "\x00" + id }
+func rowKey(accountID, table, id string) string {
+	return accountID + "\x00" + table + "\x00" + id
+}
+
+func mediaKey(accountID, key string) string { return accountID + "\x00" + key }
+
+func receiptKey(accountID, mutationID string) string {
+	return accountID + "\x00" + mutationID
+}
 
 // ---- 账号与设备 ----
 
 func (s *memoryStore) InitAccount(recoveryKeyHash []byte) (Account, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.account != nil {
-		return Account{}, ErrAccountExists
+	for _, existing := range s.accounts {
+		if string(existing.RecoveryKeyHash) == string(recoveryKeyHash) {
+			return Account{}, ErrRecoveryKeyTaken
+		}
 	}
 	a := Account{
 		ID:              newID(),
@@ -48,23 +60,42 @@ func (s *memoryStore) InitAccount(recoveryKeyHash []byte) (Account, error) {
 		CreatedAt:       time.Now().UTC(),
 		NextVersion:     1,
 	}
-	s.account = &a
+	s.accounts[a.ID] = &a
+	s.generations[a.ID] = newID()
 	return a, nil
 }
 
-func (s *memoryStore) GetAccount() (Account, error) {
+func (s *memoryStore) GetAccount(id string) (Account, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.account == nil {
+	a, ok := s.accounts[id]
+	if !ok {
 		return Account{}, ErrNoAccount
 	}
-	return *s.account, nil
+	return *a, nil
+}
+
+func (s *memoryStore) GetAccountByRecoveryKeyHash(recoveryKeyHash []byte) (Account, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, a := range s.accounts {
+		if string(a.RecoveryKeyHash) == string(recoveryKeyHash) {
+			return *a, nil
+		}
+	}
+	return Account{}, ErrNoAccount
+}
+
+func (s *memoryStore) CountAccounts() (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.accounts), nil
 }
 
 func (s *memoryStore) CreateDevice(accountID, name string, tokenHash []byte, isOwner bool) (Device, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.account == nil || s.account.ID != accountID {
+	if _, ok := s.accounts[accountID]; !ok {
 		return Device{}, ErrNoAccount
 	}
 	for _, d := range s.devices {
@@ -146,7 +177,8 @@ func (s *memoryStore) TouchDeviceLastSeen(id string) error {
 func (s *memoryStore) Push(accountID string, items []PushItem) ([]PushResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.account == nil || s.account.ID != accountID {
+	account, ok := s.accounts[accountID]
+	if !ok {
 		return nil, ErrNoAccount
 	}
 	results := make([]PushResult, 0, len(items))
@@ -155,21 +187,21 @@ func (s *memoryStore) Push(accountID string, items []PushItem) ([]PushResult, er
 		var res PushResult
 		if it.MutationID != "" {
 			var err error
-			res, err = applyRevision(memoryRevision{store: s}, it)
+			res, err = applyRevision(memoryRevision{store: s, accountID: accountID}, it)
 			if err != nil {
 				s.restoreRevisionBackup(backup)
 				return nil, err
 			}
 		} else {
-			res = s.pushOneLocked(it)
+			res = s.pushOneLocked(account, it)
 		}
 		results = append(results, res)
 	}
 	return results, nil
 }
 
-func (s *memoryStore) pushOneLocked(it PushItem) PushResult {
-	key := rowKey(it.Table, it.ID)
+func (s *memoryStore) pushOneLocked(account *Account, it PushItem) PushResult {
+	key := rowKey(account.ID, it.Table, it.ID)
 	cur, exists := s.rows[key]
 	if !s.tables[it.Table] {
 		return rejectedPushResult(it, PushUnsupportedTable)
@@ -186,14 +218,15 @@ func (s *memoryStore) pushOneLocked(it PushItem) PushResult {
 	) {
 		return unchangedPushResult(it, cur)
 	}
-	return s.acceptLocked(it, it.Operation == OpDelete)
+	return s.acceptLocked(account, it, it.Operation == OpDelete)
 }
 
-func (s *memoryStore) acceptLocked(it PushItem, deleted bool) PushResult {
-	version := s.account.NextVersion
-	s.account.NextVersion++
+func (s *memoryStore) acceptLocked(account *Account, it PushItem, deleted bool) PushResult {
+	version := account.NextVersion
+	account.NextVersion++
 
 	row := Row{
+		AccountID:   account.ID,
 		Table:       it.Table,
 		ID:          it.ID,
 		UpdatedAtMs: it.UpdatedAtMs,
@@ -205,13 +238,14 @@ func (s *memoryStore) acceptLocked(it PushItem, deleted bool) PushResult {
 	} else {
 		row.Snapshot = it.Snapshot
 	}
-	s.rows[rowKey(it.Table, it.ID)] = row
+	s.rows[rowKey(account.ID, it.Table, it.ID)] = row
 
 	op := it.Operation
 	if op != OpDelete {
 		op = OpUpdate
 	}
 	ch := Change{
+		AccountID:   account.ID,
 		Version:     version,
 		Table:       it.Table,
 		ID:          it.ID,
@@ -234,7 +268,7 @@ func (s *memoryStore) acceptLocked(it PushItem, deleted bool) PushResult {
 func (s *memoryStore) Pull(accountID string, cursor int64, limit int) ([]Change, int64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.account == nil || s.account.ID != accountID {
+	if _, ok := s.accounts[accountID]; !ok {
 		return nil, 0, ErrNoAccount
 	}
 	if limit <= 0 {
@@ -243,7 +277,7 @@ func (s *memoryStore) Pull(accountID string, cursor int64, limit int) ([]Change,
 	out := make([]Change, 0, limit)
 	next := cursor
 	for _, ch := range s.log {
-		if ch.Version <= cursor {
+		if ch.AccountID != accountID || ch.Version <= cursor {
 			continue
 		}
 		out = append(out, ch)
@@ -258,7 +292,7 @@ func (s *memoryStore) Pull(accountID string, cursor int64, limit int) ([]Change,
 func (s *memoryStore) Rows(accountID, table string) ([]Row, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.account == nil || s.account.ID != accountID {
+	if _, ok := s.accounts[accountID]; !ok {
 		return nil, ErrNoAccount
 	}
 	if !s.tables[table] {
@@ -266,7 +300,7 @@ func (s *memoryStore) Rows(accountID, table string) ([]Row, error) {
 	}
 	var out []Row
 	for _, r := range s.rows {
-		if r.Table == table && r.DeletedAtMs == 0 {
+		if r.AccountID == accountID && r.Table == table && r.DeletedAtMs == 0 {
 			out = append(out, r)
 		}
 	}
@@ -278,7 +312,7 @@ func (s *memoryStore) Rows(accountID, table string) ([]Row, error) {
 func (s *memoryStore) PutMedia(accountID, key, checksum, contentType string, size int64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.account == nil || s.account.ID != accountID {
+	if _, ok := s.accounts[accountID]; !ok {
 		return ErrNoAccount
 	}
 	if key == "" || checksum == "" {
@@ -287,10 +321,11 @@ func (s *memoryStore) PutMedia(accountID, key, checksum, contentType string, siz
 	if immutableMediaKey(key) && key != "sync/"+checksum {
 		return ErrConflict
 	}
-	if previous, exists := s.media[key]; exists && previous.Checksum != checksum {
+	if previous, exists := s.media[mediaKey(accountID, key)]; exists && previous.Checksum != checksum {
 		return ErrConflict
 	}
-	s.media[key] = MediaObject{
+	s.media[mediaKey(accountID, key)] = MediaObject{
+		AccountID:   accountID,
 		Key:         key,
 		Checksum:    checksum,
 		Size:        size,
@@ -303,10 +338,10 @@ func (s *memoryStore) PutMedia(accountID, key, checksum, contentType string, siz
 func (s *memoryStore) GetMedia(accountID, key string) (MediaObject, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.account == nil || s.account.ID != accountID {
+	if _, ok := s.accounts[accountID]; !ok {
 		return MediaObject{}, ErrNoAccount
 	}
-	m, ok := s.media[key]
+	m, ok := s.media[mediaKey(accountID, key)]
 	if !ok {
 		return MediaObject{}, ErrNotFound
 	}
@@ -316,18 +351,21 @@ func (s *memoryStore) GetMedia(accountID, key string) (MediaObject, error) {
 func (s *memoryStore) DeleteMedia(accountID, key string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.account == nil || s.account.ID != accountID {
+	if _, ok := s.accounts[accountID]; !ok {
 		return ErrNoAccount
 	}
 	for _, change := range s.log {
+		if change.AccountID != accountID {
+			continue
+		}
 		if snapshotReferencesMedia(change.Snapshot, key) {
 			return ErrConflict
 		}
 	}
-	if _, ok := s.media[key]; !ok {
+	if _, ok := s.media[mediaKey(accountID, key)]; !ok {
 		return ErrNotFound
 	}
-	delete(s.media, key)
+	delete(s.media, mediaKey(accountID, key))
 	return nil
 }
 
@@ -339,26 +377,40 @@ func (s *memoryStore) Save() error { return nil }
 
 func (s *memoryStore) Close() error { return nil }
 
-// ExportSQL 把内存中的全部状态渲染为可移植 SQL（与 SQLite 实现同格式）。
-func (s *memoryStore) ExportSQL(w io.Writer) error {
+// ExportSQL 把指定账号的全部状态渲染为可移植 SQL（与 SQLite 实现同格式）。
+func (s *memoryStore) ExportSQL(w io.Writer, accountID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	d := dumpData{Account: s.account}
-	if s.account != nil {
-		d.Dataset = &DatasetState{Generation: s.generation, Head: s.account.NextVersion - 1}
+	account, ok := s.accounts[accountID]
+	if !ok {
+		return ErrNoAccount
 	}
+	d := dumpData{Account: account}
+	d.Dataset = &DatasetState{Generation: s.generations[accountID], Head: account.NextVersion - 1}
 	for _, receipt := range s.receipts {
-		d.Receipts = append(d.Receipts, receipt)
+		if receipt.AccountID == accountID {
+			d.Receipts = append(d.Receipts, receipt)
+		}
 	}
 	for _, dv := range s.devices {
-		d.Devices = append(d.Devices, dv)
+		if dv.AccountID == accountID {
+			d.Devices = append(d.Devices, dv)
+		}
 	}
 	for _, r := range s.rows {
-		d.Rows = append(d.Rows, r)
+		if r.AccountID == accountID {
+			d.Rows = append(d.Rows, r)
+		}
 	}
-	d.Log = append(d.Log, s.log...)
+	for _, change := range s.log {
+		if change.AccountID == accountID {
+			d.Log = append(d.Log, change)
+		}
+	}
 	for _, m := range s.media {
-		d.Media = append(d.Media, m)
+		if m.AccountID == accountID {
+			d.Media = append(d.Media, m)
+		}
 	}
 	return writeSQLDump(w, d)
 }
