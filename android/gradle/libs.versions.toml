@@ -19,6 +19,8 @@ compileSdk = "37"
 targetSdk = "36"
 minSdk = "26"
 buildTools = "37.0.0"
+filament = "1.77.3"
+maplibre = "13.6.1"
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -53,3 +55,7 @@ androidx-test = { module = "androidx.test.ext:junit", version.ref = "androidxTes
 test-runner = { module = "androidx.test:runner", version.ref = "runner" }
 
 appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
+filament = { module = "com.google.android.filament:filament-android", version.ref = "filament" }
+filament-utils = { module = "com.google.android.filament:filament-utils-android", version.ref = "filament" }
+filament-gltfio = { module = "com.google.android.filament:gltfio-android", version.ref = "filament" }
+maplibre = { module = "org.maplibre.gl:android-sdk", version.ref = "maplibre" }

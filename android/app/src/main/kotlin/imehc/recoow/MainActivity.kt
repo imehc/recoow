@@ -2,6 +2,7 @@ package imehc.recoow
 
 import android.os.Bundle
 import android.os.Build
+import android.content.Intent
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,16 +19,20 @@ import dagger.hilt.android.AndroidEntryPoint
 import imehc.recoow.core.designsystem.RecoowTheme
 import imehc.recoow.core.domain.preferences.Appearance
 import imehc.recoow.feature.settings.SettingsViewModel
+import imehc.recoow.navigation.ToolLinkViewModel
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     private val preferences: SettingsViewModel by viewModels()
+    private val toolLinks: ToolLinkViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) handleToolLink(intent)
         enableEdgeToEdge()
         setContent {
             val state by preferences.uiState.collectAsStateWithLifecycle()
+            val pendingRoute by toolLinks.pendingRoute.collectAsStateWithLifecycle()
             val systemDark = isSystemInDarkTheme()
             val dark = when (state.preferences?.appearance) {
                 Appearance.LIGHT -> false
@@ -48,8 +53,20 @@ class MainActivity : AppCompatActivity() {
                 )
             }
             RecoowTheme(darkTheme = dark) {
-                RecoowApp(state, preferences::setAppearance, preferences::setLanguage, preferences::retry)
+                RecoowApp(state, preferences::setAppearance, preferences::setLanguage, preferences::retry,
+                    pendingRoute, toolLinks::consumed)
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // A link is a one-shot event. SavedStateHandle owns pending delivery across recreation.
+        handleToolLink(intent)
+    }
+
+    private fun handleToolLink(intent: Intent) {
+        if (intent.action != Intent.ACTION_VIEW) return
+        intent.data?.let { toolLinks.receive(it.scheme, it.host, it.pathSegments) }
     }
 }

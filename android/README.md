@@ -25,13 +25,21 @@ Android Studio 自动生成的 `gradle/gradle-daemon-jvm.properties` 优先于 `
 
 | 模块 | 职责 |
 | --- | --- |
-| `app` | Hilt 装配、Activity、Tab 导航、系统栏与旧版系统语言适配 |
-| `core:domain` | 纯 Kotlin 偏好模型、仓库接口、八工具路由标识契约 |
+| `app` | Hilt 装配、Activity、Tab 与深链导航、系统栏与旧版系统语言适配 |
+| `core:domain` | 纯 Kotlin 模型、仓库和平台接口、八工具路由契约 |
 | `core:data` | DataStore 持久化；Android 13+ 系统应用语言观察与设置 |
 | `core:designsystem` | 唯一 Expressive 主题、页面框架和空状态组件 |
+| `core:calendar` | Android ICU 公历/农历日期及纪念日计算 |
+| `core:backup` | iOS SQLite 备份的只读格式检查、元数据及内容概览 |
+| `core:scene` | Filament GLB 渲染与 Compose 生命周期适配 |
+| `core:location` | Android 原生定位、MapLibre 地图与轨迹显示 |
 | `feature:home` / `statistics` | 首页与统计页面 |
 | `feature:settings` | MVVM/UDF 显示设置、单份 StateFlow、失败与重试、可恢复选择弹窗 |
 
 Feature 不互相依赖，不直接访问存储。Domain 不依赖 Android、Hilt、Room 或 Retrofit。
 
 外观偏好由 DataStore 持有。Android 13+ 语言以系统 LocaleManager 为准；API 26–32 使用 DataStore 与 AppCompat。
+
+工具深链格式为 `recoow://tool/{id}`，标识以 `ToolRoute` 为准。外部链接通过单次事件分发，返回栈以首页为根。
+
+3D 使用 [Filament](https://github.com/google/filament)（Apache-2.0），地图使用 [MapLibre Native](https://github.com/maplibre/maplibre-native)（BSD-2-Clause）。地图样式及其服务授权由调用方提供；存储坐标使用 WGS84，仅按地图源要求转换显示副本。定位调用方负责权限交互与前台服务生命周期。

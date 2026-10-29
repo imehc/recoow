@@ -6,5 +6,15 @@ local.properties
 *.keystore
 .idea/
 captures/
+# Native build intermediates and local diagnostic output.
+**/.cxx/
+**/.externalNativeBuild/
+*.apk
+*.aab
+*.apks
+*.hprof
+*.jfr
+*.log
+/local-qa/
 # Android Studio may generate a host-specific daemon selection; CI selects its JDK explicitly.
 /gradle/gradle-daemon-jvm.properties

@@ -20,3 +20,6 @@ backend/data/
 **/xcuserdata/
 
 .workbuddy/
+# IDE workspace state is local; shared build configuration lives in the projects.
+/.idea/
+*.iml

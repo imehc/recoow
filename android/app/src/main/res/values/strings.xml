@@ -3,4 +3,15 @@
     <string name="tab_home">Home</string>
     <string name="tab_statistics">Statistics</string>
     <string name="tab_settings">Settings</string>
+    <string name="tool_bills">Bills</string>
+    <string name="tool_reminders">Check-ins</string>
+    <string name="tool_diary">Diary</string>
+    <string name="tool_food">Food journal</string>
+    <string name="tool_decision">What to choose</string>
+    <string name="tool_items">Where is it</string>
+    <string name="tool_anniversaries">Anniversaries</string>
+    <string name="tool_location">Track recording</string>
+    <string name="tool_unavailable">This tool is not available yet.</string>
+    <string name="return_home">Return to Home</string>
+    <string name="navigate_back">Back</string>
 </resources>

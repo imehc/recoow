@@ -3,4 +3,15 @@
     <string name="tab_home">首页</string>
     <string name="tab_statistics">统计</string>
     <string name="tab_settings">设置</string>
+    <string name="tool_bills">记一笔</string>
+    <string name="tool_reminders">打卡任务</string>
+    <string name="tool_diary">日记</string>
+    <string name="tool_food">饮食记录</string>
+    <string name="tool_decision">选什么</string>
+    <string name="tool_items">在哪里</string>
+    <string name="tool_anniversaries">纪念日</string>
+    <string name="tool_location">轨迹记录</string>
+    <string name="tool_unavailable">此工具暂未开放。</string>
+    <string name="return_home">返回首页</string>
+    <string name="navigate_back">返回</string>
 </resources>
