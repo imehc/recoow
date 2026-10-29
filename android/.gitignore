@@ -18,3 +18,5 @@ captures/
 /local-qa/
 # Android Studio may generate a host-specific daemon selection; CI selects its JDK explicitly.
 /gradle/gradle-daemon-jvm.properties
+# Room JSON exports are local; versioned migration SQL is tracked separately.
+/core/database/schemas/

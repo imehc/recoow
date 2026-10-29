@@ -17,6 +17,7 @@ android {
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 dependencies {
     implementation(project(":core:domain"))
+    implementation(project(":core:database"))
     implementation(libs.coroutines.android)
     androidTestImplementation(libs.androidx.test)
     androidTestImplementation(libs.test.runner)

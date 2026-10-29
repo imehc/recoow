@@ -21,6 +21,8 @@ minSdk = "26"
 buildTools = "37.0.0"
 filament = "1.77.3"
 maplibre = "13.6.1"
+room = "2.8.5"
+serialization = "1.10.0"
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -59,3 +61,7 @@ filament = { module = "com.google.android.filament:filament-android", version.re
 filament-utils = { module = "com.google.android.filament:filament-utils-android", version.ref = "filament" }
 filament-gltfio = { module = "com.google.android.filament:gltfio-android", version.ref = "filament" }
 maplibre = { module = "org.maplibre.gl:android-sdk", version.ref = "maplibre" }
+room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }

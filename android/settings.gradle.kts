@@ -9,3 +9,4 @@ rootProject.name = "recoow"
 include(":app", ":core:domain", ":core:data", ":core:designsystem")
 include(":feature:home", ":feature:statistics", ":feature:settings")
 include(":core:calendar", ":core:backup", ":core:scene", ":core:location")
+include(":core:database")
