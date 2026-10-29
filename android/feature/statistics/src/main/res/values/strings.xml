@@ -1,0 +1,5 @@
+<resources>
+    <string name="statistics_title">Statistics</string>
+    <string name="statistics_empty">No statistics yet</string>
+    <string name="statistics_empty_description">Statistics become available when you have records.</string>
+</resources>

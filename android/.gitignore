@@ -1,0 +1,10 @@
+.gradle/
+.kotlin/
+**/build/
+local.properties
+*.jks
+*.keystore
+.idea/
+captures/
+# Android Studio may generate a host-specific daemon selection; CI selects its JDK explicitly.
+/gradle/gradle-daemon-jvm.properties

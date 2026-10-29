@@ -1,0 +1,15 @@
+<resources>
+    <string name="settings_title">设置</string>
+    <string name="display_section">显示</string>
+    <string name="follow_system">跟随系统</string>
+    <string name="appearance_title">外观</string>
+    <string name="appearance_light">浅色</string>
+    <string name="appearance_dark">深色</string>
+    <string name="language_title">语言</string>
+    <string name="language_chinese">简体中文</string>
+    <string name="language_english">English</string>
+    <string name="read_failed">无法读取设置，请重试。</string>
+    <string name="save_failed">保存失败，已保留原设置。</string>
+    <string name="retry">重试</string>
+    <string name="cancel">取消</string>
+</resources>
