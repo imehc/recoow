@@ -23,6 +23,9 @@ filament = "1.77.3"
 maplibre = "13.6.1"
 room = "2.8.5"
 serialization = "1.10.0"
+retrofit = "3.0.0"
+okhttp = "5.5.1"
+work = "2.12.0"
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -65,3 +68,7 @@ room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "lifecycle" }

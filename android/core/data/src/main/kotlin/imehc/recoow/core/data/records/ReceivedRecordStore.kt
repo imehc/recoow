@@ -24,7 +24,15 @@ class ReceivedRecordStore(private val host: DatabaseHost, private val zone: () -
         }
     }
 
-    suspend fun receivePage(scope: String, session: Long, key: String, body: ByteArray, envelopes: List<String>, nextCursor: Long) =
+    suspend fun persistRaw(scope: String, session: Long, key: String, body: ByteArray) = host.access(session) { db ->
+        activeTarget(db, scope)
+        val hash = MessageDigest.getInstance("SHA-256").digest(body).joinToString("") { "%02x".format(it) }
+        val previous = db.records().pageHash(scope, key)
+        if (previous != null) require(previous == hash) else db.records().receive(SyncReceivedPage(scope, key, body, hash))
+    }
+
+    suspend fun receivePage(scope: String, session: Long, key: String, body: ByteArray, envelopes: List<String>, nextCursor: Long,
+        bootstrapAfter: Long? = null, bootstrapComplete: Boolean = false) =
         host.access(session) { db ->
             val target = activeTarget(db, scope)
             val hash = MessageDigest.getInstance("SHA-256").digest(body).joinToString("") { "%02x".format(it) }
@@ -46,7 +54,9 @@ class ReceivedRecordStore(private val host: DatabaseHost, private val zone: () -
                 db.records().receive(SyncInbox(scope, version, envelope.getValue("table").jsonPrimitive.content,
                     envelope.getValue("id").jsonPrimitive.content, raw))
             }
-            db.records().put(target.copy(receivedCursor = nextCursor))
+            db.records().put(target.copy(receivedCursor = nextCursor,
+                bootstrapAfter = bootstrapAfter ?: target.bootstrapAfter,
+                bootstrapComplete = target.bootstrapComplete || bootstrapComplete))
             db.records().markPageReceived(scope, key)
         } }
 
@@ -74,16 +84,16 @@ class ReceivedRecordStore(private val host: DatabaseHost, private val zone: () -
         applied
     }
 
-    private suspend fun apply(db: RecoowDatabase, row: SyncInbox): Boolean {
+    suspend fun apply(db: RecoowDatabase, row: SyncInbox, force: Boolean = false): Boolean {
         val contract = EntityContracts.registry.entity(row.tableName)
         val envelope = Json.parseToJsonElement(row.envelopeJson).jsonObject
         val dataVersion = envelope.getValue("dataVersion").jsonPrimitive.int
         require(dataVersion in contract.minimumVersion..contract.version) { "Unsupported dataVersion" }
         val updatedAt = envelope.getValue("updatedAtMs").jsonPrimitive.long
         val device = envelope.getValue("deviceId").jsonPrimitive.content
-        val deleted = envelope["deletedAtMs"]?.takeIf { it != JsonNull }
+        val deleted = envelope["deletedAtMs"]?.takeIf { it != JsonNull && it.jsonPrimitive.long > 0 }
         val previous = db.records().shadow(row.scope, row.tableName, row.entityId)
-        if (previous != null && previous.version >= row.version) return true
+        if (previous != null && (previous.version > row.version || previous.version == row.version && !force)) return true
         val old = db.records().snapshot(row.tableName, row.entityId)
         val raw = envelope["snapshot"]?.takeIf { it != JsonNull }?.jsonObject
         require(raw != null || deleted != null) { "Missing row snapshot" }
@@ -97,10 +107,25 @@ class ReceivedRecordStore(private val host: DatabaseHost, private val zone: () -
             put("id", JsonPrimitive(row.entityId)); put("updated_at", JsonPrimitive(updatedAt))
             put("device_id", JsonPrimitive(device)); put("deleted_at", deleted ?: JsonNull)
         }?.let { contract.normalize(JsonObject(it), dataVersion) }
+        if (deleted == null && incoming != null) {
+            val references = incoming["_media"]?.jsonObject.orEmpty()
+            if (row.tableName == "media_assets") require(references["object"] != null && references["object"] != JsonNull) { "Missing media object" }
+            for ((field, value) in references) {
+                require(contract.fields.any { it.binary && it.name == field } || field == "object" && row.tableName == "media_assets")
+                if (value == JsonNull) { require(field != "object"); continue }
+                val reference = MediaReference.parse(value)
+                if (field == "object") require(incoming["checksum"]?.jsonPrimitive?.content == reference.checksum &&
+                    incoming["byte_count"]?.jsonPrimitive?.long == reference.size)
+            }
+        }
         // Local edits remain visible; the remote snapshot is retained for explicit reconciliation.
         if (db.records().pending(row.scope, row.tableName, row.entityId) == null) {
             val fields = old?.json?.let { Json.parseToJsonElement(it).jsonObject }.orEmpty().toMutableMap()
-            incoming?.let { fields.putAll(it) }
+                incoming?.let {
+                    val references = fields["_media"]?.jsonObject.orEmpty() + it["_media"]?.jsonObject.orEmpty()
+                    fields.putAll(it)
+                    if (references.isNotEmpty()) fields["_media"] = JsonObject(references)
+                }
             if (fields.isNotEmpty()) {
                 fields["id"] = JsonPrimitive(row.entityId)
                 fields["updated_at"] = JsonPrimitive(updatedAt)
@@ -116,12 +141,35 @@ class ReceivedRecordStore(private val host: DatabaseHost, private val zone: () -
                 }
                 PhysicalRecords.write(db.openHelper.writableDatabase, contract, snapshot, row.version, local = false)
                 db.records().put(EntitySnapshot(row.tableName, row.entityId, contract.version, snapshot.toString()))
+                if (deleted == null) queueMedia(db, row, snapshot)
                 AggregateProjection.refresh(db, setOf(row.tableName), zone(), row.scope)
             }
             RoomRecordRepository.queueNotification(db, row.tableName, row.entityId, row.version)
         }
         db.records().put(SyncRow(row.scope, row.tableName, row.entityId, row.version, row.envelopeJson))
         return true
+    }
+
+    private suspend fun queueMedia(db: RecoowDatabase, row: SyncInbox, snapshot: JsonObject) {
+        val contract = EntityContracts.registry.entity(row.tableName)
+        val existing = db.records().media(row.scope, "download")
+        for ((field, raw) in snapshot["_media"]?.jsonObject.orEmpty()) {
+            val binary = contract.fields.firstOrNull { it.binary && it.name == field }
+            require(binary != null || field == "object" && row.tableName == "media_assets") { "Unknown media field" }
+            if (raw == JsonNull) {
+                require(field != "object")
+                db.openHelper.writableDatabase.execSQL("UPDATE \"${row.tableName}\" SET \"$field\" = ? WHERE id = ?",
+                    arrayOf(if (binary!!.nullable) null else ByteArray(0), row.entityId))
+                continue
+            }
+            val reference = MediaReference.parse(raw)
+            if (field == "object") require(snapshot["checksum"]?.jsonPrimitive?.content == reference.checksum &&
+                snapshot["byte_count"]?.jsonPrimitive?.long == reference.size)
+            val old = existing.firstOrNull { it.tableName == row.tableName && it.entityId == row.entityId && it.columnName == field && it.checksum == reference.checksum }
+            db.records().put(SyncMediaJob(id = old?.id ?: 0, scope = row.scope, direction = "download", objectKey = reference.key,
+                checksum = reference.checksum, size = reference.size, contentType = reference.contentType,
+                tableName = row.tableName, entityId = row.entityId, columnName = field, version = row.version))
+        }
     }
 
     private suspend fun activeTarget(db: RecoowDatabase, scope: String): SyncTarget {

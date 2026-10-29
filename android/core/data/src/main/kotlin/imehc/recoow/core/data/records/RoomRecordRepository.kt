@@ -28,7 +28,7 @@ class RoomRecordRepository(private val host: DatabaseHost, private val zone: () 
             val dao = database.records()
             val scope = dao.activeScope()
             for (change in changes) {
-                require(change.id.isNotBlank() && change.deviceId.isNotBlank())
+                require(change.id.isNotBlank() && change.deviceId.isNotBlank() && change.updatedAtMillis > 0)
                 val contract = EntityContracts.registry.entity(change.table)
                 val previous = dao.snapshot(change.table, change.id)?.json?.let { Json.parseToJsonElement(it).jsonObject }
                 val patch = Json.parseToJsonElement(change.fieldsJson).jsonObject
@@ -43,7 +43,8 @@ class RoomRecordRepository(private val host: DatabaseHost, private val zone: () 
                     put("device_id", JsonPrimitive(change.deviceId))
                     put("deleted_at", if (change.deleted) JsonPrimitive(change.updatedAtMillis) else JsonNull)
                 }
-                val snapshot = contract.normalize(JsonObject(fields), contract.version)
+                val snapshot = MediaObjects(host.mediaDirectory).captureSnapshot(contract,
+                    contract.normalize(JsonObject(fields), contract.version), change.binaryFields)
                 val version = scope?.let { dao.shadow(it, change.table, change.id)?.version }
                 PhysicalRecords.write(database.openHelper.writableDatabase, contract, snapshot, version, local = true, change.binaryFields)
                 dao.put(EntitySnapshot(change.table, change.id, contract.version, snapshot.toString()))

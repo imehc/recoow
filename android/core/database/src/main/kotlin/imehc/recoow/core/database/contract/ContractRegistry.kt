@@ -5,7 +5,8 @@ import kotlinx.serialization.json.*
 class ContractViolation(message: String) : IllegalArgumentException(message)
 
 data class FieldContract(val name: String, val type: String, val required: Boolean, val nullable: Boolean,
-    val binary: Boolean, val derived: Boolean, val default: JsonElement?, val enumValues: Set<String>, val jsonText: Boolean)
+    val binary: Boolean, val derived: Boolean, val default: JsonElement?, val enumValues: Set<String>, val jsonText: Boolean,
+    val labels: Map<String, String> = emptyMap())
 data class Dependency(val field: String, val table: String)
 data class EntityContract(val table: String, val version: Int, val minimumVersion: Int,
     val fields: List<FieldContract>, val dependencies: List<Dependency>) {
@@ -66,7 +67,8 @@ class ContractRegistry private constructor(val entities: Map<String, EntityContr
                         FieldContract(f.getValue("name").jsonPrimitive.content, f.getValue("type").jsonPrimitive.content,
                             f.flag("required"), f.flag("nullable"), f.flag("binary"), f.flag("derived"), f["default"],
                             f["enumValues"]?.jsonArray?.map { it.jsonPrimitive.content }?.toSet().orEmpty(),
-                            f["format"]?.jsonPrimitive?.content == "json")
+                            f["format"]?.jsonPrimitive?.content == "json",
+                            f["labels"]?.jsonObject?.mapValues { it.value.jsonPrimitive.content }.orEmpty())
                     }, row.getValue("dependencies").jsonArray.map { dependency ->
                         val d = dependency.jsonObject
                         Dependency(d.getValue("field").jsonPrimitive.content, d.getValue("table").jsonPrimitive.content)

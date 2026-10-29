@@ -43,4 +43,28 @@ interface RecordDao {
     suspend fun markPageReceived(scope: String, key: String)
     @Query("SELECT envelopeJson FROM sync_inbox WHERE scope = :scope AND version = :version")
     suspend fun receivedEnvelope(scope: String, version: Long): String?
+
+    @Upsert suspend fun put(row: SyncOutbox)
+    @Upsert suspend fun put(row: SyncConflict)
+    @Upsert suspend fun put(row: SyncMediaJob)
+    @Query("SELECT * FROM sync_outbox WHERE scope = :scope ORDER BY localChangeId")
+    suspend fun outbox(scope: String): List<SyncOutbox>
+    @Query("SELECT * FROM sync_outbox WHERE scope = :scope AND mutationId = :id")
+    suspend fun mutation(scope: String, id: String): SyncOutbox?
+    @Query("SELECT * FROM sync_conflicts WHERE scope = :scope ORDER BY createdAt")
+    suspend fun conflicts(scope: String): List<SyncConflict>
+    @Query("DELETE FROM sync_conflicts WHERE scope = :scope AND tableName = :table AND entityId = :id")
+    suspend fun clearConflicts(scope: String, table: String, id: String)
+    @Query("SELECT * FROM sync_media_jobs WHERE scope = :scope AND direction = :direction ORDER BY id")
+    suspend fun media(scope: String, direction: String): List<SyncMediaJob>
+    @Query("SELECT * FROM sync_received_pages WHERE scope = :scope AND received = 0 ORDER BY pageKey")
+    suspend fun unreceivedPages(scope: String): List<SyncReceivedPage>
+    @Query("SELECT * FROM notification_jobs ORDER BY version")
+    suspend fun notifications(): List<NotificationJob>
+    @Query("DELETE FROM notification_jobs WHERE tableName = :table AND entityId = :id AND version = :version")
+    suspend fun delivered(table: String, id: String, version: Long)
+    @Query("SELECT COALESCE(MAX(id), 0) FROM local_changes")
+    fun observeLocalChanges(): Flow<Long>
+    @Query("DELETE FROM sync_received_pages WHERE scope = :scope AND pageKey = :key AND received = 1")
+    suspend fun removeReceivedPage(scope: String, key: String)
 }

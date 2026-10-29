@@ -19,8 +19,8 @@ import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RecoowPage(title: String, content: LazyListScope.() -> Unit) {
-    Scaffold(topBar = { TopAppBar(title = { Text(title) }) }) { padding ->
+fun RecoowPage(title: String, navigationIcon: @Composable () -> Unit = {}, content: LazyListScope.() -> Unit) {
+    Scaffold(topBar = { TopAppBar(title = { Text(title) }, navigationIcon = navigationIcon) }) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),

@@ -19,12 +19,15 @@ import dagger.hilt.android.AndroidEntryPoint
 import imehc.recoow.core.designsystem.RecoowTheme
 import imehc.recoow.core.domain.preferences.Appearance
 import imehc.recoow.feature.settings.SettingsViewModel
+import imehc.recoow.feature.settings.SyncViewModel
+import imehc.recoow.feature.settings.SyncScreen
 import imehc.recoow.navigation.ToolLinkViewModel
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     private val preferences: SettingsViewModel by viewModels()
     private val toolLinks: ToolLinkViewModel by viewModels()
+    private val sync: SyncViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,6 +35,7 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContent {
             val state by preferences.uiState.collectAsStateWithLifecycle()
+            val syncState by sync.state.collectAsStateWithLifecycle()
             val pendingRoute by toolLinks.pendingRoute.collectAsStateWithLifecycle()
             val systemDark = isSystemInDarkTheme()
             val dark = when (state.preferences?.appearance) {
@@ -54,7 +58,10 @@ class MainActivity : AppCompatActivity() {
             }
             RecoowTheme(darkTheme = dark) {
                 RecoowApp(state, preferences::setAppearance, preferences::setLanguage, preferences::retry,
-                    pendingRoute, toolLinks::consumed)
+                    pendingRoute, toolLinks::consumed) { onBack ->
+                    SyncScreen(syncState, onBack, sync::connect, sync::synchronize, sync::disconnect,
+                        sync::acknowledgeRecoveryKey, sync::resolve, sync::generatePairingCode, sync::dismissPairingCode)
+                }
             }
         }
     }

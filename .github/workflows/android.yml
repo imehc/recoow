@@ -2,9 +2,9 @@ name: Android
 
 on:
   pull_request:
-    paths: ["android/**", "ios/recoow/**", "scripts/*.py", ".github/workflows/android.yml"]
+    paths: ["android/**", "backend/**", "ios/recoow/**", "scripts/*.py", ".github/workflows/android.yml"]
   push:
-    paths: ["android/**", "ios/recoow/**", "scripts/*.py", ".github/workflows/android.yml"]
+    paths: ["android/**", "backend/**", "ios/recoow/**", "scripts/*.py", ".github/workflows/android.yml"]
   workflow_dispatch:
 
 permissions:
@@ -33,7 +33,7 @@ jobs:
         run: sdkmanager 'platforms;android-37.0' 'build-tools;37.0.0'
       - name: Build, test and lint
         working-directory: android
-        run: ./gradlew :app:assembleDebug :app:assembleRelease :core:domain:test :core:database:testDebugUnitTest :core:data:testDebugUnitTest :feature:settings:testDebugUnitTest lint --stacktrace
+        run: ./gradlew :app:assembleDebug :app:assembleRelease :core:domain:test :core:database:testDebugUnitTest :core:data:testDebugUnitTest :core:network:testDebugUnitTest :feature:settings:testDebugUnitTest lint --stacktrace
       - name: Check committed Room schema history
         working-directory: android
         run: ./gradlew :core:database:checkSchemaHistory
@@ -53,6 +53,10 @@ jobs:
         api: [26, 36]
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -66,7 +70,17 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - name: Install compile SDK
         run: sdkmanager 'platforms;android-37.0' 'build-tools;37.0.0'
-      - name: Run database and Compose tests
+      - name: Start isolated integration backend
+        run: |
+          python3 scripts/generate_sync_schema.py --output "$RUNNER_TEMP/recoow-schema"
+          (cd backend && go build -o "$RUNNER_TEMP/recoow-api" ./cmd/api)
+          RECOOW_SCHEMA="$RUNNER_TEMP/recoow-schema" RECOOW_DATA="$RUNNER_TEMP/recoow-data" RECOOW_LISTEN=127.0.0.1:8080 "$RUNNER_TEMP/recoow-api" > "$RUNNER_TEMP/recoow-api.log" 2>&1 &
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:8080/api/schema > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Run database, sync and Compose tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api }}
@@ -74,7 +88,7 @@ jobs:
           target: default
           disable-animations: true
           working-directory: android
-          script: ./gradlew :core:database:connectedDebugAndroidTest :core:data:connectedDebugAndroidTest :app:connectedDebugAndroidTest --stacktrace
+          script: ./gradlew :core:database:connectedDebugAndroidTest :core:data:connectedDebugAndroidTest :core:sync:connectedDebugAndroidTest :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.syncBaseUrl=http://10.0.2.2:8080/ --stacktrace
       - uses: actions/upload-artifact@v4
         if: always()
         with:

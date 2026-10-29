@@ -197,7 +197,13 @@ class DataLayerTest {
         val token = host.sessionToken()
         val entities = EntityContracts.registry.entities.values.toList().reversed()
         val envelopes = entities.mapIndexed { index, entity ->
-            envelope(entity.table, entity.table, index + 1L, fixture(entity.table), entity.version)
+            var fields = fixture(entity.table)
+            if (entity.table == "media_assets") {
+                val reference = imehc.recoow.core.database.MediaObjects(host.mediaDirectory).capture(byteArrayOf(1, 2, 3), "image/jpeg")
+                fields = fields.patch("checksum" to JsonPrimitive(reference.checksum), "byte_count" to JsonPrimitive(reference.size),
+                    "_media" to buildJsonObject { put("object", reference.json()) })
+            }
+            envelope(entity.table, entity.table, index + 1L, fields, entity.version)
         }
         remote.receivePage(scope, token, "full-dataset", envelopes.toString().toByteArray(), envelopes, 21)
         assertEquals(21, remote.applyPending(scope, token))

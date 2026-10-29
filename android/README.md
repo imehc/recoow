@@ -30,13 +30,15 @@ Android Studio 自动生成的 `gradle/gradle-daemon-jvm.properties` 优先于 `
 | `core:domain` | 纯 Kotlin 模型、仓库和平台接口、八工具路由契约 |
 | `core:data` | 记录仓库、派生投影、同步接收/应用事务、DataStore 与系统语言适配 |
 | `core:database` | 21 实体 Room 存储、同步辅助表、索引、迁移及独占访问协调 |
+| `core:network` | Retrofit 协议 v2、严格响应解码、HTTPS 与媒体流传输 |
+| `core:sync` | Keystore 凭据、同步队列、断点恢复、冲突与媒体协调、WorkManager |
 | `core:designsystem` | 唯一 Expressive 主题、页面框架和空状态组件 |
 | `core:calendar` | Android ICU 公历/农历日期及纪念日计算 |
 | `core:backup` | 本机回滚备份与中断恢复；iOS SQLite 备份只读检查 |
 | `core:scene` | Filament GLB 渲染与 Compose 生命周期适配 |
 | `core:location` | Android 原生定位、MapLibre 地图与轨迹显示 |
 | `feature:home` / `statistics` | 首页与统计页面 |
-| `feature:settings` | MVVM/UDF 显示设置、单份 StateFlow、失败与重试、可恢复选择弹窗 |
+| `feature:settings` | 显示偏好、同步连接和冲突处理的 MVVM/UDF 界面 |
 
 Feature 不互相依赖，不直接访问存储。Domain 不依赖 Android、Hilt、Room 或 Retrofit。
 
@@ -57,3 +59,13 @@ Room 2.8.5 管理数据库，kotlinx.serialization 1.10.0 保留 JSON 值的类�
 业务写入通过 `RecordRepository` 完成；同步回放使用独立入口，避免再次生成本地变更。媒体及偏好写入须使用同一个 `DatabaseHost` 访问边界。维护操作使用 `guarded`：先备份数据库、媒体和偏好，再开始写入；异常或进程中断后先恢复再开放访问。
 
 数据和回滚目录位于应用 `noBackupFilesDir`。本机回滚包绑定安装身份，包含同步状态、不含账号凭据；它与 iOS `.recoowbackup` 互通格式是不同的格式。
+
+## 同步
+
+Retrofit 3 与 OkHttp 5 对接仓库后端的协议 v2。正式连接要求 HTTPS；Debug 仅额外允许 `localhost`、`127.0.0.1` 和模拟器宿主地址 `10.0.2.2` 的 HTTP。禁止带凭据、查询串或片段的服务器地址，认证请求不跟随重定向。
+
+设备令牌和待确认的恢复密钥以 Android Keystore AES-GCM 加密，放在回滚目录之外。业务记录使用 `DeviceIdentity` 的本地 UUID，服务端签发的设备 ID 仅用于连接身份。
+
+WorkManager 在联网约束下执行合并后的同步请求，并持久化重试；前台与本地修改触发即时任务，周期任务补偿进程退出期间的变化。媒体在保存修改时按内容寻址固定，上传确认后才提交引用；收到的数据先进入持久化 inbox，再按依赖应用。通知任务独立保留，由功能模块的幂等调度器通过 `NotificationDelivery` 消费。
+
+协议测试可运行 `./gradlew :core:network:testDebugUnitTest`。真实后端测试使用隔离的测试账号，通过设备测试参数 `syncBaseUrl` 指定地址，例如 `-Pandroid.testInstrumentationRunnerArguments.syncBaseUrl=http://10.0.2.2:8080/`；未提供地址时跳过网络联调。

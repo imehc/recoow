@@ -37,7 +37,8 @@ private enum class AppTab(val route: String, val label: Int, val icon: Int) {
 
 @Composable
 fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLanguage: (AppLanguage) -> Unit,
-    onRetry: () -> Unit, pendingTool: String? = null, onToolConsumed: (String) -> Unit = {}) {
+    onRetry: () -> Unit, pendingTool: String? = null, onToolConsumed: (String) -> Unit = {},
+    syncScreen: @Composable (() -> Unit) -> Unit = {}) {
     val controller = rememberNavController()
     val entry by controller.currentBackStackEntryAsState()
     LaunchedEffect(pendingTool) {
@@ -54,7 +55,7 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            if (entry?.destination?.route?.startsWith("tool/") != true) {
+            if (entry?.destination?.route?.startsWith("tool/") != true && entry?.destination?.route != "sync") {
                 NavigationBar {
                     AppTab.entries.forEach { tab ->
                         NavigationBarItem(
@@ -78,7 +79,8 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
         NavHost(controller, startDestination = AppTab.HOME.route, modifier = Modifier.padding(padding).consumeWindowInsets(padding)) {
             composable(AppTab.HOME.route) { HomeScreen() }
             composable(AppTab.STATISTICS.route) { StatisticsScreen() }
-            composable(AppTab.SETTINGS.route) { SettingsScreen(state, onAppearance, onLanguage, onRetry) }
+            composable(AppTab.SETTINGS.route) { SettingsScreen(state, onAppearance, onLanguage, onRetry) { controller.navigate("sync") { launchSingleTop = true } } }
+            composable("sync") { syncScreen { controller.popBackStack() } }
             composable("tool/{toolId}") { destination ->
                 val route = ToolRoute.entries.firstOrNull { it.id == destination.arguments?.getString("toolId") }
                 if (route != null) ToolDestination(route,

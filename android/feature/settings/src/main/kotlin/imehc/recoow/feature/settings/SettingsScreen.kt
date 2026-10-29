@@ -33,11 +33,12 @@ import imehc.recoow.core.domain.preferences.AppLanguage
 import imehc.recoow.core.domain.preferences.Appearance
 
 @Composable
-fun SettingsScreen(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLanguage: (AppLanguage) -> Unit, onRetry: () -> Unit) {
+fun SettingsScreen(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLanguage: (AppLanguage) -> Unit, onRetry: () -> Unit, onSync: () -> Unit = {}) {
     var selection by rememberSaveable { mutableStateOf<String?>(null) }
     val appearanceLabels = listOf(stringResource(R.string.follow_system), stringResource(R.string.appearance_light), stringResource(R.string.appearance_dark))
     val languageLabels = listOf(stringResource(R.string.follow_system), stringResource(R.string.language_chinese), stringResource(R.string.language_english))
     RecoowPage(stringResource(R.string.settings_title)) {
+        item { Card { ListItem(onClick = onSync, modifier = Modifier.testTag("sync_settings")) { Text(stringResource(R.string.sync_title)) } } }
         item { Text(stringResource(R.string.display_section), style = MaterialTheme.typography.titleSmall) }
         val preferences = state.preferences
         if (preferences != null) {

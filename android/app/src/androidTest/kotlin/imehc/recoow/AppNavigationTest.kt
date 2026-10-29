@@ -12,6 +12,8 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.assertTextContains
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
@@ -38,6 +40,17 @@ class AppNavigationTest {
         compose.onNodeWithTag(tag).performScrollTo().performClick()
         compose.onNodeWithTag("preference_option_$index").performScrollTo().performClick()
         compose.waitForIdle()
+    }
+
+    @Test fun syncScreenRestoresAddressAndReturnsToSettings() {
+        openSettings()
+        compose.onNodeWithTag("sync_settings").performScrollTo().performClick()
+        compose.onNodeWithTag("sync_endpoint").performTextInput("https://example.com/recoow")
+        compose.activityRule.scenario.recreate()
+        compose.onNodeWithTag("sync_endpoint").assertTextContains("https://example.com/recoow")
+        compose.onNodeWithTag("tab_settings").assertDoesNotExist()
+        compose.onNodeWithTag("sync_back").performClick()
+        compose.onNodeWithTag("tab_settings").assertIsSelected()
     }
 
     @Test fun allTabsAndRecreationRetainSelectedDestination() {

@@ -6,6 +6,23 @@ import kotlinx.serialization.json.*
 
 /** All calls run inside Room's transaction, so raw SQL and DAO invalidations share one connection. */
 object PhysicalRecords {
+    fun binary(db: SupportSQLiteDatabase, table: String, id: String, field: String): ByteArray? {
+        val length = db.query("SELECT length(\"$field\") FROM \"$table\" WHERE id = ?", arrayOf(id)).use {
+            if (!it.moveToFirst() || it.isNull(0)) return null
+            it.getInt(0)
+        }
+        require(length <= 200 * 1024 * 1024)
+        val result = ByteArray(length)
+        var offset = 0
+        while (offset < length) {
+            db.query("SELECT substr(\"$field\", ?, ?) FROM \"$table\" WHERE id = ?", arrayOf<Any>(offset + 1, minOf(512 * 1024, length - offset), id)).use {
+                check(it.moveToFirst()); val part = it.getBlob(0); check(part.isNotEmpty())
+                part.copyInto(result, offset); offset += part.size
+            }
+        }
+        return result
+    }
+
     fun exists(db: SupportSQLiteDatabase, table: String, id: String): Boolean =
         db.query("SELECT 1 FROM \"$table\" WHERE id = ?", arrayOf(id)).use { it.moveToFirst() }
 
