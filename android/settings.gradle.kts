@@ -25,3 +25,5 @@ include(":benchmark")
 include(":feature:anniversaries", ":feature:decision")
 
 include(":feature:tracks")
+
+include(":feature:history")

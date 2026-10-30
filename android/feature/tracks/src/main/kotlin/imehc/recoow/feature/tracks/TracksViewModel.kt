@@ -40,6 +40,7 @@ class TracksViewModel @Inject constructor(private val repository: TracksReposito
     } }
     fun show(id: String) { saved["trackDetail"] = id; saved["trackDraft"] = null }
     fun showHistory() { saved["trackHistory"] = true }
+    fun showRecording() { saved["trackDetail"] = null; saved["trackDraft"] = null; saved["trackHistory"] = false }
     fun accuracy(value: Int) { if (recorder.state.value.current == null) saved["trackAccuracy"] = value }
     fun edit(track: Track) { saved["trackDraft"] = TrackDraft(track.id, track.revision, track.name, track.note.orEmpty()) }
     fun update(value: TrackDraft) { if (!state.value.busy) saved["trackDraft"] = value }

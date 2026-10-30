@@ -1,0 +1,4 @@
+<resources>
+    <string-array name="statistics_expense_categories"><item>Dining</item><item>Shopping</item><item>Transport</item><item>Group buy</item><item>Housing</item><item>Utilities</item><item>Entertainment</item><item>Medical</item><item>Learning</item><item>Social</item><item>Other</item></string-array>
+    <string-array name="statistics_income_categories"><item>Salary</item><item>Bonus</item><item>Investment dividends</item><item>App payout</item><item>Part-time work</item><item>Reimbursement</item><item>Refund</item><item>Other</item></string-array>
+</resources>

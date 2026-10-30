@@ -1,0 +1,11 @@
+<resources>
+    <string name="home_daily">Daily records</string>
+    <string name="home_utilities">Life tools</string>
+    <string name="home_track_metrics">%1$d seconds · %2$d points</string>
+    <string name="home_summary_retry">Summary could not refresh. Retry</string>
+    <string name="home_hidden_title">No tools are visible</string>
+    <string name="home_hidden_description">Enable tools in Settings. Your records are still available in statistics and history.</string>
+    <string name="home_settings">Open Settings</string>
+    <string name="home_anniversary_today">%1$d today</string>
+    <string name="home_anniversary_days">In %1$d days</string>
+</resources>

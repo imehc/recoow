@@ -1,0 +1,27 @@
+<resources>
+    <string name="statistics_history">All history</string>
+    <string name="statistics_partial">Some data could not refresh: %1$s. The last available results are retained.</string>
+    <string name="statistics_overview">Overview</string>
+    <string name="statistics_total">Total records: %1$d</string>
+    <string name="statistics_today">Recorded today: %1$d</string>
+    <string name="statistics_days">Recorded days: %1$d</string>
+    <string name="statistics_latest">Latest: %1$s</string>
+    <string name="statistics_none">None</string>
+    <string name="statistics_scope">Check-ins count tasks by scheduled date; history shows individual completions. Food counts one record per local day. Hiding a home entry does not exclude its data.</string>
+    <string name="statistics_recent">Last 7 days</string>
+    <string name="statistics_tools">Tool usage</string>
+    <string name="statistics_usage">%1$d total · %2$d today</string>
+    <string name="statistics_checkins">Check-in progress</string>
+    <string name="statistics_no_progress">No ongoing goals or multi-day tasks</string>
+    <string name="statistics_progress">%1$d / %2$d days · %3$d remaining</string>
+    <string name="statistics_checkin_total">%1$d completed days</string>
+    <string name="statistics_streak">Current streak %1$d days · Longest %2$d days</string>
+    <string name="statistics_bills">Bill statistics</string>
+    <string name="statistics_bill_trend">Expense and income trend</string>
+    <string name="statistics_expense_share">Expense categories</string>
+    <string name="statistics_income_share">Income categories</string>
+    <string name="statistics_usage_bar">%1$s: %2$d records</string>
+    <string name="statistics_trend_legend">Each pair: expenses on the left, income on the right. Swipe to see the full period; tap a group for values.</string>
+    <string name="statistics_bill_bar">%1$s: expenses %2$s, income %3$s, %4$d bills</string>
+    <string name="statistics_share_row">%1$s · %2$s · %3$s · %4$d bills</string>
+</resources>

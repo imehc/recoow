@@ -171,6 +171,6 @@ interface RemindersRepository {
     suspend fun save(draft: ReminderDraft): String
     suspend fun act(id: String, action: ReminderAction, reason: String = "")
     suspend fun makeUp(id: String, dates: Set<LocalDate>, note: String)
-    suspend fun deleteCompletion(id: String, date: LocalDate)
+    suspend fun deleteCompletion(id: String, date: LocalDate, expected: CheckIn? = null)
     suspend fun delete(id: String, revision: String)
 }

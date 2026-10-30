@@ -1,0 +1,25 @@
+<resources>
+    <string name="history_title">History</string>
+    <string name="history_select">Select</string>
+    <string name="history_done">Done</string>
+    <string name="history_tool">Tool</string>
+    <string name="history_all">All tools</string>
+    <string name="history_all_dates">All dates</string>
+    <string name="history_choose_date">Choose date</string>
+    <string name="history_today">Today</string>
+    <string name="history_previous_week">Previous week</string>
+    <string name="history_next_week">Next week</string>
+    <string name="history_count">%1$d records</string>
+    <string name="history_calendar_scope">Badges count all records on that day, regardless of the filters. Food is grouped by meal date; the list is ordered by latest edit time.</string>
+    <string name="history_calendar_retry">Calendar could not refresh. Retry</string>
+    <string name="history_select_loaded">Select loaded records</string>
+    <string name="history_delete_selected">Delete %1$d records</string>
+    <string name="history_no_matches">No matching records</string>
+    <string name="history_empty">No history yet</string>
+    <string name="history_scope">Tracks, choices, items, check-in details, bills, food days, diary entries and anniversaries appear here.</string>
+    <string name="history_food_day">Meal date %1$s · %2$d entries</string>
+    <string name="history_more">Load more</string>
+    <string name="history_delete_result">Deleted %1$d · Failed %2$d</string>
+    <string name="history_changed">Records changed or could not be read. Refresh and select them again.</string>
+    <string name="history_delete_effects">This deletes the listed records. Check-ins delete only the selected completion, preserving the task. A food day deletes its entries and day title. Tracks delete their points and segments. Bill balances, attachments and sync deletions follow each tool’s rules. Linked diary entries and other source records are preserved.</string>
+</resources>

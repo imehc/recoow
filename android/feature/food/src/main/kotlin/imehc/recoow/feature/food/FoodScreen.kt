@@ -26,7 +26,11 @@ import java.time.*
     // A restored destination must not replay its link and discard an in-progress editor.
     var deliveredRecordId by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(recordId) {
-        if (recordId != null && recordId != deliveredRecordId) { vm.show(recordId); deliveredRecordId = recordId }
+        if (recordId != null && recordId != deliveredRecordId) {
+            val linkedDay = recordId.takeIf { it.startsWith("day:") }?.removePrefix("day:")?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+            if (linkedDay != null) vm.showDay(linkedDay) else vm.show(recordId)
+            deliveredRecordId = recordId
+        }
     }
     val nested = draft != null || detail != null || day != null || titleDraft != null || pickingBills
     val back: () -> Unit = { if (!state.busy) { if (nested) vm.back() else onBack() } }
@@ -80,7 +84,7 @@ import java.time.*
 @Composable private fun FoodDayDetail(vm: FoodViewModel, state: FoodState, group: FoodDay?, date: LocalDate, back: () -> Unit) {
     var deleting by remember { mutableStateOf<FoodDay?>(null) }; var copying by remember { mutableStateOf<List<FoodEntry>?>(null) }
     val names = LocalResources.current.getStringArray(R.array.food_meals)
-    RecordPage(group?.title ?: date.toString(), back, busy = state.busy,
+    RecordPage(group?.title ?: date.toString(), back, tag = "food_day_detail", busy = state.busy,
         action = if (group != null) stringResource(R.string.food_day_title) else null, onAction = { group?.let(vm::editTitle) },
         add = if (!state.loading && !state.failed) stringResource(R.string.food_add) else null, onAdd = { vm.edit() }) {
         if (group == null) item { if (state.loading || state.failed) RecordLoadState(state.loading, state.failed, vm::retry) else Text(stringResource(CommonR.string.record_empty)) }

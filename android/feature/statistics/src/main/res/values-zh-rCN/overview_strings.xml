@@ -1,0 +1,27 @@
+<resources>
+    <string name="statistics_history">统一历史</string>
+    <string name="statistics_partial">部分数据刷新失败：%1$s。保留上次可用结果。</string>
+    <string name="statistics_overview">记录总览</string>
+    <string name="statistics_total">总记录 %1$d 条</string>
+    <string name="statistics_today">今日记录 %1$d 条</string>
+    <string name="statistics_days">有记录 %1$d 天</string>
+    <string name="statistics_latest">最近记录：%1$s</string>
+    <string name="statistics_none">暂无</string>
+    <string name="statistics_scope">打卡按任务及计划日期统计，历史展示打卡明细；饮食按本地日期合并为一条。首页隐藏入口不影响统计。</string>
+    <string name="statistics_recent">近七日趋势</string>
+    <string name="statistics_tools">工具使用</string>
+    <string name="statistics_usage">累计 %1$d 条 · 今日 %2$d 条</string>
+    <string name="statistics_checkins">打卡进度</string>
+    <string name="statistics_no_progress">暂无长期目标或多日任务</string>
+    <string name="statistics_progress">已完成 %1$d / %2$d 天 · 剩余 %3$d 天</string>
+    <string name="statistics_checkin_total">累计打卡 %1$d 天</string>
+    <string name="statistics_streak">当前连续 %1$d 天 · 最长连续 %2$d 天</string>
+    <string name="statistics_bills">账单统计</string>
+    <string name="statistics_bill_trend">收支趋势</string>
+    <string name="statistics_expense_share">支出分类占比</string>
+    <string name="statistics_income_share">收入分类占比</string>
+    <string name="statistics_usage_bar">%1$s：%2$d 条记录</string>
+    <string name="statistics_trend_legend">每组左侧为支出，右侧为收入；可横向滑动查看整个周期，点击一组查看数值。</string>
+    <string name="statistics_bill_bar">%1$s：支出 %2$s，收入 %3$s，账单 %4$d 条</string>
+    <string name="statistics_share_row">%1$s · %2$s · %3$s · %4$d 条</string>
+</resources>

@@ -25,6 +25,9 @@ import imehc.recoow.navigation.ToolLinkViewModel
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
+    private val home: imehc.recoow.feature.home.HomeViewModel by viewModels()
+    private val statistics: imehc.recoow.feature.statistics.StatisticsViewModel by viewModels()
+    private val history: imehc.recoow.feature.history.HistoryViewModel by viewModels()
     private val preferences: SettingsViewModel by viewModels()
     private val toolLinks: ToolLinkViewModel by viewModels()
     private val bills: imehc.recoow.feature.bills.BillsViewModel by viewModels()
@@ -44,9 +47,7 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContent {
             val state by preferences.uiState.collectAsStateWithLifecycle()
-            val billState by bills.state.collectAsStateWithLifecycle()
             val recordingState by tracks.recorder.state.collectAsStateWithLifecycle()
-            val reminderState by reminders.state.collectAsStateWithLifecycle()
             val syncState by sync.state.collectAsStateWithLifecycle()
             val pendingRoute by toolLinks.pendingRoute.collectAsStateWithLifecycle()
             val systemDark = isSystemInDarkTheme()
@@ -71,8 +72,12 @@ class MainActivity : AppCompatActivity() {
             RecoowTheme(darkTheme = dark) {
                 RecoowApp(state, preferences::setAppearance, preferences::setLanguage, preferences::retry,
                     pendingRoute, toolLinks::consumed,
-                    bills = billState.bills, billsLoading = billState.loading, billsFailed = billState.readFailed, onBillsRetry = bills::retry, onBill = bills::show,
-                    onToolVisible = preferences::setToolVisible, reminders = reminderState.records, activeTrack = recordingState.current,
+                    onBill = bills::show, onToolVisible = preferences::setToolVisible,
+                    homeScreen = { settings, tool -> imehc.recoow.feature.home.HomeRoute(home, state.preferences,
+                        recordingState.current?.copy(duration = recordingState.duration, pointCount = recordingState.pointCount), settings,
+                        { tracks.showRecording(); tool(imehc.recoow.core.domain.navigation.ToolRoute.LOCATION.id) }, tool) },
+                    statisticsScreen = { history, tool -> imehc.recoow.feature.statistics.StatisticsRoute(statistics, history, tool) },
+                    historyScreen = { back, record -> imehc.recoow.feature.history.HistoryScreen(history, back, record) },
                     remindersScreen = { recordId, onBack -> imehc.recoow.feature.reminders.RemindersScreen(reminders, onBack, recordId) },
                     billsScreen = { onBack -> imehc.recoow.feature.bills.BillsScreen(bills, onBack) },
                     journalScreen = { route, id, onBack, onSource -> when (route) {

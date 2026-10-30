@@ -1,0 +1,3 @@
+<resources>
+    <string-array name="record_tool_names"><item>Bills</item><item>Check-ins</item><item>Diary</item><item>Food journal</item><item>Decision maker</item><item>Item locator</item><item>Anniversaries</item><item>Tracks</item></string-array>
+</resources>

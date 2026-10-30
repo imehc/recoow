@@ -41,10 +41,10 @@ private enum class AppTab(val route: String, val label: Int, val icon: Int) {
 fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLanguage: (AppLanguage) -> Unit,
     onRetry: () -> Unit, pendingTool: String? = null, onToolConsumed: (String) -> Unit = {},
     onToolVisible: (String, Boolean) -> Unit = { _, _ -> },
-    bills: List<imehc.recoow.core.domain.bills.BillRecord> = emptyList(),
-    billsLoading: Boolean = false, billsFailed: Boolean = false, onBillsRetry: () -> Unit = {}, onBill: (String) -> Unit = {},
-    reminders: List<imehc.recoow.core.domain.reminders.Reminder> = emptyList(),
-    activeTrack: imehc.recoow.core.domain.tracks.Track? = null,
+    onBill: (String) -> Unit = {},
+    homeScreen: @Composable (() -> Unit, (String) -> Unit) -> Unit = { settings, tool -> HomeScreen(onSettings = settings, onTool = tool) },
+    statisticsScreen: @Composable (() -> Unit, (ToolRoute, String?) -> Unit) -> Unit = { history, tool -> StatisticsScreen(onHistory = history, onTool = tool) },
+    historyScreen: @Composable (() -> Unit, (ToolRoute, String) -> Unit) -> Unit = { _, _ -> },
     remindersScreen: @Composable (String?, () -> Unit) -> Unit = { _, _ -> },
     billsScreen: @Composable (() -> Unit) -> Unit = {},
     journalScreen: @Composable (ToolRoute, String?, () -> Unit, (ToolRoute, String) -> Unit) -> Unit = { _, _, _, _ -> },
@@ -67,7 +67,7 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
         modifier = Modifier.semantics { testTagsAsResourceId = true },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            if (entry?.destination?.route?.startsWith("tool/") != true && entry?.destination?.route !in setOf("sync", "media")) {
+            if (entry?.destination?.route?.startsWith("tool/") != true && entry?.destination?.route !in setOf("sync", "media", "history")) {
                 NavigationBar {
                     AppTab.entries.forEach { tab ->
                         NavigationBarItem(
@@ -89,8 +89,13 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
         },
     ) { padding ->
         NavHost(controller, startDestination = AppTab.HOME.route, modifier = Modifier.padding(padding).consumeWindowInsets(padding)) {
-            composable(AppTab.HOME.route) { HomeScreen(state.preferences, reminders, activeTrack) { tool -> controller.navigate("tool/$tool") { launchSingleTop = true } } }
-            composable(AppTab.STATISTICS.route) { StatisticsScreen(bills, billsLoading, billsFailed, onBillsRetry) { id -> onBill(id); controller.navigate("tool/bills") } }
+            composable(AppTab.HOME.route) { homeScreen({ controller.navigate("settings") { launchSingleTop = true } }) { tool -> controller.navigate("tool/$tool") { launchSingleTop = true } } }
+            composable(AppTab.STATISTICS.route) { statisticsScreen({ controller.navigate("history") { launchSingleTop = true } }) { tool, id ->
+                controller.navigate("tool/${tool.id}" + (id?.let { "?recordId=${java.net.URLEncoder.encode(it, "UTF-8")}" } ?: ""))
+            } }
+            composable("history") { historyScreen({ controller.popBackStack() }) { tool, id ->
+                controller.navigate("tool/${tool.id}?recordId=${java.net.URLEncoder.encode(id, "UTF-8")}")
+            } }
             composable(AppTab.SETTINGS.route) { SettingsScreen(state, onAppearance, onLanguage, onRetry,
                 onSync = { controller.navigate("sync") { launchSingleTop = true } },
                 onMedia = { controller.navigate("media") { launchSingleTop = true } }, onToolVisible = onToolVisible) }

@@ -38,7 +38,7 @@ class FoodViewModel @Inject constructor(private val repository: FoodRepository, 
         } catch (e: CancellationException) { throw e } catch (_: Exception) { mutable.update { it.copy(loading = false, failed = true) } } }
     }
     fun query(value: String) { saved["foodQuery"] = value }
-    fun showDay(value: LocalDate) { saved["foodDay"] = value.toString(); saved["foodDetail"] = null }
+    fun showDay(value: LocalDate) { saved["foodDay"] = value.toString(); saved["foodDetail"] = null; saved["foodDraft"] = null; saved["foodTitle"] = null; saved["foodPickingBills"] = false }
     fun show(id: String) { saved["foodDetail"] = id; saved["foodDraft"] = null }
     fun edit(entry: FoodEntry? = null) {
         val today = LocalDate.now(); val target = day.value?.let(LocalDate::parse) ?: today
