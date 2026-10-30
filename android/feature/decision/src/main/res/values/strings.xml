@@ -1,0 +1,33 @@
+<resources>
+    <string name="decision_title">Decide</string>
+    <string name="decision_collection">Collection</string>
+    <string name="decision_history">Choice history</string>
+    <string name="decision_add_collection">Add collection</string>
+    <string name="decision_empty">Create a collection and add candidates to make your first choice.</string>
+    <string name="decision_option_count">Enabled candidates: %1$d</string>
+    <string name="decision_delete_collection">Delete this collection and its options? Choice history and snapshots will be kept.</string>
+    <string name="decision_preparing">Saving result…</string>
+    <string name="decision_spinning">Choosing…</string>
+    <string name="decision_draw">Choose</string>
+    <string name="decision_scene_failed">The 3D scene is unavailable. You can still browse candidates and choose.</string>
+    <string name="decision_previous">Previous</string>
+    <string name="decision_next">Next</string>
+    <string name="decision_no_options">Add at least one enabled candidate.</string>
+    <string name="decision_result">Result</string>
+    <string name="decision_view_result">View saved result</string>
+    <string name="decision_animation">Choice animation</string>
+    <string name="decision_options">Candidates</string>
+    <string name="decision_hide_options">Hide candidates</string>
+    <string name="decision_add_option">Add candidate</string>
+    <string name="decision_weight_value">Weight: %1$d</string>
+    <string name="decision_disabled">Disabled</string>
+    <string name="decision_focus">Show on turntable</string>
+    <string name="decision_delete_option">Delete this candidate? Existing choice history will be kept.</string>
+    <string name="decision_option">Candidate</string>
+    <string name="decision_description">Description</string>
+    <string name="decision_custom">Custom information</string>
+    <string name="decision_weight">Weight (1–100)</string>
+    <string name="decision_enabled">Enabled</string>
+    <string name="decision_delete_history">Delete this choice record? The collection and candidates will be kept.</string>
+    <string name="decision_unavailable">The collection or candidates changed. Check enabled candidates, weights and required fields.</string>
+</resources>

@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.Flow
 interface RecordDao {
     @Query("SELECT * FROM entity_snapshots WHERE tableName IN (:tables) ORDER BY tableName, entityId")
     fun observeTables(tables: List<String>): Flow<List<EntitySnapshot>>
+    @Query("SELECT 'option:' || id FROM decision_options WHERE deleted_at IS NULL AND length(image_data) > 0 UNION ALL SELECT 'choice:' || id FROM decision_choice_records WHERE deleted_at IS NULL AND length(option_image_data) > 0")
+    fun observeDecisionInlineImages(): Flow<List<String>>
     @Query("SELECT id FROM stored_items WHERE deleted_at IS NULL AND image_data IS NOT NULL AND length(image_data) > 0")
     fun observeItemsWithInlineImages(): Flow<List<String>>
     @Query("SELECT id FROM reminders WHERE deleted_at IS NULL AND image_data IS NOT NULL AND length(image_data) > 0")

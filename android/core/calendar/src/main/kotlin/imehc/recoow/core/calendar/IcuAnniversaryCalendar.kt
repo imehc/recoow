@@ -31,6 +31,11 @@ class IcuAnniversaryCalendar : AnniversaryCalendar {
                 it[Calendar.DAY_OF_MONTH], it[Calendar.IS_LEAP_MONTH] == 1)
         }
 
+    override fun yearsBetween(from: Instant, to: Instant, calendar: DateCalendar, zone: ZoneId): Int {
+        if (to < from) return 0
+        return calendar(calendar, zone).apply { timeInMillis = from.toEpochMilli() }.fieldDifference(java.util.Date(to.toEpochMilli()), Calendar.YEAR).coerceAtLeast(0)
+    }
+
     override fun nextOccurrence(schedule: AnniversarySchedule, reference: Instant, zone: ZoneId): Instant? {
         val localTime = LocalTime.of(schedule.reminderTimeMinutes / 60, schedule.reminderTimeMinutes % 60)
         val localDateTime = schedule.occurredAt.atZone(zone).toLocalDate().atTime(localTime)

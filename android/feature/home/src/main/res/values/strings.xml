@@ -12,4 +12,6 @@
     <string name="home_unavailable">Not available yet</string>
     <string name="home_pending">Ready today: %1$d</string>
     <string name="home_checkin">Open check-in</string>
+    <string name="home_anniversaries_description">Dates, lunar anniversaries and reminders</string>
+    <string name="home_decision_description">Collections, weighted choices and a 3D turntable</string>
 </resources>

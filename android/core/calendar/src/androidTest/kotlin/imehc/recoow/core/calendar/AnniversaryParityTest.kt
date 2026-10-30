@@ -9,6 +9,20 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class AnniversaryParityTest {
+    @Test fun lunarInputRoundTripsLeapMonthAndRejectsMissingDates() {
+        val zone = ZoneId.of("Asia/Shanghai")
+        val leap = LunarDate(2023, 2, 1, true)
+        assertEquals(java.time.LocalDate.of(2023, 3, 22), LunarDates.resolve(leap, zone))
+        assertEquals(leap, LunarDates.from(Instant.parse("2023-03-22T01:00:00Z").toEpochMilli(), zone))
+        org.junit.Assert.assertNull(LunarDates.resolve(leap.copy(year = 2024), zone))
+        org.junit.Assert.assertNull(LunarDates.resolve(LunarDate(2025, 1, 31, false), zone))
+        assertEquals(13, LunarDates.months(2023, zone).size)
+        assertEquals(12, LunarDates.months(2024, zone).size)
+        val calendar = IcuAnniversaryCalendar()
+        assertEquals(1, calendar.yearsBetween(Instant.parse("2024-02-10T01:00:00Z"), Instant.parse("2025-01-29T01:00:00Z"), DateCalendar.CHINESE, zone))
+        assertEquals(0, calendar.yearsBetween(Instant.parse("2024-02-10T01:00:00Z"), Instant.parse("2025-01-28T01:00:00Z"), DateCalendar.CHINESE, zone))
+    }
+
     @Test fun occurrenceAndCalendarFieldsMatchIOS() {
         val calendar = IcuAnniversaryCalendar()
         for (case in cases) {

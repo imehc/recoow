@@ -18,5 +18,6 @@ data class CalendarDate(val era: Int, val year: Int, val month: Int, val day: In
 
 interface AnniversaryCalendar {
     fun date(at: Instant, calendar: DateCalendar, zone: ZoneId): CalendarDate
+    fun yearsBetween(from: Instant, to: Instant, calendar: DateCalendar, zone: ZoneId): Int
     fun nextOccurrence(schedule: AnniversarySchedule, reference: Instant, zone: ZoneId): Instant?
 }

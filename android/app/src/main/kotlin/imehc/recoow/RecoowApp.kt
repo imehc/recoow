@@ -102,7 +102,7 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
                     billsScreen { controller.popBackStack() }
                 }
                 else if (route == ToolRoute.REMINDERS) androidx.compose.runtime.key(destination.arguments?.getString("delivery")) { remindersScreen(destination.arguments?.getString("recordId")) { controller.popBackStack() } }
-                else if (route in setOf(ToolRoute.DIARY, ToolRoute.FOOD, ToolRoute.ITEMS)) androidx.compose.runtime.key(destination.arguments?.getString("delivery")) { journalScreen(requireNotNull(route), destination.arguments?.getString("recordId"), { controller.popBackStack() }) { tool, id ->
+                else if (route in setOf(ToolRoute.DIARY, ToolRoute.FOOD, ToolRoute.ITEMS, ToolRoute.ANNIVERSARIES, ToolRoute.DECISION)) androidx.compose.runtime.key(destination.arguments?.getString("delivery")) { journalScreen(requireNotNull(route), destination.arguments?.getString("recordId"), { controller.popBackStack() }) { tool, id ->
                     if (tool == ToolRoute.BILLS) onBill(id)
                     controller.navigate("tool/${tool.id}?recordId=${java.net.URLEncoder.encode(id, "UTF-8")}")
                 } }

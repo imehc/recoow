@@ -1,0 +1,33 @@
+<resources>
+    <string name="decision_title">选什么</string>
+    <string name="decision_collection">集合</string>
+    <string name="decision_history">抽选历史</string>
+    <string name="decision_add_collection">新建集合</string>
+    <string name="decision_empty">新建集合并添加候选项，开始你的第一次抽选。</string>
+    <string name="decision_option_count">已启用 %1$d 个候选项</string>
+    <string name="decision_delete_collection">删除集合及其候选项？已有抽选历史和快照会保留。</string>
+    <string name="decision_preparing">正在保存结果…</string>
+    <string name="decision_spinning">正在抽选…</string>
+    <string name="decision_draw">选一个</string>
+    <string name="decision_scene_failed">3D 场景暂不可用，仍可浏览候选并抽选。</string>
+    <string name="decision_previous">上一个</string>
+    <string name="decision_next">下一个</string>
+    <string name="decision_no_options">请添加至少一个启用的候选项。</string>
+    <string name="decision_result">本次结果</string>
+    <string name="decision_view_result">查看已保存的结果</string>
+    <string name="decision_animation">抽选动画</string>
+    <string name="decision_options">候选项</string>
+    <string name="decision_hide_options">收起候选项</string>
+    <string name="decision_add_option">添加候选项</string>
+    <string name="decision_weight_value">权重 %1$d</string>
+    <string name="decision_disabled">未启用</string>
+    <string name="decision_focus">在转盘中查看</string>
+    <string name="decision_delete_option">删除此候选项？已有抽选历史会保留。</string>
+    <string name="decision_option">候选项</string>
+    <string name="decision_description">说明</string>
+    <string name="decision_custom">自定义信息</string>
+    <string name="decision_weight">权重（1–100）</string>
+    <string name="decision_enabled">启用</string>
+    <string name="decision_delete_history">删除这次抽选记录？集合和候选项会保留。</string>
+    <string name="decision_unavailable">候选项或集合已变化，请检查启用状态、权重和必填内容。</string>
+</resources>

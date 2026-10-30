@@ -13,6 +13,7 @@ android {
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 dependencies {
     implementation(project(":core:domain"))
+    implementation(project(":core:calendar"))
     implementation(project(":core:database"))
     implementation(libs.room.runtime)
     implementation(libs.hilt)

@@ -29,6 +29,8 @@ class MainActivity : AppCompatActivity() {
     private val toolLinks: ToolLinkViewModel by viewModels()
     private val bills: imehc.recoow.feature.bills.BillsViewModel by viewModels()
     private val reminders: imehc.recoow.feature.reminders.RemindersViewModel by viewModels()
+    private val anniversaries: imehc.recoow.feature.anniversaries.AnniversariesViewModel by viewModels()
+    private val decisions: imehc.recoow.feature.decision.DecisionViewModel by viewModels()
     private val diary: imehc.recoow.feature.diary.DiaryViewModel by viewModels()
     private val food: imehc.recoow.feature.food.FoodViewModel by viewModels()
     private val items: imehc.recoow.feature.items.ItemsViewModel by viewModels()
@@ -72,6 +74,8 @@ class MainActivity : AppCompatActivity() {
                     remindersScreen = { recordId, onBack -> imehc.recoow.feature.reminders.RemindersScreen(reminders, onBack, recordId) },
                     billsScreen = { onBack -> imehc.recoow.feature.bills.BillsScreen(bills, onBack) },
                     journalScreen = { route, id, onBack, onSource -> when (route) {
+                        imehc.recoow.core.domain.navigation.ToolRoute.ANNIVERSARIES -> imehc.recoow.feature.anniversaries.AnniversariesScreen(anniversaries, onBack, id)
+                        imehc.recoow.core.domain.navigation.ToolRoute.DECISION -> imehc.recoow.feature.decision.DecisionScreen(decisions, onBack, id)
                         imehc.recoow.core.domain.navigation.ToolRoute.DIARY -> imehc.recoow.feature.diary.DiaryScreen(diary, onBack, id, onSource)
                         imehc.recoow.core.domain.navigation.ToolRoute.FOOD -> imehc.recoow.feature.food.FoodScreen(food, onBack, id) { onSource(imehc.recoow.core.domain.navigation.ToolRoute.BILLS, it) }
                         imehc.recoow.core.domain.navigation.ToolRoute.ITEMS -> imehc.recoow.feature.items.ItemsScreen(items, onBack, id)

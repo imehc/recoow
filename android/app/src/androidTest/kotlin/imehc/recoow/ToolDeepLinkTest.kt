@@ -29,7 +29,7 @@ class ToolDeepLinkTest {
             compose.waitUntil(10_000) { compose.onAllNodesWithTag("tool_${route.id}").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithTag("tool_${route.id}").assertIsDisplayed()
             compose.onNodeWithTag("tab_home").assertDoesNotExist()
-            if (route in setOf(ToolRoute.BILLS, ToolRoute.REMINDERS, ToolRoute.DIARY, ToolRoute.FOOD, ToolRoute.ITEMS)) {
+            if (route in setOf(ToolRoute.BILLS, ToolRoute.REMINDERS, ToolRoute.DIARY, ToolRoute.FOOD, ToolRoute.ITEMS, ToolRoute.ANNIVERSARIES, ToolRoute.DECISION)) {
                 InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
                 compose.waitForIdle()
             } else compose.onNodeWithTag("return_home").performClick()
@@ -70,7 +70,7 @@ class ToolDeepLinkTest {
     }
 
     @Test fun journalRecordLinksReopenDetailsAndReturnThroughTheirLists() {
-        for ((tool, tag) in listOf("diary" to "diary_detail", "foodJournal" to "food_detail", "itemLocator" to "item_detail")) {
+        for ((tool, tag) in listOf("diary" to "diary_detail", "foodJournal" to "food_detail", "itemLocator" to "item_detail", "anniversaries" to "anniversary_detail", "decisionMaker" to "decision_detail")) {
             repeat(2) {
                 open("recoow://tool/$tool/missing-test-record")
                 compose.waitUntil(10_000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() }

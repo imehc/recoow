@@ -150,10 +150,11 @@ class ReminderNotificationRuntime @Inject constructor(@param:ApplicationContext 
 @Module @InstallIn(SingletonComponent::class)
 abstract class ReminderNotificationModule { @Binds abstract fun notifications(runtime: ReminderNotificationRuntime): ReminderNotifications }
 @EntryPoint @InstallIn(SingletonComponent::class)
-interface ReminderNotificationEntryPoint { fun runtime(): ReminderNotificationRuntime }
+interface ReminderNotificationEntryPoint { fun runtime(): ReminderNotificationRuntime; fun anniversaries(): AnniversaryNotificationRuntime }
+private fun anniversaries(context: Context) = EntryPointAccessors.fromApplication(context.applicationContext, ReminderNotificationEntryPoint::class.java).anniversaries()
 private fun runtime(context: Context) = EntryPointAccessors.fromApplication(context.applicationContext, ReminderNotificationEntryPoint::class.java).runtime()
 class ReminderReconcileWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
-    override suspend fun doWork(): Result = try { if (runtime(applicationContext).reconcile()) Result.success() else Result.retry() }
+    override suspend fun doWork(): Result = try { val reminders = runtime(applicationContext).reconcile(); val anniversaries = anniversaries(applicationContext).reconcile(); if (reminders && anniversaries) Result.success() else Result.retry() }
         catch (e: CancellationException) { throw e } catch (_: Exception) { Result.retry() }
 }
 class ReminderSystemReceiver : BroadcastReceiver() {
@@ -163,7 +164,7 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val result = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            try { withTimeout(8_000) { intent.data?.let { runtime(context).deliver(it, intent.getLongExtra("scheduled", 0)) } } }
+            try { withTimeout(8_000) { intent.data?.let { if (it.host == "anniversaries") anniversaries(context).deliver(it, intent.getLongExtra("scheduled", 0), intent.getStringExtra("revision")) else runtime(context).deliver(it, intent.getLongExtra("scheduled", 0)) } } }
             catch (_: Exception) { /* The recovery worker retries scheduling after transient failures. */ }
             finally { try { runtime(context).requestReconcile() } finally { result.finish() } }
         }

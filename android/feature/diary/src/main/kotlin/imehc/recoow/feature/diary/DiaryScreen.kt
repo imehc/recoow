@@ -152,7 +152,7 @@ import java.time.*
             if (entry.latitude != null && entry.longitude != null) item { Text(stringResource(R.string.diary_location, requireNotNull(entry.latitude), requireNotNull(entry.longitude))) }
             if (entry.links.isNotEmpty()) item { Text(stringResource(R.string.diary_links), style = MaterialTheme.typography.titleMedium) }
             items(entry.links, key = { it.key }) { link ->
-                val route = when (link.sourceType) { "bill" -> ToolRoute.BILLS; "reminder" -> ToolRoute.REMINDERS; "storedItem" -> ToolRoute.ITEMS; else -> null }
+                val route = when (link.sourceType) { "bill" -> ToolRoute.BILLS; "reminder" -> ToolRoute.REMINDERS; "storedItem" -> ToolRoute.ITEMS; "anniversary" -> ToolRoute.ANNIVERSARIES; "decisionChoice" -> ToolRoute.DECISION; else -> null }
                 OutlinedCard(Modifier.fillMaxWidth().then(if (route != null) Modifier.clickable { onSource(route, link.sourceId) } else Modifier)) { Column(Modifier.padding(16.dp)) {
                 DiarySource.entries.firstOrNull { it.wire == link.sourceType }?.let { Text(sourceNames[it.ordinal], style = MaterialTheme.typography.labelMedium) }
                 Text(link.title, style = MaterialTheme.typography.titleMedium); link.subtitle?.let { Text(it) }

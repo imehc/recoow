@@ -50,3 +50,19 @@ val testSceneAssets = tasks.register<PrepareSceneAssets>("prepareTestSceneAssets
 androidComponents.onVariants { variant ->
     variant.androidTest?.sources?.assets?.addGeneratedSourceDirectory(testSceneAssets, PrepareSceneAssets::outputDirectory)
 }
+
+abstract class PrepareDecisionAssets : DefaultTask() {
+    @get:InputDirectory abstract val sourceDirectory: DirectoryProperty
+    @get:OutputDirectory abstract val outputDirectory: DirectoryProperty
+    @TaskAction fun prepare() {
+        val source = sourceDirectory.get().asFile
+        val target = outputDirectory.get().asFile.resolve("decision").apply { mkdirs() }
+        source.listFiles()!!.filter { it.name == "asset-manifest.json" || it.name == "decision-stage.glb" || it.name.startsWith("option-") && it.extension == "glb" }
+            .forEach { it.copyTo(target.resolve(it.name), overwrite = true) }
+    }
+}
+val decisionAssets = tasks.register<PrepareDecisionAssets>("prepareDecisionAssets") {
+    sourceDirectory.set(rootProject.layout.projectDirectory.dir("../assets/decision-scene"))
+    outputDirectory.set(layout.buildDirectory.dir("generated/decisionAssets"))
+}
+androidComponents.onVariants { it.sources.assets?.addGeneratedSourceDirectory(decisionAssets, PrepareDecisionAssets::outputDirectory) }

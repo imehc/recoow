@@ -12,8 +12,8 @@ android {
         applicationId = "imehc.recoow"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.4.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     val signingValues = listOf("RECOOW_KEYSTORE", "RECOOW_KEYSTORE_PASSWORD", "RECOOW_KEY_ALIAS", "RECOOW_KEY_PASSWORD")
@@ -63,6 +63,8 @@ dependencies {
     implementation(project(":feature:bills"))
     implementation(project(":feature:reminders"))
     implementation(project(":feature:diary"))
+    implementation(project(":feature:anniversaries"))
+    implementation(project(":feature:decision"))
     implementation(project(":feature:food"))
     implementation(project(":feature:items"))
     implementation(project(":core:notifications"))

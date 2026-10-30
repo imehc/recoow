@@ -9,7 +9,7 @@ class ToolLinkViewModel(private val savedState: SavedStateHandle) : ViewModel() 
 
     fun receive(scheme: String?, host: String?, segments: List<String>) {
         ToolRoute.fromDeepLink(scheme, host, segments)?.let {
-            val records = setOf(ToolRoute.BILLS, ToolRoute.REMINDERS, ToolRoute.DIARY, ToolRoute.FOOD, ToolRoute.ITEMS)
+            val records = setOf(ToolRoute.BILLS, ToolRoute.REMINDERS, ToolRoute.DIARY, ToolRoute.FOOD, ToolRoute.ITEMS, ToolRoute.ANNIVERSARIES, ToolRoute.DECISION)
             savedState[KEY] = it.id + if (it in records && segments.size == 2 && segments[1].isNotBlank())
                 "?recordId=" + android.net.Uri.encode(segments[1]) + "&delivery=" + java.util.UUID.randomUUID() else ""
         }

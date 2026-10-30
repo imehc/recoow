@@ -114,6 +114,32 @@ class SyncIntegrationTest {
         assertTrue("Sync failed: ${client.engine.state.value.problem}, pending=${client.engine.state.value.pending}, inbox=${client.engine.state.value.waitingRows}, media=${client.engine.state.value.pendingMedia}", result)
     }
 
+    @Test fun anniversariesAndChoiceSnapshotsRoundTripAfterSourceDeletion() = runBlocking {
+        requireBackend(); val a = client(); create(a); val b = client(); recover(b, a)
+        val ad = imehc.recoow.core.data.decision.RoomDecisionsRepository(a.host, a.vault.localDeviceId)
+        val bd = imehc.recoow.core.data.decision.RoomDecisionsRepository(b.host, b.vault.localDeviceId)
+        val aa = imehc.recoow.core.data.anniversaries.RoomAnniversariesRepository(a.host, a.vault.localDeviceId)
+        val ba = imehc.recoow.core.data.anniversaries.RoomAnniversariesRepository(b.host, b.vault.localDeviceId)
+        ad.saveCollection(imehc.recoow.core.domain.decision.CollectionDraft(id = "choices", title = "Lunch"))
+        val file = File(a.host.directory, "option.jpg"); val bitmap = android.graphics.Bitmap.createBitmap(40, 30, android.graphics.Bitmap.Config.ARGB_8888)
+        file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 78, it) }; bitmap.recycle()
+        ad.saveOption(imehc.recoow.core.domain.decision.OptionDraft(id = "option", collectionId = "choices", title = "Burger", customInfo = "Original", imageChanged = true, hasImage = true,
+            imageContent = imehc.recoow.core.domain.media.PreparedMedia(file, "image/jpeg", 40, 30)))
+        val choice = ad.choose("choices")
+        aa.save(imehc.recoow.core.domain.anniversaries.AnniversaryDraft(id = "date", title = "Lunar", calendar = imehc.recoow.core.domain.calendar.DateCalendar.CHINESE, lead = 1440))
+        assertSynced(a, a.engine.sync()); assertSynced(b, b.engine.sync())
+        val received = bd.snapshot.first().history.single(); assertEquals(choice, received.id); assertEquals("Original", received.customInfo)
+        val media = imehc.recoow.core.data.media.RoomMediaRepository(b.host, File(b.host.directory, "cache"), b.vault.localDeviceId)
+        assertEquals(imehc.recoow.core.domain.media.MediaAvailability.READY, media.resolve(received.image).availability)
+        assertEquals(imehc.recoow.core.domain.calendar.DateCalendar.CHINESE, ba.records.first().single().calendar)
+        val collection = ad.snapshot.first().collections.single(); ad.deleteCollection(collection.id, collection.revision)
+        val anniversary = aa.records.first().single(); aa.save(imehc.recoow.core.domain.anniversaries.AnniversaryDraft.from(anniversary).copy(enabled = false))
+        assertSynced(a, a.engine.sync()); assertSynced(b, b.engine.sync())
+        assertTrue(bd.snapshot.first().options.isEmpty()); assertEquals(received, bd.snapshot.first().history.single()); assertFalse(ba.records.first().single().enabled)
+        assertEquals(imehc.recoow.core.domain.media.MediaAvailability.READY, media.resolve(received.image).availability)
+        bd.deleteChoice(received.id, received.revision); assertSynced(b, b.engine.sync()); assertSynced(a, a.engine.sync()); assertTrue(ad.snapshot.first().history.isEmpty())
+    }
+
     @Test fun journalRepositoriesRoundTripMediaReferencesCopiesAndDeletionThroughBackend() = runBlocking {
         requireBackend()
         val a = client(); create(a)
