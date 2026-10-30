@@ -14,7 +14,8 @@ import imehc.recoow.core.network.*
 import java.io.File
 import java.io.IOException
 import java.util.UUID
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.*
 import org.junit.After
 import org.junit.Assert.*
@@ -35,6 +36,15 @@ class SyncIntegrationTest {
         override fun save(credentials: Credentials?) { value = credentials }
         override val localDeviceId = UUID.randomUUID().toString()
     }
+    private class TestSyncPreferences : SyncPreferences {
+        private val values = mutableMapOf<String, Boolean>()
+        private val success = mutableMapOf<String, Long>()
+        private fun key(c: Credentials) = c.endpoint + "|" + c.account
+        override fun enabled(connection: Credentials) = values[key(connection)] ?: false
+        override fun setEnabled(connection: Credentials, value: Boolean) { values[key(connection)] = value }
+        override fun lastSuccess(connection: Credentials) = success[key(connection)]
+        override fun setLastSuccess(connection: Credentials, value: Long) { success[key(connection)] = value }
+    }
     private data class Client(val host: DatabaseHost, val records: RoomRecordRepository, val vault: MemoryVault,
         val engine: SyncEngine, val store: SyncStore, val received: ReceivedRecordStore)
     private fun client(provider: SyncApiProvider = factory): Client {
@@ -47,17 +57,19 @@ class SyncIntegrationTest {
         val host = DatabaseHost(context, directory, backup); hosts += host
         val received = ReceivedRecordStore(host); val vault = MemoryVault(); val store = SyncStore(host, received, vault)
         return Client(host, RoomRecordRepository(host), vault,
-            SyncEngine(vault, provider, store, received, MediaTransfer(store, File(root, "transfer")), MemoryVault()), store, received)
+            SyncEngine(vault, provider, store, received, MediaTransfer(store, File(root, "transfer")), MemoryVault(), TestSyncPreferences()), store, received)
     }
     @After fun cleanup() = runBlocking { hosts.forEach { it.close() }; roots.forEach { it.deleteRecursively() }; Unit }
     private fun requireBackend() = assumeTrue("Set syncBaseUrl for the local backend", InstrumentationRegistry.getArguments().containsKey("syncBaseUrl"))
     private suspend fun create(client: Client) {
         client.engine.connect(base, ConnectionMethod.CREATE, "", "Android test")
         assertNull(client.engine.state.value.problem); assertNotNull(client.vault.load())
+        assertFalse(client.engine.state.value.enabled); client.engine.setEnabled(true)
     }
     private suspend fun recover(client: Client, original: Client) {
         client.engine.connect(base, ConnectionMethod.RECOVER, requireNotNull(original.vault.load()?.recoveryKey), "Android peer")
         assertNull(client.engine.state.value.problem)
+        client.engine.setEnabled(true)
     }
     private fun id(table: String): String = when (table) {
         "reminder_completions" -> "reminders:2023-11-14"
@@ -197,6 +209,7 @@ class SyncIntegrationTest {
         a.engine.connect(base, ConnectionMethod.CREATE, "", "new account", false)
         assertEquals(SyncProblem.ACCOUNT_REPLACEMENT, a.engine.state.value.problem)
         a.engine.connect(base, ConnectionMethod.CREATE, "", "new account", true)
+        a.engine.setEnabled(true)
         assertNull(a.engine.state.value.problem); assertNull(a.records.find("diary_tags", "private-old"))
         assertSynced(a, a.engine.sync())
         val c = a.vault.load()!!
@@ -307,6 +320,7 @@ class SyncIntegrationTest {
         assertEquals(10, code.length)
         val paired = client()
         paired.engine.connect(base, ConnectionMethod.PAIR, code, "paired Android")
+        paired.engine.setEnabled(true)
         assertNull(paired.engine.state.value.problem)
         assertEquals(owner.vault.load()!!.account, paired.vault.load()!!.account)
         assertFalse(paired.engine.state.value.connection!!.canPair)
@@ -351,4 +365,92 @@ class SyncIntegrationTest {
         val after = b.host.access { db -> db.openHelper.writableDatabase.query("SELECT count(*) FROM local_changes").use { it.moveToFirst(); it.getLong(0) } }
         assertEquals(before, after)
     }
+    @Test fun disabledSyncMakesNoRequestsAndCancelsAnInFlightRequest() = runBlocking {
+        requireBackend()
+        val entered = CompletableDeferred<Unit>()
+        var block = false
+        var calls = 0
+        val provider = object : SyncApiProvider by factory {
+            override fun create(endpoint: String, token: String?): SyncApi {
+                val api = factory.create(endpoint, token)
+                return object : SyncApi by api {
+                    override suspend fun get(path: String, query: Map<String, String>): ByteArray {
+                        calls++
+                        if (block) { entered.complete(Unit); awaitCancellation() }
+                        return api.get(path, query)
+                    }
+                }
+            }
+        }
+        val client = client(provider)
+        client.engine.connect(base, ConnectionMethod.CREATE, "", "off by default")
+        assertFalse(client.engine.state.value.enabled)
+        val before = calls
+        assertTrue(client.engine.sync()); assertEquals(before, calls)
+        client.engine.setEnabled(true); block = true
+        val running = launch { client.engine.sync() }
+        withTimeout(5_000) { entered.await(); client.engine.setEnabled(false); running.join() }
+        assertTrue(running.isCancelled); assertFalse(client.engine.state.value.running); assertFalse(client.engine.state.value.enabled)
+        val stopped = calls
+        client.engine.sync(false); assertEquals(stopped, calls)
+        block = false
+        client.engine.setEnabled(true); assertSynced(client, client.engine.sync())
+        assertNotNull(client.engine.state.value.lastSuccessAt)
+    }
+
+    @Test fun deviceListingAndOwnerRevocationInvalidatePairedCredentials() = runBlocking {
+        requireBackend()
+        val owner = client(); create(owner)
+        owner.engine.generatePairingCode()
+        val paired = client()
+        paired.engine.connect(base, ConnectionMethod.PAIR, owner.engine.state.value.pairingCode!!, "check-in peer")
+        owner.engine.refreshDevices()
+        assertEquals(2, owner.engine.state.value.devices.size)
+        owner.engine.revokeDevice(paired.vault.load()!!.serverDevice)
+        assertNull(owner.engine.state.value.problem); assertEquals(1, owner.engine.state.value.devices.size)
+        paired.engine.setEnabled(true)
+        assertFalse(paired.engine.sync()); assertEquals(SyncProblem.AUTHENTICATION, paired.engine.state.value.problem)
+        assertFalse(paired.engine.state.value.enabled)
+    }
+
+    @Test fun syncChoiceIsScopedToAccountAndSurvivesReconnect() = runBlocking {
+        requireBackend()
+        val a = client(); create(a)
+        val recovery = a.vault.load()!!.recoveryKey!!
+        a.engine.setEnabled(false); a.engine.disconnect()
+        a.engine.connect(base, ConnectionMethod.RECOVER, recovery, "same account")
+        assertFalse(a.engine.state.value.enabled)
+        a.engine.setEnabled(true); a.engine.disconnect()
+        a.engine.connect(base, ConnectionMethod.RECOVER, recovery, "same account again")
+        assertTrue(a.engine.state.value.enabled)
+        a.engine.disconnect()
+        a.engine.connect(base, ConnectionMethod.CREATE, "", "different account", true)
+        assertFalse(a.engine.state.value.enabled)
+    }
+
+    @Test fun sameDayReminderConflictAndUndoConvergeWithoutDeletingTask() = runBlocking {
+        requireBackend()
+        val a = client()
+        val clock = timestamp + 2 * 86_400_000
+        fun reminders(client: Client) = imehc.recoow.core.data.reminders.RoomRemindersRepository(client.host, client.vault.localDeviceId,
+            { clock }, { java.time.ZoneOffset.UTC })
+        val first = reminders(a)
+        first.save(imehc.recoow.core.domain.reminders.ReminderDraft(id = "shared-check-in", title = "Read", scheduledAt = timestamp))
+        create(a); assertSynced(a, a.engine.sync())
+        val b = client(); recover(b, a); assertSynced(b, b.engine.sync())
+        val second = reminders(b)
+        val day = java.time.LocalDate.of(2023, 11, 14)
+        first.makeUp("shared-check-in", setOf(day), "first device")
+        second.makeUp("shared-check-in", setOf(day), "second device")
+        assertSynced(a, a.engine.sync()); assertSynced(b, b.engine.sync())
+        val conflict = b.engine.state.value.conflicts.single { it.table == "reminder_completions" }
+        b.engine.resolve(conflict.table, conflict.id, conflict.remoteVersion, false)
+        assertSynced(b, b.engine.sync())
+        assertEquals("first device", second.reminders.first().single().completions.single().note)
+        first.deleteCompletion("shared-check-in", day)
+        assertSynced(a, a.engine.sync()); assertSynced(b, b.engine.sync())
+        assertTrue(first.reminders.first().single().dates.isEmpty())
+        assertTrue(second.reminders.first().single().dates.isEmpty())
+    }
+
 }

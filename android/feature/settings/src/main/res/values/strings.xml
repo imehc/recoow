@@ -56,4 +56,20 @@
     <string name="sync_pair_detail">Enter this single-use code on another device using the same server address. Generate a new code if it expires.</string>
     <string name="sync_close">Close</string>
     <string name="media_library">Asset library</string>
+    <string-array name="home_tool_names"><item>Bills</item><item>Check-ins</item><item>Diary</item><item>Food journal</item><item>Decision maker</item><item>Item locator</item><item>Anniversaries</item><item>Location tracker</item></string-array>
+    <string name="home_tools">Home tools</string>
+    <string name="sync_enabled">Enable sync</string>
+    <string name="sync_disabled_hint">Sync is off. Local changes are kept. This preference is saved per server and account.</string>
+    <string name="sync_last_success">Last success: %1$s</string>
+    <string name="sync_devices">Refresh devices</string>
+    <string name="sync_owner">Owner device</string>
+    <string name="sync_member">Paired device</string>
+    <string name="sync_this_device">This device</string>
+    <string name="sync_revoke">Revoke device</string>
+    <string name="sync_revoke_hint">This device will need to pair again before it can sync.</string>
+    <string name="sync_preparing">Checking server…</string>
+    <string name="sync_uploading">Uploading changes…</string>
+    <string name="sync_downloading">Downloading changes…</string>
+    <string name="sync_applying">Applying changes…</string>
+    <string name="sync_working">Working…</string>
 </resources>

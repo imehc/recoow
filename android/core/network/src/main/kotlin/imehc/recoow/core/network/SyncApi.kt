@@ -4,6 +4,8 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -22,6 +24,7 @@ class SyncHttpException(val status: Int, val resetRequired: Boolean = false) : I
 /** No ambient credentials or mutable interceptor: one API instance belongs to one connection. */
 interface SyncApi {
     suspend fun get(path: String, query: Map<String, String> = emptyMap()): ByteArray
+    suspend fun delete(path: String): ByteArray
     suspend fun post(path: String, body: JsonObject): ByteArray
     suspend fun upload(key: String, checksum: String, type: String, file: File): ByteArray
     suspend fun download(key: String, file: File, limit: Long)
@@ -29,6 +32,7 @@ interface SyncApi {
 
 internal interface RetrofitEndpoints {
     @GET @Streaming suspend fun get(@Url path: String, @QueryMap query: Map<String, String>): Response<ResponseBody>
+    @DELETE @Streaming suspend fun delete(@Url path: String): Response<ResponseBody>
     @POST @Streaming suspend fun post(@Url path: String, @Body body: RequestBody): Response<ResponseBody>
     @PUT @Streaming suspend fun put(@Url path: String, @QueryMap query: Map<String, String>, @Body body: RequestBody): Response<ResponseBody>
 }
@@ -63,6 +67,7 @@ class SyncApiFactory(private val allowLocalHttp: Boolean = false) : SyncApiProvi
         val retrofit = Retrofit.Builder().baseUrl(base).client(scoped).build().create(RetrofitEndpoints::class.java)
         return object : SyncApi {
             override suspend fun get(path: String, query: Map<String, String>) = read(retrofit.get(path, query))
+            override suspend fun delete(path: String) = read(retrofit.delete(path))
             override suspend fun post(path: String, body: JsonObject) = read(retrofit.post(path, body.toString().toRequestBody("application/json".toMediaType())))
             override suspend fun upload(key: String, checksum: String, type: String, file: File) =
                 read(retrofit.put("api/media/objects/$key", mapOf("checksum" to checksum, "contentType" to type), file.asRequestBody(type.toMediaType())))
@@ -76,6 +81,7 @@ class SyncApiFactory(private val allowLocalHttp: Boolean = false) : SyncApiProvi
                         it.byteStream().use { input -> file.outputStream().use { output ->
                             val buffer = ByteArray(64 * 1024); var count = 0L
                             while (true) {
+                                currentCoroutineContext().ensureActive()
                                 val read = input.read(buffer); if (read < 0) break
                                 count += read; require(count <= limit) { "Media exceeds declared size" }
                                 output.write(buffer, 0, read)
@@ -97,6 +103,7 @@ class SyncApiFactory(private val allowLocalHttp: Boolean = false) : SyncApiProvi
                 val out = java.io.ByteArrayOutputStream()
                 val buffer = ByteArray(64 * 1024)
                 while (true) {
+                    currentCoroutineContext().ensureActive()
                     val count = stream.read(buffer); if (count < 0) break
                     require(out.size().toLong() + count <= max) { "Sync response too large" }
                     out.write(buffer, 0, count)

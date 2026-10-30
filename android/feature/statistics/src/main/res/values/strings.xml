@@ -2,4 +2,16 @@
     <string name="statistics_title">Statistics</string>
     <string name="statistics_empty">No statistics yet</string>
     <string name="statistics_empty_description">Statistics become available when you have records.</string>
+    <string name="statistics_expense">Expense</string>
+    <string name="statistics_income">Income</string>
+    <string name="statistics_bill_count">Bill count</string>
+    <string name="statistics_discount">Discount</string>
+    <string name="statistics_stored_use">Stored value use</string>
+    <string name="statistics_week">Week</string>
+    <string name="statistics_month">Month</string>
+    <string name="statistics_year">Year</string>
+    <string name="statistics_sort_date">Newest first</string>
+    <string name="statistics_sort_amount">Largest amount</string>
+    <string name="statistics_no_bills">No bills</string>
+    <string name="statistics_retry">Retry</string>
 </resources>

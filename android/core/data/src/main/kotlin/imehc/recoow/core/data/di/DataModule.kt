@@ -35,6 +35,9 @@ abstract class DataBindings {
 @InstallIn(SingletonComponent::class)
 object DataModule {
     @Provides @Singleton
+    fun reminders(database: DatabaseHost, identity: imehc.recoow.core.domain.sync.DeviceIdentity): imehc.recoow.core.domain.reminders.RemindersRepository =
+        imehc.recoow.core.data.reminders.RoomRemindersRepository(database, identity.id)
+    @Provides @Singleton
     fun bills(database: DatabaseHost, identity: imehc.recoow.core.domain.sync.DeviceIdentity): imehc.recoow.core.domain.bills.BillsRepository =
         imehc.recoow.core.data.bills.RoomBillsRepository(database, identity.id)
     @Provides @Singleton

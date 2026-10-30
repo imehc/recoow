@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import imehc.recoow.core.domain.preferences.AppLanguage
 import imehc.recoow.core.domain.preferences.AppPreferences
 import imehc.recoow.core.domain.preferences.Appearance
@@ -18,6 +19,7 @@ class DataStorePreferencesRepository @Inject constructor(
 ) : PreferencesRepository {
     override val preferences = store.data.map { values ->
         AppPreferences(
+            hiddenHomeTools = values[HIDDEN_TOOLS].orEmpty(),
             appearance = Appearance.entries.firstOrNull { it.name == values[APPEARANCE] } ?: Appearance.SYSTEM,
             language = AppLanguage.entries.firstOrNull { it.name == values[LANGUAGE] } ?: AppLanguage.SYSTEM,
             addsPickedPhotosToMediaLibrary = values[ADD_PHOTOS] ?: false,
@@ -25,12 +27,17 @@ class DataStorePreferencesRepository @Inject constructor(
         )
     }.distinctUntilChanged()
 
+    override suspend fun setToolVisible(id: String, visible: Boolean) {
+        require(imehc.recoow.core.domain.navigation.ToolRoute.entries.any { it.id == id })
+        store.edit { it[HIDDEN_TOOLS] = if (visible) it[HIDDEN_TOOLS].orEmpty() - id else it[HIDDEN_TOOLS].orEmpty() + id }
+    }
     override suspend fun setAppearance(value: Appearance) { store.edit { it[APPEARANCE] = value.name } }
     override suspend fun setLanguage(value: AppLanguage) { store.edit { it[LANGUAGE] = value.name } }
     override suspend fun setAddsPickedPhotosToMediaLibrary(value: Boolean) { store.edit { it[ADD_PHOTOS] = value } }
     override suspend fun setSavesCameraPhotosToLibrary(value: Boolean) { store.edit { it[SAVE_CAMERA] = value } }
 
     private companion object {
+        val HIDDEN_TOOLS = stringSetPreferencesKey("hiddenHomeTools")
         val APPEARANCE = stringPreferencesKey("appearance")
         val LANGUAGE = stringPreferencesKey("language")
         val ADD_PHOTOS = booleanPreferencesKey("addsPickedPhotosToMediaLibrary")

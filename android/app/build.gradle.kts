@@ -12,17 +12,40 @@ android {
         applicationId = "imehc.recoow"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+    val signingValues = listOf("RECOOW_KEYSTORE", "RECOOW_KEYSTORE_PASSWORD", "RECOOW_KEY_ALIAS", "RECOOW_KEY_PASSWORD")
+        .map { providers.environmentVariable(it).orNull }
+    require(signingValues.all { it == null } || signingValues.all { !it.isNullOrBlank() }) { "Provide all four RECOOW signing environment variables" }
+    val distributionSigning = if (signingValues.all { it != null }) signingConfigs.create("distribution") {
+        storeFile = file(signingValues[0]!!)
+        storePassword = signingValues[1]
+        keyAlias = signingValues[2]
+        keyPassword = signingValues[3]
+    } else null
     buildTypes {
         debug { applicationIdSuffix = ".debug" }
         release {
+            signingConfig = distributionSigning
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
+    }
+    buildTypes.create("benchmark") {
+        initWith(buildTypes.getByName("release"))
+        applicationIdSuffix = ".benchmark"
+        signingConfig = signingConfigs.getByName("debug")
+        matchingFallbacks += "release"
+        isDebuggable = false
+    }
+    buildTypes.create("baseline") {
+        initWith(buildTypes.getByName("benchmark"))
+        isMinifyEnabled = false
+        isShrinkResources = false
+        matchingFallbacks += "release"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -38,6 +61,8 @@ dependencies {
     implementation(project(":core:sync"))
     implementation(project(":feature:media"))
     implementation(project(":feature:bills"))
+    implementation(project(":feature:reminders"))
+    implementation(project(":core:notifications"))
     implementation(project(":core:designsystem"))
     implementation(project(":feature:home"))
     implementation(project(":feature:statistics"))

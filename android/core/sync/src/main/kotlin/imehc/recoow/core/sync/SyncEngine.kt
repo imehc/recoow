@@ -8,7 +8,7 @@ import imehc.recoow.core.network.*
 import java.io.IOException
 import java.security.MessageDigest
 import java.util.UUID
-import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,10 +20,45 @@ import kotlinx.serialization.json.*
 
 class SyncEngine(private val credentials: CredentialStore, private val apiProvider: SyncApiProvider,
     private val store: SyncStore, private val received: ReceivedRecordStore, private val media: MediaTransfer,
-    private val pendingCredentials: CredentialStore) : SyncRepository {
+    private val pendingCredentials: CredentialStore, private val preferences: SyncPreferences) : SyncRepository {
     private val mutex = Mutex()
+    private val toggleMutex = Mutex()
+    @Volatile private var activeSync: Job? = null
+    @Volatile private var disabling = false
     private val mutableState = MutableStateFlow(SyncState())
     override val state = mutableState.asStateFlow()
+
+    override suspend fun setEnabled(enabled: Boolean) = withContext(Dispatchers.IO) { toggleMutex.withLock {
+        if (!enabled) { disabling = true; activeSync?.cancelAndJoin() }
+        mutex.withLock {
+            try {
+                val connection = requireNotNull(credentials.load())
+                preferences.setEnabled(connection, enabled)
+                disabling = false
+                refreshState()
+            } catch (e: CancellationException) { throw e } catch (e: Exception) { mutableState.update { it.copy(problem = problem(e)) } }
+        }
+    } }
+
+    override suspend fun refreshDevices() = deviceOperation { connection, api ->
+        mutableState.update { it.copy(devices = decodeObject(api.get("api/devices"))["devices"]!!.jsonArray.map { value ->
+            val device = value.jsonObject
+            SyncDevice(device.text("id"), device.text("name"), device["isOwner"]!!.jsonPrimitive.boolean, device.text("lastSeenAt"))
+        }) }
+    }
+    override suspend fun revokeDevice(id: String) = deviceOperation { connection, api ->
+        require(id.isNotBlank())
+        require(if (connection.canPair) id != connection.serverDevice else id == connection.serverDevice)
+        api.delete("api/devices/" + java.net.URLEncoder.encode(id, "UTF-8"))
+        if (id == connection.serverDevice) { credentials.save(null); mutableState.value = SyncState(loaded = true) }
+        else mutableState.update { it.copy(devices = it.devices.filterNot { device -> device.id == id }) }
+    }
+    private suspend fun deviceOperation(block: suspend (Credentials, SyncApi) -> Unit) = withContext(Dispatchers.IO) { mutex.withLock {
+        mutableState.update { it.copy(running = true, problem = null) }
+        try { val connection = requireNotNull(credentials.load()); block(connection, apiProvider.create(connection.endpoint, connection.token)) }
+        catch (e: CancellationException) { throw e } catch (e: Exception) { mutableState.update { it.copy(problem = problem(e)) } }
+        finally { mutableState.update { it.copy(running = false) } }
+    } }
 
     override suspend fun refresh() = withContext(Dispatchers.IO) { mutex.withLock {
         try { refreshState() } catch (cancelled: CancellationException) { throw cancelled
@@ -47,6 +82,7 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
         } } ?: listOf(0, 0, 0, 0)
         mutableState.update { it.copy(loaded = true, connection = connection?.let { c -> SyncConnection(c.endpoint, c.account, c.serverDevice, c.canPair) },
             pending = counts[0], waitingRows = counts[1], pendingMedia = counts[2], notificationJobs = counts[3], conflicts = conflicts,
+            enabled = connection?.let(preferences::enabled) == true, lastSuccessAt = connection?.let(preferences::lastSuccess),
             recoveryKey = pending?.recoveryKey ?: connection?.recoveryKey) }
     }
 
@@ -111,10 +147,12 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
 
     override suspend fun sync(manual: Boolean): Boolean = withContext(Dispatchers.IO) {
         if (!mutex.tryLock()) return@withContext false
+        activeSync = currentCoroutineContext().job
         var session: SyncSession? = null
         try {
             val connection = credentials.load() ?: run { refreshState(); return@withContext true }
-            mutableState.update { it.copy(running = true, problem = null) }
+            if (disabling || !preferences.enabled(connection)) { refreshState(); return@withContext true }
+            mutableState.update { it.copy(running = true, problem = null, stage = SyncStage.PREPARING) }
             val api = apiProvider.create(connection.endpoint, connection.token)
             val caps = capabilities(api, connection)
             session = store.prepare(connection, caps)
@@ -126,6 +164,7 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
             // A resumed raw page is replayed before requesting the same position again.
             receivePages(session, api, caps, bootstrapOnly = true)
             received.applyPending(session.scope, session.databaseToken)
+            mutableState.update { it.copy(stage = SyncStage.UPLOADING) }
             var outboundProblem: Exception? = null
             try {
                 for (batch in 0 until 10) {
@@ -145,6 +184,7 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
             } catch (cancelled: CancellationException) { throw cancelled
             } catch (error: Exception) { outboundProblem = error }
             // Conflicts, bad outbound data and upload failures never starve incoming changes.
+            mutableState.update { it.copy(stage = SyncStage.DOWNLOADING) }
             receivePages(session, api, caps, bootstrapOnly = false)
             received.applyPending(session.scope, session.databaseToken)
             val downloaded = media.transfer(session, api, "download", caps.mediaLimit)
@@ -152,11 +192,16 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
             val current = mutableState.value
             val success = outboundProblem == null && downloaded && current.waitingRows == 0 && current.pending == 0 && current.pendingMedia == 0
             store.retry(session, !success)
+            if (success) { preferences.setLastSuccess(connection, System.currentTimeMillis()); refreshState(session) }
             if (!success) mutableState.update { it.copy(problem = outboundProblem?.let(::problem) ?: if (!downloaded) SyncProblem.MEDIA else SyncProblem.PENDING) }
             success
         } catch (cancelled: CancellationException) { throw cancelled
         } catch (error: Exception) {
             mutableState.update { it.copy(problem = problem(error)) }
+            if (error is SyncHttpException && error.status == 401) {
+                credentials.load()?.let { preferences.setEnabled(it, false) }
+                mutableState.update { it.copy(enabled = false) }
+            }
             if (session != null) {
                 try {
                     if (error is SyncHttpException && error.resetRequired) {
@@ -168,7 +213,8 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
             }
             false
         } finally {
-            mutableState.update { it.copy(running = false, loaded = true) }
+            activeSync = null
+            mutableState.update { it.copy(running = false, loaded = true, stage = SyncStage.IDLE) }
             mutex.unlock()
         }
     }
@@ -199,7 +245,9 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
             received.receivePage(session.scope, session.databaseToken, key, bytes, page.entries.map { it.toString() },
                 if (!target.bootstrapComplete && !page.more) target.bootstrapWatermark else maxOf(cursor, page.entries.lastOrNull()?.integer("version") ?: cursor),
                 if (target.bootstrapComplete) null else page.cursor, !target.bootstrapComplete && !page.more)
+            mutableState.update { it.copy(stage = SyncStage.APPLYING) }
             received.applyPending(session.scope, session.databaseToken)
+            mutableState.update { it.copy(stage = SyncStage.DOWNLOADING) }
             store.access(session) { it.records().removeReceivedPage(session.scope, key) }
             if (!page.more) return
         }

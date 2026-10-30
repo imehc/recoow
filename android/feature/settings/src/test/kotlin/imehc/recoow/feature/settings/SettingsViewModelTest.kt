@@ -121,6 +121,7 @@ class SettingsViewModelTest {
     }
 
     private class TestPreferencesRepository : PreferencesRepository {
+        override suspend fun setToolVisible(id: String, visible: Boolean) { beforeSave(); values.update { it.copy(hiddenHomeTools = if (visible) it.hiddenHomeTools - id else it.hiddenHomeTools + id) } }
         override suspend fun setAddsPickedPhotosToMediaLibrary(value: Boolean) = Unit
         override suspend fun setSavesCameraPhotosToLibrary(value: Boolean) = Unit
         val values = MutableStateFlow(AppPreferences())

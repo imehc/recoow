@@ -8,5 +8,6 @@ import javax.inject.Inject
 @HiltAndroidApp
 class RecoowApplication : Application() {
     @Inject lateinit var sync: SyncRuntime
-    override fun onCreate() { super.onCreate(); sync.start() }
+    @Inject lateinit var reminders: imehc.recoow.core.notifications.ReminderNotificationRuntime
+    override fun onCreate() { super.onCreate(); sync.start(); reminders.start() }
 }

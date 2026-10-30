@@ -41,6 +41,7 @@ class AndroidPreferencesRepository @Inject constructor(
         emitAll(observedPreferences)
     }
 
+    override suspend fun setToolVisible(id: String, visible: Boolean) = database.access { stored.setToolVisible(id, visible) }
     override suspend fun setAppearance(value: Appearance) = database.access { stored.setAppearance(value) }
     override suspend fun setAddsPickedPhotosToMediaLibrary(value: Boolean) = database.access { stored.setAddsPickedPhotosToMediaLibrary(value) }
     override suspend fun setSavesCameraPhotosToLibrary(value: Boolean) = database.access { stored.setSavesCameraPhotosToLibrary(value) }

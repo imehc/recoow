@@ -33,7 +33,7 @@ import imehc.recoow.core.domain.preferences.AppLanguage
 import imehc.recoow.core.domain.preferences.Appearance
 
 @Composable
-fun SettingsScreen(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLanguage: (AppLanguage) -> Unit, onRetry: () -> Unit, onSync: () -> Unit = {}, onMedia: () -> Unit = {}) {
+fun SettingsScreen(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLanguage: (AppLanguage) -> Unit, onRetry: () -> Unit, onSync: () -> Unit = {}, onMedia: () -> Unit = {}, onToolVisible: (String, Boolean) -> Unit = { _, _ -> }) {
     var selection by rememberSaveable { mutableStateOf<String?>(null) }
     val appearanceLabels = listOf(stringResource(R.string.follow_system), stringResource(R.string.appearance_light), stringResource(R.string.appearance_dark))
     val languageLabels = listOf(stringResource(R.string.follow_system), stringResource(R.string.language_chinese), stringResource(R.string.language_english))
@@ -59,6 +59,14 @@ fun SettingsScreen(state: SettingsUiState, onAppearance: (Appearance) -> Unit, o
                     ) { Text(stringResource(R.string.language_title)) }
                 }
             }
+            item { Text(stringResource(R.string.home_tools), style = MaterialTheme.typography.titleSmall) }
+            item { Card {
+                val names = androidx.compose.ui.platform.LocalResources.current.getStringArray(R.array.home_tool_names)
+                imehc.recoow.core.domain.navigation.ToolRoute.entries.forEachIndexed { index, tool ->
+                    ListItem(onClick = { onToolVisible(tool.id, tool.id in preferences.hiddenHomeTools) }, enabled = !state.saving,
+                        trailingContent = { androidx.compose.material3.Switch(tool.id !in preferences.hiddenHomeTools, { onToolVisible(tool.id, it) }, enabled = !state.saving) }) { Text(names[index]) }
+                }
+            } }
         } else if (!state.readFailed) { item { CircularProgressIndicator() } }
         if (state.readFailed || state.saveFailed) {
             item {

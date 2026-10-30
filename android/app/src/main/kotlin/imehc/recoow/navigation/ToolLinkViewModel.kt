@@ -8,7 +8,7 @@ class ToolLinkViewModel(private val savedState: SavedStateHandle) : ViewModel() 
     val pendingRoute = savedState.getStateFlow<String?>(KEY, null)
 
     fun receive(scheme: String?, host: String?, segments: List<String>) {
-        ToolRoute.fromDeepLink(scheme, host, segments)?.let { savedState[KEY] = it.id }
+        ToolRoute.fromDeepLink(scheme, host, segments)?.let { savedState[KEY] = it.id + if (it == ToolRoute.REMINDERS && segments.size == 2) "?recordId=" + android.net.Uri.encode(segments[1]) + "&delivery=" + java.util.UUID.randomUUID() else "" }
     }
 
     fun consumed(route: String) {

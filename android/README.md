@@ -18,7 +18,7 @@
 ./gradlew :core:database:testDebugUnitTest :core:database:connectedDebugAndroidTest :core:data:connectedDebugAndroidTest
 ```
 
-Debug 包名为 `imehc.recoow.debug`，Release 为 `imehc.recoow`。Release 启用 R8 和资源压缩，输出未签名 APK；正式签名由分发环境提供，不使用 Debug 密钥发布。
+Debug 包名为 `imehc.recoow.debug`，Release 为 `imehc.recoow`。Release 启用 R8 和资源压缩。分发环境通过 `RECOOW_KEYSTORE`、`RECOOW_KEYSTORE_PASSWORD`、`RECOOW_KEY_ALIAS`、`RECOOW_KEY_PASSWORD` 四个环境变量提供正式签名；全部未设置时输出未签名 APK，部分缺失时构建失败。密钥文件及本机环境文件不提交。
 
 Android Studio 自动生成的 `gradle/gradle-daemon-jvm.properties` 优先于 `JAVA_HOME`，仅保留本机；CI 显式选择 JDK 17/25。
 
@@ -31,7 +31,8 @@ Android Studio 自动生成的 `gradle/gradle-daemon-jvm.properties` 优先于 `
 | `core:data` | 记录仓库、派生投影、同步接收/应用事务、DataStore 与系统语言适配 |
 | `core:database` | 21 实体 Room 存储、同步辅助表、索引、迁移及独占访问协调 |
 | `core:network` | Retrofit 协议 v2、严格响应解码、HTTPS 与媒体流传输 |
-| `core:sync` | Keystore 凭据、同步队列、断点恢复、冲突与媒体协调、WorkManager |
+| `core:sync` | Keystore 凭据、账号同步偏好、设备管理、同步队列、断点恢复、冲突与媒体协调、WorkManager |
+| `core:notifications` | 通知权限和渠道、AlarmManager 提醒、WorkManager 重排与系统事件恢复 |
 | `core:designsystem` | 唯一 Expressive 主题、页面框架和空状态组件 |
 | `core:media` | Photo Picker/拍照、图片优化和裁剪、缩略图/翻页预览、前台录音与播放、可复用媒体输入 |
 | `core:calendar` | Android ICU 公历/农历日期及纪念日计算 |
@@ -42,12 +43,14 @@ Android Studio 自动生成的 `gradle/gradle-daemon-jvm.properties` 优先于 `
 | `feature:settings` | 显示偏好、同步连接和冲突处理的 MVVM/UDF 界面 |
 | `feature:media` | 素材库管理与照片偏好的 MVVM/UDF 界面 |
 | `feature:bills` | 账单录入、筛选、结算与储值账户管理的 MVVM/UDF 界面 |
+| `feature:reminders` | 六类打卡排程、进度、逐日明细、补签月历与任务生命周期 |
+| `benchmark` | 核心页面 Baseline Profile 采集与冷启动 Macrobenchmark |
 
 Feature 不互相依赖，不直接访问存储。Domain 不依赖 Android、Hilt、Room 或 Retrofit。
 
 外观偏好由 DataStore 持有。Android 13+ 语言以系统 LocaleManager 为准；API 26–32 使用 DataStore 与 AppCompat。
 
-工具深链格式为 `recoow://tool/{id}`，标识以 `ToolRoute` 为准。外部链接通过单次事件分发，返回栈以首页为根。
+工具深链格式为 `recoow://tool/{id}`，标识以 `ToolRoute` 为准。通知记录入口为 `recoow://tool/reminders/{recordId}`。外部链接通过单次事件分发，返回栈以首页为根。
 
 3D 使用 [Filament](https://github.com/google/filament)（Apache-2.0），地图使用 [MapLibre Native](https://github.com/maplibre/maplibre-native)（BSD-2-Clause）。地图样式及其服务授权由调用方提供；存储坐标使用 WGS84，仅按地图源要求转换显示副本。定位调用方负责权限交互与前台服务生命周期。
 
@@ -81,6 +84,23 @@ Retrofit 3 与 OkHttp 5 对接仓库后端的协议 v2。正式连接要求 HTTP
 
 设备令牌和待确认的恢复密钥以 Android Keystore AES-GCM 加密，放在回滚目录之外。业务记录使用 `DeviceIdentity` 的本地 UUID，服务端签发的设备 ID 仅用于连接身份。
 
-WorkManager 在联网约束下执行合并后的同步请求，并持久化重试；前台与本地修改触发即时任务，周期任务补偿进程退出期间的变化。媒体在保存修改时按内容寻址固定，上传确认后才提交引用；收到的数据先进入持久化 inbox，再按依赖应用。通知任务独立保留，由功能模块的幂等调度器通过 `NotificationDelivery` 消费。
+同步默认关闭，按规范化服务器地址与账号分别保存；关闭会取消正在执行的同步，并停止手动及自动同步。开启后，WorkManager 在联网约束下执行合并后的同步请求，并持久化重试；前台与本地修改触发即时任务，周期任务补偿进程退出期间的变化。媒体在保存修改时按内容寻址固定，上传确认后才提交引用；收到的数据先进入持久化 inbox，再按依赖应用。通知任务独立保留，由功能模块的幂等调度器消费。
 
 协议测试可运行 `./gradlew :core:network:testDebugUnitTest`。真实后端测试使用隔离的测试账号，通过设备测试参数 `syncBaseUrl` 指定地址，例如 `-Pandroid.testInstrumentationRunnerArguments.syncBaseUrl=http://10.0.2.2:8080/`；未提供地址时跳过网络联调。
+
+## 打卡与通知
+
+六种排程使用本地日历计算，历史日期键保持固定。打卡和补签写入独立的 `reminder_completions`；撤销只为对应明细写墓碑，父记录的完成日期列表由投影维护。连续挑战遇到漏签需先补签；坚持目标支持暂停，累计实际暂停时长，不改写历史日期。
+
+通知使用独立渠道，每个任务安排下一次本体和提前提醒。Android 13+ 申请通知权限；Android 12+ 缺少精确闹钟权限时使用非精确调度。WorkManager、应用前台、设备重启、时间及权限变化触发恢复。拒绝通知不阻止数据保存和打卡。系统强行停止后需重新打开应用才能恢复后台任务。
+
+## 性能采集
+
+`baseline` 和 `benchmark` 都使用独立包名 `imehc.recoow.benchmark` 与测试签名，不参与正式分发。`baseline` 保留类名以采集 Profile，`benchmark` 使用与 Release 相同的 R8 和资源压缩设置。
+
+```sh
+./gradlew :benchmark:connectedBaselineAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=imehc.recoow.benchmark.CoreBaselineProfile
+./gradlew :benchmark:connectedBenchmarkAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=imehc.recoow.benchmark.CoreStartupBenchmark
+```
+
+采集结果位于 `benchmark/build/outputs/connected_android_test_additional_output/`。将审核后的 `baseline-prof.txt` 与 `startup-prof.txt` 放入 `app/src/main/`，AGP 会重写为 Release 所需的 Profile。测量性能收益及设置回归阈值须使用真实设备；模拟器用于验证采集和打包链路。

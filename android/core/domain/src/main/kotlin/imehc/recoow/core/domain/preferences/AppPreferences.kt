@@ -13,10 +13,12 @@ data class AppPreferences(
     val language: AppLanguage = AppLanguage.SYSTEM,
     val addsPickedPhotosToMediaLibrary: Boolean = false,
     val savesCameraPhotosToLibrary: Boolean = true,
+    val hiddenHomeTools: Set<String> = emptySet(),
 )
 
 interface PreferencesRepository {
     val preferences: Flow<AppPreferences>
+    suspend fun setToolVisible(id: String, visible: Boolean)
     suspend fun setAppearance(value: Appearance)
     suspend fun setLanguage(value: AppLanguage)
     suspend fun setAddsPickedPhotosToMediaLibrary(value: Boolean)

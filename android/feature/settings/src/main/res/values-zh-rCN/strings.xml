@@ -56,4 +56,20 @@
     <string name="sync_pair_detail">在另一台设备上填写相同服务器地址，并输入此一次性配对码。过期后请重新生成。</string>
     <string name="sync_close">关闭</string>
     <string name="media_library">素材库</string>
+    <string-array name="home_tool_names"><item>账单</item><item>打卡</item><item>日记</item><item>饮食记录</item><item>选择助手</item><item>物品定位</item><item>纪念日</item><item>轨迹记录</item></string-array>
+    <string name="home_tools">首页工具显隐</string>
+    <string name="sync_enabled">启用同步</string>
+    <string name="sync_disabled_hint">同步已关闭，本地修改会保留。此设置按服务器与账号分别保存。</string>
+    <string name="sync_last_success">上次成功：%1$s</string>
+    <string name="sync_devices">刷新设备列表</string>
+    <string name="sync_owner">主设备</string>
+    <string name="sync_member">配对设备</string>
+    <string name="sync_this_device">当前设备</string>
+    <string name="sync_revoke">吊销设备</string>
+    <string name="sync_revoke_hint">吊销后此设备将无法继续同步，需要重新配对。</string>
+    <string name="sync_preparing">正在检查服务器…</string>
+    <string name="sync_uploading">正在上传变更…</string>
+    <string name="sync_downloading">正在下载变更…</string>
+    <string name="sync_applying">正在应用变更…</string>
+    <string name="sync_working">正在处理…</string>
 </resources>

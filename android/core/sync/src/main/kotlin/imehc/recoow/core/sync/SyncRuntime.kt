@@ -35,7 +35,7 @@ object SyncModule {
         val store = SyncStore(host, received, vault)
         val debug = context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
         return SyncEngine(vault, SyncApiFactory(allowLocalHttp = debug), store, received,
-            MediaTransfer(store, File(context.cacheDir, "sync-transfer")), CredentialVault(context, "pending-sync-credentials"))
+            MediaTransfer(store, File(context.cacheDir, "sync-transfer")), CredentialVault(context, "pending-sync-credentials"), StoredSyncPreferences(context))
     }
 }
 
@@ -59,7 +59,7 @@ class SyncWorker(context: Context, parameters: WorkerParameters) : CoroutineWork
 }
 
 @Singleton
-class SyncRuntime @Inject constructor(@ApplicationContext private val context: Context,
+class SyncRuntime @Inject constructor(@param:ApplicationContext private val context: Context,
     private val host: DatabaseHost, private val repository: SyncRepository) : DefaultLifecycleObserver {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var started = false
@@ -70,8 +70,6 @@ class SyncRuntime @Inject constructor(@ApplicationContext private val context: C
         if (started) return
         started = true
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork("sync-periodic", ExistingPeriodicWorkPolicy.KEEP,
-            PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES).setConstraints(constraints).build())
         scope.launch {
             try { repository.refresh() } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* Retry on foreground. */ }
             host.observe { it.records().observeLocalChanges() }.distinctUntilChanged().debounce(750)
@@ -79,11 +77,19 @@ class SyncRuntime @Inject constructor(@ApplicationContext private val context: C
                 .collect { request() }
         }
         scope.launch {
-            repository.state.map { it.connection }.distinctUntilChanged().collect { if (it != null) request() }
+            repository.state.map { it.connection != null && it.enabled }.distinctUntilChanged().collect { enabled ->
+                val work = WorkManager.getInstance(context)
+                if (enabled) {
+                    work.enqueueUniquePeriodicWork("sync-periodic", ExistingPeriodicWorkPolicy.KEEP,
+                        PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES).setConstraints(constraints).build())
+                    request()
+                } else { work.cancelUniqueWork("sync-periodic"); work.cancelUniqueWork("sync-on-demand") }
+            }
         }
     }
     override fun onStart(owner: LifecycleOwner) { request() }
     fun request() {
+        if (!repository.state.value.enabled || repository.state.value.connection == null) return
         WorkManager.getInstance(context).enqueueUniqueWork("sync-on-demand", ExistingWorkPolicy.KEEP,
             OneTimeWorkRequestBuilder<SyncWorker>().setConstraints(constraints)
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS).build())

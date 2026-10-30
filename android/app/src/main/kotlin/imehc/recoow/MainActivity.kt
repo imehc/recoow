@@ -28,6 +28,7 @@ class MainActivity : AppCompatActivity() {
     private val preferences: SettingsViewModel by viewModels()
     private val toolLinks: ToolLinkViewModel by viewModels()
     private val bills: imehc.recoow.feature.bills.BillsViewModel by viewModels()
+    private val reminders: imehc.recoow.feature.reminders.RemindersViewModel by viewModels()
     private val media: imehc.recoow.feature.media.MediaLibraryViewModel by viewModels()
     private val sync: SyncViewModel by viewModels()
 
@@ -37,6 +38,8 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContent {
             val state by preferences.uiState.collectAsStateWithLifecycle()
+            val billState by bills.state.collectAsStateWithLifecycle()
+            val reminderState by reminders.state.collectAsStateWithLifecycle()
             val syncState by sync.state.collectAsStateWithLifecycle()
             val pendingRoute by toolLinks.pendingRoute.collectAsStateWithLifecycle()
             val systemDark = isSystemInDarkTheme()
@@ -61,10 +64,13 @@ class MainActivity : AppCompatActivity() {
             RecoowTheme(darkTheme = dark) {
                 RecoowApp(state, preferences::setAppearance, preferences::setLanguage, preferences::retry,
                     pendingRoute, toolLinks::consumed,
+                    bills = billState.bills, billsLoading = billState.loading, billsFailed = billState.readFailed, onBillsRetry = bills::retry, onBill = bills::show,
+                    onToolVisible = preferences::setToolVisible, reminders = reminderState.records,
+                    remindersScreen = { recordId, onBack -> imehc.recoow.feature.reminders.RemindersScreen(reminders, onBack, recordId) },
                     billsScreen = { onBack -> imehc.recoow.feature.bills.BillsScreen(bills, onBack) },
                     mediaScreen = { onBack -> imehc.recoow.feature.media.MediaLibraryScreen(media, onBack) }) { onBack ->
                     SyncScreen(syncState, onBack, sync::connect, sync::synchronize, sync::disconnect,
-                        sync::acknowledgeRecoveryKey, sync::resolve, sync::generatePairingCode, sync::dismissPairingCode)
+                        sync::acknowledgeRecoveryKey, sync::resolve, sync::generatePairingCode, sync::dismissPairingCode, sync::setEnabled, sync::refreshDevices, sync::revokeDevice)
                 }
             }
         }

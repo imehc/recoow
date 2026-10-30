@@ -15,3 +15,8 @@ include(":core:network", ":core:sync")
 include(":core:media", ":feature:media")
 
 include(":feature:bills")
+
+include(":core:notifications")
+include(":feature:reminders")
+
+include(":benchmark")

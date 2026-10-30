@@ -25,13 +25,15 @@ import imehc.recoow.core.domain.sync.*
 fun SyncScreen(state: SyncState, onBack: () -> Unit,
     onConnect: (String, ConnectionMethod, String, String, Boolean) -> Unit, onSync: () -> Unit,
     onDisconnect: () -> Unit, onRecoverySaved: () -> Unit, onResolve: (RecordConflict, Boolean) -> Unit,
-    onPairingCode: () -> Unit, onDismissPairingCode: () -> Unit) {
+    onPairingCode: () -> Unit, onDismissPairingCode: () -> Unit, onEnabled: (Boolean) -> Unit = {},
+    onDevices: () -> Unit = {}, onRevoke: (String) -> Unit = {}) {
     var endpoint by rememberSaveable { mutableStateOf("") }
     var method by rememberSaveable { mutableStateOf(ConnectionMethod.PAIR) }
     var device by rememberSaveable { mutableStateOf("Android") }
     // Credentials must not enter savedInstanceState or screenshot-backed navigation state.
     var secret by remember { mutableStateOf("") }
     var disconnect by remember { mutableStateOf(false) }
+    var revoke by rememberSaveable { mutableStateOf<String?>(null) }
     var replace by remember { mutableStateOf(false) }
     val chinese = LocalConfiguration.current.locales[0].language == "zh"
     RecoowPage(stringResource(R.string.sync_title), navigationIcon = {
@@ -45,10 +47,25 @@ fun SyncScreen(state: SyncState, onBack: () -> Unit,
                 Text(connection.endpoint, style = MaterialTheme.typography.titleMedium)
                 SelectionContainer { Text(stringResource(R.string.sync_account, connection.accountId), style = MaterialTheme.typography.bodyMedium) }
                 Text(stringResource(R.string.sync_counts, state.pending, state.conflicts.size, state.pendingMedia))
-                Button(onClick = onSync, enabled = !state.running, modifier = Modifier.testTag("sync_now")) { Text(stringResource(R.string.sync_now)) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.sync_enabled), Modifier.weight(1f))
+                    Switch(state.enabled, onEnabled, modifier = Modifier.testTag("sync_enabled"))
+                }
+                if (!state.enabled) Text(stringResource(R.string.sync_disabled_hint))
+                state.lastSuccessAt?.let { Text(stringResource(R.string.sync_last_success, java.text.DateFormat.getDateTimeInstance().format(java.util.Date(it)))) }
+                Button(onClick = onSync, enabled = !state.running && state.enabled, modifier = Modifier.testTag("sync_now")) { Text(stringResource(R.string.sync_now)) }
+                TextButton(onClick = onDevices, enabled = !state.running) { Text(stringResource(R.string.sync_devices)) }
                 if (connection.canPair) TextButton(onClick = onPairingCode, enabled = !state.running) { Text(stringResource(R.string.sync_pair_device)) }
                 TextButton(onClick = { disconnect = true }, enabled = !state.running) { Text(stringResource(R.string.sync_disconnect)) }
             } } }
+            state.devices.forEach { device -> item(key = "device:${device.id}") { OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp)) {
+                Text(device.name, style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(if (device.owner) R.string.sync_owner else R.string.sync_member))
+                if (device.id == connection.serverDeviceId) Text(stringResource(R.string.sync_this_device))
+                Text(device.lastSeenAt, style = MaterialTheme.typography.bodySmall)
+                if (if (connection.canPair) device.id != connection.serverDeviceId else device.id == connection.serverDeviceId)
+                    TextButton(onClick = { revoke = device.id }, enabled = !state.running) { Text(stringResource(R.string.sync_revoke)) }
+            } } } }
         } else {
             item { Text(stringResource(R.string.sync_intro), style = MaterialTheme.typography.bodyLarge) }
             item { OutlinedTextField(endpoint, { endpoint = it }, Modifier.fillMaxWidth().testTag("sync_endpoint"),
@@ -70,7 +87,10 @@ fun SyncScreen(state: SyncState, onBack: () -> Unit,
                 Text(stringResource(R.string.sync_connect))
             } }
         }
-        if (state.running) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+        if (state.running) item { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LinearProgressIndicator(Modifier.fillMaxWidth())
+            Text(stringResource(when (state.stage) { SyncStage.PREPARING -> R.string.sync_preparing; SyncStage.UPLOADING -> R.string.sync_uploading; SyncStage.DOWNLOADING -> R.string.sync_downloading; SyncStage.APPLYING -> R.string.sync_applying; SyncStage.IDLE -> R.string.sync_working }))
+        } }
         state.problem?.let { problem -> item {
             Text(stringResource(when (problem) {
                 SyncProblem.AUTHENTICATION -> R.string.sync_error_auth
@@ -104,6 +124,9 @@ fun SyncScreen(state: SyncState, onBack: () -> Unit,
             } }
         } }
     }
+    revoke?.let { id -> AlertDialog(onDismissRequest = { revoke = null }, title = { Text(stringResource(R.string.sync_revoke)) },
+        text = { Text(stringResource(R.string.sync_revoke_hint)) }, confirmButton = { TextButton(onClick = { revoke = null; onRevoke(id) }) { Text(stringResource(R.string.sync_revoke)) } },
+        dismissButton = { TextButton(onClick = { revoke = null }) { Text(stringResource(R.string.cancel)) } }) }
     if (disconnect) AlertDialog(onDismissRequest = { disconnect = false },
         title = { Text(stringResource(R.string.sync_disconnect)) }, text = { Text(stringResource(R.string.sync_disconnect_detail)) },
         confirmButton = { TextButton(onClick = { disconnect = false; onDisconnect() }) { Text(stringResource(R.string.sync_disconnect)) } },

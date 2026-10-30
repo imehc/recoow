@@ -41,6 +41,7 @@ class SettingsViewModel @Inject constructor(private val repository: PreferencesR
         }
     }
 
+    fun setToolVisible(id: String, visible: Boolean) = save { repository.setToolVisible(id, visible) }
     fun setAppearance(value: Appearance) = save { repository.setAppearance(value) }
     fun setLanguage(value: AppLanguage) = save { repository.setLanguage(value) }
 

@@ -16,6 +16,9 @@ class SyncViewModel @Inject constructor(private val repository: SyncRepository) 
         repository.connect(endpoint, method, secret, device, replace)
         if (repository.state.value.connection != null && repository.state.value.problem == null) repository.sync()
     }
+    fun setEnabled(value: Boolean) = action { repository.setEnabled(value) }
+    fun refreshDevices() = action { repository.refreshDevices() }
+    fun revokeDevice(id: String) = action { repository.revokeDevice(id) }
     fun synchronize() = action { repository.sync() }
     fun disconnect() = action { repository.disconnect() }
     fun acknowledgeRecoveryKey() = action { repository.acknowledgeRecoveryKey() }

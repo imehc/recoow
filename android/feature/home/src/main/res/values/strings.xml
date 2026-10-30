@@ -4,4 +4,9 @@
     <string name="home_empty_description">Your daily records will appear here.</string>
     <string name="home_bills">Bills and stored value</string>
     <string name="home_bills_description">Income, expenses and stored value accounts</string>
+    <string-array name="home_tool_names"><item>Bills</item><item>Check-ins</item><item>Diary</item><item>Food journal</item><item>Decision maker</item><item>Item locator</item><item>Anniversaries</item><item>Location tracker</item></string-array>
+    <string name="home_reminders_description">Reminders, check-ins and missed days</string>
+    <string name="home_unavailable">Not available yet</string>
+    <string name="home_pending">Ready today: %1$d</string>
+    <string name="home_checkin">Open check-in</string>
 </resources>

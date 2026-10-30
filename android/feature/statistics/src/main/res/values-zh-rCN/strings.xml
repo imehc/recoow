@@ -2,4 +2,16 @@
     <string name="statistics_title">统计</string>
     <string name="statistics_empty">暂无统计</string>
     <string name="statistics_empty_description">有记录后将在这里显示统计。</string>
+    <string name="statistics_expense">支出</string>
+    <string name="statistics_income">收入</string>
+    <string name="statistics_bill_count">账单数量</string>
+    <string name="statistics_discount">优惠</string>
+    <string name="statistics_stored_use">储值消费</string>
+    <string name="statistics_week">周</string>
+    <string name="statistics_month">月</string>
+    <string name="statistics_year">年</string>
+    <string name="statistics_sort_date">时间倒序</string>
+    <string name="statistics_sort_amount">金额倒序</string>
+    <string name="statistics_no_bills">暂无账单</string>
+    <string name="statistics_retry">重试</string>
 </resources>

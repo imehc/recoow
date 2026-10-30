@@ -107,4 +107,21 @@ class DataStorePreferencesRepositoryTest {
             }
         } finally { job.cancelAndJoin() }
     }
+    @Test fun allHomeToolsCanBeHiddenAndRestoredAfterReopen() = runTest {
+        val file = File(folder.root, "tools.preferences_pb")
+        val firstJob = SupervisorJob()
+        try {
+            val preferences = repository(file, firstJob)
+            imehc.recoow.core.domain.navigation.ToolRoute.entries.forEach { preferences.setToolVisible(it.id, false) }
+            assertEquals(8, preferences.preferences.first().hiddenHomeTools.size)
+        } finally { firstJob.cancelAndJoin() }
+        val secondJob = SupervisorJob()
+        try {
+            val preferences = repository(file, secondJob)
+            assertEquals(8, preferences.preferences.first().hiddenHomeTools.size)
+            imehc.recoow.core.domain.navigation.ToolRoute.entries.forEach { preferences.setToolVisible(it.id, true) }
+            assertEquals(emptySet<String>(), preferences.preferences.first().hiddenHomeTools)
+        } finally { secondJob.cancelAndJoin() }
+    }
+
 }

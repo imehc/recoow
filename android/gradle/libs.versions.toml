@@ -30,7 +30,11 @@ coil = "3.6.3"
 exif = "1.4.2"
 media3 = "1.11.1"
 
+benchmark = "1.5.0"
+uiautomator = "2.4.0"
+
 [plugins]
+android-test = { id = "com.android.test", version.ref = "agp" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
@@ -79,3 +83,6 @@ lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.r
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 exif = { module = "androidx.exifinterface:exifinterface", version.ref = "exif" }
 media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
+
+benchmark-macro = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "benchmark" }
+uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "uiautomator" }

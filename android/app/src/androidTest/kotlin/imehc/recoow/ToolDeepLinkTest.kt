@@ -29,7 +29,7 @@ class ToolDeepLinkTest {
             compose.waitUntil(10_000) { compose.onAllNodesWithTag("tool_${route.id}").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithTag("tool_${route.id}").assertIsDisplayed()
             compose.onNodeWithTag("tab_home").assertDoesNotExist()
-            if (route == ToolRoute.BILLS) {
+            if (route in setOf(ToolRoute.BILLS, ToolRoute.REMINDERS)) {
                 InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
                 compose.waitForIdle()
             } else compose.onNodeWithTag("return_home").performClick()
@@ -57,4 +57,16 @@ class ToolDeepLinkTest {
         open("https://tool/bills")
         compose.onNodeWithTag("tab_settings").assertIsSelected()
     }
+    @Test fun repeatedReminderRecordLinksReopenDetailsAndKeepBackStack() {
+        repeat(2) {
+            open("recoow://tool/reminders/missing-test-record")
+            compose.waitUntil(10_000) { compose.onAllNodesWithTag("reminder_detail").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithTag("reminder_detail").assertIsDisplayed()
+            InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+            compose.waitUntil(10_000) { compose.onAllNodesWithTag("tool_reminders").fetchSemanticsNodes().isNotEmpty() }
+        }
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        compose.onNodeWithTag("tab_home").assertIsSelected()
+    }
+
 }

@@ -20,3 +20,8 @@ captures/
 /gradle/gradle-daemon-jvm.properties
 # Room JSON exports are local; versioned migration SQL is tracked separately.
 /core/database/schemas/
+
+# Local signing material and environment files.
+.env
+.env.*
+/signing.properties
