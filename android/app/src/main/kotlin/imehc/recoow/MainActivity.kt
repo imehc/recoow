@@ -40,6 +40,7 @@ class MainActivity : AppCompatActivity() {
     private val items: imehc.recoow.feature.items.ItemsViewModel by viewModels()
     private val media: imehc.recoow.feature.media.MediaLibraryViewModel by viewModels()
     private val sync: SyncViewModel by viewModels()
+    private val data: imehc.recoow.feature.settings.DataManagementViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,6 +74,8 @@ class MainActivity : AppCompatActivity() {
                 RecoowApp(state, preferences::setAppearance, preferences::setLanguage, preferences::retry,
                     pendingRoute, toolLinks::consumed,
                     onBill = bills::show, onToolVisible = preferences::setToolVisible,
+                    onPickedPhotos = preferences::setPickedPhotos, onCameraPhotos = preferences::setCameraPhotos,
+                    dataScreen = { back -> imehc.recoow.feature.settings.DataManagementScreen(data, back) },
                     homeScreen = { settings, tool -> imehc.recoow.feature.home.HomeRoute(home, state.preferences,
                         recordingState.current?.copy(duration = recordingState.duration, pointCount = recordingState.pointCount), settings,
                         { tracks.showRecording(); tool(imehc.recoow.core.domain.navigation.ToolRoute.LOCATION.id) }, tool) },

@@ -30,7 +30,13 @@ class LocalRollbackFiles(
         recover()
         val database = File(dataDirectory, "records.sqlite")
         if (!database.exists()) return
-        val oldVersion = SQLiteDatabase.openDatabase(database.path, null, SQLiteDatabase.OPEN_READONLY).use { it.version }
+        val oldVersion = SQLiteDatabase.openDatabase(database.path, null, SQLiteDatabase.OPEN_READONLY,
+            android.database.DatabaseErrorHandler { throw IllegalStateException("Damaged database retained for recovery") }).use { db ->
+            db.rawQuery("PRAGMA integrity_check(1)", null).use {
+                check(it.moveToFirst() && it.getString(0) == "ok") { "Damaged database retained for recovery" }
+            }
+            db.version
+        }
         require(oldVersion <= version) { "Database downgrade is not supported" }
         if (oldVersion in 1 until version) begin("upgrade-$oldVersion-to-$version")
     }

@@ -41,6 +41,14 @@ class ReminderNotificationRuntime @Inject constructor(@param:ApplicationContext 
     private val mutable = MutableStateFlow(ReminderNotificationState())
     override val state = mutable.asStateFlow()
     private var started = false
+    suspend fun resetLocalState() = lock.withLock {
+        for (key in ledger.getStringSet("scheduled", emptySet()).orEmpty()) {
+            val intent = pending(key); alarms.cancel(intent); intent.cancel()
+        }
+        manager.activeNotifications.filter { it.notification.channelId == CHANNEL }.forEach { manager.cancel(it.tag, it.id) }
+        check(ledger.edit().clear().commit())
+        mutable.value = ReminderNotificationState()
+    }
     override suspend fun refreshAccess() {
         manager.createNotificationChannel(NotificationChannel(CHANNEL, context.getString(R.string.reminder_channel), NotificationManager.IMPORTANCE_DEFAULT))
         val allowed = manager.areNotificationsEnabled() && manager.getNotificationChannel(CHANNEL).importance != NotificationManager.IMPORTANCE_NONE

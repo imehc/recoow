@@ -27,6 +27,7 @@ dependencies {
     implementation(libs.compose.preview)
     debugImplementation(libs.compose.tooling)
     implementation(project(":core:designsystem"))
+    implementation(libs.activity.compose)
     implementation(libs.lifecycle.compose)
     implementation(libs.lifecycle.viewmodel)
     implementation(libs.hilt)

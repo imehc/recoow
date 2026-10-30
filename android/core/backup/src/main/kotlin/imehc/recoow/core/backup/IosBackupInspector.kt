@@ -66,7 +66,8 @@ class IosBackupInspector(private val temporaryDirectory: File) {
                         db.rawQuery("SELECT coalesce(sum(length(inline_data)), 0) FROM media_assets", null).use { it.moveToFirst(); it.getLong(0) }
                     } else 0L
                     BackupPreview(format, schema, metadata.getString("appVersion"), metadata.getString("appBuild"),
-                        Instant.parse(metadata.getString("exportedAt")), metadata.getString("sourceDeviceID"), json, counts, mediaBytes)
+                        Instant.parse(metadata.getString("exportedAt")), metadata.getString("sourceDeviceID"), json, counts, mediaBytes, metadata.optString("sourcePlatform", "iOS"),
+                        if (metadata.has("sourceSchemaVersion")) metadata.getInt("sourceSchemaVersion") else schema)
                 }
             } catch (error: CancellationException) {
                 throw error

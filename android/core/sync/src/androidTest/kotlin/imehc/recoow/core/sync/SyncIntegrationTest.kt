@@ -39,6 +39,7 @@ class SyncIntegrationTest {
     private class TestSyncPreferences : SyncPreferences {
         private val values = mutableMapOf<String, Boolean>()
         private val success = mutableMapOf<String, Long>()
+        override fun clear() { values.clear(); success.clear() }
         private fun key(c: Credentials) = c.endpoint + "|" + c.account
         override fun enabled(connection: Credentials) = values[key(connection)] ?: false
         override fun setEnabled(connection: Credentials, value: Boolean) { values[key(connection)] = value }
@@ -474,6 +475,82 @@ class SyncIntegrationTest {
         val after = b.host.access { db -> db.openHelper.writableDatabase.query("SELECT count(*) FROM local_changes").use { it.moveToFirst(); it.getLong(0) } }
         assertEquals(before, after)
     }
+    @Test fun backupReplacementUploadsAllEntitiesAndMediaToTheCurrentAccount() = runBlocking {
+        requireBackend()
+        val source = client(); mixed(source)
+        edit(source, "bills", "stored_value_effects", "{\"stored_value_accounts\":1}", timestamp)
+        val destination = client(); create(destination)
+        val jobs = mutableListOf<Job>()
+        fun backup(client: Client): imehc.recoow.core.data.backup.RoomDataManagement {
+            val job = SupervisorJob(); jobs += job
+            val preferences = androidx.datastore.preferences.core.PreferenceDataStoreFactory.create(scope = CoroutineScope(job + Dispatchers.IO)) {
+                File(client.host.directory.parentFile, "backup.preferences_pb")
+            }
+            return imehc.recoow.core.data.backup.RoomDataManagement(context, client.host, preferences,
+                object : DeviceIdentity { override val id = client.vault.localDeviceId })
+        }
+        try {
+            val file = File(source.host.directory.parentFile, "exchange.recoowbackup")
+            backup(source).export { file.outputStream() }
+            val importer = backup(destination)
+            val prepared = importer.preview { file.inputStream() }
+            val binding = destination.vault.load()
+            destination.engine.localMaintenance {
+                assertEquals(21, importer.import(prepared, imehc.recoow.core.domain.backup.ImportMode.REPLACE_ALL, emptySet()))
+            }
+            importer.discard(prepared)
+            assertEquals(binding, destination.vault.load())
+            assertSynced(destination, destination.engine.sync())
+            val peer = client(); recover(peer, destination); assertSynced(peer, peer.engine.sync())
+            for (table in EntityContracts.registry.entities.keys) {
+                val expected = Json.parseToJsonElement(source.records.find(table, id(table))!!.snapshotJson).jsonObject
+                val actual = Json.parseToJsonElement(peer.records.find(table, id(table))!!.snapshotJson).jsonObject
+                assertEquals(table, expected.filterKeys { it != "_media" }, actual.filterKeys { it != "_media" })
+            }
+            peer.host.access { db ->
+                val bytes = PhysicalRecords.binary(db.openHelper.writableDatabase, "media_attachments", id("media_attachments"), "data")!!
+                assertArrayEquals(ByteArray(3 * 1024 * 1024) { (it % 127).toByte() }, bytes)
+            }
+        } finally { jobs.forEach { it.cancelAndJoin() } }
+    }
+
+    @Test fun localMaintenanceCancelsNetworkAndClearsCredentialsOnlyAfterSuccess() = runBlocking {
+        val entered = CompletableDeferred<Unit>()
+        var cancelled = false
+        val provider = object : SyncApiProvider by factory {
+            override fun create(endpoint: String, token: String?): SyncApi = object : SyncApi by factory.create(endpoint, token) {
+                override suspend fun get(path: String, query: Map<String, String>): ByteArray {
+                    entered.complete(Unit)
+                    try { awaitCancellation() } finally { cancelled = true }
+                }
+            }
+        }
+        val client = client(provider)
+        val credentials = Credentials("connection", "http://127.0.0.1:8080/", "account", "device", "token")
+        client.vault.value = credentials
+        client.engine.setEnabled(true)
+        val token = client.host.sessionToken()
+        val running = launch { client.engine.sync() }
+        withTimeout(5_000) {
+            entered.await()
+            assertEquals(7, client.engine.localMaintenance {
+                assertTrue(cancelled)
+                client.host.guarded("maintenance-test") { _, _ -> 7 }
+            })
+            running.join()
+        }
+        assertTrue(running.isCancelled)
+        assertEquals(credentials, client.vault.load())
+        assertThrows(IllegalStateException::class.java) { runBlocking { client.host.access(token) { } } }
+        assertThrows(IllegalStateException::class.java) { runBlocking {
+            client.engine.localMaintenance(clearCredentials = true) { error("failed restore") }
+        } }
+        assertEquals(credentials, client.vault.load())
+        client.engine.localMaintenance(clearCredentials = true) { }
+        assertNull(client.vault.load()); assertNull(client.engine.state.value.connection)
+        client.vault.value = credentials; client.engine.refresh(); assertFalse(client.engine.state.value.enabled)
+    }
+
     @Test fun disabledSyncMakesNoRequestsAndCancelsAnInFlightRequest() = runBlocking {
         requireBackend()
         val entered = CompletableDeferred<Unit>()

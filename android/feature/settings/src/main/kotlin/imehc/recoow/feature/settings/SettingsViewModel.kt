@@ -41,6 +41,8 @@ class SettingsViewModel @Inject constructor(private val repository: PreferencesR
         }
     }
 
+    fun setPickedPhotos(value: Boolean) = save { repository.setAddsPickedPhotosToMediaLibrary(value) }
+    fun setCameraPhotos(value: Boolean) = save { repository.setSavesCameraPhotosToLibrary(value) }
     fun setToolVisible(id: String, visible: Boolean) = save { repository.setToolVisible(id, visible) }
     fun setAppearance(value: Appearance) = save { repository.setAppearance(value) }
     fun setLanguage(value: AppLanguage) = save { repository.setLanguage(value) }

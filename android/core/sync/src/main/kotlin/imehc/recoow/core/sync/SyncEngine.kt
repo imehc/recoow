@@ -28,6 +28,26 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
     private val mutableState = MutableStateFlow(SyncState())
     override val state = mutableState.asStateFlow()
 
+    override suspend fun <T> localMaintenance(clearCredentials: Boolean, action: suspend () -> T): T = withContext(Dispatchers.IO) {
+        toggleMutex.withLock {
+            disabling = true
+            try {
+                activeSync?.cancelAndJoin()
+                mutex.withLock {
+                    val result = action()
+                    if (clearCredentials) withContext(NonCancellable) {
+                        preferences.clear(); credentials.save(null); pendingCredentials.save(null)
+                        mutableState.value = SyncState(loaded = true)
+                    }
+                    else try { refreshState() }
+                    catch (e: CancellationException) { throw e }
+                    catch (_: Exception) { mutableState.update { it.copy(problem = SyncProblem.STORAGE) } }
+                    result
+                }
+            } finally { disabling = false }
+        }
+    }
+
     override suspend fun setEnabled(enabled: Boolean) = withContext(Dispatchers.IO) { toggleMutex.withLock {
         if (!enabled) { disabling = true; activeSync?.cancelAndJoin() }
         mutex.withLock {

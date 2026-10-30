@@ -29,6 +29,7 @@ dependencies {
     implementation(libs.work.runtime)
     implementation(libs.lifecycle.process)
     androidTestImplementation(project(":core:backup"))
+    androidTestImplementation(libs.datastore)
     androidTestImplementation(libs.androidx.test)
     androidTestImplementation(libs.test.runner)
     androidTestImplementation(libs.coroutines.test)

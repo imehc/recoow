@@ -14,4 +14,8 @@
     <string name="tool_unavailable">此工具暂未开放。</string>
     <string name="return_home">返回首页</string>
     <string name="navigate_back">返回</string>
+    <string name="widget_label">工具快捷入口</string>
+    <string name="widget_choose">选择入口</string>
+    <string name="widget_hint">为这个小组件选择一个工具。添加后可在桌面长按小组件更改。</string>
+    <string name="widget_cancel">取消</string>
 </resources>

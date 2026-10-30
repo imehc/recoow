@@ -1,0 +1,11 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:gravity="center" android:padding="12dp"
+    android:background="@drawable/widget_background" android:theme="@android:style/Theme.Material.Light">
+    <TextView android:id="@+id/widget_symbol" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="@string/widget_add_symbol" android:textSize="28sp" android:maxLines="1" android:importantForAccessibility="no" />
+    <TextView android:id="@+id/widget_title" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="@string/widget_choose" android:gravity="center" android:textSize="16sp" android:textStyle="bold" android:maxLines="2" android:ellipsize="end" />
+    <TextView android:id="@+id/widget_brand" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="@string/app_name" android:layout_marginTop="4dp" android:textSize="12sp" android:maxLines="1" android:importantForAccessibility="no" />
+</LinearLayout>

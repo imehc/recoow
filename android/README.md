@@ -26,9 +26,9 @@ Android Studio 自动生成的 `gradle/gradle-daemon-jvm.properties` 优先于 `
 
 | 模块 | 职责 |
 | --- | --- |
-| `app` | Hilt 装配、Activity、Tab 与深链导航、系统栏与旧版系统语言适配 |
+| `app` | Hilt 装配、Activity、Tab 与深链导航、系统栏、小组件和数据维护协调 |
 | `core:domain` | 纯 Kotlin 模型、仓库和平台接口、八工具路由契约 |
-| `core:data` | 记录仓库、派生投影、同步接收/应用事务、DataStore 与系统语言适配 |
+| `core:data` | 记录仓库、派生投影、同步事务、备份转换、存储管理、DataStore 与系统语言适配 |
 | `core:database` | 21 实体 Room 存储、同步辅助表、索引、迁移及独占访问协调 |
 | `core:network` | Retrofit 协议 v2、严格响应解码、HTTPS 与媒体流传输 |
 | `core:sync` | Keystore 凭据、账号同步偏好、设备管理、同步队列、断点恢复、冲突与媒体协调、WorkManager |
@@ -36,11 +36,11 @@ Android Studio 自动生成的 `gradle/gradle-daemon-jvm.properties` 优先于 `
 | `core:designsystem` | 唯一 Expressive 主题、页面框架和空状态组件 |
 | `core:media` | Photo Picker/拍照、图片优化和裁剪、缩略图/翻页预览、前台录音与播放、可复用媒体输入 |
 | `core:calendar` | Android ICU 公历/农历日期及纪念日计算 |
-| `core:backup` | 本机回滚备份与中断恢复；iOS SQLite 备份只读检查 |
+| `core:backup` | 本机回滚备份与中断恢复；iOS SQLite 备份检查与互通结构 |
 | `core:scene` | Filament GLB 渲染与 Compose 生命周期适配 |
 | `core:location` | Android 原生定位、MapLibre 地图与轨迹显示 |
 | `feature:home` / `statistics` | 首页与统计页面 |
-| `feature:settings` | 显示偏好、同步连接和冲突处理的 MVVM/UDF 界面 |
+| `feature:settings` | 显示与照片偏好、数据管理、同步连接和冲突处理的 MVVM/UDF 界面 |
 | `feature:media` | 素材库管理与照片偏好的 MVVM/UDF 界面 |
 | `feature:bills` | 账单录入、筛选、结算与储值账户管理的 MVVM/UDF 界面 |
 | `feature:reminders` | 六类打卡排程、进度、逐日明细、补签月历与任务生命周期 |
@@ -86,6 +86,12 @@ Room 2.8.5 管理数据库，kotlinx.serialization 1.10.0 保留 JSON 值的类�
 业务写入通过 `RecordRepository` 完成；同步回放使用独立入口，避免再次生成本地变更。媒体及偏好写入须使用同一个 `DatabaseHost` 访问边界。维护操作使用 `guarded`：先备份数据库、媒体和偏好，再开始写入；异常或进程中断后先恢复再开放访问。
 
 数据和回滚目录位于应用 `noBackupFilesDir`。本机回滚包绑定安装身份，包含同步状态、不含账号凭据；它与 iOS `.recoowbackup` 互通格式是不同的格式。
+
+设置中的数据管理通过系统文件选择器读写 `.recoowbackup`，包含全部 21 类实体、媒体及可移植偏好。导出使用 iOS schema 36 的独立 SQLite 副本；元数据分别记录互通结构、来源平台和源数据库版本。可直接导入 iOS schema 34–36 的备份；更早的开发期备份需先在当前 iOS 应用中迁移并重新导出。互通结构文件为 `core/backup/src/main/assets/ios-backup-schema-v36.sql`，与 Room 迁移独立维护。
+
+增量导入按八工具选择范围，仅补缺失 ID；覆盖导入替换业务和可移植偏好，保留本机身份与当前连接，重新建立同步及通知任务。优化存储保留墓碑、历史媒体和最新恢复副本。重置清除本地记录、媒体、偏好、恢复备份及服务器绑定，不删除云端账号。
+
+桌面小组件使用原生 App Widget/RemoteViews，每个实例独立选择轨迹、抽选、物品、打卡、账单、日记或纪念日入口；可长按更改配置，未配置时点击进入选择。小组件不做后台轮询，点击通过工具深链打开应用。
 
 ## 同步
 

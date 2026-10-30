@@ -12,6 +12,10 @@ data class BackupPreview(
     val metadataJson: String,
     val tableCounts: Map<String, Long>,
     val embeddedMediaBytes: Long,
+    val sourcePlatform: String = "iOS",
+    val sourceSchemaVersion: Int? = null,
 )
 
 class InvalidBackupException(message: String, cause: Throwable? = null) : Exception(message, cause)
+
+class LegacyBackupException : IllegalArgumentException("Upgrade this backup with iOS first")

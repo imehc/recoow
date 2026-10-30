@@ -26,3 +26,5 @@ backend/data/
 # Local cross-platform validation harnesses; production tests live outside these folders.
 /ios/recoowTests/LocalValidation/
 /android/core/sync/src/androidTest/kotlin/imehc/recoow/core/sync/localvalidation/
+
+/android/core/data/src/androidTest/kotlin/imehc/recoow/core/data/localvalidation/

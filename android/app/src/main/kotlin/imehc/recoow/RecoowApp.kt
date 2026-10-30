@@ -42,6 +42,8 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
     onRetry: () -> Unit, pendingTool: String? = null, onToolConsumed: (String) -> Unit = {},
     onToolVisible: (String, Boolean) -> Unit = { _, _ -> },
     onBill: (String) -> Unit = {},
+    onPickedPhotos: (Boolean) -> Unit = {}, onCameraPhotos: (Boolean) -> Unit = {},
+    dataScreen: @Composable (() -> Unit) -> Unit = {},
     homeScreen: @Composable (() -> Unit, (String) -> Unit) -> Unit = { settings, tool -> HomeScreen(onSettings = settings, onTool = tool) },
     statisticsScreen: @Composable (() -> Unit, (ToolRoute, String?) -> Unit) -> Unit = { history, tool -> StatisticsScreen(onHistory = history, onTool = tool) },
     historyScreen: @Composable (() -> Unit, (ToolRoute, String) -> Unit) -> Unit = { _, _ -> },
@@ -67,7 +69,7 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
         modifier = Modifier.semantics { testTagsAsResourceId = true },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            if (entry?.destination?.route?.startsWith("tool/") != true && entry?.destination?.route !in setOf("sync", "media", "history")) {
+            if (entry?.destination?.route?.startsWith("tool/") != true && entry?.destination?.route !in setOf("sync", "media", "history", "data")) {
                 NavigationBar {
                     AppTab.entries.forEach { tab ->
                         NavigationBarItem(
@@ -98,7 +100,9 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
             } }
             composable(AppTab.SETTINGS.route) { SettingsScreen(state, onAppearance, onLanguage, onRetry,
                 onSync = { controller.navigate("sync") { launchSingleTop = true } },
-                onMedia = { controller.navigate("media") { launchSingleTop = true } }, onToolVisible = onToolVisible) }
+                onMedia = { controller.navigate("media") { launchSingleTop = true } }, onToolVisible = onToolVisible,
+                onData = { controller.navigate("data") { launchSingleTop = true } }, onPickedPhotos = onPickedPhotos, onCameraPhotos = onCameraPhotos) }
+            composable("data") { dataScreen { controller.popBackStack() } }
             composable("media") { mediaScreen { controller.popBackStack() } }
             composable("sync") { syncScreen { controller.popBackStack() } }
             composable("tool/{toolId}?recordId={recordId}&delivery={delivery}", arguments = listOf(androidx.navigation.navArgument("recordId") { type = androidx.navigation.NavType.StringType; nullable = true; defaultValue = null }, androidx.navigation.navArgument("delivery") { type = androidx.navigation.NavType.StringType; nullable = true; defaultValue = null })) { destination ->

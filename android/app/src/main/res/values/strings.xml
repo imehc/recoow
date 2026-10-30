@@ -14,4 +14,9 @@
     <string name="tool_unavailable">This tool is not available yet.</string>
     <string name="return_home">Return to Home</string>
     <string name="navigate_back">Back</string>
+    <string name="widget_label">Quick tool</string>
+    <string name="widget_choose">Choose a tool</string>
+    <string name="widget_hint">Choose one shortcut for this widget. Touch and hold it on the home screen to change it.</string>
+    <string name="widget_cancel">Cancel</string>
+    <string name="widget_add_symbol" translatable="false">+</string>
 </resources>

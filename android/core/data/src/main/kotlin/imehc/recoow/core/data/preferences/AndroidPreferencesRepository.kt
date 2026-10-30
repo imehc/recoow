@@ -36,10 +36,8 @@ class AndroidPreferencesRepository @Inject constructor(
         stored.preferences
     }
 
-    override val preferences = flow {
-        database.access { } // Finish interrupted restores before presenting any persisted preference.
-        emitAll(observedPreferences)
-    }
+    // Suspend preference delivery while a guarded restore is in progress, just like record flows.
+    override val preferences = database.observe { observedPreferences }
 
     override suspend fun setToolVisible(id: String, visible: Boolean) = database.access { stored.setToolVisible(id, visible) }
     override suspend fun setAppearance(value: Appearance) = database.access { stored.setAppearance(value) }

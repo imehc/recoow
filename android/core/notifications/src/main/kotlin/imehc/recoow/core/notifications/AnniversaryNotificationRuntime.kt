@@ -32,6 +32,14 @@ class AnniversaryNotificationRuntime @Inject constructor(@param:ApplicationConte
     private val lock = Mutex()
     private val mutable = MutableStateFlow(ReminderNotificationState())
     override val state = mutable.asStateFlow()
+    suspend fun resetLocalState() = lock.withLock {
+        for (key in ledger.getStringSet("scheduled", emptySet()).orEmpty()) {
+            val intent = pending(key); alarms.cancel(intent); intent.cancel()
+        }
+        manager.activeNotifications.filter { it.notification.channelId == CHANNEL }.forEach { manager.cancel(it.tag, it.id) }
+        check(ledger.edit().clear().commit())
+        mutable.value = ReminderNotificationState()
+    }
     override suspend fun refreshAccess() {
         manager.createNotificationChannel(NotificationChannel(CHANNEL, context.getString(R.string.anniversary_channel), NotificationManager.IMPORTANCE_DEFAULT))
         mutable.update { it.copy(allowed = manager.areNotificationsEnabled() && manager.getNotificationChannel(CHANNEL).importance != NotificationManager.IMPORTANCE_NONE,

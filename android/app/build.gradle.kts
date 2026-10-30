@@ -53,6 +53,7 @@ android {
     }
     buildFeatures { compose = true }
     androidResources { generateLocaleConfig = true }
+    bundle { language { enableSplit = false } }
 }
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 dependencies {

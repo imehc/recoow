@@ -16,5 +16,17 @@
                 <data android:scheme="recoow" android:host="tool" />
             </intent-filter>
         </activity>
+        <receiver android:name=".widget.QuickToolWidget" android:exported="false" android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/quick_tool_widget" />
+        </receiver>
+        <activity android:name=".widget.QuickToolWidgetConfiguration" android:exported="true" android:excludeFromRecents="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
+        </activity>
     </application>
 </manifest>

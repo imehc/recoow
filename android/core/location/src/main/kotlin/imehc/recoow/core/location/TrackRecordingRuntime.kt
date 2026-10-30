@@ -45,6 +45,11 @@ class TrackRecordingRuntime @Inject constructor(@param:ApplicationContext privat
             .putExtra("name", name).putExtra("accuracy", accuracy)) }
         catch (_: Exception) { mutable.update { it.copy(problem = RecordingProblem.START) } }
     }
+    suspend fun prepareMaintenance() {
+        pause()
+        lock.withLock { check(session == null) { "Save the active track before changing local data" } }
+    }
+    suspend fun databaseChanged() = lock.withLock { expired(); recover() }
     fun requestPause() { scope.launch { pause() } }
     fun requestFinish() { scope.launch { finish() } }
     fun refresh() { scope.launch { lock.withLock { if (session == null) { initialized = false; recover() } } } }

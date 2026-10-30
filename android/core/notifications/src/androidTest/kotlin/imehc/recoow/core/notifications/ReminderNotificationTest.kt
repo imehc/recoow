@@ -48,6 +48,19 @@ class ReminderNotificationTest {
         repository.reminders.first().forEach { repository.delete(it.id, it.revision) }
         runtime.reconcile(); manager.cancelAll(); host.close(); root.deleteRecursively(); Unit
     }
+    @Test fun resetClearsAlarmsAndAllowsAnImportedRecordToNotifyAgain() = runBlocking {
+        val at = System.currentTimeMillis() - 1_000
+        repository.save(ReminderDraft(id = "restored", title = "Restored", scheduledAt = at, kind = ScheduleKind.SINGLE))
+        repository.save(ReminderDraft(id = "scheduled", title = "Scheduled", scheduledAt = at + 600_000, kind = ScheduleKind.SINGLE))
+        runtime.deliver(key("restored", at), at); awaitNotifications(1)
+        runtime.reconcile()
+        val ledger = context.getSharedPreferences("reminder-alarms", Context.MODE_PRIVATE)
+        assertTrue(ledger.getStringSet("scheduled", emptySet())!!.isNotEmpty())
+        runtime.resetLocalState(); awaitNotifications(0)
+        assertTrue(ledger.all.isEmpty())
+        runtime.deliver(key("restored", at), at); awaitNotifications(1)
+    }
+
     @Test fun sentNotificationSurvivesReconcileAndReplayButCheckInCancelsIt() = runBlocking {
         val at = System.currentTimeMillis() - 1_000
         repository.save(ReminderDraft(id = "notice", title = "Read", scheduledAt = at, kind = ScheduleKind.SINGLE))
