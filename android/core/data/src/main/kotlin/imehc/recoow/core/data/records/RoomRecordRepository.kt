@@ -28,7 +28,7 @@ class RoomRecordRepository(private val host: DatabaseHost, private val zone: () 
     }
 
     /** The caller owns DatabaseHost and the Room transaction; never reenter the host gate here. */
-    internal suspend fun saveInTransaction(database: RecoowDatabase, changes: List<RecordChange>) {
+    internal suspend fun saveInTransaction(database: RecoowDatabase, changes: List<RecordChange>, inheritedMedia: Map<String, JsonObject> = emptyMap()) {
         check(database.inTransaction())
         val dao = database.records()
         val scope = dao.activeScope()
@@ -41,6 +41,14 @@ class RoomRecordRepository(private val host: DatabaseHost, private val zone: () 
             if (!allowed.containsAll(patch.keys)) throw ContractViolation("Invalid local fields in ${change.table}")
             require(!change.deleted || previous != null) { "Cannot delete a missing record" }
             val fields = previous.orEmpty().toMutableMap().apply {
+                inheritedMedia[change.id]?.let { media ->
+                    require(previous == null) { "Only a new record can inherit media" }
+                    for ((field, value) in media) {
+                        require(contract.fields.any { it.name == field && it.binary })
+                        if (value != JsonNull) MediaReference.parse(value)
+                    }
+                    put("_media", media)
+                }
                 putAll(patch)
                 put("id", JsonPrimitive(change.id))
                 putIfAbsent("created_at", JsonPrimitive(change.updatedAtMillis))

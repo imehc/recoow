@@ -29,7 +29,10 @@ class ToolDeepLinkTest {
             compose.waitUntil(10_000) { compose.onAllNodesWithTag("tool_${route.id}").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithTag("tool_${route.id}").assertIsDisplayed()
             compose.onNodeWithTag("tab_home").assertDoesNotExist()
-            compose.onNodeWithTag("return_home").performClick()
+            if (route == ToolRoute.BILLS) {
+                InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+                compose.waitForIdle()
+            } else compose.onNodeWithTag("return_home").performClick()
             compose.onNodeWithTag("tab_home").assertIsSelected()
         }
     }

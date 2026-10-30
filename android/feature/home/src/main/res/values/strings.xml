@@ -2,4 +2,6 @@
     <string name="home_title">Home</string>
     <string name="home_empty">No records yet</string>
     <string name="home_empty_description">Your daily records will appear here.</string>
+    <string name="home_bills">Bills and stored value</string>
+    <string name="home_bills_description">Income, expenses and stored value accounts</string>
 </resources>

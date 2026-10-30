@@ -41,6 +41,7 @@ Android Studio 自动生成的 `gradle/gradle-daemon-jvm.properties` 优先于 `
 | `feature:home` / `statistics` | 首页与统计页面 |
 | `feature:settings` | 显示偏好、同步连接和冲突处理的 MVVM/UDF 界面 |
 | `feature:media` | 素材库管理与照片偏好的 MVVM/UDF 界面 |
+| `feature:bills` | 账单录入、筛选、结算与储值账户管理的 MVVM/UDF 界面 |
 
 Feature 不互相依赖，不直接访问存储。Domain 不依赖 Android、Hilt、Room 或 Retrofit。
 
@@ -61,6 +62,8 @@ Feature 不互相依赖，不直接访问存储。Domain 不依赖 Android、Hil
 照片选取使用系统 Photo Picker，无需申请图库读取权限；拍照委托系统相机，通过限定目录的 FileProvider 返回图片。默认关闭自动加入素材库，默认开启拍照保存到系统图库；API 26–28 写入图库需要权限，拒绝不影响私有图片保存。录音使用 AAC/M4A（mono 44.1 kHz），仅在前台进行，离开页面、进入后台或丢失音频焦点时释放录音器；播放遵循音频焦点和耳机拔出事件。
 
 ## 数据与迁移
+
+账单金额使用十进制定点计算，保存为整数分；普通金额四舍五入，折扣乘法向下截断。储值余额由调整流水与账单累计影响投影得到：充值按面值入账，消费按实付扣减；团购到期仅改变展示和统计，不主动改写账单及历史流水。账单和账户写入在同一事务内校验版本，拒绝旧表单覆盖新数据。
 
 Room 2.8.5 管理数据库，kotlinx.serialization 1.10.0 保留 JSON 值的类型、缺失字段及未知字段。`build-tools/generate_database.py` 直接复用仓库的 iOS 契约生成函数，生成字段、实体和注册表；构建不依赖本机已有的 `schema/` 目录。生成的 Kotlin 文件位于 `build/`，不提交。
 

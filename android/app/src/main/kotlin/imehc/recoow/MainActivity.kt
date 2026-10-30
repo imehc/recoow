@@ -27,6 +27,7 @@ import imehc.recoow.navigation.ToolLinkViewModel
 class MainActivity : AppCompatActivity() {
     private val preferences: SettingsViewModel by viewModels()
     private val toolLinks: ToolLinkViewModel by viewModels()
+    private val bills: imehc.recoow.feature.bills.BillsViewModel by viewModels()
     private val media: imehc.recoow.feature.media.MediaLibraryViewModel by viewModels()
     private val sync: SyncViewModel by viewModels()
 
@@ -60,6 +61,7 @@ class MainActivity : AppCompatActivity() {
             RecoowTheme(darkTheme = dark) {
                 RecoowApp(state, preferences::setAppearance, preferences::setLanguage, preferences::retry,
                     pendingRoute, toolLinks::consumed,
+                    billsScreen = { onBack -> imehc.recoow.feature.bills.BillsScreen(bills, onBack) },
                     mediaScreen = { onBack -> imehc.recoow.feature.media.MediaLibraryScreen(media, onBack) }) { onBack ->
                     SyncScreen(syncState, onBack, sync::connect, sync::synchronize, sync::disconnect,
                         sync::acknowledgeRecoveryKey, sync::resolve, sync::generatePairingCode, sync::dismissPairingCode)

@@ -38,6 +38,7 @@ private enum class AppTab(val route: String, val label: Int, val icon: Int) {
 @Composable
 fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLanguage: (AppLanguage) -> Unit,
     onRetry: () -> Unit, pendingTool: String? = null, onToolConsumed: (String) -> Unit = {},
+    billsScreen: @Composable (() -> Unit) -> Unit = {},
     mediaScreen: @Composable (() -> Unit) -> Unit = {},
     syncScreen: @Composable (() -> Unit) -> Unit = {}) {
     val controller = rememberNavController()
@@ -78,7 +79,7 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
         },
     ) { padding ->
         NavHost(controller, startDestination = AppTab.HOME.route, modifier = Modifier.padding(padding).consumeWindowInsets(padding)) {
-            composable(AppTab.HOME.route) { HomeScreen() }
+            composable(AppTab.HOME.route) { HomeScreen { controller.navigate("tool/bills") { launchSingleTop = true } } }
             composable(AppTab.STATISTICS.route) { StatisticsScreen() }
             composable(AppTab.SETTINGS.route) { SettingsScreen(state, onAppearance, onLanguage, onRetry,
                 onSync = { controller.navigate("sync") { launchSingleTop = true } },
@@ -87,7 +88,8 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
             composable("sync") { syncScreen { controller.popBackStack() } }
             composable("tool/{toolId}") { destination ->
                 val route = ToolRoute.entries.firstOrNull { it.id == destination.arguments?.getString("toolId") }
-                if (route != null) ToolDestination(route,
+                if (route == ToolRoute.BILLS) billsScreen { controller.popBackStack() }
+                else if (route != null) ToolDestination(route,
                     onBack = { controller.popBackStack() },
                     onHome = { controller.popBackStack(AppTab.HOME.route, false) })
             }

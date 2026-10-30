@@ -2,4 +2,6 @@
     <string name="home_title">首页</string>
     <string name="home_empty">还没有记录</string>
     <string name="home_empty_description">日常记录将在这里显示。</string>
+    <string name="home_bills">账单与储值</string>
+    <string name="home_bills_description">收入、支出与储值账户</string>
 </resources>

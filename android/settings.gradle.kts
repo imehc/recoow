@@ -13,3 +13,5 @@ include(":core:database")
 include(":core:network", ":core:sync")
 
 include(":core:media", ":feature:media")
+
+include(":feature:bills")
