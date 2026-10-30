@@ -1,0 +1,33 @@
+<resources>
+    <string name="food_title">饮食记录</string>
+    <string name="food_add">记录饮食</string>
+    <string name="food_edit">编辑饮食</string>
+    <string name="food_name">食物名称</string>
+    <string name="food_meal">餐别</string>
+    <string name="food_portion">份量</string>
+    <string name="food_day_title">日标题</string>
+    <string name="food_suggestions">常用推荐</string>
+    <string name="food_linked_bills">已关联账单</string>
+    <string name="food_select_bills">选择账单</string>
+    <string name="food_missing_bill">关联账单已不可用</string>
+    <string name="food_media">照片与录音</string>
+    <string name="food_entry_count">%1$d 条记录</string>
+    <string name="food_summary">共 %1$d 条 · 今日 %2$d 条\n记录 %3$d 天 · 今日 %4$d 类餐别</string>
+    <string name="food_week_summary">本周：零食 %1$d · 饮品 %2$d · 夜宵 %3$d\n本月奶茶 %4$d</string>
+    <string name="food_latest">最近记录：%1$s</string>
+    <string name="food_copy">复制到指定日期</string>
+    <string name="food_copy_meal">复制整餐</string>
+    <string name="food_delete_day">删除整日</string>
+    <string name="food_delete_day_note">删除当日全部 %1$d 条饮食、所属附件和日标题？关联账单会保留。</string>
+    <string name="food_delete_note">删除此条饮食及其附件？关联账单会保留。</string>
+    <string name="food_relations">关联账单 %1$d 笔 · 附件 %2$d 个</string>
+    <string-array name="food_meals">
+        <item>早餐</item>
+        <item>午餐</item>
+        <item>晚餐</item>
+        <item>夜宵</item>
+        <item>零食</item>
+        <item>饮品</item>
+        <item>其他</item>
+    </string-array>
+</resources>

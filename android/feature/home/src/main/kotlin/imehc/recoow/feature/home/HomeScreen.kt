@@ -29,7 +29,11 @@ fun HomeScreen(preferences: AppPreferences? = null, reminders: List<Reminder> = 
             Card(onClick = { onTool(tool.id) }, modifier = Modifier.fillMaxWidth().testTag("home_${tool.id}")) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(names[index], style = MaterialTheme.typography.titleLarge)
-                    Text(stringResource(when (tool) { ToolRoute.BILLS -> R.string.home_bills_description; ToolRoute.REMINDERS -> R.string.home_reminders_description; else -> R.string.home_unavailable }), style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(when (tool) {
+                        ToolRoute.BILLS -> R.string.home_bills_description; ToolRoute.REMINDERS -> R.string.home_reminders_description
+                        ToolRoute.DIARY -> R.string.home_diary_description; ToolRoute.FOOD -> R.string.home_food_description
+                        ToolRoute.ITEMS -> R.string.home_items_description; else -> R.string.home_unavailable
+                    }), style = MaterialTheme.typography.bodyMedium)
                     if (tool == ToolRoute.REMINDERS) Text(stringResource(R.string.home_pending, reminders.count { it.canCheckIn(now, ZoneId.systemDefault()) }))
                 }
             }

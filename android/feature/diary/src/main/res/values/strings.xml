@@ -1,0 +1,43 @@
+<resources>
+    <string name="diary_capture_location">Use current location</string>
+    <string name="diary_locating">Getting location…</string>
+    <string name="diary_location_denied">Location permission was denied. You can still save this entry.</string>
+    <string name="diary_location_unavailable">Could not get your location. Check location services and try again.</string>
+    <string name="diary_title">Diary</string>
+    <string name="diary_add">New diary entry</string>
+    <string name="diary_edit">Edit diary entry</string>
+    <string name="diary_entry_title">Title</string>
+    <string name="diary_content">Content</string>
+    <string name="diary_mood">Mood</string>
+    <string name="diary_tags">Tags</string>
+    <string name="diary_manage_tags">Manage tags</string>
+    <string name="diary_links">Linked records</string>
+    <string name="diary_select_links">Select records</string>
+    <string name="diary_source">Source</string>
+    <string name="diary_filter_date">Filter by date</string>
+    <string name="diary_clear_date">Clear date</string>
+    <string name="diary_photos">Photos</string>
+    <string name="diary_audio">Audio</string>
+    <string name="diary_summary">Entries: %1$d · Today: %2$d\nActive days: %3$d · Streak: %4$d</string>
+    <string name="diary_relations_count">%1$d linked records · %2$d attachments</string>
+    <string name="diary_delete_tag_note">Delete this tag? Existing diary entries keep their tag references.</string>
+    <string name="diary_delete_note">Delete this entry and its links and attachments? Source records are kept.</string>
+    <string name="diary_location">Location: %1$.5f, %2$.5f</string>
+    <string name="diary_remove_location">Remove location</string>
+    <string-array name="diary_moods">
+        <item>Neutral</item>
+        <item>Happy</item>
+        <item>Calm</item>
+        <item>Tired</item>
+        <item>Stressed</item>
+        <item>Sad</item>
+    </string-array>
+    <string-array name="diary_sources">
+        <item>Tracks</item>
+        <item>Bills</item>
+        <item>Check-in tasks</item>
+        <item>Anniversaries</item>
+        <item>Items</item>
+        <item>Choice history</item>
+    </string-array>
+</resources>

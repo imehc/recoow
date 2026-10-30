@@ -1,0 +1,16 @@
+<resources>
+    <string name="diary_source_weekdays">Weekdays</string>
+    <string name="diary_source_continuous">%1$d-day challenge</string>
+    <string name="diary_source_goal">Daily goal</string>
+    <string name="diary_source_ready">Ready to check in</string>
+    <string name="diary_source_upcoming">Upcoming</string>
+    <string name="diary_source_checked_in">Checked in today</string>
+    <string name="diary_source_completed">Completed</string>
+    <string name="diary_source_paused">Paused</string>
+    <string name="diary_source_disabled">Disabled</string>
+    <string name="diary_source_broken">Missed check-ins</string>
+    <string name="diary_source_ended">Ended</string>
+    <string name="diary_source_ended_early">Ended early</string>
+    <string name="diary_source_total">Total check-in days: %1$d</string>
+    <string name="diary_source_progress">%1$d/%2$d days</string>
+</resources>

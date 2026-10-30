@@ -46,6 +46,7 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
     reminders: List<imehc.recoow.core.domain.reminders.Reminder> = emptyList(),
     remindersScreen: @Composable (String?, () -> Unit) -> Unit = { _, _ -> },
     billsScreen: @Composable (() -> Unit) -> Unit = {},
+    journalScreen: @Composable (ToolRoute, String?, () -> Unit, (ToolRoute, String) -> Unit) -> Unit = { _, _, _, _ -> },
     mediaScreen: @Composable (() -> Unit) -> Unit = {},
     syncScreen: @Composable (() -> Unit) -> Unit = {}) {
     val controller = rememberNavController()
@@ -96,8 +97,15 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
             composable("sync") { syncScreen { controller.popBackStack() } }
             composable("tool/{toolId}?recordId={recordId}&delivery={delivery}", arguments = listOf(androidx.navigation.navArgument("recordId") { type = androidx.navigation.NavType.StringType; nullable = true; defaultValue = null }, androidx.navigation.navArgument("delivery") { type = androidx.navigation.NavType.StringType; nullable = true; defaultValue = null })) { destination ->
                 val route = ToolRoute.entries.firstOrNull { it.id == destination.arguments?.getString("toolId") }
-                if (route == ToolRoute.BILLS) billsScreen { controller.popBackStack() }
+                if (route == ToolRoute.BILLS) {
+                    LaunchedEffect(destination.arguments?.getString("recordId"), destination.arguments?.getString("delivery")) { destination.arguments?.getString("recordId")?.let(onBill) }
+                    billsScreen { controller.popBackStack() }
+                }
                 else if (route == ToolRoute.REMINDERS) androidx.compose.runtime.key(destination.arguments?.getString("delivery")) { remindersScreen(destination.arguments?.getString("recordId")) { controller.popBackStack() } }
+                else if (route in setOf(ToolRoute.DIARY, ToolRoute.FOOD, ToolRoute.ITEMS)) androidx.compose.runtime.key(destination.arguments?.getString("delivery")) { journalScreen(requireNotNull(route), destination.arguments?.getString("recordId"), { controller.popBackStack() }) { tool, id ->
+                    if (tool == ToolRoute.BILLS) onBill(id)
+                    controller.navigate("tool/${tool.id}?recordId=${java.net.URLEncoder.encode(id, "UTF-8")}")
+                } }
                 else if (route != null) ToolDestination(route,
                     onBack = { controller.popBackStack() },
                     onHome = { controller.popBackStack(AppTab.HOME.route, false) })

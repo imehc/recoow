@@ -151,6 +151,13 @@ class RoomMediaRepository(private val host: DatabaseHost, private val cache: Fil
     }.distinctUntilChanged()
 
     override suspend fun saveAttachments(owner: AttachmentOwner, attachments: List<MediaAttachment>, ownerChange: RecordChange?) = mutate { db ->
+        saveAttachmentsInTransaction(db, owner, attachments, ownerChange)
+    }
+
+    /** Feature repositories own the host gate so owner, links and media commit or roll back together. */
+    internal suspend fun saveAttachmentsInTransaction(db: RecoowDatabase, owner: AttachmentOwner,
+        attachments: List<MediaAttachment>, ownerChange: RecordChange? = null) {
+        check(db.inTransaction())
         require(owner.id.isNotBlank() && attachments.map { it.id }.distinct().size == attachments.size)
         ownerChange?.let {
             require(it.table == owner.type.table && it.id == owner.id && !it.deleted)
@@ -162,7 +169,12 @@ class RoomMediaRepository(private val host: DatabaseHost, private val cache: Fil
         attachments.forEachIndexed { index, attachment ->
             val prior = snapshot(db, "media_attachments", attachment.id)
             require(prior == null || (prior.live && prior.text("owner_type") == owner.type.wire && prior.text("owner_id") == owner.id))
-            val asset = attachment.assetId?.let { require(attachment.kind == AttachmentKind.PHOTO); liveAsset(db, it) }
+            val asset = attachment.assetId?.let {
+                require(attachment.kind == AttachmentKind.PHOTO)
+                // Keep a pre-existing unresolved reference when only editing the owner or attachment order.
+                if (prior?.text("asset_id") == it) snapshot(db, "media_assets", it)?.takeIf { row -> row.live }
+                else liveAsset(db, it)
+            }
             val content = attachment.content
             require(content == null || attachment.assetId == null)
             require(prior != null || content != null || attachment.assetId != null)

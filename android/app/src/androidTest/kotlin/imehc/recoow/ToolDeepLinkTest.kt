@@ -29,7 +29,7 @@ class ToolDeepLinkTest {
             compose.waitUntil(10_000) { compose.onAllNodesWithTag("tool_${route.id}").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithTag("tool_${route.id}").assertIsDisplayed()
             compose.onNodeWithTag("tab_home").assertDoesNotExist()
-            if (route in setOf(ToolRoute.BILLS, ToolRoute.REMINDERS)) {
+            if (route in setOf(ToolRoute.BILLS, ToolRoute.REMINDERS, ToolRoute.DIARY, ToolRoute.FOOD, ToolRoute.ITEMS)) {
                 InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
                 compose.waitForIdle()
             } else compose.onNodeWithTag("return_home").performClick()
@@ -67,6 +67,23 @@ class ToolDeepLinkTest {
         }
         InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
         compose.onNodeWithTag("tab_home").assertIsSelected()
+    }
+
+    @Test fun journalRecordLinksReopenDetailsAndReturnThroughTheirLists() {
+        for ((tool, tag) in listOf("diary" to "diary_detail", "foodJournal" to "food_detail", "itemLocator" to "item_detail")) {
+            repeat(2) {
+                open("recoow://tool/$tool/missing-test-record")
+                compose.waitUntil(10_000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() }
+                compose.activityRule.scenario.recreate()
+                compose.onNodeWithTag(tag).assertIsDisplayed()
+                InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+                compose.waitUntil(10_000) { compose.onAllNodesWithTag("tool_$tool").fetchSemanticsNodes().isNotEmpty() }
+                compose.activityRule.scenario.recreate()
+                compose.onNodeWithTag("tool_$tool").assertIsDisplayed()
+            }
+            InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+            compose.onNodeWithTag("tab_home").assertIsSelected()
+        }
     }
 
 }

@@ -1,0 +1,33 @@
+<resources>
+    <string name="food_title">Food journal</string>
+    <string name="food_add">Add food</string>
+    <string name="food_edit">Edit food</string>
+    <string name="food_name">Food name</string>
+    <string name="food_meal">Meal</string>
+    <string name="food_portion">Portion</string>
+    <string name="food_day_title">Day title</string>
+    <string name="food_suggestions">Frequently recorded</string>
+    <string name="food_linked_bills">Linked bills</string>
+    <string name="food_select_bills">Select bills</string>
+    <string name="food_missing_bill">Linked bill is no longer available</string>
+    <string name="food_media">Photos and audio</string>
+    <string name="food_entry_count">Entries: %1$d</string>
+    <string name="food_summary">Entries: %1$d · Today: %2$d\nDays: %3$d · Meal types today: %4$d</string>
+    <string name="food_week_summary">This week: %1$d snacks · %2$d drinks · %3$d late-night snacks\nThis month: %4$d milk teas</string>
+    <string name="food_latest">Latest: %1$s</string>
+    <string name="food_copy">Copy to date</string>
+    <string name="food_copy_meal">Copy meal</string>
+    <string name="food_delete_day">Delete day</string>
+    <string name="food_delete_day_note">Delete all %1$d entries, their attachments and the day title? Linked bills are kept.</string>
+    <string name="food_delete_note">Delete this entry and its attachments? Linked bills are kept.</string>
+    <string name="food_relations">%1$d bills · %2$d attachments</string>
+    <string-array name="food_meals">
+        <item>Breakfast</item>
+        <item>Lunch</item>
+        <item>Dinner</item>
+        <item>Late-night snack</item>
+        <item>Snack</item>
+        <item>Drink</item>
+        <item>Other</item>
+    </string-array>
+</resources>

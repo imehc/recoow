@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.Flow
 
 /** A private, bounded, normalized file. Callers retain drafts until the owner transaction succeeds. */
 data class PreparedMedia(val file: File, val mimeType: String, val width: Int? = null,
-    val height: Int? = null, val durationSeconds: Double? = null)
+    val height: Int? = null, val durationSeconds: Double? = null) : java.io.Serializable
 
 data class MediaAsset(val id: String, val title: String?, val mimeType: String, val byteCount: Long,
     val checksum: String, val width: Int?, val height: Int?, val sortOrder: Long, val references: Int)
@@ -27,7 +27,7 @@ enum class AttachmentKind(val wire: String) { PHOTO("photo"), AUDIO("audio") }
 data class MediaAttachment(val id: String = UUID.randomUUID().toString(), val kind: AttachmentKind,
     val title: String? = null, val assetId: String? = null, val mimeType: String,
     val width: Int? = null, val height: Int? = null, val durationSeconds: Double? = null,
-    val content: PreparedMedia? = null) {
+    val content: PreparedMedia? = null) : java.io.Serializable {
     val locator get() = MediaLocator(assetId, "media_attachments", id, "data", content?.file)
 }
 

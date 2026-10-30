@@ -35,15 +35,28 @@ abstract class DataBindings {
 @InstallIn(SingletonComponent::class)
 object DataModule {
     @Provides @Singleton
+    fun diary(@ApplicationContext context: Context, database: DatabaseHost, media: imehc.recoow.core.data.media.RoomMediaRepository,
+        identity: imehc.recoow.core.domain.sync.DeviceIdentity): imehc.recoow.core.domain.diary.DiaryRepository =
+        imehc.recoow.core.data.journal.RoomDiaryRepository(database, media, identity.id, context)
+    @Provides @Singleton
+    fun food(database: DatabaseHost, media: imehc.recoow.core.data.media.RoomMediaRepository,
+        identity: imehc.recoow.core.domain.sync.DeviceIdentity): imehc.recoow.core.domain.food.FoodRepository =
+        imehc.recoow.core.data.journal.RoomFoodRepository(database, media, identity.id)
+    @Provides @Singleton
+    fun items(database: DatabaseHost, identity: imehc.recoow.core.domain.sync.DeviceIdentity): imehc.recoow.core.domain.items.ItemsRepository =
+        imehc.recoow.core.data.journal.RoomItemsRepository(database, identity.id)
+    @Provides @Singleton
     fun reminders(database: DatabaseHost, identity: imehc.recoow.core.domain.sync.DeviceIdentity): imehc.recoow.core.domain.reminders.RemindersRepository =
         imehc.recoow.core.data.reminders.RoomRemindersRepository(database, identity.id)
     @Provides @Singleton
     fun bills(database: DatabaseHost, identity: imehc.recoow.core.domain.sync.DeviceIdentity): imehc.recoow.core.domain.bills.BillsRepository =
         imehc.recoow.core.data.bills.RoomBillsRepository(database, identity.id)
     @Provides @Singleton
-    fun media(@ApplicationContext context: Context, database: DatabaseHost,
-        identity: imehc.recoow.core.domain.sync.DeviceIdentity): imehc.recoow.core.domain.media.MediaRepository =
+    fun roomMedia(@ApplicationContext context: Context, database: DatabaseHost,
+        identity: imehc.recoow.core.domain.sync.DeviceIdentity): imehc.recoow.core.data.media.RoomMediaRepository =
         imehc.recoow.core.data.media.RoomMediaRepository(database, File(context.cacheDir, "resolved-media"), identity.id)
+    @Provides @Singleton
+    fun media(repository: imehc.recoow.core.data.media.RoomMediaRepository): imehc.recoow.core.domain.media.MediaRepository = repository
     @Provides @Singleton
     fun preferenceStore(@ApplicationContext context: Context): DataStore<Preferences> = context.preferenceStore
 

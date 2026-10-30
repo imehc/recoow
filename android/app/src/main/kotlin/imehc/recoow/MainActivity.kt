@@ -29,6 +29,9 @@ class MainActivity : AppCompatActivity() {
     private val toolLinks: ToolLinkViewModel by viewModels()
     private val bills: imehc.recoow.feature.bills.BillsViewModel by viewModels()
     private val reminders: imehc.recoow.feature.reminders.RemindersViewModel by viewModels()
+    private val diary: imehc.recoow.feature.diary.DiaryViewModel by viewModels()
+    private val food: imehc.recoow.feature.food.FoodViewModel by viewModels()
+    private val items: imehc.recoow.feature.items.ItemsViewModel by viewModels()
     private val media: imehc.recoow.feature.media.MediaLibraryViewModel by viewModels()
     private val sync: SyncViewModel by viewModels()
 
@@ -68,6 +71,12 @@ class MainActivity : AppCompatActivity() {
                     onToolVisible = preferences::setToolVisible, reminders = reminderState.records,
                     remindersScreen = { recordId, onBack -> imehc.recoow.feature.reminders.RemindersScreen(reminders, onBack, recordId) },
                     billsScreen = { onBack -> imehc.recoow.feature.bills.BillsScreen(bills, onBack) },
+                    journalScreen = { route, id, onBack, onSource -> when (route) {
+                        imehc.recoow.core.domain.navigation.ToolRoute.DIARY -> imehc.recoow.feature.diary.DiaryScreen(diary, onBack, id, onSource)
+                        imehc.recoow.core.domain.navigation.ToolRoute.FOOD -> imehc.recoow.feature.food.FoodScreen(food, onBack, id) { onSource(imehc.recoow.core.domain.navigation.ToolRoute.BILLS, it) }
+                        imehc.recoow.core.domain.navigation.ToolRoute.ITEMS -> imehc.recoow.feature.items.ItemsScreen(items, onBack, id)
+                        else -> Unit
+                    } },
                     mediaScreen = { onBack -> imehc.recoow.feature.media.MediaLibraryScreen(media, onBack) }) { onBack ->
                     SyncScreen(syncState, onBack, sync::connect, sync::synchronize, sync::disconnect,
                         sync::acknowledgeRecoveryKey, sync::resolve, sync::generatePairingCode, sync::dismissPairingCode, sync::setEnabled, sync::refreshDevices, sync::revokeDevice)

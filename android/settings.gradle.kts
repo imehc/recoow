@@ -18,5 +18,6 @@ include(":feature:bills")
 
 include(":core:notifications")
 include(":feature:reminders")
+include(":feature:diary", ":feature:food", ":feature:items")
 
 include(":benchmark")

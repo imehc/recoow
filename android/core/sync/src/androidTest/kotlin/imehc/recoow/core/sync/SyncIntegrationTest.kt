@@ -114,6 +114,54 @@ class SyncIntegrationTest {
         assertTrue("Sync failed: ${client.engine.state.value.problem}, pending=${client.engine.state.value.pending}, inbox=${client.engine.state.value.waitingRows}, media=${client.engine.state.value.pendingMedia}", result)
     }
 
+    @Test fun journalRepositoriesRoundTripMediaReferencesCopiesAndDeletionThroughBackend() = runBlocking {
+        requireBackend()
+        val a = client(); create(a)
+        val b = client(); recover(b, a)
+        fun media(c: Client) = imehc.recoow.core.data.media.RoomMediaRepository(c.host, File(c.host.directory, "test-media-cache"), c.vault.localDeviceId)
+        val am = media(a); val bm = media(b)
+        val ad = imehc.recoow.core.data.journal.RoomDiaryRepository(a.host, am, a.vault.localDeviceId, context)
+        val bd = imehc.recoow.core.data.journal.RoomDiaryRepository(b.host, bm, b.vault.localDeviceId, context)
+        val af = imehc.recoow.core.data.journal.RoomFoodRepository(a.host, am, a.vault.localDeviceId)
+        val bf = imehc.recoow.core.data.journal.RoomFoodRepository(b.host, bm, b.vault.localDeviceId)
+        val ai = imehc.recoow.core.data.journal.RoomItemsRepository(a.host, a.vault.localDeviceId)
+        val bi = imehc.recoow.core.data.journal.RoomItemsRepository(b.host, b.vault.localDeviceId)
+        val bitmap = android.graphics.Bitmap.createBitmap(32, 32, android.graphics.Bitmap.Config.ARGB_8888).apply { eraseColor(android.graphics.Color.GREEN) }
+        val file = File(a.host.directory, "journal.jpg")
+        file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 78, it) }; bitmap.recycle()
+        val photo = imehc.recoow.core.domain.media.PreparedMedia(file, "image/jpeg", 32, 32)
+        val asset = am.createImage(photo)
+        ai.saveCategory(imehc.recoow.core.domain.records.NamedRecordDraft(id = "category", name = "Documents"))
+        ai.save(imehc.recoow.core.domain.items.ItemDraft(id = "item", title = "Passport", location = "Drawer", categoryId = "category", imageChanged = true, imageAssetId = asset, hasImage = true))
+        ad.saveTag(imehc.recoow.core.domain.records.NamedRecordDraft(id = "tag", name = "Travel"))
+        val source = ad.sources(imehc.recoow.core.domain.diary.DiarySource.ITEM).first().single()
+        val attachment = imehc.recoow.core.domain.media.MediaAttachment(id = "diary-photo", kind = imehc.recoow.core.domain.media.AttachmentKind.PHOTO, mimeType = "image/jpeg", assetId = asset)
+        ad.save(imehc.recoow.core.domain.diary.DiaryDraft(id = "diary", title = "Trip", content = "Long content\n".repeat(1000),
+            tags = listOf(imehc.recoow.core.domain.diary.DiaryTagReference("tag", "Travel")), links = listOf(source), attachments = listOf(attachment)), "Diary")
+        imehc.recoow.core.data.bills.RoomBillsRepository(a.host, a.vault.localDeviceId).save(
+            imehc.recoow.core.domain.bills.BillDraft(id = "bills", title = "Meal bill", amounts = imehc.recoow.core.domain.bills.AmountInput(original = "20", final = "20")))
+        val zone = java.time.ZoneId.of("Asia/Shanghai"); val day = java.time.LocalDate.of(2026, 10, 30)
+        val whenAt = day.atTime(12, 34, 56).atZone(zone).toInstant().toEpochMilli()
+        af.save(imehc.recoow.core.domain.food.FoodDraft(id = "food", title = "Noodles", occurredAt = whenAt, billIds = listOf("bills"), attachments = listOf(attachment.copy(id = "food-photo"))))
+        val dayStart = day.atStartOfDay(zone).toInstant().toEpochMilli(); af.saveDayTitle(dayStart, "Trip meals", null)
+        assertSynced(a, a.engine.sync()); assertSynced(b, b.engine.sync())
+        val diary = bd.snapshot.first().entries.single(); assertEquals("Trip", diary.title); assertEquals(source, diary.links.single())
+        assertEquals(imehc.recoow.core.domain.media.MediaAvailability.READY, bm.resolve(diary.attachments.single().locator).availability)
+        assertEquals(imehc.recoow.core.domain.media.MediaAvailability.READY, bm.resolve(bi.snapshot.first().items.single().image).availability)
+        val category = bi.snapshot.first().categories.single(); bi.deleteCategory(category.id, category.revision)
+        val tag = bd.snapshot.first().tags.single(); bd.deleteTag(tag.id, tag.revision)
+        val oldFood = bf.snapshot.first().entries.single(); bf.duplicate(mapOf(oldFood.id to oldFood.revision), day.plusDays(1), zone)
+        val originalDay = bf.snapshot.first().days(zone).single { it.date == day }
+        bf.deleteDay(day, zone, originalDay.entries.associate { it.id to it.revision }, originalDay.record?.revision)
+        assertSynced(b, b.engine.sync()); assertSynced(a, a.engine.sync())
+        assertEquals("category", ai.snapshot.first().items.single().categoryId); assertTrue(ai.snapshot.first().categories.isEmpty())
+        assertEquals("Travel", ad.snapshot.first().entries.single().tags.single().value); assertTrue(ad.snapshot.first().tags.isEmpty())
+        val copy = af.snapshot.first().entries.single(); assertNotEquals("food", copy.id); assertTrue(copy.billIds.isEmpty()); assertTrue(copy.attachments.isEmpty())
+        assertEquals(day.plusDays(1).atTime(12, 34, 56).atZone(zone).toInstant().toEpochMilli(), copy.occurredAt)
+        assertEquals(JsonNull, Json.parseToJsonElement(a.records.find("bills", "bills")!!.snapshotJson).jsonObject["deleted_at"])
+        assertTrue(af.snapshot.first().dayRecords.isEmpty())
+    }
+
     @Test fun allTwentyOneEntitiesAndMediaRoundTripThroughRealBackend() = runBlocking {
         requireBackend()
         val a = client(); mixed(a); create(a); assertSynced(a, a.engine.sync())

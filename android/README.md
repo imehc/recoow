@@ -44,6 +44,9 @@ Android Studio 自动生成的 `gradle/gradle-daemon-jvm.properties` 优先于 `
 | `feature:media` | 素材库管理与照片偏好的 MVVM/UDF 界面 |
 | `feature:bills` | 账单录入、筛选、结算与储值账户管理的 MVVM/UDF 界面 |
 | `feature:reminders` | 六类打卡排程、进度、逐日明细、补签月历与任务生命周期 |
+| `feature:diary` | 日记、心情、标签、六类来源快照、位置与多媒体附件 |
+| `feature:food` | 按天饮食、餐别、推荐、账单关联、复制和日级管理 |
+| `feature:items` | 物品位置、分类、标签关键词检索与图片 |
 | `benchmark` | 核心页面 Baseline Profile 采集与冷启动 Macrobenchmark |
 
 Feature 不互相依赖，不直接访问存储。Domain 不依赖 Android、Hilt、Room 或 Retrofit。
@@ -51,6 +54,8 @@ Feature 不互相依赖，不直接访问存储。Domain 不依赖 Android、Hil
 外观偏好由 DataStore 持有。Android 13+ 语言以系统 LocaleManager 为准；API 26–32 使用 DataStore 与 AppCompat。
 
 工具深链格式为 `recoow://tool/{id}`，标识以 `ToolRoute` 为准。通知记录入口为 `recoow://tool/reminders/{recordId}`。外部链接通过单次事件分发，返回栈以首页为根。
+
+账单、日记、饮食和物品也接受 `recoow://tool/{工具标识}/{recordId}` 详情链接。页面间通过应用导航层打开关联记录，Feature 之间不直接依赖。
 
 3D 使用 [Filament](https://github.com/google/filament)（Apache-2.0），地图使用 [MapLibre Native](https://github.com/maplibre/maplibre-native)（BSD-2-Clause）。地图样式及其服务授权由调用方提供；存储坐标使用 WGS84，仅按地图源要求转换显示副本。定位调用方负责权限交互与前台服务生命周期。
 
@@ -93,6 +98,12 @@ Retrofit 3 与 OkHttp 5 对接仓库后端的协议 v2。正式连接要求 HTTP
 六种排程使用本地日历计算，历史日期键保持固定。打卡和补签写入独立的 `reminder_completions`；撤销只为对应明细写墓碑，父记录的完成日期列表由投影维护。连续挑战遇到漏签需先补签；坚持目标支持暂停，累计实际暂停时长，不改写历史日期。
 
 通知使用独立渠道，每个任务安排下一次本体和提前提醒。Android 13+ 申请通知权限；Android 12+ 缺少精确闹钟权限时使用非精确调度。WorkManager、应用前台、设备重启、时间及权限变化触发恢复。拒绝通知不阻止数据保存和打卡。系统强行停止后需重新打开应用才能恢复后台任务。
+
+## 日记、饮食与物品
+
+日记连同来源快照及附件在同一事务内保存，删除标签或来源保留日记中的历史摘要。日记当前位置仅在用户操作后获取，离开编辑页或进入后台即取消定位。物品分类删除不连删物品，也不清空历史分类引用；编辑文字保留内嵌图片及素材引用。
+
+饮食以本地自然日分组，日标题 ID 沿用 `food-day:<day_start_at>`。复制单条或整餐只改变日期、保留时分秒，清空账单关联及照片/录音。删除整日会重新校验确认时的记录集合，事务内删除当日条目、附件及日标题，保留关联账单。三个模块均校验编辑版本，附件或关联发生变化时拒绝旧草稿覆盖。
 
 ## 性能采集
 

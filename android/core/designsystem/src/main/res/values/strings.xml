@@ -1,0 +1,10 @@
+<resources>
+    <string name="record_back">Back</string><string name="record_save">Save</string><string name="record_cancel">Cancel</string>
+    <string name="record_confirm">Confirm</string><string name="record_delete">Delete</string><string name="record_edit">Edit</string>
+    <string name="record_add">Add</string><string name="record_name">Name</string><string name="record_note">Note</string>
+    <string name="record_choose">Choose</string><string name="record_empty">No records yet</string><string name="record_no_matches">No matching records</string>
+    <string name="record_missing">This record is no longer available.</string><string name="record_failed">Could not complete the operation. Please try again.</string>
+    <string name="record_retry">Retry</string><string name="record_stale">This record has changed. Reopen it to use the latest version.</string>
+    <string name="record_invalid">Check the required fields and linked records.</string><string name="record_search">Search</string>
+    <string name="record_all">All</string><string name="record_remove">Remove</string><string name="record_date">Date and time</string>
+</resources>

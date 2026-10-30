@@ -1,0 +1,16 @@
+<resources>
+    <string name="diary_source_weekdays">工作日</string>
+    <string name="diary_source_continuous">连续挑战 %1$d 天</string>
+    <string name="diary_source_goal">每天坚持</string>
+    <string name="diary_source_ready">待打卡</string>
+    <string name="diary_source_upcoming">未开始</string>
+    <string name="diary_source_checked_in">今日已打卡</string>
+    <string name="diary_source_completed">已完成</string>
+    <string name="diary_source_paused">已暂停</string>
+    <string name="diary_source_disabled">已关闭</string>
+    <string name="diary_source_broken">已断签</string>
+    <string name="diary_source_ended">已结束</string>
+    <string name="diary_source_ended_early">已提前结束</string>
+    <string name="diary_source_total">累计打卡 %1$d 天</string>
+    <string name="diary_source_progress">%1$d/%2$d 天</string>
+</resources>

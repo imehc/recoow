@@ -1,0 +1,10 @@
+<resources>
+    <string name="record_back">返回</string><string name="record_save">保存</string><string name="record_cancel">取消</string>
+    <string name="record_confirm">确定</string><string name="record_delete">删除</string><string name="record_edit">编辑</string>
+    <string name="record_add">新增</string><string name="record_name">名称</string><string name="record_note">备注</string>
+    <string name="record_choose">请选择</string><string name="record_empty">暂无记录</string><string name="record_no_matches">没有匹配的记录</string>
+    <string name="record_missing">此记录已不可用。</string><string name="record_failed">操作未完成，请重试。</string>
+    <string name="record_retry">重试</string><string name="record_stale">记录已发生变化，请重新打开以使用最新版本。</string>
+    <string name="record_invalid">请检查必填内容及关联记录。</string><string name="record_search">搜索</string>
+    <string name="record_all">全部</string><string name="record_remove">移除</string><string name="record_date">日期与时间</string>
+</resources>
