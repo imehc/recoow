@@ -8,6 +8,12 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface RecordDao {
+    @Query("SELECT s.* FROM entity_snapshots s WHERE (s.tableName = 'tracks' AND s.entityId = :id) OR (s.tableName = 'track_points' AND s.entityId IN (SELECT id FROM track_points WHERE track_id = :id)) OR (s.tableName = 'track_segments' AND s.entityId IN (SELECT id FROM track_segments WHERE track_id = :id))")
+    fun observeTrack(id: String): Flow<List<EntitySnapshot>>
+    @Query("SELECT s.* FROM entity_snapshots s WHERE (s.tableName = 'tracks' AND s.entityId = :id) OR (s.tableName = 'track_points' AND s.entityId IN (SELECT id FROM track_points WHERE track_id = :id)) OR (s.tableName = 'track_segments' AND s.entityId IN (SELECT id FROM track_segments WHERE track_id = :id))")
+    suspend fun trackRows(id: String): List<EntitySnapshot>
+    @Query("SELECT track_id AS trackId, COUNT(*) AS count FROM track_points WHERE deleted_at IS NULL GROUP BY track_id")
+    fun observeTrackCounts(): Flow<List<TrackPointCount>>
     @Query("SELECT * FROM entity_snapshots WHERE tableName IN (:tables) ORDER BY tableName, entityId")
     fun observeTables(tables: List<String>): Flow<List<EntitySnapshot>>
     @Query("SELECT 'option:' || id FROM decision_options WHERE deleted_at IS NULL AND length(image_data) > 0 UNION ALL SELECT 'choice:' || id FROM decision_choice_records WHERE deleted_at IS NULL AND length(option_image_data) > 0")
@@ -84,3 +90,5 @@ interface RecordDao {
     @Query("DELETE FROM sync_received_pages WHERE scope = :scope AND pageKey = :key AND received = 1")
     suspend fun removeReceivedPage(scope: String, key: String)
 }
+
+data class TrackPointCount(val trackId: String, val count: Int)

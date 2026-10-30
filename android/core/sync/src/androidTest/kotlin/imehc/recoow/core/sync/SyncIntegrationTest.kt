@@ -114,6 +114,41 @@ class SyncIntegrationTest {
         assertTrue("Sync failed: ${client.engine.state.value.problem}, pending=${client.engine.state.value.pending}, inbox=${client.engine.state.value.waitingRows}, media=${client.engine.state.value.pendingMedia}", result)
     }
 
+    @Test fun tracksPageAcrossDevicesPreserveManualSegmentsAndCascadeDeletion() = runBlocking {
+        requireBackend(); val a = client(); create(a); val b = client(); recover(b, a)
+        suspend fun drain(client: Client) {
+            repeat(8) {
+                if (client.engine.sync()) return
+                assertEquals(SyncProblem.PENDING, client.engine.state.value.problem)
+            }
+            fail("Paged sync did not drain")
+        }
+        var clock = System.currentTimeMillis()
+        val ar = imehc.recoow.core.data.tracks.RoomTracksRepository(a.host, a.vault.localDeviceId) { clock }
+        val br = imehc.recoow.core.data.tracks.RoomTracksRepository(b.host, b.vault.localDeviceId) { clock }
+        val session = ar.begin("Paged track", 10)
+        val points = (0..1200).map { imehc.recoow.core.domain.tracks.TrackPoint(coordinate = imehc.recoow.core.domain.location.GeoCoordinate(31.23, 121.47 + it * 0.00001),
+            time = session.start + it * 1000L, accuracy = 5.0, speed = 1.0) }
+        clock += 1_300_000
+        ar.checkpoint(session, points, 1200, imehc.recoow.core.domain.tracks.TrackStatus.FINISHED)
+        drain(a); drain(b)
+        var d = br.detail(session.track.id).first(); assertEquals(points, d.points)
+        clock += 1000
+        br.editSegment(session.track.id, d.revision, d.segments.single().id, imehc.recoow.core.domain.tracks.SegmentEdit.Split(points[600].time))
+        d = br.detail(session.track.id).first()
+        clock += 1000
+        br.editSegment(session.track.id, d.revision, d.segments.first().id, imehc.recoow.core.domain.tracks.SegmentEdit.Type(imehc.recoow.core.domain.tracks.MotionType.CYCLING))
+        drain(b); drain(a)
+        ar.ensureSegments(session.track.id); val fromA = ar.detail(session.track.id).first()
+        assertEquals(2, fromA.segments.size); assertTrue(fromA.segments.all { it.manual })
+        assertEquals(imehc.recoow.core.domain.tracks.MotionType.CYCLING, fromA.segments.first().motion)
+        assertEquals(br.detail(session.track.id).first().segments, fromA.segments)
+        clock += 1000
+        ar.delete(session.track.id, fromA.revision)
+        drain(a); drain(b)
+        assertTrue(br.tracks.first().isEmpty()); assertTrue(br.detail(session.track.id).first().points.isEmpty()); assertTrue(br.detail(session.track.id).first().segments.isEmpty())
+    }
+
     @Test fun anniversariesAndChoiceSnapshotsRoundTripAfterSourceDeletion() = runBlocking {
         requireBackend(); val a = client(); create(a); val b = client(); recover(b, a)
         val ad = imehc.recoow.core.data.decision.RoomDecisionsRepository(a.host, a.vault.localDeviceId)

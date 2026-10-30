@@ -35,6 +35,9 @@ abstract class DataBindings {
 @InstallIn(SingletonComponent::class)
 object DataModule {
     @Provides @Singleton
+    fun tracks(database: DatabaseHost, identity: imehc.recoow.core.domain.sync.DeviceIdentity): imehc.recoow.core.domain.tracks.TracksRepository =
+        imehc.recoow.core.data.tracks.RoomTracksRepository(database, identity.id)
+    @Provides @Singleton
     fun anniversaries(database: DatabaseHost, identity: imehc.recoow.core.domain.sync.DeviceIdentity): imehc.recoow.core.domain.anniversaries.AnniversariesRepository =
         imehc.recoow.core.data.anniversaries.RoomAnniversariesRepository(database, identity.id)
     @Provides @Singleton

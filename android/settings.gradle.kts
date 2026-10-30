@@ -23,3 +23,5 @@ include(":feature:diary", ":feature:food", ":feature:items")
 include(":benchmark")
 
 include(":feature:anniversaries", ":feature:decision")
+
+include(":feature:tracks")

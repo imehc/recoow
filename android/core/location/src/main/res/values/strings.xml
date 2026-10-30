@@ -1,0 +1,7 @@
+<resources>
+    <string name="track_channel">Track recording</string>
+    <string name="track_recording_duration">Recording · %1$d seconds</string>
+    <string name="track_save_failed">Saving failed. Open the app to retry.</string>
+    <string name="track_pause">Pause</string>
+    <string name="track_finish">Finish</string>
+</resources>

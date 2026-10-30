@@ -14,4 +14,7 @@
     <string name="home_checkin">Open check-in</string>
     <string name="home_anniversaries_description">Dates, lunar anniversaries and reminders</string>
     <string name="home_decision_description">Collections, weighted choices and a 3D turntable</string>
+    <string name="home_tracks_description">Record routes, review movement and replay saved tracks.</string>
+    <string name="home_track_recording">Recording: %1$s</string>
+    <string name="home_track_paused">Paused: %1$s</string>
 </resources>

@@ -49,6 +49,7 @@ Android Studio 自动生成的 `gradle/gradle-daemon-jvm.properties` 优先于 `
 | `feature:items` | 物品位置、分类、标签关键词检索与图片 |
 | `feature:anniversaries` | 公历/农历纪念日、倒计时、周年与通知设置 |
 | `feature:decision` | 集合、加权候选、3D 转盘和持久抽选历史 |
+| `feature:tracks` | 轨迹录制、历史、分段编辑、回放、洞察与时间范围关联 |
 | `benchmark` | 核心页面 Baseline Profile 采集与冷启动 Macrobenchmark |
 
 Feature 不互相依赖，不直接访问存储。Domain 不依赖 Android、Hilt、Room 或 Retrofit。
@@ -57,9 +58,9 @@ Feature 不互相依赖，不直接访问存储。Domain 不依赖 Android、Hil
 
 工具深链格式为 `recoow://tool/{id}`，标识以 `ToolRoute` 为准。通知记录入口为 `recoow://tool/reminders/{recordId}`。外部链接通过单次事件分发，返回栈以首页为根。
 
-账单、日记、饮食、物品、纪念日和抽选历史也接受 `recoow://tool/{工具标识}/{recordId}` 详情链接。页面间通过应用导航层打开关联记录，Feature 之间不直接依赖。
+账单、日记、饮食、物品、纪念日、抽选历史和轨迹也接受 `recoow://tool/{工具标识}/{recordId}` 详情链接。页面间通过应用导航层打开关联记录，Feature 之间不直接依赖。
 
-3D 使用 [Filament](https://github.com/google/filament)（Apache-2.0），地图使用 [MapLibre Native](https://github.com/maplibre/maplibre-native)（BSD-2-Clause）。地图样式及其服务授权由调用方提供；存储坐标使用 WGS84，仅按地图源要求转换显示副本。定位调用方负责权限交互与前台服务生命周期。
+3D 使用 [Filament](https://github.com/google/filament)（Apache-2.0），地图使用 [MapLibre Native](https://github.com/maplibre/maplibre-native)（BSD-2-Clause）。地图组件接收样式及坐标系，轨迹页面使用 [OpenFreeMap](https://openfreemap.org/) Liberty 底图并保留来源署名；存储坐标使用 WGS84，仅按地图源要求转换显示副本。
 
 ## 图片与附件
 
@@ -114,6 +115,16 @@ Retrofit 3 与 OkHttp 5 对接仓库后端的协议 v2。正式连接要求 HTTP
 抽选在事务中读取当前启用候选，以 `max(1, weight)` 的相对权重抽样并保存历史；使用大整数累加避免导入权重溢出。表单权重为 1–100，未修改的历史大权重保持原值。结果展示和动画均以已提交历史为准。删除集合软删候选，保留全部历史及文本/图片快照；历史可以逐条删除。
 
 Filament 转盘读取共享 `assets/decision-scene/` 中的 GLB 和模型目录，构建复制到生成资产目录，不读取 USDZ。模型名称按 Unicode NFKC、空白归一化及小写做精确别名匹配。舞台、底座和默认模型预热，其余按候选标题加载；最多显示 8 个槽位，完整候选池可以通过滑动、前后按钮及候选列表浏览。原型共享几何、实例按槽位复用，原生资源随页面释放。系统关闭动画或用户关闭抽选动画时直接展示已保存结果；渲染失败仍保留列表与抽选操作。
+
+## 轨迹
+
+原生 LocationManager 兼容有无 GMS 的设备；同时请求精确/大致位置，用户在前台开始后使用 `location` 类型前台服务持续采样，不要求后台定位授权或电池白名单。5/10/100 米是采样偏好，同一会话保持不变。通知提供暂停和结束操作；拒绝通知权限不阻止前台启动录制。
+
+采样点、当前指标和分段在同一事务写入同步队列。缓冲达到5点或2秒时保存，无新点时每10秒保存时长；只有成功提交才清除缓冲。时长使用单调时钟，暂停不累计。异常退出后将已保存的本设备录制恢复为暂停，不补造中断期间的位置。数据库替换、远端结束或删除会使旧录制会话失效。
+
+分段复用 iOS 的100米精度过滤、80米/秒速度上限、五点窗口中值平滑及短段合并规则；显式暂停前后分别分析。WGS84距离使用Vincenty算法，对照容差为每段5厘米、速度0.001米/秒。人工编辑支持类型、采样点拆分、邻接边界和前后合并，保留手动段并检查旧版本；不把明确中断合并为连续路线。
+
+回放支持进度、1/2/4倍速、跟随和当前采样数据，播放状态不改写原始记录。洞察由同一组点和分段生成运动汇总、停留点及质量问题，列表与地图联动。关联账单/日记按首末采样时间查询，不写入手工绑定。底图失败时保留路线及定位记录；删除轨迹为主记录、采样点和分段生成墓碑，保留关联账单和日记。
 
 ## 性能采集
 

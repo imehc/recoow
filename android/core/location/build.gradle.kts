@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.compose)
+    alias(libs.plugins.hilt)
+    alias(libs.plugins.ksp)
 }
 android {
     namespace = "imehc.recoow.core.location"
@@ -31,4 +33,6 @@ dependencies {
     androidTestImplementation(libs.compose.test)
     debugImplementation(libs.compose.test.manifest)
     implementation(libs.maplibre)
+    implementation(libs.hilt)
+    ksp(libs.hilt.compiler)
 }

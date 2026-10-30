@@ -42,7 +42,11 @@ class AndroidLocationSource(context: Context) : LocationSource {
                 if (!location.latitude.isFinite() || location.latitude !in -90.0..90.0 ||
                     !location.longitude.isFinite() || location.longitude !in -180.0..180.0) return
                 trySend(LocationObservation.Fix(LocationFix(GeoCoordinate(location.latitude, location.longitude),
-                    location.time, location.accuracy)))
+                    location.time, if (location.hasAccuracy()) location.accuracy else -1f,
+                    location.altitude.takeIf { location.hasAltitude() },
+                    location.verticalAccuracyMeters.toDouble().takeIf { location.hasVerticalAccuracy() && it >= 0 },
+                    location.speed.toDouble().takeIf { location.hasSpeed() && it >= 0 },
+                    location.bearing.toDouble().takeIf { location.hasBearing() && it >= 0 })))
             }
             override fun onProviderDisabled(provider: String) {
                 if (providers.none { manager.isProviderEnabled(it) }) trySend(LocationObservation.ProviderUnavailable)

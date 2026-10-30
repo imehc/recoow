@@ -14,4 +14,7 @@
     <string name="home_checkin">前往打卡</string>
     <string name="home_anniversaries_description">记录重要日期、农历纪念日与提醒</string>
     <string name="home_decision_description">候选集合、加权抽选与 3D 转盘</string>
+    <string name="home_tracks_description">记录路线、查看运动分段和回放轨迹。</string>
+    <string name="home_track_recording">正在记录：%1$s</string>
+    <string name="home_track_paused">已暂停：%1$s</string>
 </resources>

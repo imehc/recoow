@@ -1,0 +1,7 @@
+<resources>
+    <string name="track_channel">轨迹录制</string>
+    <string name="track_recording_duration">记录中 · %1$d 秒</string>
+    <string name="track_save_failed">保存失败，请打开应用重试。</string>
+    <string name="track_pause">暂停</string>
+    <string name="track_finish">结束</string>
+</resources>

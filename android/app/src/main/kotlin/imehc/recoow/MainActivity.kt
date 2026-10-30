@@ -30,6 +30,7 @@ class MainActivity : AppCompatActivity() {
     private val bills: imehc.recoow.feature.bills.BillsViewModel by viewModels()
     private val reminders: imehc.recoow.feature.reminders.RemindersViewModel by viewModels()
     private val anniversaries: imehc.recoow.feature.anniversaries.AnniversariesViewModel by viewModels()
+    private val tracks: imehc.recoow.feature.tracks.TracksViewModel by viewModels()
     private val decisions: imehc.recoow.feature.decision.DecisionViewModel by viewModels()
     private val diary: imehc.recoow.feature.diary.DiaryViewModel by viewModels()
     private val food: imehc.recoow.feature.food.FoodViewModel by viewModels()
@@ -44,6 +45,7 @@ class MainActivity : AppCompatActivity() {
         setContent {
             val state by preferences.uiState.collectAsStateWithLifecycle()
             val billState by bills.state.collectAsStateWithLifecycle()
+            val recordingState by tracks.recorder.state.collectAsStateWithLifecycle()
             val reminderState by reminders.state.collectAsStateWithLifecycle()
             val syncState by sync.state.collectAsStateWithLifecycle()
             val pendingRoute by toolLinks.pendingRoute.collectAsStateWithLifecycle()
@@ -70,10 +72,11 @@ class MainActivity : AppCompatActivity() {
                 RecoowApp(state, preferences::setAppearance, preferences::setLanguage, preferences::retry,
                     pendingRoute, toolLinks::consumed,
                     bills = billState.bills, billsLoading = billState.loading, billsFailed = billState.readFailed, onBillsRetry = bills::retry, onBill = bills::show,
-                    onToolVisible = preferences::setToolVisible, reminders = reminderState.records,
+                    onToolVisible = preferences::setToolVisible, reminders = reminderState.records, activeTrack = recordingState.current,
                     remindersScreen = { recordId, onBack -> imehc.recoow.feature.reminders.RemindersScreen(reminders, onBack, recordId) },
                     billsScreen = { onBack -> imehc.recoow.feature.bills.BillsScreen(bills, onBack) },
                     journalScreen = { route, id, onBack, onSource -> when (route) {
+                        imehc.recoow.core.domain.navigation.ToolRoute.LOCATION -> imehc.recoow.feature.tracks.TracksScreen(tracks, onBack, id, onSource)
                         imehc.recoow.core.domain.navigation.ToolRoute.ANNIVERSARIES -> imehc.recoow.feature.anniversaries.AnniversariesScreen(anniversaries, onBack, id)
                         imehc.recoow.core.domain.navigation.ToolRoute.DECISION -> imehc.recoow.feature.decision.DecisionScreen(decisions, onBack, id)
                         imehc.recoow.core.domain.navigation.ToolRoute.DIARY -> imehc.recoow.feature.diary.DiaryScreen(diary, onBack, id, onSource)

@@ -44,6 +44,7 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
     bills: List<imehc.recoow.core.domain.bills.BillRecord> = emptyList(),
     billsLoading: Boolean = false, billsFailed: Boolean = false, onBillsRetry: () -> Unit = {}, onBill: (String) -> Unit = {},
     reminders: List<imehc.recoow.core.domain.reminders.Reminder> = emptyList(),
+    activeTrack: imehc.recoow.core.domain.tracks.Track? = null,
     remindersScreen: @Composable (String?, () -> Unit) -> Unit = { _, _ -> },
     billsScreen: @Composable (() -> Unit) -> Unit = {},
     journalScreen: @Composable (ToolRoute, String?, () -> Unit, (ToolRoute, String) -> Unit) -> Unit = { _, _, _, _ -> },
@@ -88,7 +89,7 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
         },
     ) { padding ->
         NavHost(controller, startDestination = AppTab.HOME.route, modifier = Modifier.padding(padding).consumeWindowInsets(padding)) {
-            composable(AppTab.HOME.route) { HomeScreen(state.preferences, reminders) { tool -> controller.navigate("tool/$tool") { launchSingleTop = true } } }
+            composable(AppTab.HOME.route) { HomeScreen(state.preferences, reminders, activeTrack) { tool -> controller.navigate("tool/$tool") { launchSingleTop = true } } }
             composable(AppTab.STATISTICS.route) { StatisticsScreen(bills, billsLoading, billsFailed, onBillsRetry) { id -> onBill(id); controller.navigate("tool/bills") } }
             composable(AppTab.SETTINGS.route) { SettingsScreen(state, onAppearance, onLanguage, onRetry,
                 onSync = { controller.navigate("sync") { launchSingleTop = true } },
@@ -102,7 +103,7 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
                     billsScreen { controller.popBackStack() }
                 }
                 else if (route == ToolRoute.REMINDERS) androidx.compose.runtime.key(destination.arguments?.getString("delivery")) { remindersScreen(destination.arguments?.getString("recordId")) { controller.popBackStack() } }
-                else if (route in setOf(ToolRoute.DIARY, ToolRoute.FOOD, ToolRoute.ITEMS, ToolRoute.ANNIVERSARIES, ToolRoute.DECISION)) androidx.compose.runtime.key(destination.arguments?.getString("delivery")) { journalScreen(requireNotNull(route), destination.arguments?.getString("recordId"), { controller.popBackStack() }) { tool, id ->
+                else if (route in setOf(ToolRoute.DIARY, ToolRoute.FOOD, ToolRoute.ITEMS, ToolRoute.ANNIVERSARIES, ToolRoute.DECISION, ToolRoute.LOCATION)) androidx.compose.runtime.key(destination.arguments?.getString("delivery")) { journalScreen(requireNotNull(route), destination.arguments?.getString("recordId"), { controller.popBackStack() }) { tool, id ->
                     if (tool == ToolRoute.BILLS) onBill(id)
                     controller.navigate("tool/${tool.id}?recordId=${java.net.URLEncoder.encode(id, "UTF-8")}")
                 } }

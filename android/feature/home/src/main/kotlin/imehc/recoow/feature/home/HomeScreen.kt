@@ -19,7 +19,7 @@ import java.time.ZoneId
 import kotlinx.coroutines.delay
 
 @Composable
-fun HomeScreen(preferences: AppPreferences? = null, reminders: List<Reminder> = emptyList(), onTool: (String) -> Unit = {}) {
+fun HomeScreen(preferences: AppPreferences? = null, reminders: List<Reminder> = emptyList(), activeTrack: imehc.recoow.core.domain.tracks.Track? = null, onTool: (String) -> Unit = {}) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle) { lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { while (true) { now = System.currentTimeMillis(); delay(30_000) } } }
@@ -33,8 +33,9 @@ fun HomeScreen(preferences: AppPreferences? = null, reminders: List<Reminder> = 
                         ToolRoute.BILLS -> R.string.home_bills_description; ToolRoute.REMINDERS -> R.string.home_reminders_description
                         ToolRoute.DIARY -> R.string.home_diary_description; ToolRoute.FOOD -> R.string.home_food_description
                         ToolRoute.ITEMS -> R.string.home_items_description; ToolRoute.ANNIVERSARIES -> R.string.home_anniversaries_description
-                        ToolRoute.DECISION -> R.string.home_decision_description; else -> R.string.home_unavailable
+                        ToolRoute.DECISION -> R.string.home_decision_description; ToolRoute.LOCATION -> R.string.home_tracks_description
                     }), style = MaterialTheme.typography.bodyMedium)
+                    if (tool == ToolRoute.LOCATION && activeTrack != null) Text(stringResource(if (activeTrack.status == imehc.recoow.core.domain.tracks.TrackStatus.RECORDING) R.string.home_track_recording else R.string.home_track_paused, activeTrack.name))
                     if (tool == ToolRoute.REMINDERS) Text(stringResource(R.string.home_pending, reminders.count { it.canCheckIn(now, ZoneId.systemDefault()) }))
                 }
             }
