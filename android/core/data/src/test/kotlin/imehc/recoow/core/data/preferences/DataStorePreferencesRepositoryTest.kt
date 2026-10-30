@@ -56,6 +56,25 @@ class DataStorePreferencesRepositoryTest {
         } finally { secondJob.cancelAndJoin() }
     }
 
+    @Test fun photoDefaultsAndIndependentTogglesSurviveReopen() = runTest {
+        val file = File(folder.root, "photos.preferences_pb")
+        val job = SupervisorJob()
+        try {
+            val repository = repository(file, job)
+            assertEquals(false, repository.preferences.first().addsPickedPhotosToMediaLibrary)
+            assertEquals(true, repository.preferences.first().savesCameraPhotosToLibrary)
+            repository.setAddsPickedPhotosToMediaLibrary(true)
+            repository.setSavesCameraPhotosToLibrary(false)
+        } finally { job.cancelAndJoin() }
+        val reopened = SupervisorJob()
+        try {
+            val prefs = repository(file, reopened).preferences.first()
+            assertEquals(true, prefs.addsPickedPhotosToMediaLibrary)
+            assertEquals(false, prefs.savesCameraPhotosToLibrary)
+            assertEquals(Appearance.SYSTEM, prefs.appearance)
+        } finally { reopened.cancelAndJoin() }
+    }
+
     @Test fun unknownFutureValuesFallBackWithoutErasingOtherPreferences() = runTest {
         val file = File(folder.root, "future.preferences_pb")
         val job = SupervisorJob()

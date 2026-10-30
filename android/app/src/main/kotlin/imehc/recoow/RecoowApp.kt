@@ -38,6 +38,7 @@ private enum class AppTab(val route: String, val label: Int, val icon: Int) {
 @Composable
 fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLanguage: (AppLanguage) -> Unit,
     onRetry: () -> Unit, pendingTool: String? = null, onToolConsumed: (String) -> Unit = {},
+    mediaScreen: @Composable (() -> Unit) -> Unit = {},
     syncScreen: @Composable (() -> Unit) -> Unit = {}) {
     val controller = rememberNavController()
     val entry by controller.currentBackStackEntryAsState()
@@ -55,7 +56,7 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            if (entry?.destination?.route?.startsWith("tool/") != true && entry?.destination?.route != "sync") {
+            if (entry?.destination?.route?.startsWith("tool/") != true && entry?.destination?.route !in setOf("sync", "media")) {
                 NavigationBar {
                     AppTab.entries.forEach { tab ->
                         NavigationBarItem(
@@ -79,7 +80,10 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
         NavHost(controller, startDestination = AppTab.HOME.route, modifier = Modifier.padding(padding).consumeWindowInsets(padding)) {
             composable(AppTab.HOME.route) { HomeScreen() }
             composable(AppTab.STATISTICS.route) { StatisticsScreen() }
-            composable(AppTab.SETTINGS.route) { SettingsScreen(state, onAppearance, onLanguage, onRetry) { controller.navigate("sync") { launchSingleTop = true } } }
+            composable(AppTab.SETTINGS.route) { SettingsScreen(state, onAppearance, onLanguage, onRetry,
+                onSync = { controller.navigate("sync") { launchSingleTop = true } },
+                onMedia = { controller.navigate("media") { launchSingleTop = true } }) }
+            composable("media") { mediaScreen { controller.popBackStack() } }
             composable("sync") { syncScreen { controller.popBackStack() } }
             composable("tool/{toolId}") { destination ->
                 val route = ToolRoute.entries.firstOrNull { it.id == destination.arguments?.getString("toolId") }

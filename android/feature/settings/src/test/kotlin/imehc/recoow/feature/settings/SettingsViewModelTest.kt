@@ -121,6 +121,8 @@ class SettingsViewModelTest {
     }
 
     private class TestPreferencesRepository : PreferencesRepository {
+        override suspend fun setAddsPickedPhotosToMediaLibrary(value: Boolean) = Unit
+        override suspend fun setSavesCameraPhotosToLibrary(value: Boolean) = Unit
         val values = MutableStateFlow(AppPreferences())
         var failRead = false
         var failSave = false

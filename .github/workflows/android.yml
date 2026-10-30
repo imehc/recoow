@@ -80,7 +80,7 @@ jobs:
             sleep 1
           done
           exit 1
-      - name: Run database, sync and Compose tests
+      - name: Run database, sync, media and Compose tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api }}
@@ -88,7 +88,7 @@ jobs:
           target: default
           disable-animations: true
           working-directory: android
-          script: ./gradlew :core:database:connectedDebugAndroidTest :core:data:connectedDebugAndroidTest :core:sync:connectedDebugAndroidTest :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.syncBaseUrl=http://10.0.2.2:8080/ --stacktrace
+          script: ./gradlew :core:database:connectedDebugAndroidTest :core:data:connectedDebugAndroidTest :core:sync:connectedDebugAndroidTest :core:media:connectedDebugAndroidTest :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.syncBaseUrl=http://10.0.2.2:8080/ --stacktrace
       - uses: actions/upload-artifact@v4
         if: always()
         with:

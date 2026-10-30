@@ -55,4 +55,5 @@
     <string name="sync_pair_device">配对其他设备</string>
     <string name="sync_pair_detail">在另一台设备上填写相同服务器地址，并输入此一次性配对码。过期后请重新生成。</string>
     <string name="sync_close">关闭</string>
+    <string name="media_library">素材库</string>
 </resources>

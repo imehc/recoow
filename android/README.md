@@ -33,12 +33,14 @@ Android Studio 自动生成的 `gradle/gradle-daemon-jvm.properties` 优先于 `
 | `core:network` | Retrofit 协议 v2、严格响应解码、HTTPS 与媒体流传输 |
 | `core:sync` | Keystore 凭据、同步队列、断点恢复、冲突与媒体协调、WorkManager |
 | `core:designsystem` | 唯一 Expressive 主题、页面框架和空状态组件 |
+| `core:media` | Photo Picker/拍照、图片优化和裁剪、缩略图/翻页预览、前台录音与播放、可复用媒体输入 |
 | `core:calendar` | Android ICU 公历/农历日期及纪念日计算 |
 | `core:backup` | 本机回滚备份与中断恢复；iOS SQLite 备份只读检查 |
 | `core:scene` | Filament GLB 渲染与 Compose 生命周期适配 |
 | `core:location` | Android 原生定位、MapLibre 地图与轨迹显示 |
 | `feature:home` / `statistics` | 首页与统计页面 |
 | `feature:settings` | 显示偏好、同步连接和冲突处理的 MVVM/UDF 界面 |
+| `feature:media` | 素材库管理与照片偏好的 MVVM/UDF 界面 |
 
 Feature 不互相依赖，不直接访问存储。Domain 不依赖 Android、Hilt、Room 或 Retrofit。
 
@@ -47,6 +49,16 @@ Feature 不互相依赖，不直接访问存储。Domain 不依赖 Android、Hil
 工具深链格式为 `recoow://tool/{id}`，标识以 `ToolRoute` 为准。外部链接通过单次事件分发，返回栈以首页为根。
 
 3D 使用 [Filament](https://github.com/google/filament)（Apache-2.0），地图使用 [MapLibre Native](https://github.com/maplibre/maplibre-native)（BSD-2-Clause）。地图样式及其服务授权由调用方提供；存储坐标使用 WGS84，仅按地图源要求转换显示副本。定位调用方负责权限交互与前台服务生命周期。
+
+## 图片与附件
+
+图片加载使用 [Coil 3.6.3](https://github.com/coil-kt/coil)（Apache-2.0），方向校正使用 AndroidX ExifInterface 1.4.2，播放使用 [AndroidX Media3 1.11.1](https://github.com/androidx/media)（Apache-2.0）。图片在后台限尺寸解码，输出最长边不超过 2048 的 JPEG（质量 78）；缩略图请求上限为 512。裁剪预览与输出共用变换矩阵，支持平移、缩放和连续旋转。
+
+`PhotoInput` 提供单图输入；`AttachmentInput` 编辑照片/录音混合草稿，`ImagePreview` 提供缩放翻页。所属功能的 ViewModel 持有草稿，保存时调用 `MediaRepository.saveAttachments`，将所属记录的 `RecordChange` 与附件一起提交。附件支持 `diary` / `foodEntry`；照片换位保留音频所在的槽位。草稿只保存私有文件路径和元数据，使用 `PreparedMediaSaver` 恢复编辑状态，避免把媒体字节放入 Bundle。
+
+素材新增按内容去重；替换保留素材 ID，局部裁剪生成独立图片，被引用素材不可删除。旧 BLOB 与待下载的 `_media` 引用均由仓库解析；标题和可用状态随数据更新。对象文件使用 SHA-256 内容寻址，读取前验证；清理保留同步历史引用和回滚副本，只删除超过一天的未引用对象。临时草稿及解析缓存保留七天。
+
+照片选取使用系统 Photo Picker，无需申请图库读取权限；拍照委托系统相机，通过限定目录的 FileProvider 返回图片。默认关闭自动加入素材库，默认开启拍照保存到系统图库；API 26–28 写入图库需要权限，拒绝不影响私有图片保存。录音使用 AAC/M4A（mono 44.1 kHz），仅在前台进行，离开页面、进入后台或丢失音频焦点时释放录音器；播放遵循音频焦点和耳机拔出事件。
 
 ## 数据与迁移
 

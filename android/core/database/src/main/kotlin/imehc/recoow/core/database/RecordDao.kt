@@ -8,6 +8,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface RecordDao {
+    @Query("SELECT * FROM entity_snapshots WHERE tableName IN ('media_assets','media_attachments','reminders','bills','stored_items','decision_options','decision_choice_records')")
+    fun observeMediaRecords(): Flow<List<EntitySnapshot>>
+    @Query("SELECT COUNT(*) FROM sync_media_jobs")
+    fun observeMediaJobs(): Flow<Int>
     @Query("SELECT * FROM entity_snapshots WHERE tableName = :table AND entityId = :id")
     suspend fun snapshot(table: String, id: String): EntitySnapshot?
     @Query("SELECT * FROM entity_snapshots WHERE tableName = :table ORDER BY entityId")

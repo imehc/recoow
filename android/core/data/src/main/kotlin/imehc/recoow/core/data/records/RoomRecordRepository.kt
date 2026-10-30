@@ -24,43 +24,47 @@ class RoomRecordRepository(private val host: DatabaseHost, private val zone: () 
     }
 
     override suspend fun save(changes: List<RecordChange>) = host.access { database ->
-        database.withTransaction {
-            val dao = database.records()
-            val scope = dao.activeScope()
-            for (change in changes) {
-                require(change.id.isNotBlank() && change.deviceId.isNotBlank() && change.updatedAtMillis > 0)
-                val contract = EntityContracts.registry.entity(change.table)
-                val previous = dao.snapshot(change.table, change.id)?.json?.let { Json.parseToJsonElement(it).jsonObject }
-                val patch = Json.parseToJsonElement(change.fieldsJson).jsonObject
-                val allowed = contract.fields.filter { !it.derived && !it.binary && it.name !in SYSTEM_FIELDS }.map { it.name }.toSet()
-                if (!allowed.containsAll(patch.keys)) throw ContractViolation("Invalid local fields in ${change.table}")
-                require(!change.deleted || previous != null) { "Cannot delete a missing record" }
-                val fields = previous.orEmpty().toMutableMap().apply {
-                    putAll(patch)
-                    put("id", JsonPrimitive(change.id))
-                    putIfAbsent("created_at", JsonPrimitive(change.updatedAtMillis))
-                    put("updated_at", JsonPrimitive(change.updatedAtMillis))
-                    put("device_id", JsonPrimitive(change.deviceId))
-                    put("deleted_at", if (change.deleted) JsonPrimitive(change.updatedAtMillis) else JsonNull)
-                }
-                val snapshot = MediaObjects(host.mediaDirectory).captureSnapshot(contract,
-                    contract.normalize(JsonObject(fields), contract.version), change.binaryFields)
-                val version = scope?.let { dao.shadow(it, change.table, change.id)?.version }
-                PhysicalRecords.write(database.openHelper.writableDatabase, contract, snapshot, version, local = true, change.binaryFields)
-                dao.put(EntitySnapshot(change.table, change.id, contract.version, snapshot.toString()))
-                val operation = if (change.deleted) "delete" else "update"
-                val mutation = UUID.randomUUID().toString()
-                val localId = dao.log(LocalChange(mutationId = mutation, tableName = change.table, entityId = change.id,
-                    operation = operation, dataVersion = contract.version, payloadJson = snapshot.toString(), changedAt = change.updatedAtMillis))
-                if (scope != null) {
-                    val predecessor = dao.pending(scope, change.table, change.id)?.mutationId
-                    dao.enqueue(SyncOutbox(scope, mutation, change.table, change.id, operation, contract.version,
-                        snapshot.toString(), version ?: 0, localId, predecessorId = predecessor))
-                }
-                queueNotification(database, change.table, change.id, change.updatedAtMillis)
+        database.withTransaction { saveInTransaction(database, changes) }
+    }
+
+    /** The caller owns DatabaseHost and the Room transaction; never reenter the host gate here. */
+    internal suspend fun saveInTransaction(database: RecoowDatabase, changes: List<RecordChange>) {
+        check(database.inTransaction())
+        val dao = database.records()
+        val scope = dao.activeScope()
+        for (change in changes) {
+            require(change.id.isNotBlank() && change.deviceId.isNotBlank() && change.updatedAtMillis > 0)
+            val contract = EntityContracts.registry.entity(change.table)
+            val previous = dao.snapshot(change.table, change.id)?.json?.let { Json.parseToJsonElement(it).jsonObject }
+            val patch = Json.parseToJsonElement(change.fieldsJson).jsonObject
+            val allowed = contract.fields.filter { !it.derived && !it.binary && it.name !in SYSTEM_FIELDS }.map { it.name }.toSet()
+            if (!allowed.containsAll(patch.keys)) throw ContractViolation("Invalid local fields in ${change.table}")
+            require(!change.deleted || previous != null) { "Cannot delete a missing record" }
+            val fields = previous.orEmpty().toMutableMap().apply {
+                putAll(patch)
+                put("id", JsonPrimitive(change.id))
+                putIfAbsent("created_at", JsonPrimitive(change.updatedAtMillis))
+                put("updated_at", JsonPrimitive(change.updatedAtMillis))
+                put("device_id", JsonPrimitive(change.deviceId))
+                put("deleted_at", if (change.deleted) JsonPrimitive(change.updatedAtMillis) else JsonNull)
             }
-            AggregateProjection.refresh(database, changes.map { it.table }.toSet(), zone())
+            val snapshot = MediaObjects(host.mediaDirectory).captureSnapshot(contract,
+                contract.normalize(JsonObject(fields), contract.version), change.binaryFields)
+            val version = scope?.let { dao.shadow(it, change.table, change.id)?.version }
+            PhysicalRecords.write(database.openHelper.writableDatabase, contract, snapshot, version, local = true, change.binaryFields)
+            dao.put(EntitySnapshot(change.table, change.id, contract.version, snapshot.toString()))
+            val operation = if (change.deleted) "delete" else "update"
+            val mutation = UUID.randomUUID().toString()
+            val localId = dao.log(LocalChange(mutationId = mutation, tableName = change.table, entityId = change.id,
+                operation = operation, dataVersion = contract.version, payloadJson = snapshot.toString(), changedAt = change.updatedAtMillis))
+            if (scope != null) {
+                val predecessor = dao.pending(scope, change.table, change.id)?.mutationId
+                dao.enqueue(SyncOutbox(scope, mutation, change.table, change.id, operation, contract.version,
+                    snapshot.toString(), version ?: 0, localId, predecessorId = predecessor))
+            }
+            queueNotification(database, change.table, change.id, change.updatedAtMillis)
         }
+        AggregateProjection.refresh(database, changes.map { it.table }.toSet(), zone())
     }
 
     companion object {

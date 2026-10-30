@@ -11,10 +11,14 @@ enum class AppLanguage(val tag: String) {
 data class AppPreferences(
     val appearance: Appearance = Appearance.SYSTEM,
     val language: AppLanguage = AppLanguage.SYSTEM,
+    val addsPickedPhotosToMediaLibrary: Boolean = false,
+    val savesCameraPhotosToLibrary: Boolean = true,
 )
 
 interface PreferencesRepository {
     val preferences: Flow<AppPreferences>
     suspend fun setAppearance(value: Appearance)
     suspend fun setLanguage(value: AppLanguage)
+    suspend fun setAddsPickedPhotosToMediaLibrary(value: Boolean)
+    suspend fun setSavesCameraPhotosToLibrary(value: Boolean)
 }

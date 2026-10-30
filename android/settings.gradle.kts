@@ -11,3 +11,5 @@ include(":feature:home", ":feature:statistics", ":feature:settings")
 include(":core:calendar", ":core:backup", ":core:scene", ":core:location")
 include(":core:database")
 include(":core:network", ":core:sync")
+
+include(":core:media", ":feature:media")

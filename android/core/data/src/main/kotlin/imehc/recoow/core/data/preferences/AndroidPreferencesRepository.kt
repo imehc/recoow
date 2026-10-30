@@ -42,6 +42,8 @@ class AndroidPreferencesRepository @Inject constructor(
     }
 
     override suspend fun setAppearance(value: Appearance) = database.access { stored.setAppearance(value) }
+    override suspend fun setAddsPickedPhotosToMediaLibrary(value: Boolean) = database.access { stored.setAddsPickedPhotosToMediaLibrary(value) }
+    override suspend fun setSavesCameraPhotosToLibrary(value: Boolean) = database.access { stored.setSavesCameraPhotosToLibrary(value) }
 
     override suspend fun setLanguage(value: AppLanguage) = database.access {
         if (Build.VERSION.SDK_INT >= 33) {

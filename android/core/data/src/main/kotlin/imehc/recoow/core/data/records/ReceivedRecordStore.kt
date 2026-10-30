@@ -121,11 +121,11 @@ class ReceivedRecordStore(private val host: DatabaseHost, private val zone: () -
         // Local edits remain visible; the remote snapshot is retained for explicit reconciliation.
         if (db.records().pending(row.scope, row.tableName, row.entityId) == null) {
             val fields = old?.json?.let { Json.parseToJsonElement(it).jsonObject }.orEmpty().toMutableMap()
-                incoming?.let {
-                    val references = fields["_media"]?.jsonObject.orEmpty() + it["_media"]?.jsonObject.orEmpty()
-                    fields.putAll(it)
-                    if (references.isNotEmpty()) fields["_media"] = JsonObject(references)
-                }
+            incoming?.let {
+                val references = fields["_media"]?.jsonObject.orEmpty() + it["_media"]?.jsonObject.orEmpty()
+                fields.putAll(it)
+                if (references.isNotEmpty()) fields["_media"] = JsonObject(references)
+            }
             if (fields.isNotEmpty()) {
                 fields["id"] = JsonPrimitive(row.entityId)
                 fields["updated_at"] = JsonPrimitive(updatedAt)

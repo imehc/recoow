@@ -55,4 +55,5 @@
     <string name="sync_pair_device">Pair another device</string>
     <string name="sync_pair_detail">Enter this single-use code on another device using the same server address. Generate a new code if it expires.</string>
     <string name="sync_close">Close</string>
+    <string name="media_library">Asset library</string>
 </resources>

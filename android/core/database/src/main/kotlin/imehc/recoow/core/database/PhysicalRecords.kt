@@ -6,6 +6,26 @@ import kotlinx.serialization.json.*
 
 /** All calls run inside Room's transaction, so raw SQL and DAO invalidations share one connection. */
 object PhysicalRecords {
+    fun copyBinary(db: SupportSQLiteDatabase, table: String, id: String, field: String, output: java.io.File): Long? {
+        val contract = imehc.recoow.core.database.generated.EntityContracts.registry.entity(table)
+        require(contract.fields.any { it.name == field && it.binary })
+        val length = db.query("SELECT length(\"$field\") FROM \"$table\" WHERE id = ?", arrayOf(id)).use {
+            if (!it.moveToFirst() || it.isNull(0)) return null
+            it.getLong(0)
+        }
+        require(length in 0..200L * 1024 * 1024)
+        output.outputStream().use { stream ->
+            var offset = 0L
+            while (offset < length) {
+                db.query("SELECT substr(\"$field\", ?, ?) FROM \"$table\" WHERE id = ?",
+                    arrayOf<Any>(offset + 1, minOf(512 * 1024L, length - offset), id)).use {
+                    check(it.moveToFirst()); val part = it.getBlob(0); check(part.isNotEmpty())
+                    stream.write(part); offset += part.size
+                }
+            }
+        }
+        return length
+    }
     fun binary(db: SupportSQLiteDatabase, table: String, id: String, field: String): ByteArray? {
         val length = db.query("SELECT length(\"$field\") FROM \"$table\" WHERE id = ?", arrayOf(id)).use {
             if (!it.moveToFirst() || it.isNull(0)) return null

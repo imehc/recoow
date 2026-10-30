@@ -35,6 +35,10 @@ abstract class DataBindings {
 @InstallIn(SingletonComponent::class)
 object DataModule {
     @Provides @Singleton
+    fun media(@ApplicationContext context: Context, database: DatabaseHost,
+        identity: imehc.recoow.core.domain.sync.DeviceIdentity): imehc.recoow.core.domain.media.MediaRepository =
+        imehc.recoow.core.data.media.RoomMediaRepository(database, File(context.cacheDir, "resolved-media"), identity.id)
+    @Provides @Singleton
     fun preferenceStore(@ApplicationContext context: Context): DataStore<Preferences> = context.preferenceStore
 
     @Provides @Singleton
