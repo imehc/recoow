@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -34,6 +34,8 @@ jobs:
           distribution: temurin
           java-version: ${{ matrix.java }}
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - uses: gradle/actions/setup-gradle@v4
       - name: Install compile SDK
         run: sdkmanager 'platforms;android-37.0' 'build-tools;37.0.0'
@@ -61,7 +63,7 @@ jobs:
             android/**/build/test-results/
 
   device:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -77,6 +79,8 @@ jobs:
           distribution: temurin
           java-version: 25
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - uses: gradle/actions/setup-gradle@v4
       - name: Enable KVM
         run: |
