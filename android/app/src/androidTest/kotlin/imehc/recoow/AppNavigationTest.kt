@@ -12,6 +12,9 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertCountEquals
@@ -40,20 +43,28 @@ class AppNavigationTest {
         compose.waitForIdle()
     }
 
+    private fun settingsRow(tag: String): androidx.compose.ui.test.SemanticsNodeInteraction {
+        // Lazy rows outside a small viewport do not have semantics nodes yet.
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasTestTag(tag))
+        return compose.onNodeWithTag(tag).performScrollTo()
+    }
+
     private fun openSettings() {
         compose.onNodeWithTag("tab_settings").performClick()
-        compose.waitUntil(10_000) { compose.onAllNodesWithTag("appearance").fetchSemanticsNodes().isNotEmpty() }
+        val preferences = androidx.lifecycle.ViewModelProvider(compose.activity)[imehc.recoow.feature.settings.SettingsViewModel::class.java]
+        compose.waitUntil(10_000) { preferences.uiState.value.preferences != null }
+        settingsRow("appearance").assertIsDisplayed()
     }
 
     private fun choose(tag: String, index: Int) {
-        compose.onNodeWithTag(tag).performScrollTo().performClick()
+        settingsRow(tag).performClick()
         compose.onNodeWithTag("preference_option_$index").performScrollTo().performClick()
         compose.waitForIdle()
     }
 
     @Test fun syncScreenRestoresAddressAndReturnsToSettings() {
         openSettings()
-        compose.onNodeWithTag("sync_settings").performScrollTo().performClick()
+        settingsRow("sync_settings").performClick()
         compose.onNodeWithTag("sync_endpoint").performTextInput("https://example.com/recoow")
         compose.activityRule.scenario.recreate()
         compose.onNodeWithTag("sync_endpoint").assertTextContains("https://example.com/recoow")
@@ -67,10 +78,10 @@ class AppNavigationTest {
         compose.onNodeWithTag("tab_statistics").performClick().assertIsSelected()
         openSettings()
         compose.onNodeWithTag("tab_settings").assertIsSelected()
-        compose.onNodeWithTag("appearance").assertIsDisplayed()
+        settingsRow("appearance").assertIsDisplayed()
         compose.activityRule.scenario.recreate()
         compose.onNodeWithTag("tab_settings").assertIsSelected()
-        compose.onNodeWithTag("language").performScrollTo().assertIsDisplayed()
+        settingsRow("language").assertIsDisplayed()
         compose.onNodeWithTag("tab_home").performClick().assertIsSelected()
     }
 
@@ -78,7 +89,7 @@ class AppNavigationTest {
         openSettings()
         choose("appearance", 2)
         compose.activityRule.scenario.recreate()
-        compose.onNodeWithTag("appearance").performClick()
+        settingsRow("appearance").performClick()
         compose.onNodeWithTag("preference_option_2").assertIsSelected()
         pressBack()
         compose.onNodeWithTag("preference_option_2").assertDoesNotExist()
@@ -88,13 +99,15 @@ class AppNavigationTest {
     @Test fun chineseAndEnglishSurviveLocaleRecreation() {
         openSettings()
         choose("language", 1)
-        compose.waitUntil(10_000) { compose.onAllNodesWithText("外观").fetchSemanticsNodes().isNotEmpty() }
+        settingsRow("appearance")
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("外观").fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty() }
         compose.onNodeWithTag("tab_settings").assertIsSelected()
         compose.onNodeWithText("外观").assertIsDisplayed()
         compose.activityRule.scenario.recreate()
         compose.onNodeWithText("外观").assertIsDisplayed()
         choose("language", 2)
-        compose.waitUntil(10_000) { compose.onAllNodesWithText("Appearance").fetchSemanticsNodes().isNotEmpty() }
+        settingsRow("appearance")
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("Appearance").fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty() }
         compose.onNodeWithText("Appearance").assertIsDisplayed()
         compose.onNodeWithTag("tab_settings").assertIsSelected()
     }
@@ -102,10 +115,10 @@ class AppNavigationTest {
     @Test fun canceledSelectionDoesNotChangeStoredAppearance() {
         openSettings()
         choose("appearance", 1)
-        compose.onNodeWithTag("appearance").performClick()
+        settingsRow("appearance").performClick()
         compose.onNodeWithTag("preference_option_1").assertIsSelected()
         pressBack()
-        compose.onNodeWithTag("appearance").performClick()
+        settingsRow("appearance").performClick()
         compose.onNodeWithTag("preference_option_1").assertIsSelected()
         pressBack()
     }
@@ -114,10 +127,10 @@ class AppNavigationTest {
         openSettings()
         choose("appearance", 0)
         choose("language", 0)
-        compose.onNodeWithTag("appearance").performClick()
+        settingsRow("appearance").performClick()
         compose.onNodeWithTag("preference_option_0").assertIsSelected()
         pressBack()
-        compose.onNodeWithTag("language").performClick()
+        settingsRow("language").performClick()
         compose.onNodeWithTag("preference_option_0").assertIsSelected()
         pressBack()
         pressBack()
@@ -126,7 +139,7 @@ class AppNavigationTest {
 
     @Test fun dialogRestoresAcrossActivityRecreation() {
         openSettings()
-        compose.onNodeWithTag("language").performClick()
+        settingsRow("language").performClick()
         compose.activityRule.scenario.recreate()
         compose.onNodeWithTag("preference_option_2").performScrollTo().assertIsDisplayed()
         pressBack()
@@ -137,6 +150,7 @@ class AppNavigationTest {
         openSettings()
         val label = compose.activity.getString(imehc.recoow.feature.settings.R.string.photos_picked)
         val selector = hasText(label) and isToggleable()
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(selector)
         compose.onNode(selector).performScrollTo()
         compose.onAllNodes(selector).assertCountEquals(1)
         val preferences = androidx.lifecycle.ViewModelProvider(compose.activity)[imehc.recoow.feature.settings.SettingsViewModel::class.java]
@@ -145,6 +159,7 @@ class AppNavigationTest {
             compose.onNode(selector).performClick()
             compose.waitUntil(10_000) { !preferences.uiState.value.saving && preferences.uiState.value.preferences!!.addsPickedPhotosToMediaLibrary != original }
             compose.activityRule.scenario.recreate()
+            compose.onNode(hasScrollToIndexAction()).performScrollToNode(selector)
             compose.onNode(selector).performScrollTo()
             if (original) compose.onNode(selector).assertIsOff() else compose.onNode(selector).assertIsOn()
         } finally {
@@ -158,7 +173,7 @@ class AppNavigationTest {
             activity.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("recoow://tool/reminders"), activity, MainActivity::class.java)
                 .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP))
         }
-        compose.waitUntil(10_000) { compose.onAllNodesWithTag("reminder_add").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(10_000) { compose.onAllNodesWithTag("reminder_add").fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty() }
         compose.onNodeWithTag("reminder_add").performClick()
         val label = compose.activity.getString(imehc.recoow.feature.reminders.R.string.reminder_enabled)
         val selector = hasText(label) and isToggleable()
@@ -183,13 +198,14 @@ class AppNavigationTest {
         compose.activityRule.scenario.onActivity {
             it.getSystemService(LocaleManager::class.java).applicationLocales = LocaleList.forLanguageTags("zh-Hans")
         }
-        compose.waitUntil(10_000) { compose.onAllNodesWithText("外观").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("language").performClick()
+        settingsRow("appearance")
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("外观").fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty() }
+        settingsRow("language").performClick()
         compose.onNodeWithTag("preference_option_1").assertIsSelected()
         pressBack()
         compose.activityRule.scenario.recreate()
         compose.onNodeWithText("外观").assertIsDisplayed()
-        compose.onNodeWithTag("language").performClick()
+        settingsRow("language").performClick()
         compose.onNodeWithTag("preference_option_1").assertIsSelected()
         pressBack()
     }

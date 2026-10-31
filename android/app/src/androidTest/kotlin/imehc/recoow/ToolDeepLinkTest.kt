@@ -26,7 +26,7 @@ class ToolDeepLinkTest {
     @Test fun allToolsAcceptWarmLinksAndReturnHome() {
         for (route in ToolRoute.entries) {
             open("recoow://tool/${route.id}")
-            compose.waitUntil(10_000) { compose.onAllNodesWithTag("tool_${route.id}").fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(10_000) { compose.onAllNodesWithTag("tool_${route.id}").fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty() }
             compose.onNodeWithTag("tool_${route.id}").assertIsDisplayed()
             compose.onNodeWithTag("tab_home").assertDoesNotExist()
             if (route in setOf(ToolRoute.BILLS, ToolRoute.REMINDERS, ToolRoute.DIARY, ToolRoute.FOOD, ToolRoute.ITEMS, ToolRoute.ANNIVERSARIES, ToolRoute.DECISION, ToolRoute.LOCATION)) {
@@ -39,9 +39,9 @@ class ToolDeepLinkTest {
 
     @Test fun newToolReplacesOldToolAndRecreationDoesNotReplayTheIntent() {
         open("recoow://tool/bills")
-        compose.waitUntil(10_000) { compose.onAllNodesWithTag("tool_bills").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(10_000) { compose.onAllNodesWithTag("tool_bills").fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty() }
         open("recoow://tool/anniversaries")
-        compose.waitUntil(10_000) { compose.onAllNodesWithTag("tool_anniversaries").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(10_000) { compose.onAllNodesWithTag("tool_anniversaries").fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty() }
         compose.activityRule.scenario.recreate()
         compose.onNodeWithTag("tool_anniversaries").assertIsDisplayed()
         InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
@@ -60,10 +60,10 @@ class ToolDeepLinkTest {
     @Test fun repeatedReminderRecordLinksReopenDetailsAndKeepBackStack() {
         repeat(2) {
             open("recoow://tool/reminders/missing-test-record")
-            compose.waitUntil(10_000) { compose.onAllNodesWithTag("reminder_detail").fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(10_000) { compose.onAllNodesWithTag("reminder_detail").fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty() }
             compose.onNodeWithTag("reminder_detail").assertIsDisplayed()
             InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-            compose.waitUntil(10_000) { compose.onAllNodesWithTag("tool_reminders").fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(10_000) { compose.onAllNodesWithTag("tool_reminders").fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty() }
         }
         InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
         compose.onNodeWithTag("tab_home").assertIsSelected()
@@ -73,11 +73,11 @@ class ToolDeepLinkTest {
         for ((tool, tag) in listOf("diary" to "diary_detail", "foodJournal" to "food_detail", "itemLocator" to "item_detail", "anniversaries" to "anniversary_detail", "decisionMaker" to "decision_detail", "locationTracker" to "track_detail")) {
             repeat(2) {
                 open("recoow://tool/$tool/missing-test-record")
-                compose.waitUntil(10_000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() }
+                compose.waitUntil(10_000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty() }
                 compose.activityRule.scenario.recreate()
                 compose.onNodeWithTag(tag).assertIsDisplayed()
                 InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-                compose.waitUntil(10_000) { compose.onAllNodesWithTag("tool_$tool").fetchSemanticsNodes().isNotEmpty() }
+                compose.waitUntil(10_000) { compose.onAllNodesWithTag("tool_$tool").fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty() }
                 compose.activityRule.scenario.recreate()
                 compose.onNodeWithTag("tool_$tool").assertIsDisplayed()
             }

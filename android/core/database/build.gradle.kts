@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
 }
 
 android {
@@ -17,7 +18,8 @@ android {
     }
 }
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
-ksp { arg("room.schemaLocation", layout.buildDirectory.dir("roomSchemas").get().asFile.path) }
+// The Room plugin declares schema inputs/outputs and restores exports on KSP cache hits.
+room { schemaDirectory(layout.buildDirectory.dir("roomSchemas").get().asFile.path) }
 
 val generatedDatabase = layout.buildDirectory.dir("generated/database")
 val generateDatabase by tasks.registering(Exec::class) {
@@ -38,7 +40,7 @@ tasks.configureEach {
 }
 
 tasks.register<Exec>("checkSchemaHistory") {
-    dependsOn("kspDebugKotlin")
+    dependsOn("kspDebugKotlin", "copyRoomSchemas")
     val version = layout.projectDirectory.file("schema-version.txt").asFile.readText().trim()
     commandLine("python3", rootProject.file("build-tools/generate_database.py"), "--room-schema",
         layout.buildDirectory.file("roomSchemas/imehc.recoow.core.database.generated.RecoowDatabase/$version.json").get().asFile,
