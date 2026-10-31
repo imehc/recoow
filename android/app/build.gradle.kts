@@ -47,6 +47,7 @@ android {
         isShrinkResources = false
         matchingFallbacks += "release"
     }
+    sourceSets.getByName("baseline").kotlin.srcDir("src/benchmark/kotlin")
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

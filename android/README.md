@@ -51,7 +51,7 @@ Android Studio 自动生成的 `gradle/gradle-daemon-jvm.properties` 优先于 `
 | `feature:decision` | 集合、加权候选、3D 转盘和持久抽选历史 |
 | `feature:tracks` | 轨迹录制、历史、分段编辑、回放、洞察与时间范围关联 |
 | `feature:history` | 八类统一时间线、周历、筛选搜索、游标分页与业务删除计划 |
-| `benchmark` | 核心页面 Baseline Profile 采集与冷启动 Macrobenchmark |
+| `benchmark` | 八工具与统计/历史的 Baseline Profile，冷启动、列表帧耗时和 3D 内存 Macrobenchmark |
 
 Feature 不互相依赖，不直接访问存储。Domain 不依赖 Android、Hilt、Room 或 Retrofit。
 
@@ -145,11 +145,16 @@ Filament 转盘读取共享 `assets/decision-scene/` 中的 GLB 和模型目录�
 
 ## 性能采集
 
-`baseline` 和 `benchmark` 都使用独立包名 `imehc.recoow.benchmark` 与测试签名，不参与正式分发。`baseline` 保留类名以采集 Profile，`benchmark` 使用与 Release 相同的 R8 和资源压缩设置。
+`baseline` 和 `benchmark` 都使用独立包名 `imehc.recoow.benchmark` 与测试签名，不参与正式分发。`baseline` 保留类名以采集 Profile，`benchmark` 使用与 Release 相同的 R8 和资源压缩设置。性能测试最低 API 为 28。
+
+每个性能测试类在测量前清空这个独立包的数据，再通过真实仓库准备 120 条账单、各 40 条日记/饮食/物品、各 12 条打卡/纪念日、10 个抽选候选和 600 个轨迹点。日期相对测试当天生成，提醒与同步保持关闭。准备入口仅存在于这两个测试变体，准备过程不计入采集区间，也不写入 Profile。
 
 ```sh
 ./gradlew :benchmark:connectedBaselineAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=imehc.recoow.benchmark.CoreBaselineProfile
 ./gradlew :benchmark:connectedBenchmarkAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=imehc.recoow.benchmark.CoreStartupBenchmark
+./gradlew :benchmark:connectedBenchmarkAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=imehc.recoow.benchmark.CoreJourneyBenchmark
 ```
 
-采集结果位于 `benchmark/build/outputs/connected_android_test_additional_output/`。将审核后的 `baseline-prof.txt` 与 `startup-prof.txt` 放入 `app/src/main/`，AGP 会重写为 Release 所需的 Profile。测量性能收益及设置回归阈值须使用真实设备；模拟器用于验证采集和打包链路。
+采集结果位于 `benchmark/build/outputs/connected_android_test_additional_output/`。将审核后的业务及启动规则去重合并到 `app/src/main/baseline-prof.txt`，启动规则同时放入 `app/src/main/startup-prof.txt`；随后重新构建 Release/benchmark，AGP 会重写 Profile。测试以 `BaselineProfileMode.Require` 确认安装的 Profile 可用。
+
+全功能采集包含三个 Tab、设置选择器、统一历史、八工具列表/详情、账单编辑、3D 浏览和抽选、轨迹详情。宏基准分别记录有/无 Profile 冷启动、账单/历史列表帧耗时与峰值内存、3D 浏览/抽选帧耗时与峰值内存，原始 Perfetto 和 JSON 保留在构建输出中。测量收益及设置回归阈值须使用真实设备；模拟器仅验证采集和打包链路，运行时需显式添加 `-Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR`。

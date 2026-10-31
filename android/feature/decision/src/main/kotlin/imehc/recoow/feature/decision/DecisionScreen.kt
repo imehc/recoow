@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -99,13 +100,13 @@ import kotlin.math.pow
     LaunchedEffect(enabled.map { it.id }, spinning) { if (!spinning && enabled.isNotEmpty()) cursor.snapTo(Turntable.wrap(cursor.value.toInt(), enabled.size).toFloat()) }
     val busy = state.busy || spinning || result != null && drawn != result.id
     fun browse(delta: Int) { if (!busy && pool.isNotEmpty()) scope.launch { cursor.snapTo((cursor.value + delta).mod(pool.size.toFloat())) } }
-    Scaffold(topBar = { TopAppBar(title = { Text(collection?.title ?: stringResource(R.string.decision_title)) }, navigationIcon = {
+    Scaffold(Modifier.testTag("decision_stage"), topBar = { TopAppBar(title = { Text(collection?.title ?: stringResource(R.string.decision_title)) }, navigationIcon = {
         TextButton(onClick = back, enabled = !state.busy) { Text(stringResource(CommonR.string.record_back)) }
     }, actions = { TextButton(onClick = { drawer = if (drawer == 2) 0 else 2 }, enabled = !busy) { Text(stringResource(R.string.decision_history)) } }) }) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (collection == null) item { if (state.loading || state.failed) RecordLoadState(state.loading, state.failed, vm::retry) else Text(stringResource(CommonR.string.record_missing)) }
             else {
-                item { Box(Modifier.fillMaxWidth().height(if (drawer != 0) 220.dp else 330.dp)) {
+                item { Box(Modifier.fillMaxWidth().height(if (drawer != 0) 220.dp else 330.dp).testTag(if (loaded) "decision_scene_ready" else "decision_scene_loading")) {
                     if (!unavailable) DecisionScene(pool.map { it.title }, cursor.value.toDouble(), dark, Modifier.fillMaxSize(), onLoaded = { loaded = true }, onFailure = { unavailable = true })
                     Box(Modifier.matchParentSize().pointerInput(busy, pool.size) {
                         var drag = 0f
