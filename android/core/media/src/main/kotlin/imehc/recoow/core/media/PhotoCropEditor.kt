@@ -1,5 +1,6 @@
 package imehc.recoow.core.media
 
+import imehc.recoow.core.designsystem.recordControlDescription
 import android.graphics.Bitmap
 import android.graphics.Paint
 import androidx.core.graphics.withClip
@@ -17,6 +18,9 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -57,7 +61,20 @@ fun PhotoCropEditor(source: PreparedMedia, processor: ImageProcessor, onCancel: 
         }) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Canvas(Modifier.widthIn(max = 400.dp).fillMaxWidth().aspectRatio(1f).pointerInput(busy) {
+                val moveLeft = stringResource(R.string.crop_move_left)
+                val moveRight = stringResource(R.string.crop_move_right)
+                val moveUp = stringResource(R.string.crop_move_up)
+                val moveDown = stringResource(R.string.crop_move_down)
+                Canvas(Modifier.widthIn(max = 400.dp).fillMaxWidth().aspectRatio(1f)
+                    .recordControlDescription(stringResource(R.string.crop_preview))
+                    .semantics {
+                        if (!busy) customActions = listOf(
+                            CustomAccessibilityAction(moveLeft) { panX = (panX - 0.1f).coerceAtLeast(-2f); true },
+                            CustomAccessibilityAction(moveRight) { panX = (panX + 0.1f).coerceAtMost(2f); true },
+                            CustomAccessibilityAction(moveUp) { panY = (panY - 0.1f).coerceAtLeast(-2f); true },
+                            CustomAccessibilityAction(moveDown) { panY = (panY + 0.1f).coerceAtMost(2f); true },
+                        )
+                    }.pointerInput(busy) {
                     if (!busy) detectTransformGestures { _, pan, scale, angle ->
                         zoom = (zoom * scale).coerceIn(1f, 4f)
                         panX = (panX + pan.x / size.width).coerceIn(-2f, 2f)
@@ -74,9 +91,9 @@ fun PhotoCropEditor(source: PreparedMedia, processor: ImageProcessor, onCancel: 
                     }
                 }
                 Text(stringResource(R.string.zoom))
-                Slider(zoom, { zoom = it }, enabled = !busy, valueRange = 1f..4f)
+                Slider(zoom, { zoom = it }, enabled = !busy, valueRange = 1f..4f, modifier = Modifier.recordControlDescription(stringResource(R.string.zoom), "${"%.1f".format(zoom)}×"))
                 Text("${stringResource(R.string.rotation)} ${rotation.toInt()}°")
-                Slider(rotation, { rotation = it }, enabled = !busy, valueRange = -180f..180f)
+                Slider(rotation, { rotation = it }, enabled = !busy, valueRange = -180f..180f, modifier = Modifier.recordControlDescription(stringResource(R.string.rotation), "${rotation.toInt()}°"))
                 TextButton(enabled = !busy, onClick = { zoom = 1f; panX = 0f; panY = 0f; rotation = 0f }) { Text(stringResource(R.string.reset)) }
                 if (busy || bitmap == null && !error) CircularProgressIndicator()
                 if (error) Text(stringResource(R.string.failed), color = MaterialTheme.colorScheme.error)

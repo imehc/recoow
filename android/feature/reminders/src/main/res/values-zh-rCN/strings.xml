@@ -82,4 +82,6 @@
     <string name="reminder_duplicate">用作模板</string>
     <string name="reminder_remaining_days">剩余 %1$d 天</string>
     <string name="reminder_calendar_legend">✓ 正常打卡 · ↺ 补签</string>
+    <string name="reminder_calendar_checked_in">已打卡</string>
+    <string name="reminder_calendar_made_up">已补签</string>
 </resources>

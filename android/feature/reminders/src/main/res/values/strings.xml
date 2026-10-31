@@ -82,4 +82,6 @@
     <string name="reminder_duplicate">Use as template</string>
     <string name="reminder_remaining_days">Remaining days: %1$d</string>
     <string name="reminder_calendar_legend">✓ Check-in · ↺ Make-up</string>
+    <string name="reminder_calendar_checked_in">Checked in</string>
+    <string name="reminder_calendar_made_up">Made up</string>
 </resources>

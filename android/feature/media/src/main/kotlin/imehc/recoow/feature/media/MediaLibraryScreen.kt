@@ -1,5 +1,6 @@
 package imehc.recoow.feature.media
 
+import imehc.recoow.core.designsystem.RecordSwitch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
@@ -130,8 +131,5 @@ fun MediaLibraryScreen(viewModel: MediaLibraryViewModel, onBack: () -> Unit) {
 
 @Composable
 private fun PhotoPreference(label: String, checked: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-        Switch(checked, onChange, enabled = enabled)
-    }
+    RecordSwitch(label, checked, onChange, enabled = enabled)
 }

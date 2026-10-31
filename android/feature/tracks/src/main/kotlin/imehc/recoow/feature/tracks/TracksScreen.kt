@@ -161,20 +161,20 @@ import kotlin.math.roundToInt
                     Text(trackDateTime(current.time)); Text(stringResource(R.string.track_point_number, index + 1, points.size))
                     Text(stringResource(R.string.track_coordinate, current.coordinate.latitude, current.coordinate.longitude))
                     Text(stringResource(R.string.track_point_metrics, current.speed?.times(3.6)?.let { "%.1f".format(it) } ?: "—", current.accuracy?.let { "%.0f".format(it) } ?: "—"))
-                    Slider(index.toFloat().coerceIn(0f, points.lastIndex.coerceAtLeast(1).toFloat()), { playing = false; seek(it.roundToInt()) }, valueRange = 0f..points.lastIndex.coerceAtLeast(1).toFloat(), enabled = points.size > 1, modifier = Modifier.testTag("track_playback_progress"))
+                    Slider(index.toFloat().coerceIn(0f, points.lastIndex.coerceAtLeast(1).toFloat()), { playing = false; seek(it.roundToInt()) }, valueRange = 0f..points.lastIndex.coerceAtLeast(1).toFloat(), enabled = points.size > 1, modifier = Modifier.testTag("track_playback_progress").recordControlDescription(stringResource(R.string.track_playback), stringResource(R.string.track_point_number, index + 1, points.size)))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = { if (index == points.lastIndex) seek(0); playing = !playing }, enabled = points.size > 1) { Text(stringResource(if (playing) R.string.track_pause else R.string.track_play)) }
                         listOf(1, 2, 4).forEach { value -> FilterChip(speed == value, { speed = value }, label = { Text("${value}×") }) }
                     }
-                    Row { Text(stringResource(R.string.track_playback_path), Modifier.weight(1f)); Switch(showPath, { showPath = it }) }
-                    Row { Text(stringResource(R.string.track_follow), Modifier.weight(1f)); Switch(follow, { follow = it; if (it) focus = MapFocus(listOf(current.coordinate), "follow:$index") }) }
+                    RecordSwitch(stringResource(R.string.track_playback_path), showPath, { showPath = it })
+                    RecordSwitch(stringResource(R.string.track_follow), follow, { follow = it; if (it) focus = MapFocus(listOf(current.coordinate), "follow:$index") })
                 }
             }
             if (mode == 1) {
                 item { Text(stringResource(R.string.track_motion_summary), style = MaterialTheme.typography.titleMedium)
                     segments.groupBy { it.motion }.forEach { (motion, values) -> Text(stringResource(R.string.track_motion_metrics, motionName(motion), values.sumOf { it.distance } / 1000, values.sumOf { it.duration })) }
-                    Row { Text(stringResource(R.string.track_places), Modifier.weight(1f)); Switch(showPlaces, { showPlaces = it }) }
-                    Row { Text(stringResource(R.string.track_quality), Modifier.weight(1f)); Switch(showIssues, { showIssues = it }) }
+                    RecordSwitch(stringResource(R.string.track_places), showPlaces, { showPlaces = it })
+                    RecordSwitch(stringResource(R.string.track_quality), showIssues, { showIssues = it })
                 }
                 items(places) { place -> OutlinedCard(onClick = { playing = false; focus = MapFocus(listOf(place.coordinate), "place:${place.start}"); selected = segments.firstOrNull { place.start in it.start..it.end }?.id }) {
                     Column(Modifier.padding(12.dp)) { Text(stringResource(R.string.track_stay, (place.end - place.start) / 60_000)); Text(trackDateTime(place.start)) }
@@ -222,10 +222,10 @@ import kotlin.math.roundToInt
     val valid = if (split) inner.isNotEmpty() else choices.getOrNull(start)?.let { s -> choices.getOrNull(end)?.let { e -> s < e && (previous == null || s > previous.start) && (next == null || e < next.end) } } == true
     AlertDialog(onDismissRequest = dismiss, title = { Text(stringResource(if (split) R.string.track_split else R.string.track_boundaries)) }, text = {
         Column(Modifier.verticalScroll(rememberScrollState())) {
-            if (split && inner.isNotEmpty()) { Text(trackDateTime(inner[splitIndex])); Slider(splitIndex.toFloat(), { splitIndex = it.roundToInt() }, valueRange = 0f..inner.lastIndex.coerceAtLeast(1).toFloat(), enabled = inner.size > 1) }
+            if (split && inner.isNotEmpty()) { Text(trackDateTime(inner[splitIndex])); Slider(splitIndex.toFloat(), { splitIndex = it.roundToInt() }, valueRange = 0f..inner.lastIndex.coerceAtLeast(1).toFloat(), enabled = inner.size > 1, modifier = Modifier.recordControlDescription(stringResource(R.string.track_split), trackDateTime(inner[splitIndex]))) }
             else if (choices.isNotEmpty()) {
-                Text(stringResource(R.string.track_start_boundary)); Text(trackDateTime(choices[start])); Slider(start.toFloat(), { start = it.roundToInt() }, valueRange = 0f..choices.lastIndex.coerceAtLeast(1).toFloat(), enabled = previous?.end == segment.start)
-                Text(stringResource(R.string.track_end_boundary)); Text(trackDateTime(choices[end])); Slider(end.toFloat(), { end = it.roundToInt() }, valueRange = 0f..choices.lastIndex.coerceAtLeast(1).toFloat(), enabled = next?.start == segment.end)
+                Text(stringResource(R.string.track_start_boundary)); Text(trackDateTime(choices[start])); Slider(start.toFloat(), { start = it.roundToInt() }, valueRange = 0f..choices.lastIndex.coerceAtLeast(1).toFloat(), enabled = previous?.end == segment.start, modifier = Modifier.recordControlDescription(stringResource(R.string.track_start_boundary), trackDateTime(choices[start])))
+                Text(stringResource(R.string.track_end_boundary)); Text(trackDateTime(choices[end])); Slider(end.toFloat(), { end = it.roundToInt() }, valueRange = 0f..choices.lastIndex.coerceAtLeast(1).toFloat(), enabled = next?.start == segment.end, modifier = Modifier.recordControlDescription(stringResource(R.string.track_end_boundary), trackDateTime(choices[end])))
             }
         }
     }, confirmButton = { TextButton(onClick = { save(if (split) SegmentEdit.Split(inner[splitIndex]) else SegmentEdit.Bounds(choices[start], choices[end])) }, enabled = valid) { Text(stringResource(CommonR.string.record_save)) } },

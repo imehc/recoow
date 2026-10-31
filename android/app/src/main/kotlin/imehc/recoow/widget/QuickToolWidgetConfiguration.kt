@@ -1,5 +1,10 @@
 package imehc.recoow.widget
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+
 import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.os.Bundle
@@ -45,7 +50,10 @@ class QuickToolWidgetConfiguration : AppCompatActivity() {
                 }) {
                     item { Text(stringResource(R.string.widget_hint), style = MaterialTheme.typography.bodyMedium) }
                     QuickToolWidget.tools.forEach { tool -> item {
-                        Card { ListItem(modifier = Modifier.testTag("widget_tool_${tool.id}"), onClick = {
+                        Card { ListItem(modifier = Modifier.testTag("widget_tool_${tool.id}").semantics {
+                            role = Role.RadioButton
+                            selected = QuickToolWidget.selected(this@QuickToolWidgetConfiguration, id) == tool
+                        }, onClick = {
                             check(QuickToolWidget.settings(this@QuickToolWidgetConfiguration).edit().putString(id.toString(), tool.id).commit())
                             lifecycleScope.launch {
                                 QuickToolWidget.renderWithPreferences(this@QuickToolWidgetConfiguration, intArrayOf(id), state.preferences ?: imehc.recoow.core.domain.preferences.AppPreferences())

@@ -99,7 +99,7 @@ class BillsFlowTest {
         // The account chooser is below the date. Select the account created by the first bill.
         compose.onNodeWithTag("bill_form").performScrollToNode(hasText(label(BillsR.string.select_account)))
         compose.onNode(hasText(label(BillsR.string.select_account)) and hasClickAction()).performClick()
-        compose.onNodeWithText(title).performClick()
+        compose.onNode(hasText(title) and hasAnyAncestor(isPopup())).performClick()
         compose.onNodeWithTag("bill_save").performClick(); ready()
         compose.waitUntil(10_000) { viewModel.state.value.accounts.any { it.id == id && it.balance == 13_000L && it.references == 2 } }
         back(); compose.onNodeWithTag("bill_accounts").performClick()

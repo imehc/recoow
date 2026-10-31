@@ -1,5 +1,6 @@
 package imehc.recoow.feature.settings
 
+import imehc.recoow.core.designsystem.recordToggleState
 import android.text.format.Formatter
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -70,8 +71,8 @@ fun DataManagementScreen(viewModel: DataManagementViewModel, onBack: () -> Unit)
             item { Card { ImportScope.entries.forEachIndexed { index, scope ->
                 val checked = scope.name in selected
                 val toggle = { value: Boolean -> selected = if (value) (selected + scope.name).distinct() else selected - scope.name }
-                ListItem(onClick = { toggle(!checked) }, enabled = !state.busy,
-                    trailingContent = { Checkbox(checked, toggle, enabled = !state.busy) },
+                ListItem(onClick = { toggle(!checked) }, enabled = !state.busy, modifier = Modifier.recordToggleState(checked),
+                    trailingContent = { Checkbox(checked, null, enabled = !state.busy) },
                     supportingContent = { Text(stringResource(R.string.backup_rows, scope.tables.sumOf { preview.preview.tableCounts[it] ?: 0 })) }) { Text(names[index]) }
             } } }
             item { Button(onClick = { viewModel.import(ImportMode.MERGE_MISSING, selected.map(ImportScope::valueOf).toSet()) }, enabled = !state.busy && selected.isNotEmpty(), modifier = Modifier.fillMaxWidth().testTag("backup_merge")) { Text(stringResource(R.string.backup_merge)) } }

@@ -83,7 +83,7 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit, onRecord: (ToolRoute
         }
         items(state.entries, key = { it.key }) { entry ->
             OutlinedCard(onClick = { if (state.selecting) vm.select(entry) else onRecord(entry.route, entry.recordId) },
-                enabled = !state.busy, modifier = Modifier.fillMaxWidth().testTag("history_${entry.key}")) {
+                enabled = !state.busy, modifier = Modifier.fillMaxWidth().testTag("history_${entry.key}").then(if (state.selecting) Modifier.recordToggleState(entry.key in state.selected) else Modifier)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row {
                         if (state.selecting) Checkbox(entry.key in state.selected, null)

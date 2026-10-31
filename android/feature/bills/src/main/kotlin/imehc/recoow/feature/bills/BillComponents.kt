@@ -1,5 +1,6 @@
 package imehc.recoow.feature.bills
 
+import imehc.recoow.core.designsystem.recordControlDescription
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -25,11 +26,12 @@ import java.time.format.FormatStyle
 @Composable internal fun <T> ChoiceField(label: String, selected: T, options: List<Pair<T, String>>, onChange: (T) -> Unit,
     modifier: Modifier = Modifier, enabled: Boolean = true) {
     var expanded by remember { mutableStateOf(false) }
+    val selectedLabel = options.firstOrNull { it.first == selected }?.second ?: stringResource(R.string.select_account)
     Column(modifier) {
         Text(label, style = MaterialTheme.typography.labelLarge)
         Box {
-            OutlinedButton(onClick = { expanded = true }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
-                Text(options.firstOrNull { it.first == selected }?.second ?: stringResource(R.string.select_account))
+            OutlinedButton(onClick = { expanded = true }, enabled = enabled, modifier = Modifier.fillMaxWidth().recordControlDescription(label, selectedLabel)) {
+                Text(selectedLabel)
             }
             DropdownMenu(expanded, onDismissRequest = { expanded = false }, modifier = Modifier.heightIn(max = 360.dp)) {
                 options.forEach { (value, text) -> DropdownMenuItem(text = { Text(text) }, onClick = { expanded = false; onChange(value) }) }

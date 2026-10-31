@@ -1,5 +1,6 @@
 package imehc.recoow.feature.bills
 
+import imehc.recoow.core.designsystem.RecordSwitch
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
@@ -52,10 +53,7 @@ import java.io.File
             if (draft.isGroupBuy) item { DateTimeField(stringResource(R.string.valid_until), draft.validUntil, { viewModel.update(draft.copy(validUntil = it)) }, enabled) }
             if (draft.type != BillType.INCOME) item { Card {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (draft.type == BillType.EXPENSE) Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.recharge), Modifier.weight(1f))
-                        Switch(draft.recharge, { viewModel.update(draft.copy(recharge = it)) }, enabled = enabled, modifier = Modifier.testTag("bill_recharge"))
-                    }
+                    if (draft.type == BillType.EXPENSE) RecordSwitch(stringResource(R.string.recharge), draft.recharge, { viewModel.update(draft.copy(recharge = it)) }, enabled = enabled, modifier = Modifier.testTag("bill_recharge"))
                     if (draft.requiresAccount) {
                         ChoiceField(stringResource(R.string.select_account), draft.accountId, state.accounts.map { it.id as String? to it.name },
                             { viewModel.update(draft.copy(accountId = it)) }, enabled = enabled)

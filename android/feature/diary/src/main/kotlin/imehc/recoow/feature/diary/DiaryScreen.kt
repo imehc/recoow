@@ -129,7 +129,7 @@ import java.time.*
         item { RecordLoadState(loading, failed) { vm.selectSource(source) } }
         if (!loading && !failed && filtered.isEmpty()) item { Text(stringResource(CommonR.string.record_no_matches)) }
         items(filtered, key = { it.key }) { link -> val selected = d.links.any { it.key == link.key }
-            OutlinedCard(onClick = { vm.update(d.copy(links = if (selected) d.links.filterNot { it.key == link.key } else d.links + link)) }, modifier = Modifier.fillMaxWidth()) {
+            OutlinedCard(onClick = { vm.update(d.copy(links = if (selected) d.links.filterNot { it.key == link.key } else d.links + link)) }, modifier = Modifier.fillMaxWidth().recordToggleState(selected)) {
                 Row(Modifier.padding(12.dp)) { Checkbox(selected, null); Column(Modifier.weight(1f).padding(8.dp)) {
                     Text(link.title); link.subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                     link.occurredAt?.let { Text(recordDateTime(it), style = MaterialTheme.typography.bodySmall) }

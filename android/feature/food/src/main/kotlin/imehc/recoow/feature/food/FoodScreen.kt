@@ -145,7 +145,7 @@ import java.time.*
         item { RecordField(stringResource(CommonR.string.record_search), query, { query = it }) }
         if (filtered.isEmpty()) item { Text(stringResource(CommonR.string.record_no_matches)) }
         items(filtered, key = { it.id }) { bill -> val selected = bill.id in d.billIds
-            OutlinedCard(onClick = { vm.update(d.copy(billIds = if (selected) d.billIds - bill.id else d.billIds + bill.id)) }, modifier = Modifier.fillMaxWidth()) {
+            OutlinedCard(onClick = { vm.update(d.copy(billIds = if (selected) d.billIds - bill.id else d.billIds + bill.id)) }, modifier = Modifier.fillMaxWidth().recordToggleState(selected)) {
                 Row(Modifier.padding(12.dp)) { Checkbox(selected, null); Column(Modifier.weight(1f).padding(8.dp)) {
                     Text(bill.title); Text(BigDecimal.valueOf(bill.amounts.final, 2).toPlainString()); Text(recordDateTime(bill.occurredAt), style = MaterialTheme.typography.bodySmall)
                 } }

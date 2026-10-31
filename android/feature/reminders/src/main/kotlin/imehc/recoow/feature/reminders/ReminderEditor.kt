@@ -1,5 +1,6 @@
 package imehc.recoow.feature.reminders
 
+import imehc.recoow.core.designsystem.RecordSwitch
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
@@ -46,8 +47,7 @@ import java.time.Instant
             item { OutlinedTextField(draft.importedDays, { vm.update(draft.copy(importedDays = it)) }, label = { Text(stringResource(R.string.reminder_imported_days)) },
                 supportingText = { Text(stringResource(R.string.reminder_imported_hint)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), enabled = enabled,
                 singleLine = true, modifier = Modifier.fillMaxWidth().testTag("reminder_imported")) }
-            item { Row(verticalAlignment = Alignment.CenterVertically) { Text(stringResource(R.string.reminder_enabled), Modifier.weight(1f))
-                Switch(draft.enabled, { vm.update(draft.copy(enabled = it)) }, enabled = enabled, modifier = Modifier.testTag("reminder_enabled")) } }
+            item { RecordSwitch(stringResource(R.string.reminder_enabled), draft.enabled, { vm.update(draft.copy(enabled = it)) }, enabled = enabled, modifier = Modifier.testTag("reminder_enabled")) }
             item { ChoiceField(stringResource(R.string.reminder_lead), draft.lead, leadMinutes.map { it to if (it == 0) resources.getString(R.string.reminder_no_lead) else resources.getString(R.string.reminder_lead_minutes, it) },
                 { vm.update(draft.copy(lead = it)) }, enabled = enabled) }
             item { ChoiceField(stringResource(R.string.reminder_icon), draft.icon, (reminderIcons + draft.icon).distinct().map { it to it }, { vm.update(draft.copy(icon = it)) }, enabled = enabled) }

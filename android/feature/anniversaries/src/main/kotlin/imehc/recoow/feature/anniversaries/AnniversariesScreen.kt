@@ -120,7 +120,7 @@ import kotlinx.coroutines.delay
     }
 }
 @Composable private fun AnniversaryToggle(label: String, value: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) { Text(label, Modifier.weight(1f)); Switch(value, onChange, enabled = enabled) }
+    RecordSwitch(label, value, onChange, enabled = enabled)
 }
 @Composable private fun anniversaryDate(at: Long, primary: DateCalendar): String {
     val zone = ZoneId.systemDefault(); val date = Instant.ofEpochMilli(at).atZone(zone).toLocalDate(); val lunar = LunarDates.from(at, zone)

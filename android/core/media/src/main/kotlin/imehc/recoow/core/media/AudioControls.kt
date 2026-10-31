@@ -1,5 +1,6 @@
 package imehc.recoow.core.media
 
+import imehc.recoow.core.designsystem.recordControlDescription
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -107,7 +108,8 @@ fun AudioPlayback(locator: MediaLocator, repository: MediaRepository, durationSe
         }
         Slider(position.toFloat().coerceIn(0f, duration.coerceAtLeast(1).toFloat()),
             onValueChange = { position = it.toLong(); player.seekTo(position) },
-            valueRange = 0f..duration.coerceAtLeast(1).toFloat(), enabled = content.availability == MediaAvailability.READY && duration > 0)
+            valueRange = 0f..duration.coerceAtLeast(1).toFloat(), enabled = content.availability == MediaAvailability.READY && duration > 0,
+            modifier = Modifier.recordControlDescription(stringResource(R.string.audio_playback_position), "${durationLabel(position / 1000)} / ${durationLabel(duration / 1000)}"))
         if (failed) Text(stringResource(R.string.audio_failed), color = MaterialTheme.colorScheme.error)
         else if (content.availability != MediaAvailability.READY) Text(stringResource(R.string.pending))
     }

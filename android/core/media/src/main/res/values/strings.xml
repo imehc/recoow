@@ -56,4 +56,10 @@
   <string name="photo_settings_detail">Auto-added photos are stored as asset references. The gallery option applies to camera photos only.</string>
   <string name="retry">Retry</string>
   <string name="more">More actions</string>
+    <string name="audio_playback_position">Audio playback position</string>
+    <string name="crop_preview">Crop preview</string>
+    <string name="crop_move_left">Move image left</string>
+    <string name="crop_move_right">Move image right</string>
+    <string name="crop_move_up">Move image up</string>
+    <string name="crop_move_down">Move image down</string>
 </resources>

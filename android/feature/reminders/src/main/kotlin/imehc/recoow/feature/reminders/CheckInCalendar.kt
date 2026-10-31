@@ -8,8 +8,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import imehc.recoow.core.domain.reminders.Reminder
 import java.time.*
@@ -24,6 +29,8 @@ import java.time.*
     val allowed = selected.map(LocalDate::parse).filter { r?.canMakeUp(it, state.now, state.zone) == true }.toSet()
     val completions = r?.completions?.associateBy { it.date }.orEmpty()
     val weekdays = LocalResources.current.getStringArray(R.array.reminder_weekday_names)
+    val dateFormat = java.time.format.DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.FULL)
+        .withLocale(LocalConfiguration.current.locales[0])
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.reminder_make_up)) }, navigationIcon = { BackButton(onBack) }, actions = {
         TextButton(enabled = r != null && allowed.isNotEmpty() && !state.busy, onClick = { vm.saveMakeup(requireNotNull(r).id, allowed, note) }, modifier = Modifier.testTag("makeup_save")) { Text(stringResource(R.string.reminder_save)) }
     }) }) { padding -> LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -46,8 +53,14 @@ import java.time.*
                             val picked = day.toString() in selected
                             val pick = { selected = ArrayList(if (picked) selected - day.toString() else selected + day.toString()) }
                             val label = day.dayOfMonth.toString() + if (completions[day]?.kind == imehc.recoow.core.domain.reminders.CheckInKind.MAKE_UP) " ↺" else if (checked) " ✓" else ""
-                            if (picked) FilledTonalButton(onClick = pick, enabled = !state.busy, contentPadding = PaddingValues(0.dp), modifier = Modifier.testTag("makeup_$day")) { Text(label) }
-                            else TextButton(onClick = pick, enabled = !state.busy && r.canMakeUp(day, state.now, state.zone), contentPadding = PaddingValues(0.dp), modifier = Modifier.testTag("makeup_$day")) { Text(label) }
+                            val completion = if (!checked) null else stringResource(if (completions[day]?.kind == imehc.recoow.core.domain.reminders.CheckInKind.MAKE_UP) R.string.reminder_calendar_made_up else R.string.reminder_calendar_checked_in)
+                            val dayModifier = Modifier.testTag("makeup_$day").semantics {
+                                contentDescription = day.format(dateFormat)
+                                this.selected = picked
+                                if (completion != null) stateDescription = completion
+                            }
+                            if (picked) FilledTonalButton(onClick = pick, enabled = !state.busy, contentPadding = PaddingValues(0.dp), modifier = dayModifier) { Text(label) }
+                            else TextButton(onClick = pick, enabled = !state.busy && r.canMakeUp(day, state.now, state.zone), contentPadding = PaddingValues(0.dp), modifier = dayModifier) { Text(label) }
                         }
                     }
                 }

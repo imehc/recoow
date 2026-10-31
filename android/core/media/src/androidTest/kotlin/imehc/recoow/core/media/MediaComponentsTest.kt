@@ -33,6 +33,7 @@ class MediaComponentsTest {
         val bitmap = Bitmap.createBitmap(800, 800, Bitmap.Config.ARGB_8888).apply { eraseColor(color) }
         file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 78, it) }; bitmap.recycle()
     }
+    @OptIn(ExperimentalTestApi::class)
     @Test fun cancelCropPreservesOriginalAndPreviewPageSurvivesRecreation() {
         val first = photo(Color.RED); val second = photo(Color.BLUE)
         val bytes = first.readBytes()
@@ -44,6 +45,13 @@ class MediaComponentsTest {
                 onCancel = { editor = false }, onConfirm = { selected = it })
             else ImagePreview(listOf(MediaLocator(draft = first), MediaLocator(draft = second)), 0, FilesRepository()) {}
         } }
+        // Screen readers adjust these by name and SetProgress, without pinch/rotate gestures.
+        compose.onNodeWithContentDescription(context.getString(R.string.crop_preview))
+            .performCustomAccessibilityActionWithLabel(context.getString(R.string.crop_move_left))
+        compose.onNodeWithContentDescription(context.getString(R.string.zoom)).performScrollTo()
+            .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.SetProgress) { it(2f) }
+        compose.onNodeWithContentDescription(context.getString(R.string.rotation)).performScrollTo()
+            .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.SetProgress) { it(90f) }
         compose.onNodeWithText(context.getString(R.string.cancel)).performClick()
         assertNull(selected); assertArrayEquals(bytes, first.readBytes())
         compose.onNodeWithText(context.getString(R.string.next)).performClick()

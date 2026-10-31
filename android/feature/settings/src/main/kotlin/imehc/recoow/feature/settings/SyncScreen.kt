@@ -1,5 +1,6 @@
 package imehc.recoow.feature.settings
 
+import imehc.recoow.core.designsystem.RecordSwitch
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -47,10 +48,7 @@ fun SyncScreen(state: SyncState, onBack: () -> Unit,
                 Text(connection.endpoint, style = MaterialTheme.typography.titleMedium)
                 SelectionContainer { Text(stringResource(R.string.sync_account, connection.accountId), style = MaterialTheme.typography.bodyMedium) }
                 Text(stringResource(R.string.sync_counts, state.pending, state.conflicts.size, state.pendingMedia))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.sync_enabled), Modifier.weight(1f))
-                    Switch(state.enabled, onEnabled, modifier = Modifier.testTag("sync_enabled"))
-                }
+                RecordSwitch(stringResource(R.string.sync_enabled), state.enabled, onEnabled, modifier = Modifier.testTag("sync_enabled"))
                 if (!state.enabled) Text(stringResource(R.string.sync_disabled_hint))
                 state.lastSuccessAt?.let { Text(stringResource(R.string.sync_last_success, java.text.DateFormat.getDateTimeInstance().format(java.util.Date(it)))) }
                 Button(onClick = onSync, enabled = !state.running && state.enabled, modifier = Modifier.testTag("sync_now")) { Text(stringResource(R.string.sync_now)) }

@@ -36,10 +36,11 @@ import java.time.format.FormatStyle
 }
 @Composable fun <T> RecordChoice(label: String, selected: T, options: List<Pair<T, String>>, onChange: (T) -> Unit, enabled: Boolean = true) {
     var open by remember { mutableStateOf(false) }
+    val selectedLabel = options.firstOrNull { it.first == selected }?.second ?: stringResource(R.string.record_choose)
     Column {
         Text(label, style = MaterialTheme.typography.labelLarge)
-        Box { OutlinedButton(onClick = { open = true }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
-            Text(options.firstOrNull { it.first == selected }?.second ?: stringResource(R.string.record_choose))
+        Box { OutlinedButton(onClick = { open = true }, enabled = enabled, modifier = Modifier.fillMaxWidth().recordControlDescription(label, selectedLabel)) {
+            Text(selectedLabel)
         }
             DropdownMenu(open, { open = false }, modifier = Modifier.heightIn(max = 360.dp)) {
                 options.forEach { (value, name) -> DropdownMenuItem(text = { Text(name) }, onClick = { open = false; onChange(value) }) }

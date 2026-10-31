@@ -129,7 +129,7 @@ import kotlin.math.pow
                     Text(stringResource(R.string.decision_result), style = MaterialTheme.typography.labelLarge); Text(result.title, style = MaterialTheme.typography.titleLarge)
                     Text(stringResource(R.string.decision_view_result))
                 } } }
-                item { Row(verticalAlignment = Alignment.CenterVertically) { Text(stringResource(R.string.decision_animation), Modifier.weight(1f)); Switch(animate, { animate = it }, enabled = !busy) }
+                item { RecordSwitch(stringResource(R.string.decision_animation), animate, { animate = it }, enabled = !busy)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { drawer = if (drawer == 1) 0 else 1 }, enabled = !busy) { Text(stringResource(if (drawer == 1) R.string.decision_hide_options else R.string.decision_options)) }
                         FilledTonalButton(onClick = { vm.editOption() }, enabled = !busy) { Text(stringResource(R.string.decision_add_option)) }
@@ -166,7 +166,7 @@ import kotlin.math.pow
         item { RecordField(stringResource(R.string.decision_description), d.detail, { vm.update(d.copy(detail = it)) }, !state.busy, multiline = true) }
         item { RecordField(stringResource(R.string.decision_custom), d.customInfo, { vm.update(d.copy(customInfo = it)) }, !state.busy, multiline = true) }
         item { RecordField(stringResource(R.string.decision_weight), d.weight, { vm.update(d.copy(weight = it)) }, !state.busy, tag = "decision_weight") }
-        item { Row { Text(stringResource(R.string.decision_enabled), Modifier.weight(1f)); Switch(d.enabled, { vm.update(d.copy(enabled = it)) }, enabled = !state.busy) } }
+        item { RecordSwitch(stringResource(R.string.decision_enabled), d.enabled, { vm.update(d.copy(enabled = it)) }, enabled = !state.busy) }
         item { PhotoInput(d.image, { photo -> vm.update(d.copy(imageChanged = true, imageAssetId = photo?.assetId, imageContent = photo?.content, hasImage = photo != null)) }, vm.media, vm.processor, state.preferences) }
     }
 }

@@ -1,5 +1,6 @@
 package imehc.recoow.feature.settings
 
+import imehc.recoow.core.designsystem.RecordSwitchItem
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -45,10 +46,8 @@ fun SettingsScreen(state: SettingsUiState, onAppearance: (Appearance) -> Unit, o
         if (preferences != null) {
             item { Text(stringResource(R.string.photos_section), style = MaterialTheme.typography.titleSmall) }
             item { Card {
-                ListItem(onClick = { onPickedPhotos(!preferences.addsPickedPhotosToMediaLibrary) }, enabled = !state.saving,
-                    trailingContent = { androidx.compose.material3.Switch(preferences.addsPickedPhotosToMediaLibrary, onPickedPhotos, enabled = !state.saving) }) { Text(stringResource(R.string.photos_picked)) }
-                ListItem(onClick = { onCameraPhotos(!preferences.savesCameraPhotosToLibrary) }, enabled = !state.saving,
-                    trailingContent = { androidx.compose.material3.Switch(preferences.savesCameraPhotosToLibrary, onCameraPhotos, enabled = !state.saving) }) { Text(stringResource(R.string.photos_camera)) }
+                RecordSwitchItem(stringResource(R.string.photos_picked), preferences.addsPickedPhotosToMediaLibrary, onPickedPhotos, enabled = !state.saving)
+                RecordSwitchItem(stringResource(R.string.photos_camera), preferences.savesCameraPhotosToLibrary, onCameraPhotos, enabled = !state.saving)
             } }
             item { Text(stringResource(R.string.display_section), style = MaterialTheme.typography.titleSmall) }
             item {
@@ -71,8 +70,7 @@ fun SettingsScreen(state: SettingsUiState, onAppearance: (Appearance) -> Unit, o
             item { Card {
                 val names = androidx.compose.ui.platform.LocalResources.current.getStringArray(R.array.home_tool_names)
                 imehc.recoow.core.domain.navigation.ToolRoute.entries.forEachIndexed { index, tool ->
-                    ListItem(onClick = { onToolVisible(tool.id, tool.id in preferences.hiddenHomeTools) }, enabled = !state.saving,
-                        trailingContent = { androidx.compose.material3.Switch(tool.id !in preferences.hiddenHomeTools, { onToolVisible(tool.id, it) }, enabled = !state.saving) }) { Text(names[index]) }
+                    RecordSwitchItem(names[index], tool.id !in preferences.hiddenHomeTools, { onToolVisible(tool.id, it) }, enabled = !state.saving)
                 }
             } }
         } else if (!state.readFailed) { item { CircularProgressIndicator() } }

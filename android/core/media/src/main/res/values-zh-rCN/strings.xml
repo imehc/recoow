@@ -56,4 +56,10 @@
   <string name="photo_settings_detail">自动入库后，记录保存素材引用；系统图库选项仅影响拍照。</string>
   <string name="retry">重试</string>
   <string name="more">更多操作</string>
+    <string name="audio_playback_position">音频播放位置</string>
+    <string name="crop_preview">裁剪预览</string>
+    <string name="crop_move_left">向左移动图片</string>
+    <string name="crop_move_right">向右移动图片</string>
+    <string name="crop_move_up">向上移动图片</string>
+    <string name="crop_move_down">向下移动图片</string>
 </resources>
