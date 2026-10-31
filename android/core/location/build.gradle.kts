@@ -24,6 +24,7 @@ dependencies {
     implementation(libs.coroutines.android)
     androidTestImplementation(libs.androidx.test)
     androidTestImplementation(libs.test.runner)
+    androidTestImplementation(libs.test.rules)
     androidTestImplementation(libs.coroutines.test)
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

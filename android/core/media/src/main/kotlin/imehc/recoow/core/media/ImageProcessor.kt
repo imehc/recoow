@@ -82,8 +82,9 @@ class ImageProcessor @Inject constructor(@param:ApplicationContext private val c
             try {
                 val ratio = minOf(1f, 2048f / max(oriented.width, oriented.height))
                 val result = createBitmap(max(1, (oriented.width * ratio).roundToInt()), max(1, (oriented.height * ratio).roundToInt()))
+                // Keep exported pixels independent of OEM Canvas dark-mode recoloring.
+                result.eraseColor(Color.WHITE)
                 Canvas(result).apply {
-                    drawColor(Color.WHITE)
                     drawBitmap(oriented, null, android.graphics.Rect(0, 0, result.width, result.height), Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
                 }
                 return result
@@ -96,8 +97,8 @@ class ImageProcessor @Inject constructor(@param:ApplicationContext private val c
         val side = minOf(1600, maxOf(800, minOf(bitmap.width, bitmap.height)))
         val output = createBitmap(side, side)
         try {
+            output.eraseColor(Color.WHITE)
             Canvas(output).apply {
-                drawColor(Color.WHITE)
                 drawBitmap(bitmap, transform.matrix(bitmap.width, bitmap.height, side.toFloat()), Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
             }
             withContext(Dispatchers.IO) { encode(output) }

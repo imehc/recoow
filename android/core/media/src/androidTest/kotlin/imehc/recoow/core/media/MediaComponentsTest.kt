@@ -10,7 +10,7 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.Lifecycle
-import androidx.test.filters.SdkSuppress
+import androidx.test.rule.GrantPermissionRule
 import androidx.test.platform.app.InstrumentationRegistry
 import imehc.recoow.core.designsystem.RecoowTheme
 import imehc.recoow.core.domain.media.*
@@ -24,7 +24,8 @@ import org.junit.Rule
 import org.junit.Test
 
 class MediaComponentsTest {
-    @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    @get:Rule(order = 0) val permissions = GrantPermissionRule.grant(Manifest.permission.RECORD_AUDIO)
+    @get:Rule(order = 1) val compose = createAndroidComposeRule<ComponentActivity>()
     private val files = mutableListOf<File>()
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
     @After fun cleanup() { files.forEach { it.delete() } }
@@ -62,9 +63,8 @@ class MediaComponentsTest {
         compose.waitUntil(5000) { compose.onAllNodesWithText("1 / 2").fetchSemanticsNodes().isNotEmpty() }
     }
 
-    @Test @SdkSuppress(minSdkVersion = 28)
+    @Test
     fun recorderProducesPlayableAacAndReleasesOnBackground() {
-        InstrumentationRegistry.getInstrumentation().uiAutomation.grantRuntimePermission(context.packageName, Manifest.permission.RECORD_AUDIO)
         var recorded by mutableStateOf<PreparedMedia?>(null)
         compose.setContent { RecoowTheme {
             if (recorded == null) AudioRecorderInput { recorded = it; files += it.file }

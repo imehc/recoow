@@ -65,6 +65,7 @@ junit = { module = "junit:junit", version.ref = "junit" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 androidx-test = { module = "androidx.test.ext:junit", version.ref = "androidxTest" }
 test-runner = { module = "androidx.test:runner", version.ref = "runner" }
+test-rules = { module = "androidx.test:rules", version.ref = "runner" }
 
 appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 filament = { module = "com.google.android.filament:filament-android", version.ref = "filament" }

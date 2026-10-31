@@ -159,6 +159,26 @@ class BackupRepositoryTest {
         data.discard(prepared)
     }
 
+    @Test fun foodImportKeepsExistingAndImportedBillLinksInOrder() = runBlocking {
+        seed(); val exported = backup(); data.reset()
+        val localId = "local \"bill\" 餐费"
+        imehc.recoow.core.data.bills.RoomBillsRepository(host, "local-device").save(
+            imehc.recoow.core.domain.bills.BillDraft(id = localId, title = "Local bill", occurredAt = 1_798_000_000_001L,
+                amounts = imehc.recoow.core.domain.bills.AmountInput(original = "1", final = "1")))
+        val local = records.find("bills", localId)
+        val links = JsonArray(listOf(localId, "missing", "bills", localId).map(::JsonPrimitive))
+        SQLiteDatabase.openDatabase(exported.path, null, SQLiteDatabase.OPEN_READWRITE).use {
+            it.execSQL("UPDATE food_entries SET bill_ids_json=?", arrayOf(links.toString()))
+        }
+        val prepared = preview(exported)
+        data.import(prepared, ImportMode.MERGE_MISSING, setOf(ImportScope.FOOD, ImportScope.BILLS))
+        val food = Json.parseToJsonElement(records.find("food_entries", "food_entries")!!.snapshotJson).jsonObject
+        assertEquals(JsonPrimitive(JsonArray(listOf(localId, "bills", localId).map(::JsonPrimitive)).toString()), food["bill_ids_json"])
+        assertEquals(local, records.find("bills", localId))
+        assertEquals(2, count("bills"))
+        data.discard(prepared)
+    }
+
     @Test fun invalidProjectionRollsBackDatabaseMediaPreferencesAndRejectsChangedPreview() = runBlocking {
         seed(); val exported = backup()
         SQLiteDatabase.openDatabase(exported.path, null, SQLiteDatabase.OPEN_READWRITE).use { db -> db.execSQL("UPDATE bills SET stored_value_effects='[]'") }

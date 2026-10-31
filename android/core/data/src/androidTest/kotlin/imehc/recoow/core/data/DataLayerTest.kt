@@ -67,6 +67,7 @@ class DataLayerTest {
             val dependency = contract.dependencies.firstOrNull { it.field == field.name }
             val value = when {
                 dependency != null -> JsonPrimitive(dependency.table)
+                field.name == "mime_type" -> JsonPrimitive("image/jpeg")
                 field.nullable -> JsonNull
                 field.default != null -> field.default!!
                 field.enumValues.isNotEmpty() -> JsonPrimitive(field.enumValues.first())

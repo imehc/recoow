@@ -85,7 +85,8 @@ jobs:
           (cd backend && go build -o "$RUNNER_TEMP/recoow-api" ./cmd/api)
           RECOOW_SCHEMA="$RUNNER_TEMP/recoow-schema" RECOOW_DATA="$RUNNER_TEMP/recoow-data" RECOOW_LISTEN=127.0.0.1:8080 "$RUNNER_TEMP/recoow-api" > "$RUNNER_TEMP/recoow-api.log" 2>&1 &
           for attempt in {1..30}; do
-            if curl -fsS http://127.0.0.1:8080/api/schema > /dev/null; then exit 0; fi
+            # Schema requires authentication; an anonymous 401 confirms the API is listening.
+            if [ "$(curl -sS --max-time 2 -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/schema)" = 401 ]; then exit 0; fi
             sleep 1
           done
           exit 1

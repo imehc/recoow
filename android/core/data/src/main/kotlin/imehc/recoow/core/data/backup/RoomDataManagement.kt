@@ -27,6 +27,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.*
 import org.json.JSONObject
+import kotlin.coroutines.CoroutineContext
 
 /** Converts a portable SQLite snapshot; the live Room schema is never replaced by an iOS file. */
 @Singleton
@@ -54,47 +55,17 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
     override suspend fun export(openDestination: () -> OutputStream): Unit = withContext(Dispatchers.IO) { lock.withLock {
         val file = File.createTempFile("export-", ".recoowbackup", staging)
         try {
-            host.access { db ->
+            host.access {
+                // Read DataStore before opening the thread-bound SQLite transaction.
+                val preferenceSnapshot = portable.capture()
+                val cancellation = currentCoroutineContext()
                 SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READWRITE or SQLiteDatabase.CREATE_IF_NECESSARY or SQLiteDatabase.NO_LOCALIZED_COLLATORS).use { output ->
                     context.assets.open("ios-backup-schema-v36.sql").bufferedReader().use { reader ->
                         reader.readText().lineSequence().filterNot { it.trimStart().startsWith("--") }.joinToString("\n")
                             .split(';').filter { it.isNotBlank() }.forEach(output::execSQL)
                     }
                     output.execSQL("ATTACH DATABASE ? AS live", arrayOf(host.databaseFile.path))
-                    output.beginTransaction()
-                    try {
-                        for (table in tables) {
-                            currentCoroutineContext().ensureActive()
-                            val columns = columns(output, table).intersect(columns(output, table, "live")).joinToString { "\"$it\"" }
-                            output.execSQL("INSERT INTO \"$table\" ($columns) SELECT $columns FROM live.\"$table\"")
-                        }
-                        // Read immutable objects only. Export must never fill inline_data in the online database.
-                        for (contract in contracts.values) for (row in db.records().snapshots(contract.table)) {
-                            val snapshot = Json.parseToJsonElement(row.json).jsonObject
-                            val media = snapshot["_media"]?.jsonObject.orEmpty()
-                            for ((key, value) in media) {
-                                if (value == JsonNull) continue
-                                val column = if (contract.table == "media_assets" && key == "object") "inline_data" else key
-                                require(contract.fields.any { it.name == column && it.binary })
-                                val reference = MediaReference.parse(value)
-                                val source = MediaObjects(host.mediaDirectory).verified(reference)
-                                embed(output, contract.table, row.entityId, column, source)
-                            }
-                            if (contract.table == "media_assets" && media["object"] == null) {
-                                val key = snapshot["storage_key"]?.jsonPrimitive?.contentOrNull
-                                val source = key?.let { safeMedia(host.mediaDirectory, it) }
-                                if (source?.isFile == true) embed(output, contract.table, row.entityId, "inline_data", source)
-                            }
-                        }
-                        val info = context.packageManager.getPackageInfo(context.packageName, 0)
-                        @Suppress("DEPRECATION") val build = if (android.os.Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()
-                        val metadata = JSONObject().put("formatVersion", 1).put("databaseSchemaVersion", 36)
-                            .put("sourcePlatform", "android").put("sourceSchemaVersion", DatabaseHost.VERSION)
-                            .put("appVersion", info.versionName ?: "unknown").put("appBuild", build.toString())
-                            .put("exportedAt", Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS).toString()).put("sourceDeviceID", identity.id).put("preferences", portable.capture())
-                        output.execSQL("INSERT OR REPLACE INTO _recoow_backup_metadata(key,value) VALUES ('metadata',?)", arrayOf(metadata.toString()))
-                        output.setTransactionSuccessful()
-                    } finally { output.endTransaction() }
+                    writeExport(output, preferenceSnapshot, cancellation)
                     output.execSQL("DETACH DATABASE live")
                     output.rawQuery("PRAGMA foreign_key_check", null).use { check(!it.moveToFirst()) { "Invalid backup references" } }
                 }
@@ -104,6 +75,48 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
             host.access { preferences.edit { it[LAST_EXPORT] = System.currentTimeMillis() }; Unit }
         } finally { removeDatabase(file) }
     } }
+
+    // Deliberately non-suspending: SQLiteDatabase transactions belong to their starting thread.
+    private fun writeExport(output: SQLiteDatabase, preferenceSnapshot: JSONObject, cancellation: CoroutineContext) {
+        output.beginTransaction()
+        try {
+            for (table in tables) {
+                cancellation.ensureActive()
+                val columns = columns(output, table).intersect(columns(output, table, "live")).joinToString { "\"$it\"" }
+                output.execSQL("INSERT INTO \"$table\" ($columns) SELECT $columns FROM live.\"$table\"")
+            }
+            // Read immutable objects only. Export must never fill inline_data in the online database.
+            for (contract in contracts.values) output.rawQuery(
+                "SELECT entityId, json FROM live.entity_snapshots WHERE tableName=? ORDER BY entityId", arrayOf(contract.table)
+            ).use { rows -> while (rows.moveToNext()) {
+                cancellation.ensureActive()
+                val id = rows.getString(0)
+                val snapshot = Json.parseToJsonElement(rows.getString(1)).jsonObject
+                val media = snapshot["_media"]?.jsonObject.orEmpty()
+                for ((key, value) in media) {
+                    if (value == JsonNull) continue
+                    val column = if (contract.table == "media_assets" && key == "object") "inline_data" else key
+                    require(contract.fields.any { it.name == column && it.binary })
+                    val reference = MediaReference.parse(value)
+                    val source = MediaObjects(host.mediaDirectory).verified(reference)
+                    embed(output, contract.table, id, column, source, cancellation)
+                }
+                if (contract.table == "media_assets" && media["object"] == null) {
+                    val key = snapshot["storage_key"]?.jsonPrimitive?.contentOrNull
+                    val source = key?.let { safeMedia(host.mediaDirectory, it) }
+                    if (source?.isFile == true) embed(output, contract.table, id, "inline_data", source, cancellation)
+                }
+            } }
+            val info = context.packageManager.getPackageInfo(context.packageName, 0)
+            @Suppress("DEPRECATION") val build = if (android.os.Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()
+            val metadata = JSONObject().put("formatVersion", 1).put("databaseSchemaVersion", 36)
+                .put("sourcePlatform", "android").put("sourceSchemaVersion", DatabaseHost.VERSION)
+                .put("appVersion", info.versionName ?: "unknown").put("appBuild", build.toString())
+                .put("exportedAt", Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS).toString()).put("sourceDeviceID", identity.id).put("preferences", preferenceSnapshot)
+            output.execSQL("INSERT OR REPLACE INTO _recoow_backup_metadata(key,value) VALUES ('metadata',?)", arrayOf(metadata.toString()))
+            output.setTransactionSuccessful()
+        } finally { output.endTransaction() }
+    }
 
     override suspend fun preview(openSource: () -> InputStream): PreparedBackup = withContext(Dispatchers.IO) { lock.withLock {
         val file = File.createTempFile("incoming-", ".recoowbackup", staging)
@@ -174,10 +187,25 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
                             column == "sync_status" -> "0"
                             column == "server_version" -> "NULL"
                             table == "food_entries" && column == "bill_id" -> "CASE WHEN EXISTS(SELECT 1 FROM bills WHERE id=src.bill_id) OR EXISTS(SELECT 1 FROM import_bills WHERE id=src.bill_id) THEN src.bill_id ELSE NULL END"
-                            table == "food_entries" && column == "bill_ids_json" -> "COALESCE((SELECT json_group_array(value) FROM json_each(src.bill_ids_json) WHERE EXISTS(SELECT 1 FROM bills WHERE id=value) OR EXISTS(SELECT 1 FROM import_bills WHERE id=value)), '[]')"
                             else -> "src.\"$column\""
                         } }
                         sql.execSQL("INSERT INTO \"$table\" (${fields.joinToString { "\"$it\"" }}) SELECT ${expressions.joinToString()} FROM incoming.\"$table\" src JOIN \"import_$table\" chosen ON src.id=chosen.id")
+                    }
+                    // API26's system SQLite has no JSON1 extension. Filter after every selected
+                    // table is inserted, so both existing and newly imported bills are available.
+                    sql.compileStatement("SELECT EXISTS(SELECT 1 FROM bills WHERE id=?)").use { billExists ->
+                        sql.query("SELECT r.id, r.bill_ids_json FROM food_entries r JOIN import_food_entries chosen ON r.id=chosen.id").use { rows ->
+                            while (rows.moveToNext()) {
+                                currentCoroutineContext().ensureActive()
+                                val links = Json.parseToJsonElement(rows.getString(1)).jsonArray.filter { link ->
+                                    require(link is JsonPrimitive && link.isString) { "Invalid food bill reference" }
+                                    billExists.bindString(1, link.content)
+                                    billExists.simpleQueryForLong() != 0L
+                                }
+                                sql.execSQL("UPDATE food_entries SET bill_ids_json=? WHERE id=?",
+                                    arrayOf(JsonArray(links).toString(), rows.getString(0)))
+                            }
+                        }
                     }
                     for (table in tables) {
                         val contract = contracts.getValue(table)
@@ -318,13 +346,13 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
     private fun columns(db: SQLiteDatabase, table: String, schema: String = "main") = db.rawQuery("PRAGMA $schema.table_info(\"$table\")", null).use { rows -> buildSet { while (rows.moveToNext()) add(rows.getString(1)) } }
     private fun safeMedia(root: File, key: String): File = File(root, key).canonicalFile.also { require(it.path.startsWith(root.canonicalPath + File.separator)) }
     private fun removeDatabase(file: File) { listOf("", "-wal", "-shm", "-journal").forEach { File(file.path + it).delete() } }
-    private suspend fun embed(db: SQLiteDatabase, table: String, id: String, column: String, source: File) {
+    private fun embed(db: SQLiteDatabase, table: String, id: String, column: String, source: File, cancellation: CoroutineContext) {
         require(source.length() <= MAX_MEDIA)
         db.execSQL("UPDATE \"$table\" SET \"$column\"=X'' WHERE id=?", arrayOf(id))
         source.inputStream().use { input ->
             val buffer = ByteArray(512 * 1024)
             while (true) {
-                currentCoroutineContext().ensureActive()
+                cancellation.ensureActive()
                 val n = input.read(buffer); if (n < 0) break
                 db.execSQL("UPDATE \"$table\" SET \"$column\"=CAST(\"$column\" || ? AS BLOB) WHERE id=?", arrayOf(buffer.copyOf(n), id))
             }

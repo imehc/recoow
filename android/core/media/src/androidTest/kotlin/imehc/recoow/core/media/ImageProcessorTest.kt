@@ -2,9 +2,7 @@ package imehc.recoow.core.media
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
 import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
 import androidx.test.platform.app.InstrumentationRegistry
@@ -23,13 +21,11 @@ class ImageProcessorTest {
     private fun quadrants(width: Int = 1200, height: Int = 800): File {
         val file = File(context.cacheDir, "quadrants-${UUID.randomUUID()}.jpg").also { files += it }
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val paint = Paint()
-        Canvas(bitmap).apply {
-            paint.color = Color.RED; drawRect(0f, 0f, width / 2f, height / 2f, paint)
-            paint.color = Color.GREEN; drawRect(width / 2f, 0f, width.toFloat(), height / 2f, paint)
-            paint.color = Color.BLUE; drawRect(0f, height / 2f, width / 2f, height.toFloat(), paint)
-            paint.color = Color.YELLOW; drawRect(width / 2f, height / 2f, width.toFloat(), height.toFloat(), paint)
-        }
+        // Some OEM dark-mode implementations recolor Canvas primitives, even off screen.
+        // Write known source pixels directly; keep only two scanlines in memory.
+        val top = IntArray(width) { if (it < width / 2) Color.RED else Color.GREEN }
+        val bottom = IntArray(width) { if (it < width / 2) Color.BLUE else Color.YELLOW }
+        for (y in 0 until height) bitmap.setPixels(if (y < height / 2) top else bottom, 0, width, 0, y, width, 1)
         file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 95, it) }; bitmap.recycle()
         return file
     }
