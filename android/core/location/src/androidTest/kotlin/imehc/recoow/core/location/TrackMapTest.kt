@@ -8,6 +8,9 @@ import imehc.recoow.core.domain.location.GeoCoordinate
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertEquals
+import androidx.test.platform.app.InstrumentationRegistry
+import org.maplibre.android.RenderingEngine
 import org.junit.Rule
 import org.junit.Test
 
@@ -31,6 +34,10 @@ class TrackMapTest {
         }
         compose.waitUntil(20_000) { ready.get() == 1 && frames.get() > 0 || failure.get() != null }
         assertNull(failure.get())
+        val supportsVulkan = InstrumentationRegistry.getInstrumentation().targetContext.packageManager
+            .hasSystemFeature(android.content.pm.PackageManager.FEATURE_VULKAN_HARDWARE_VERSION, 0x400003)
+        assertEquals(if (supportsVulkan) RenderingEngine.Type.VULKAN else RenderingEngine.Type.OPENGL,
+            RenderingEngine.getCurrentType())
         compose.runOnIdle { focus.value = MapFocus(listOf(route.last()), "end") }
         compose.waitForIdle()
         compose.runOnIdle { visible.value = false }

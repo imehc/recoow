@@ -38,6 +38,11 @@ jobs:
         if: matrix.java == 25
         working-directory: android
         run: ./gradlew :app:assembleBaseline :app:assembleBenchmark :benchmark:assembleBaseline :benchmark:assembleBenchmark --stacktrace
+      - name: Check packaged release artifact
+        working-directory: android
+        run: |
+          python3 -m unittest discover -s build-tools -p 'test_verify_release.py'
+          ./gradlew :app:verifyReleaseArtifact --stacktrace
       - name: Check committed Room schema history
         working-directory: android
         run: ./gradlew :core:database:checkSchemaHistory

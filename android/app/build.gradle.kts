@@ -1,3 +1,5 @@
+import com.android.build.api.artifact.SingleArtifact
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose)
@@ -57,6 +59,28 @@ android {
     bundle { language { enableSplit = false } }
 }
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
+
+androidComponents.onVariants(androidComponents.selector().withBuildType("release")) { variant ->
+    val apkDirectory = variant.artifacts.get(SingleArtifact.APK)
+    val sdkDirectory = androidComponents.sdkComponents.sdkDirectory
+    val report = layout.buildDirectory.file("reports/release-artifact/${variant.name}.json")
+    tasks.register<Exec>("verifyReleaseArtifact") {
+        group = "verification"
+        description = "Check the packaged production APK, permissions, native alignment and profiles (without a signing identity)."
+        inputs.dir(apkDirectory)
+        inputs.file(rootProject.file("build-tools/verify_release.py"))
+        // Run the SDK validators each time, including when a local APK was signed after assembly.
+        doFirst {
+            commandLine("python3", rootProject.file("build-tools/verify_release.py"),
+                "--apk-dir", apkDirectory.get().asFile,
+                "--sdk", sdkDirectory.get().asFile,
+                "--build-tools", libs.versions.buildTools.get(),
+                "--min-sdk", libs.versions.minSdk.get(), "--target-sdk", libs.versions.targetSdk.get(),
+                "--report", report.get().asFile)
+        }
+    }
+}
+
 dependencies {
     implementation(project(":core:domain"))
     implementation(project(":core:data"))

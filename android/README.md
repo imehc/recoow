@@ -20,6 +20,8 @@
 
 Debug 包名为 `imehc.recoow.debug`，Release 为 `imehc.recoow`。Release 启用 R8 和资源压缩。分发环境通过 `RECOOW_KEYSTORE`、`RECOOW_KEYSTORE_PASSWORD`、`RECOOW_KEY_ALIAS`、`RECOOW_KEY_PASSWORD` 四个环境变量提供正式签名；全部未设置时输出未签名 APK，部分缺失时构建失败。密钥文件及本机环境文件不提交。
 
+`./gradlew :app:verifyReleaseArtifact` 检查实际 Release APK 的权限、组件、原生库对齐和 Profile；默认不验证正式签名。[APK 分发说明](RELEASE.md)包含证书固定与升级校验流程，[数据与权限说明](PRIVACY.md)描述客户端的数据处理方式。
+
 Android Studio 自动生成的 `gradle/gradle-daemon-jvm.properties` 优先于 `JAVA_HOME`，仅保留本机；CI 显式选择 JDK 17/25。
 
 ## 模块
@@ -61,7 +63,7 @@ Feature 不互相依赖，不直接访问存储。Domain 不依赖 Android、Hil
 
 账单、日记、饮食、物品、纪念日、抽选历史和轨迹也接受 `recoow://tool/{工具标识}/{recordId}` 详情链接。页面间通过应用导航层打开关联记录，Feature 之间不直接依赖。
 
-3D 使用 [Filament](https://github.com/google/filament)（Apache-2.0），地图使用 [MapLibre Native](https://github.com/maplibre/maplibre-native)（BSD-2-Clause）。地图组件接收样式及坐标系，轨迹页面使用 [OpenFreeMap](https://openfreemap.org/) Liberty 底图并保留来源署名；存储坐标使用 WGS84，仅按地图源要求转换显示副本。
+3D 使用 [Filament](https://github.com/google/filament)（Apache-2.0），地图使用 [MapLibre Native](https://github.com/maplibre/maplibre-native)（BSD-2-Clause）的 Vulkan/OpenGL 双后端包：有 Vulkan 能力时优先使用 Vulkan，其余设备回退到 OpenGL ES。地图组件接收样式及坐标系，轨迹页面使用 [OpenFreeMap](https://openfreemap.org/) Liberty 底图并保留来源署名；存储坐标使用 WGS84，仅按地图源要求转换显示副本。
 
 ## 图片与附件
 

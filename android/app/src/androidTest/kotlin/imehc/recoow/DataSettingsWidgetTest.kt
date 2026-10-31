@@ -4,6 +4,8 @@ import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Intent
+import android.os.Build
+import android.os.ParcelFileDescriptor
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.test.core.app.ActivityScenario
@@ -19,6 +21,24 @@ class DataSettingsWidgetTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val context get() = instrumentation.targetContext
+
+    private fun bindWidgets(block: () -> Unit) {
+        if (Build.VERSION.SDK_INT >= 29) {
+            instrumentation.uiAutomation.adoptShellPermissionIdentity("android.permission.BIND_APPWIDGET")
+            try { block() } finally { instrumentation.uiAutomation.dropShellPermissionIdentity() }
+        } else {
+            // API26–28 have no shell-identity API. Scope the legacy grant to this test package.
+            fun shell(command: String) = ParcelFileDescriptor.AutoCloseInputStream(
+                instrumentation.uiAutomation.executeShellCommand(command)
+            ).bufferedReader().use { it.readText().trim() }
+            // API26's appwidget command does not resolve the symbolic "current" user.
+            val user = shell("am get-current-user").toInt()
+            fun permission(command: String) {
+                assertEquals("", shell("appwidget $command --package ${context.packageName} --user $user"))
+            }
+            try { permission("grantbind"); block() } finally { permission("revokebind") }
+        }
+    }
 
     @Test fun dataPageRecreatesAndReturnsToSettings() {
         compose.onNodeWithTag("tab_settings").performClick()
@@ -36,9 +56,7 @@ class DataSettingsWidgetTest {
         val manager = AppWidgetManager.getInstance(context)
         val ids = IntArray(3) { host.allocateAppWidgetId() }
         try {
-            instrumentation.uiAutomation.adoptShellPermissionIdentity("android.permission.BIND_APPWIDGET")
-            try { ids.forEach { id -> assertTrue(manager.bindAppWidgetIdIfAllowed(id, ComponentName(context, QuickToolWidget::class.java))) } }
-            finally { instrumentation.uiAutomation.dropShellPermissionIdentity() }
+            bindWidgets { ids.forEach { id -> assertTrue(manager.bindAppWidgetIdIfAllowed(id, ComponentName(context, QuickToolWidget::class.java))) } }
             assertNull(QuickToolWidget.selected(context, ids[0]))
             fun choose(id: Int, tool: ToolRoute) {
                 ActivityScenario.launch<QuickToolWidgetConfiguration>(Intent(context, QuickToolWidgetConfiguration::class.java)

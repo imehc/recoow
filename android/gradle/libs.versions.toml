@@ -70,7 +70,7 @@ appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat"
 filament = { module = "com.google.android.filament:filament-android", version.ref = "filament" }
 filament-utils = { module = "com.google.android.filament:filament-utils-android", version.ref = "filament" }
 filament-gltfio = { module = "com.google.android.filament:gltfio-android", version.ref = "filament" }
-maplibre = { module = "org.maplibre.gl:android-sdk", version.ref = "maplibre" }
+maplibre = { module = "org.maplibre.gl:android-sdk-vulkan-opengl", version.ref = "maplibre" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
