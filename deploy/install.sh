@@ -39,6 +39,7 @@ trap 'rm -rf -- "$staging_directory"' EXIT
 for package_file in common.sh run.sh install.sh export.sh recoow.env.example deploy.env.example Dockerfile docker-compose.yml .dockerignore README.md; do
     install -m 0644 "$bundle_directory/$package_file" "$staging_directory/$package_file"
 done
+if [ -f "$bundle_directory/build-info.json" ]; then install -m 0644 "$bundle_directory/build-info.json" "$staging_directory/build-info.json"; fi
 for binary_path in "$bundle_directory"/recoow-api-linux-*; do install -m 0755 "$binary_path" "$staging_directory/$(basename -- "$binary_path")"; done
 chmod 0755 "$staging_directory/"*.sh
 copy_tree "$bundle_directory/schema" "$staging_directory/schema"

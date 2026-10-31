@@ -157,6 +157,12 @@ Filament 转盘读取共享 `assets/decision-scene/` 中的 GLB 和模型目录�
 ./gradlew :benchmark:connectedBenchmarkAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=imehc.recoow.benchmark.CoreJourneyBenchmark
 ```
 
-采集结果位于 `benchmark/build/outputs/connected_android_test_additional_output/`。将审核后的业务及启动规则去重合并到 `app/src/main/baseline-prof.txt`，启动规则同时放入 `app/src/main/startup-prof.txt`；随后重新构建 Release/benchmark，AGP 会重写 Profile。测试以 `BaselineProfileMode.Require` 确认安装的 Profile 可用。
+采集结果位于 `benchmark/build/outputs/connected_android_test_additional_output/`。将审核后的业务及启动规则去重合并到 `app/src/profiles/baseline-prof.txt`，启动规则同时放入 `app/src/profiles/startup-prof.txt`；随后重新构建 Release/benchmark，AGP 会重写 Profile。测试以 `BaselineProfileMode.Require` 确认安装的 Profile 可用。
 
-全功能采集包含三个 Tab、设置选择器、统一历史、八工具列表/详情、账单编辑、3D 浏览和抽选、轨迹详情。宏基准分别记录有/无 Profile 冷启动、账单/历史列表帧耗时与峰值内存、3D 浏览/抽选帧耗时与峰值内存，原始 Perfetto 和 JSON 保留在构建输出中。测量收益及设置回归阈值须使用真实设备；模拟器仅验证采集和打包链路，运行时需显式添加 `-Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR`。
+审核后的应用规则仅由 release/benchmark 变体消费，baseline 采集变体不打包这些规则。首次从 benchmark 切换到 baseline 采集时，先卸载独立包 `imehc.recoow.benchmark`，清除设备上既有的参考 Profile；再运行上述采集任务。此操作会删除该性能包的合成数据，不涉及正式应用。不要将已有 Profile 被重新导出的结果当作新的启动覆盖。
+
+真机运行前确认 ProfileInstaller 在应用强停后仍能接收测试广播。若出现安装 Profile 或清 Shader 缓存广播未收到，先排查厂商后台限制；该轮结果无效，不能通过关闭 `Require` 或忽略错误生成性能结论。
+
+全功能采集包含三个 Tab、设置选择器、统一历史、八工具列表/详情、账单编辑、3D 浏览和抽选、轨迹详情。宏基准分别记录有/无 Profile 冷启动、账单/历史列表帧耗时与峰值内存、3D 浏览/抽选帧耗时与峰值内存。
+
+API29+ 的 3D 首帧指标取本轮第一次场景创建到已加载场景首个渲染帧提交的耗时；不累加从结果页返回时的场景重建，也不等同于屏幕实际呈现时间。原始 Perfetto 和 JSON 保留在构建输出中。测量收益及设置回归阈值须使用真实设备；模拟器仅验证采集和打包链路，运行时需显式添加 `-Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR`。

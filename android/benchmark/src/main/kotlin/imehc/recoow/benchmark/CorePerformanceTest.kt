@@ -2,6 +2,7 @@ package imehc.recoow.benchmark
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import androidx.benchmark.macro.*
 import androidx.benchmark.macro.junit4.BaselineProfileRule
 import androidx.benchmark.macro.junit4.MacrobenchmarkRule
@@ -36,8 +37,11 @@ private fun MacrobenchmarkScope.openTool(tool: String, id: String? = null, tag: 
 private fun MacrobenchmarkScope.find(selector: BySelector): UiObject2 {
     repeat(14) {
         device.wait(Until.findObject(selector), 500)?.let { return it }
-        checkNotNull(device.wait(Until.findObject(By.scrollable(true)), 10_000)) { "No list while looking for $selector" }
-            .scroll(Direction.DOWN, 0.65f)
+        val list = checkNotNull(device.wait(Until.findObject(By.scrollable(true)), 10_000)) { "No list while looking for $selector" }
+        if (!list.scroll(Direction.DOWN, 0.65f)) {
+            device.wait(Until.findObject(selector), 1_500)?.let { return it }
+            error("Reached list end while looking for $selector")
+        }
     }
     error("Missing UI: $selector")
 }
@@ -59,8 +63,16 @@ private fun MacrobenchmarkScope.home() {
 private fun MacrobenchmarkScope.allJourneys() {
     home()
     tap("tab_statistics"); tap("statistics_history"); waitTag("history_page"); scrollList()
-    device.pressBack(); tap("tab_settings"); tap("appearance"); device.pressBack()
-    tap("language"); device.pressBack(); tap("tab_home")
+    device.pressBack(); tap("tab_settings")
+    for (preference in listOf("appearance", "language")) {
+        tap(preference)
+        // Dialogs use a separate semantics root; activity test resource IDs do not propagate.
+        val cancel = By.text("Cancel")
+        check(device.wait(Until.hasObject(cancel), 10_000)) { "Preference dialog did not open: $preference" }
+        device.pressBack()
+        check(device.wait(Until.gone(cancel), 10_000)) { "Preference dialog did not close" }
+    }
+    tap("tab_home")
     openTool("bills"); scrollList()
     openTool("bills", "perf-bill-0", null); find(By.text("Performance bill 0")); tapText("Edit"); waitTag("bill_form")
     device.pressBack(); device.pressBack(); device.pressBack()
@@ -121,7 +133,8 @@ class CoreJourneyBenchmark {
         compilationMode = CompilationMode.Partial(baselineProfileMode = BaselineProfileMode.Require),
         iterations = 5, setupBlock = { home(); tap("tab_statistics"); tap("statistics_history"); waitTag("history_page") }) { scrollList(sweeps = 3) }
     @Test fun decisionScene() = rule.measureRepeated(PACKAGE,
-        metrics = listOf(FrameTimingMetric(), MemoryUsageMetric(MemoryUsageMetric.Mode.Max)),
+        metrics = listOf(FrameTimingMetric(), MemoryUsageMetric(MemoryUsageMetric.Mode.Max)) +
+            if (Build.VERSION.SDK_INT >= 29) listOf(TraceSectionMetric("recoow.decision.firstFrame", mode = TraceSectionMetric.Mode.First)) else emptyList(),
         compilationMode = CompilationMode.Partial(baselineProfileMode = BaselineProfileMode.Require),
         iterations = 5, setupBlock = { home() }) { decisionJourney() }
 }

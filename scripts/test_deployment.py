@@ -25,6 +25,7 @@ class DeploymentTests(unittest.TestCase):
                 shutil.copy2(source, self.bundle / source.name)
         self.schema = self.bundle / "schema"
         self.schema.mkdir()
+        (self.bundle / "build-info.json").write_text('{"version":"0.0.1","commit":"fixture","dirty":false}')
         (self.schema / "bills.json").write_text('{"table":"bills"}')
         for architecture in ("amd64", "arm64"):
             binary = self.bundle / f"recoow-api-linux-{architecture}"
@@ -110,6 +111,7 @@ class DeploymentTests(unittest.TestCase):
             self.assertIn("RECOOW_MAX_ACCOUNTS=3\n", configuration)
             self.assertIn("RECOOW_TLS_KEY=\n", configuration)
             self.assertNotIn("/old/private.pem", configuration)
+            self.assertEqual(archive.extractfile("./build-info.json").read(), (self.bundle / "build-info.json").read_bytes())
 
     def test_export_excludes_metadata_and_preserves_wal_bytes(self):
         (self.data / "._recoow.db").write_bytes(b"AppleDouble")

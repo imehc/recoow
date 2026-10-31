@@ -110,6 +110,19 @@ class ReleaseGateTest(unittest.TestCase):
                 with self.subTest(elements=elements), self.assertRaises(ValueError):
                     gate.apk_from_directory(directory)
 
+    def test_arm64_distribution_rejects_additional_architectures(self):
+        with tempfile.TemporaryDirectory() as folder:
+            apk = Path(folder) / 'app.apk'
+            with zipfile.ZipFile(apk, 'w') as archive:
+                archive.writestr('assets/dexopt/baseline.prof', b'pro\x00')
+                archive.writestr('assets/dexopt/baseline.profm', b'prm\x00')
+                archive.writestr('lib/arm64-v8a/libexample.so', elf())
+            gate.inspect_zip(apk, ['arm64-v8a'])
+            with zipfile.ZipFile(apk, 'a') as archive:
+                archive.writestr('lib/x86_64/libexample.so', elf())
+            with self.assertRaisesRegex(ValueError, 'Unexpected APK ABIs'):
+                gate.inspect_zip(apk, ['arm64-v8a'])
+
     def test_certificate_pin_debug_identity_and_multiple_signers(self):
         expected = 'ab' * 32
         output = 'Signer #1 certificate DN: CN=Release\nSigner #1 certificate SHA-256 digest: ' + expected + '\n'

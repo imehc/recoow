@@ -1,3 +1,7 @@
+# 版本管理
+
+三个端独立升版，统一使用 `python3 scripts/version.py show/check/bump`。配置、构建编号及发布规则见 [VERSIONING.md](VERSIONING.md)。
+
 # 生成 iOS 模型资源
 
 ```sh

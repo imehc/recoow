@@ -1,6 +1,26 @@
 # Android APK 构建与分发
 
-以下流程面向直接分发的完整 APK。Google Play 的 AAB、商店表单、审核和正式发布需按目标渠道另行验证。构建校验不会上传文件或创建签名身份。
+使用同一公开源码仓库 `imehc/recoow` 的 GitHub Actions 生成、签名并直接分发 arm64 APK。应用内更新仅在 Android 提供，安装由系统确认。
+
+## Actions 发布
+
+版本由根目录 [versions.json](../versions.json) 管理，操作见 [VERSIONING.md](../VERSIONING.md)。升版、填写 `android/releases/<版本>.md` 并提交后，推送与该提交配置一致的标签：
+
+```sh
+python3 scripts/version.py check
+git tag android/v0.6.0
+git push origin android/v0.6.0
+```
+
+`android-release.yml` 先运行 JDK 17/25 构建、测试、Lint 和 API 26/36 设备测试，再构建正式签名的 arm64 APK。Android `versionCode` 为版本配置中的 `buildBase + GITHUB_RUN_NUMBER`，重跑同一 Actions 不改变编号。
+
+仓库的四个 Actions Secrets 为 `RECOOW_KEYSTORE_BASE64`、`RECOOW_KEYSTORE_PASSWORD`、`RECOOW_KEY_ALIAS`、`RECOOW_KEY_PASSWORD`。公开的 `release-certificate.sha256` 是独立固定的校验依据；私钥不提交。临时签名文件不会进入 Actions artifacts。
+
+发布产物包括 APK、`update.json`、`SHA256SUMS` 和签名产物报告；R8 mapping 在对应 Actions artifact 中归档。脚本检查已发布 Android 版本，拒绝语义版本或安装编号倒退，拒绝覆盖已发布版本。所有资产先上传草稿，完整后才公开；失败的草稿可重跑。
+
+Android 稳定 Release 占用仓库 Latest；后端和 iOS Release 必须指定 `--latest=false`。更新清单位于 `https://github.com/imehc/recoow/releases/latest/download/update.json`，其中 APK 链接指向不可覆盖的版本标签。
+
+应用会验证下载大小和 SHA-256，再检查 APK 包名、版本、最低系统和与已安装应用相同的签名。允许“安装未知应用”后，再点击安装；不会静默安装。密钥不轮换；首次分发采用独立签名，旧测试签名的数据须先保留备份，不能直接用新签名覆盖。
 
 ## 构建产物检查
 

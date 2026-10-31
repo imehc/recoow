@@ -3,7 +3,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"flag"
 	"log/slog"
 	"net/http"
 	"os"
@@ -13,16 +15,27 @@ import (
 	"time"
 
 	"github.com/imehc/recoow/backend/internal/api"
+	"github.com/imehc/recoow/backend/internal/buildinfo"
 	"github.com/imehc/recoow/backend/internal/config"
 	"github.com/imehc/recoow/backend/internal/schema"
 	"github.com/imehc/recoow/backend/internal/store"
 )
 
 func main() {
+	versionOnly := flag.Bool("version", false, "print executable version and exit")
+	flag.Parse()
+	if *versionOnly {
+		if err := json.NewEncoder(os.Stdout).Encode(buildinfo.Current()); err != nil {
+			os.Exit(1)
+		}
+		return
+	}
 	cfg := config.Load()
 
 	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(log)
+	build := buildinfo.Current()
+	log.Info("recoow 后端版本", "version", build.Version, "commit", build.Commit, "dirty", build.Dirty)
 
 	// 读取并自检三端共用的字段清单（唯一权威）。
 	registries, err := schema.Load(cfg.SchemaDir)

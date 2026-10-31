@@ -39,6 +39,7 @@ RUN addgroup -S -g 10001 recoow \
 WORKDIR /app
 COPY --from=pick /recoow-api /app/recoow-api
 COPY --from=pick /schema /app/schema
+COPY build-info.json /app/build-info.json
 
 ENV RECOOW_LISTEN=0.0.0.0:8080 \
     RECOOW_DATA=/data \

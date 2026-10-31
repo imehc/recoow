@@ -1,0 +1,92 @@
+name: Android release
+
+on:
+  push:
+    tags: ["android/v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A single official workflow owns the monotonically increasing build sequence.
+concurrency:
+  group: android-production-release
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    uses: ./.github/workflows/android.yml
+
+  publish:
+    needs: checks
+    if: startsWith(github.ref, 'refs/tags/android/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Resolve release version
+        id: version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: python3 scripts/version.py ci android --tag "$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install compile SDK
+        run: sdkmanager 'platforms;android-37.0' 'build-tools;37.0.0'
+      - name: Restore release identity
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RECOOW_KEYSTORE_BASE64 }}
+        run: |
+          python3 - <<'PY'
+          import base64, os
+          from pathlib import Path
+          path = Path(os.environ['RUNNER_TEMP']) / 'recoow-release.p12'
+          with open(path, 'xb', opener=lambda p, flags: os.open(p, flags, 0o600)) as stream:
+              stream.write(base64.b64decode(os.environ['KEYSTORE_BASE64'], validate=True))
+          PY
+      - name: Build signed arm64 APK
+        working-directory: android
+        env:
+          RECOOW_ANDROID_VERSION_CODE: ${{ steps.version.outputs.build }}
+          RECOOW_KEYSTORE: ${{ runner.temp }}/recoow-release.p12
+          RECOOW_KEYSTORE_PASSWORD: ${{ secrets.RECOOW_KEYSTORE_PASSWORD }}
+          RECOOW_KEY_ALIAS: ${{ secrets.RECOOW_KEY_ALIAS }}
+          RECOOW_KEY_PASSWORD: ${{ secrets.RECOOW_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease --stacktrace
+      - name: Verify signed APK
+        run: |
+          python3 android/build-tools/verify_release.py \
+            --apk-dir android/app/build/outputs/apk/release \
+            --sdk "$ANDROID_HOME" --build-tools 37.0.0 --min-sdk 26 --target-sdk 36 \
+            --abi arm64-v8a --certificate-sha256 "$(cat android/release-certificate.sha256)" \
+            --report "$RUNNER_TEMP/release-verification.json"
+      - name: Publish verified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          python3 android/build-tools/release.py \
+            --apk android/app/build/outputs/apk/release/app-release.apk \
+            --report "$RUNNER_TEMP/release-verification.json" \
+            --run-number "$GITHUB_RUN_NUMBER" --tag "$RELEASE_TAG" \
+            --notes "android/releases/$RELEASE_VERSION.md" \
+            --output "$RUNNER_TEMP/android-release" --publish
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-release-${{ steps.version.outputs.version }}-${{ steps.version.outputs.build }}
+          path: |
+            ${{ runner.temp }}/android-release/
+            ${{ runner.temp }}/release-verification.json
+            android/app/build/outputs/mapping/release/mapping.txt
+      - name: Remove temporary signing key
+        if: always()
+        run: rm -f -- "$RUNNER_TEMP/recoow-release.p12"

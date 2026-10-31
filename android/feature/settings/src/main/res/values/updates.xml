@@ -1,0 +1,20 @@
+<resources>
+    <string name="update_title">App updates</string>
+    <string name="update_installed">Current version: %1$s</string>
+    <string name="update_available">Version %1$s is available</string>
+    <string name="update_size">Download size: %1$s MB</string>
+    <string name="update_ready">Download verified. Android will ask you to confirm installation.</string>
+    <string name="update_install">Install update</string>
+    <string name="update_download">Download update</string>
+    <string name="update_progress">Downloading: %1$d%%</string>
+    <string name="update_keep_open">Keep the app open while downloading. You can cancel and retry.</string>
+    <string name="update_checking">Checking update…</string>
+    <string name="update_current">You have the latest version.</string>
+    <string name="update_permission">Allow this app to install updates in Android settings, then return here and tap Install update.</string>
+    <string name="update_connection_failed">Could not finish the download or update check. Check your network and available space, then retry.</string>
+    <string name="update_invalid">This update could not be verified. Download it again before installing.</string>
+    <string name="update_incompatible">This update is not compatible with this Android version or device.</string>
+    <string name="update_storage_failed">Could not save the update. Free some storage and try again.</string>
+    <string name="update_installer_failed">The Android installer is unavailable. Try installing the APK from the releases page.</string>
+    <string name="update_check">Check for updates</string>
+</resources>

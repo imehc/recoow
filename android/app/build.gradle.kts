@@ -1,4 +1,5 @@
 import com.android.build.api.artifact.SingleArtifact
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -6,6 +7,16 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
 }
+val releaseVersion = Properties().apply {
+    rootProject.file("version.properties").inputStream().use { load(it) }
+}
+val localVersionCode = releaseVersion.getProperty("versionCode").toInt()
+val requestedVersionCode = providers.environmentVariable("RECOOW_ANDROID_VERSION_CODE").orNull
+val resolvedVersionCode = requestedVersionCode?.let {
+    require(it.matches(Regex("[1-9][0-9]*"))) { "RECOOW_ANDROID_VERSION_CODE must be a positive integer" }
+    it.toInt()
+} ?: localVersionCode
+require(resolvedVersionCode in localVersionCode..2_100_000_000) { "Android build number is below baseline or exceeds platform limit" }
 android {
     namespace = "imehc.recoow"
     compileSdk = libs.versions.compileSdk.get().toInt()
@@ -14,8 +25,8 @@ android {
         applicationId = "imehc.recoow"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 6
-        versionName = "0.6.0"
+        versionCode = resolvedVersionCode
+        versionName = releaseVersion.getProperty("versionName")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     val signingValues = listOf("RECOOW_KEYSTORE", "RECOOW_KEYSTORE_PASSWORD", "RECOOW_KEY_ALIAS", "RECOOW_KEY_PASSWORD")
@@ -30,6 +41,7 @@ android {
     buildTypes {
         debug { applicationIdSuffix = ".debug" }
         release {
+            ndk { abiFilters += "arm64-v8a" }
             signingConfig = distributionSigning
             isMinifyEnabled = true
             isShrinkResources = true
@@ -50,6 +62,11 @@ android {
         matchingFallbacks += "release"
     }
     sourceSets.getByName("baseline").kotlin.srcDir("src/benchmark/kotlin")
+    // The collector must not rediscover a previously packaged application profile.
+    // Only the comparable R8 benchmark and production variants consume reviewed rules.
+    for (variant in listOf("release", "benchmark")) {
+        sourceSets.getByName(variant).baselineProfiles.srcDir("src/profiles")
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -76,12 +93,14 @@ androidComponents.onVariants(androidComponents.selector().withBuildType("release
                 "--sdk", sdkDirectory.get().asFile,
                 "--build-tools", libs.versions.buildTools.get(),
                 "--min-sdk", libs.versions.minSdk.get(), "--target-sdk", libs.versions.targetSdk.get(),
+                "--abi", "arm64-v8a",
                 "--report", report.get().asFile)
         }
     }
 }
 
 dependencies {
+    implementation(project(":core:update"))
     implementation(project(":core:domain"))
     implementation(project(":core:data"))
     implementation(project(":core:sync"))

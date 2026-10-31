@@ -34,7 +34,7 @@ import imehc.recoow.core.domain.preferences.AppLanguage
 import imehc.recoow.core.domain.preferences.Appearance
 
 @Composable
-fun SettingsScreen(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLanguage: (AppLanguage) -> Unit, onRetry: () -> Unit, onSync: () -> Unit = {}, onMedia: () -> Unit = {}, onData: () -> Unit = {}, onPickedPhotos: (Boolean) -> Unit = {}, onCameraPhotos: (Boolean) -> Unit = {}, onToolVisible: (String, Boolean) -> Unit = { _, _ -> }) {
+fun SettingsScreen(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLanguage: (AppLanguage) -> Unit, onRetry: () -> Unit, onSync: () -> Unit = {}, onMedia: () -> Unit = {}, onData: () -> Unit = {}, onPickedPhotos: (Boolean) -> Unit = {}, onCameraPhotos: (Boolean) -> Unit = {}, onToolVisible: (String, Boolean) -> Unit = { _, _ -> }, onUpdate: () -> Unit = {}) {
     var selection by rememberSaveable { mutableStateOf<String?>(null) }
     val appearanceLabels = listOf(stringResource(R.string.follow_system), stringResource(R.string.appearance_light), stringResource(R.string.appearance_dark))
     val languageLabels = listOf(stringResource(R.string.follow_system), stringResource(R.string.language_chinese), stringResource(R.string.language_english))
@@ -42,6 +42,7 @@ fun SettingsScreen(state: SettingsUiState, onAppearance: (Appearance) -> Unit, o
         item { Card { ListItem(onClick = onSync, modifier = Modifier.testTag("sync_settings")) { Text(stringResource(R.string.sync_title)) } } }
         item { Card { ListItem(onClick = onMedia, modifier = Modifier.testTag("media_settings")) { Text(stringResource(R.string.media_library)) } } }
         item { Card { ListItem(onClick = onData, modifier = Modifier.testTag("data_settings")) { Text(stringResource(R.string.data_title)) } } }
+        item { Card { ListItem(onClick = onUpdate, modifier = Modifier.testTag("app_update")) { Text(stringResource(R.string.update_title)) } } }
         val preferences = state.preferences
         if (preferences != null) {
             item { Text(stringResource(R.string.photos_section), style = MaterialTheme.typography.titleSmall) }

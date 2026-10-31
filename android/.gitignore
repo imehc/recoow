@@ -25,3 +25,4 @@ captures/
 .env
 .env.*
 /signing.properties
+/.signing/

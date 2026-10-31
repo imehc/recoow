@@ -41,6 +41,7 @@ class MainActivity : AppCompatActivity() {
     private val media: imehc.recoow.feature.media.MediaLibraryViewModel by viewModels()
     private val sync: SyncViewModel by viewModels()
     private val data: imehc.recoow.feature.settings.DataManagementViewModel by viewModels()
+    private val updates: imehc.recoow.feature.settings.AppUpdateViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,6 +77,7 @@ class MainActivity : AppCompatActivity() {
                     onBill = bills::show, onToolVisible = preferences::setToolVisible,
                     onPickedPhotos = preferences::setPickedPhotos, onCameraPhotos = preferences::setCameraPhotos,
                     dataScreen = { back -> imehc.recoow.feature.settings.DataManagementScreen(data, back) },
+                    updateScreen = { back -> imehc.recoow.feature.settings.AppUpdateScreen(updates, back, ::installUpdate) },
                     homeScreen = { settings, tool -> imehc.recoow.feature.home.HomeRoute(home, state.preferences,
                         recordingState.current?.copy(duration = recordingState.duration, pointCount = recordingState.pointCount), settings,
                         { tracks.showRecording(); tool(imehc.recoow.core.domain.navigation.ToolRoute.LOCATION.id) }, tool) },
@@ -104,6 +106,25 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         // A link is a one-shot event. SavedStateHandle owns pending delivery across recreation.
         handleToolLink(intent)
+    }
+
+    private fun installUpdate() {
+        if (!packageManager.canRequestPackageInstalls()) {
+            updates.requireInstallPermission()
+            try {
+                startActivity(Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    android.net.Uri.parse("package:$packageName")))
+            } catch (_: android.content.ActivityNotFoundException) { updates.installerFailed() }
+              catch (_: SecurityException) { updates.installerFailed() }
+            return
+        }
+        updates.install { uri ->
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(android.net.Uri.parse(uri),
+                    "application/vnd.android.package-archive").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+            } catch (_: android.content.ActivityNotFoundException) { updates.installerFailed() }
+              catch (_: SecurityException) { updates.installerFailed() }
+        }
     }
 
     private fun handleToolLink(intent: Intent) {

@@ -18,6 +18,7 @@ PERMISSIONS = {
     'ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION', 'FOREGROUND_SERVICE',
     'FOREGROUND_SERVICE_LOCATION', 'POST_NOTIFICATIONS', 'SCHEDULE_EXACT_ALARM',
     'RECEIVE_BOOT_COMPLETED', 'RECORD_AUDIO', 'READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE',
+    'REQUEST_INSTALL_PACKAGES',
 }
 LEGACY_STORAGE = {'READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE'}
 SYSTEM_EXPORTS = {
@@ -115,7 +116,7 @@ def elf_alignment(data, abi):
     return min(aligns)
 
 
-def inspect_zip(apk):
+def inspect_zip(apk, expected_abis=None):
     with zipfile.ZipFile(apk) as archive:
         names = archive.namelist()
         require(len(names) == len(set(names)), 'Duplicate ZIP entries')
@@ -129,6 +130,9 @@ def inspect_zip(apk):
             abi = info.filename.split('/')[1]
             native.append({'path': info.filename, 'loadAlignment': elf_alignment(archive.read(info), abi)})
         require(any(n['path'].startswith('lib/arm64-v8a/') for n in native), 'Missing ARM64 native libraries')
+        if expected_abis is not None:
+            actual = {n['path'].split('/')[1] for n in native}
+            require(actual == set(expected_abis), 'Unexpected APK ABIs: ' + ', '.join(sorted(actual)))
         return native
 
 
@@ -155,7 +159,7 @@ def check_upgrade(previous, current):
 def apk_from_directory(directory):
     metadata = json.loads((directory / 'output-metadata.json').read_text())
     elements = metadata['elements']
-    require(len(elements) == 1 and not elements[0].get('filters'), 'Expected one universal APK')
+    require(len(elements) == 1 and not elements[0].get('filters'), 'Expected one APK without split outputs')
     apk = (directory / elements[0]['outputFile']).resolve()
     require(apk.parent == directory.resolve() and apk.suffix == '.apk', 'Unexpected APK output path')
     return apk
@@ -170,6 +174,8 @@ def main():
     parser.add_argument('--build-tools', required=True)
     parser.add_argument('--min-sdk', type=int, required=True)
     parser.add_argument('--target-sdk', type=int, required=True)
+    parser.add_argument('--abi', action='append', choices=['arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'],
+                        help='Require exactly these native ABIs (repeat for more than one)')
     parser.add_argument('--certificate-sha256', help='Enable signing checks against this independently recorded certificate')
     parser.add_argument('--previous-apk', type=Path, help='Also require the same signing identity and a higher versionCode')
     parser.add_argument('--report', type=Path)
@@ -182,7 +188,7 @@ def main():
         analyzer = args.sdk / 'cmdline-tools/latest/bin/apkanalyzer'
         build_tools = args.sdk / 'build-tools' / args.build_tools
         report.update(inspect_manifest(run(analyzer, 'manifest', 'print', apk), args.min_sdk, args.target_sdk))
-        report['nativeLibraries'] = inspect_zip(apk)
+        report['nativeLibraries'] = inspect_zip(apk, args.abi)
         run(build_tools / 'zipalign', '-c', '-P', '16', '-v', '4', apk)
         report['sha256'] = hashlib.sha256(apk.read_bytes()).hexdigest()
         if args.certificate_sha256:

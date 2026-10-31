@@ -2,6 +2,8 @@ package imehc.recoow.core.scene
 
 import android.content.Context
 import android.opengl.Matrix
+import android.os.Build
+import android.os.Trace
 import android.view.Choreographer
 import android.view.SurfaceView
 import android.view.View
@@ -70,7 +72,11 @@ private class DecisionSurface(context: Context) : SurfaceView(context), Choreogr
     var cursor = 0.0
     var onFrame: (Long) -> Unit = {}
     private var active = false; private var attached = false; private var released = false
+    private var sceneReady = false
+    private var firstFramePending = true
+    private val traceCookie = System.identityHashCode(this)
     init {
+        if (Build.VERSION.SDK_INT >= 29) Trace.beginAsyncSection("recoow.decision.firstFrame", traceCookie)
         Utils.init()
         // Registered before ModelViewer's detach listener, so our assets die before its engine.
         addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
@@ -106,6 +112,7 @@ private class DecisionSurface(context: Context) : SurfaceView(context), Choreogr
                 android.graphics.Color.red(c) / 255f, android.graphics.Color.green(c) / 255f, android.graphics.Color.blue(c) / 255f, 1f)
         }
         viewer.renderer.clearOptions = Renderer.ClearOptions().apply { clear = true; clearColor = if (dark) doubleArrayOf(.016, .016, .021, 1.0) else doubleArrayOf(.96, .95, .98, 1.0) }
+        sceneReady = true
     }
     private fun position() {
         val desired = mutableSetOf<FilamentInstance>()
@@ -130,6 +137,7 @@ private class DecisionSurface(context: Context) : SurfaceView(context), Choreogr
     fun stop() { active = false; Choreographer.getInstance().removeFrameCallback(this) }
     private fun releaseAssets() {
         if (released) return
+        finishFirstFrameTrace()
         stop(); released = true
         for (model in models.values) { for (instance in model.instances) viewer.scene.removeEntities(instance.entities); loader.destroyAsset(model.asset) }
         models.clear(); visible = emptySet()
@@ -137,9 +145,21 @@ private class DecisionSurface(context: Context) : SurfaceView(context), Choreogr
         resources.destroy(); loader.destroy(); materials.destroyMaterials(); materials.destroy()
     }
     fun release() { releaseAssets(); if (!attached) viewer.destroy() }
+    private fun finishFirstFrameTrace() {
+        if (!firstFramePending) return
+        firstFramePending = false
+        if (Build.VERSION.SDK_INT >= 29) Trace.endAsyncSection("recoow.decision.firstFrame", traceCookie)
+    }
     override fun doFrame(frameTimeNanos: Long) {
         if (!active || released) return
-        if (isAttachedToWindow && windowVisibility == VISIBLE) { position(); if (viewer.render(frameTimeNanos)) onFrame(frameTimeNanos) }
+        if (isAttachedToWindow && windowVisibility == VISIBLE) {
+            position()
+            if (viewer.render(frameTimeNanos)) {
+                // Measure through the first submitted frame containing the loaded scene.
+                if (sceneReady) finishFirstFrameTrace()
+                onFrame(frameTimeNanos)
+            }
+        }
         Choreographer.getInstance().postFrameCallback(this)
     }
 }

@@ -1,0 +1,45 @@
+# 版本与发布
+
+`versions.json` 是应用发布版本的唯一来源。Android、iOS、后端分别发布，互不要求版本号相同。接入时 Android 为 `0.6.0`，iOS 为 `0.1.0`，后端从 `0.0.1` 开始。
+
+```sh
+python3 scripts/version.py show
+python3 scripts/version.py check
+python3 scripts/version.py bump android patch
+python3 scripts/version.py bump ios minor
+python3 scripts/version.py bump backend patch
+```
+
+`bump` 只修改所选端的版本及其生成文件，不提交、不打标签、不推送。日常构建和 `check` 不修改版本。新增功能升 minor，修复升 patch，不兼容的应用发布升 major；是否升版由发布者决定，不根据提交信息自动猜测。
+
+生成文件 `android/version.properties`、`ios/Version.xcconfig`、`backend/internal/buildinfo/version_generated.go` 随版本提交；不要直接编辑。手动调整 `versions.json` 后运行 `python3 scripts/version.py sync`，CI 用 `check` 拒绝漂移。iOS 主应用和 Widget 的 Debug/Release 共用同一份配置。
+
+发布标签分别为 `android/v0.6.0`、`ios/v0.1.0`、`backend/v0.0.1`。标签必须与该提交的配置一致，每个已发布标签只使用一次。一个端修复问题只升该端；已有版本不替换 APK 或运行包。
+
+## 构建编号
+
+移动端发布流水线使用 `buildBase + GITHUB_RUN_NUMBER`。同一 workflow 的重跑保持编号，下一次运行递增；`GITHUB_RUN_ATTEMPT` 不参与编号。语义版本升版时不重置 `buildBase`。每个端只设一条正式发布 workflow；迁移或重建 workflow 导致计数重置时，先提高 `buildBase`，发布前还要与已发布的最高编号比较，拒绝倒退。
+
+Android 将结果作为 `versionCode`，通过 `RECOOW_ANDROID_VERSION_CODE` 注入 Gradle，最大值为 2100000000。本地构建使用配置中的基线。
+
+iOS 将序号转换为满足 `CFBundleVersion` 位数限制的三段数字：序号 1 为 `1.0.0`，100 为 `1.0.99`，101 为 `1.1.0`，10001 为 `2.0.0`；与应用的语义版本无关。未来 iOS 发布 CI 可直接使用：
+
+```sh
+python3 scripts/version.py ci ios --tag "$GITHUB_REF_NAME" --run-number "$GITHUB_RUN_NUMBER"
+ios_build=$(python3 scripts/version.py show ios --field build --run-number "$GITHUB_RUN_NUMBER")
+xcodebuild -project ios/recoow.xcodeproj -scheme recoow -configuration Release \
+  CURRENT_PROJECT_VERSION="$ios_build" archive
+```
+
+命令行构建设置同时覆盖主应用与 Widget，不回写工程文件。iOS 签名、商店上传仍按独立发布流程处理。
+
+## 后端
+
+```sh
+bash scripts/package-backend.sh
+./recoow-api --version
+```
+
+包名含后端版本；`build-info.json` 保存版本、标签、Git 提交和工作区是否有未提交改动，纳入 SHA256SUMS。二进制的 `--version` 和启动日志也包含版本及提交信息。源码直接 `go build` 使用生成的版本常量，并尽可能读取 Go 自带的 Git 构建信息。
+
+后端和 iOS 的 GitHub Release 应使用 `--latest=false`；仓库的 Latest 留给 Android 稳定 APK，供 Android 应用内更新查找。应用版本、同步协议版本、数据表版本及备份格式版本分别维护，升应用版本不会自动修改数据协议。

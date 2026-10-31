@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "android": {
+    "version": "0.6.0",
+    "buildBase": 6
+  },
+  "ios": {
+    "version": "0.1.0",
+    "buildBase": 1
+  },
+  "backend": {
+    "version": "0.0.1"
+  }
+}

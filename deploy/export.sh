@@ -72,6 +72,7 @@ mkdir -p "$work_directory/package/schema"
 for package_file in common.sh run.sh install.sh export.sh recoow.env.example deploy.env.example Dockerfile docker-compose.yml .dockerignore README.md; do
     cp "$bundle_directory/$package_file" "$work_directory/package/$package_file"
 done
+if [ -f "$bundle_directory/build-info.json" ]; then cp "$bundle_directory/build-info.json" "$work_directory/package/build-info.json"; fi
 for binary_path in "$bundle_directory"/recoow-api-linux-*; do cp "$binary_path" "$work_directory/package/"; done
 if [ "$mode" = docker ]; then
     require_command docker
