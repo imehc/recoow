@@ -19,10 +19,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        java: [17, 25]
     steps:
       - uses: actions/checkout@v4
       - name: Check independent application versions
@@ -32,7 +28,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: ${{ matrix.java }}
+          java-version: 17
       - uses: android-actions/setup-android@v3
         with:
           packages: platform-tools
@@ -43,7 +39,6 @@ jobs:
         working-directory: android
         run: ./gradlew :app:assembleDebug :app:assembleRelease :core:domain:test :core:database:testDebugUnitTest :core:data:testDebugUnitTest :core:network:testDebugUnitTest :core:update:testDebugUnitTest :feature:settings:testDebugUnitTest :feature:history:testDebugUnitTest :feature:statistics:testDebugUnitTest lint --stacktrace
       - name: Build performance variants
-        if: matrix.java == 25
         working-directory: android
         run: ./gradlew :app:assembleBaseline :app:assembleBenchmark :benchmark:assembleBaseline :benchmark:assembleBenchmark --stacktrace
       - name: Check packaged release artifact
@@ -57,7 +52,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: android-reports-jdk-${{ matrix.java }}
+          name: android-reports-jdk-17
           path: |
             android/**/build/reports/
             android/**/build/test-results/
@@ -77,7 +72,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 25
+          java-version: 17
       - uses: android-actions/setup-android@v3
         with:
           packages: platform-tools
@@ -89,6 +84,15 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - name: Install compile SDK
         run: sdkmanager 'platforms;android-37.0' 'build-tools;37.0.0'
+      - name: Assemble device test APKs before booting the emulator
+        working-directory: android
+        run: >-
+          ./gradlew --max-workers=2 :app:assembleDebug :app:assembleDebugAndroidTest
+          :core:database:assembleDebugAndroidTest :core:data:assembleDebugAndroidTest
+          :core:sync:assembleDebugAndroidTest :core:media:assembleDebugAndroidTest
+          :core:backup:assembleDebugAndroidTest :core:calendar:assembleDebugAndroidTest
+          :core:notifications:assembleDebugAndroidTest :core:location:assembleDebugAndroidTest
+          :core:scene:assembleDebugAndroidTest :core:update:assembleDebugAndroidTest --stacktrace
       - name: Start isolated integration backend
         run: |
           python3 scripts/generate_sync_schema.py --output "$RUNNER_TEMP/recoow-schema"
@@ -107,8 +111,13 @@ jobs:
           arch: x86_64
           target: default
           disable-animations: true
+          ram-size: 2048M
+          cores: 2
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back none -feature -Vulkan
           working-directory: android
-          script: ./gradlew :core:database:connectedDebugAndroidTest :core:data:connectedDebugAndroidTest :core:sync:connectedDebugAndroidTest :core:media:connectedDebugAndroidTest :core:backup:connectedDebugAndroidTest :core:calendar:connectedDebugAndroidTest :core:notifications:connectedDebugAndroidTest :core:location:connectedDebugAndroidTest :core:scene:connectedDebugAndroidTest :core:update:connectedDebugAndroidTest :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.syncBaseUrl=http://10.0.2.2:8080/ --stacktrace
+          script: |
+            adb logcat -v threadtime > "$RUNNER_TEMP/emulator-logcat.txt" 2>&1 &
+            ./gradlew --no-parallel --max-workers=2 :core:database:connectedDebugAndroidTest :core:data:connectedDebugAndroidTest :core:sync:connectedDebugAndroidTest :core:media:connectedDebugAndroidTest :core:backup:connectedDebugAndroidTest :core:calendar:connectedDebugAndroidTest :core:notifications:connectedDebugAndroidTest :core:location:connectedDebugAndroidTest :core:scene:connectedDebugAndroidTest :core:update:connectedDebugAndroidTest :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.syncBaseUrl=http://10.0.2.2:8080/ --stacktrace
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -116,3 +125,5 @@ jobs:
           path: |
             android/**/build/reports/androidTests/
             android/**/build/outputs/androidTest-results/
+            ${{ runner.temp }}/emulator-logcat.txt
+            ${{ runner.temp }}/recoow-api.log

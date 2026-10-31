@@ -12,7 +12,7 @@ git tag android/v0.6.0
 git push origin android/v0.6.0
 ```
 
-`android-release.yml` 先运行 JDK 17/25 构建、测试、Lint 和 API 26/36 设备测试，再构建正式签名的 arm64 APK。Android `versionCode` 为版本配置中的 `buildBase + GITHUB_RUN_NUMBER`，重跑同一 Actions 不改变编号。
+`android-release.yml` 先运行 JDK 17 构建、测试、Lint 和 API 26/36 设备测试，再构建正式签名的 arm64 APK。Android `versionCode` 为版本配置中的 `buildBase + GITHUB_RUN_NUMBER`，重跑同一 Actions 不改变编号。
 
 仓库的四个 Actions Secrets 为 `RECOOW_KEYSTORE_BASE64`、`RECOOW_KEYSTORE_PASSWORD`、`RECOOW_KEY_ALIAS`、`RECOOW_KEY_PASSWORD`。公开的 `release-certificate.sha256` 是独立固定的校验依据；私钥不提交。临时签名文件不会进入 Actions artifacts。
 
