@@ -113,11 +113,14 @@ jobs:
           disable-animations: true
           ram-size: 2048M
           cores: 2
-          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back none -feature -Vulkan
+          emulator-options: -no-window -gpu swangle -no-snapshot -noaudio -no-boot-anim -camera-back none
           working-directory: android
           script: |
             adb logcat -v threadtime > "$RUNNER_TEMP/emulator-logcat.txt" 2>&1 &
             ./gradlew --no-parallel --max-workers=2 :core:database:connectedDebugAndroidTest :core:data:connectedDebugAndroidTest :core:sync:connectedDebugAndroidTest :core:media:connectedDebugAndroidTest :core:backup:connectedDebugAndroidTest :core:calendar:connectedDebugAndroidTest :core:notifications:connectedDebugAndroidTest :core:location:connectedDebugAndroidTest :core:scene:connectedDebugAndroidTest :core:update:connectedDebugAndroidTest :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.syncBaseUrl=http://10.0.2.2:8080/ --stacktrace
+      - name: Collect host diagnostics after a device failure
+        if: failure()
+        run: sudo dmesg --ctime | tail -100 > "$RUNNER_TEMP/emulator-host-kernel.log"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -126,4 +129,5 @@ jobs:
             android/**/build/reports/androidTests/
             android/**/build/outputs/androidTest-results/
             ${{ runner.temp }}/emulator-logcat.txt
+            ${{ runner.temp }}/emulator-host-kernel.log
             ${{ runner.temp }}/recoow-api.log
