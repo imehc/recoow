@@ -9,6 +9,23 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class AnniversaryParityTest {
+    @Test fun timezoneAndScheduleMatrixMatchesFoundation() {
+        val calendar = IcuAnniversaryCalendar()
+        for (case in timezoneCases) {
+            val zone = ZoneId.of(case.zone)
+            val occurred = Instant.parse(case.occurredAt)
+            val reference = Instant.parse(case.reference)
+            val name = "${case.zone} ${case.kind} ${case.occurredAt}"
+            assertEquals(name, case.date, calendar.date(occurred, case.kind, zone))
+            for ((minutes, next) in listOf(90 to case.at0130, 150 to case.at0230, 540 to case.at0900)) {
+                for (yearly in listOf(false, true)) {
+                    assertEquals("$name minutes=$minutes yearly=$yearly", if (yearly) Instant.parse(next) else null,
+                        calendar.nextOccurrence(AnniversarySchedule(occurred, case.kind, yearly, minutes), reference, zone))
+                }
+            }
+        }
+    }
+
     @Test fun lunarInputRoundTripsLeapMonthAndRejectsMissingDates() {
         val zone = ZoneId.of("Asia/Shanghai")
         val leap = LunarDate(2023, 2, 1, true)
@@ -75,5 +92,71 @@ class AnniversaryParityTest {
             null, CalendarDate(1, 2024, 1, 1, false), zone = "UTC", yearly = false),
         Case("future base takes precedence", "2027-05-01T00:00:00Z", "2026-01-01T00:00:00Z",
             "2027-05-01T00:00:00Z", CalendarDate(78, 44, 3, 25, false), DateCalendar.CHINESE, minutes = 480),
+    )
+
+    private data class TimezoneCase(
+        val zone: String,
+        val occurredAt: String,
+        val reference: String,
+        val kind: DateCalendar,
+        val date: CalendarDate,
+        val at0130: String,
+        val at0230: String,
+        val at0900: String,
+    )
+
+    // Fixed Foundation results from AnniversaryRecord.swift / AnniversaryDateCalendar.swift
+    // at the same iOS baseline as the cases above. Six schedules share each input:
+    // 01:30 / 02:30 / 09:00, once / yearly; all once-only dates are before reference.
+    // 16 inputs cover 96 schedules without repeating the same fields in a JSON asset.
+    private val timezoneCases = listOf(
+        TimezoneCase("America/New_York", "2024-03-09T07:00:00Z", "2025-03-09T05:00:00Z",
+            DateCalendar.GREGORIAN, CalendarDate(1, 2024, 3, 9, false),
+            "2025-03-09T06:30:00Z", "2025-03-09T07:30:00Z", "2025-03-09T13:00:00Z"),
+        TimezoneCase("America/New_York", "2024-03-09T07:00:00Z", "2025-03-09T05:00:00Z",
+            DateCalendar.CHINESE, CalendarDate(78, 41, 1, 29, false),
+            "2026-03-17T05:30:00Z", "2026-03-17T06:30:00Z", "2026-03-17T13:00:00Z"),
+        TimezoneCase("America/New_York", "2024-11-02T07:00:00Z", "2025-11-02T04:00:00Z",
+            DateCalendar.GREGORIAN, CalendarDate(1, 2024, 11, 2, false),
+            "2025-11-02T05:30:00Z", "2025-11-02T07:30:00Z", "2025-11-02T14:00:00Z"),
+        TimezoneCase("America/New_York", "2024-11-02T07:00:00Z", "2025-11-02T04:00:00Z",
+            DateCalendar.CHINESE, CalendarDate(78, 41, 10, 2, false),
+            "2025-11-21T06:30:00Z", "2025-11-21T07:30:00Z", "2025-11-21T14:00:00Z"),
+        TimezoneCase("Europe/Berlin", "2024-03-30T10:00:00Z", "2025-03-29T23:00:00Z",
+            DateCalendar.GREGORIAN, CalendarDate(1, 2024, 3, 30, false),
+            "2025-03-30T00:30:00Z", "2025-03-30T01:30:00Z", "2025-03-30T07:00:00Z"),
+        TimezoneCase("Europe/Berlin", "2024-03-30T10:00:00Z", "2025-03-29T23:00:00Z",
+            DateCalendar.CHINESE, CalendarDate(78, 41, 2, 21, false),
+            "2026-04-07T23:30:00Z", "2026-04-08T00:30:00Z", "2026-04-08T07:00:00Z"),
+        TimezoneCase("Australia/Lord_Howe", "2024-10-05T22:00:00Z", "2025-10-04T13:30:00Z",
+            DateCalendar.GREGORIAN, CalendarDate(1, 2024, 10, 6, false),
+            "2025-10-05T14:30:00Z", "2025-10-05T15:30:00Z", "2025-10-05T22:00:00Z"),
+        TimezoneCase("Australia/Lord_Howe", "2024-10-05T22:00:00Z", "2025-10-04T13:30:00Z",
+            DateCalendar.CHINESE, CalendarDate(78, 41, 9, 4, false),
+            "2025-10-23T14:30:00Z", "2025-10-23T15:30:00Z", "2025-10-23T22:00:00Z"),
+        TimezoneCase("Asia/Kathmandu", "2024-02-29T00:00:00Z", "2025-01-01T00:00:00Z",
+            DateCalendar.GREGORIAN, CalendarDate(1, 2024, 2, 29, false),
+            "2025-02-28T19:45:00Z", "2025-02-28T20:45:00Z", "2025-03-01T03:15:00Z"),
+        TimezoneCase("Asia/Kathmandu", "2024-02-29T00:00:00Z", "2025-01-01T00:00:00Z",
+            DateCalendar.CHINESE, CalendarDate(78, 41, 1, 20, false),
+            "2025-02-16T19:45:00Z", "2025-02-16T20:45:00Z", "2025-02-17T03:15:00Z"),
+        TimezoneCase("Pacific/Apia", "2010-12-30T20:00:00Z", "2011-12-29T10:00:00Z",
+            DateCalendar.GREGORIAN, CalendarDate(1, 2010, 12, 30, false),
+            "2011-12-30T11:30:00Z", "2011-12-30T12:30:00Z", "2011-12-30T19:00:00Z"),
+        TimezoneCase("Pacific/Apia", "2010-12-30T20:00:00Z", "2011-12-29T10:00:00Z",
+            DateCalendar.CHINESE, CalendarDate(78, 27, 11, 25, false),
+            "2013-01-05T11:30:00Z", "2013-01-05T12:30:00Z", "2013-01-05T19:00:00Z"),
+        TimezoneCase("Pacific/Auckland", "2024-12-31T12:00:00Z", "2025-12-30T11:00:00Z",
+            DateCalendar.GREGORIAN, CalendarDate(1, 2025, 1, 1, false),
+            "2025-12-31T12:30:00Z", "2025-12-31T13:30:00Z", "2025-12-31T20:00:00Z"),
+        TimezoneCase("Pacific/Auckland", "2024-12-31T12:00:00Z", "2025-12-30T11:00:00Z",
+            DateCalendar.CHINESE, CalendarDate(78, 41, 12, 2, false),
+            "2026-01-19T12:30:00Z", "2026-01-19T13:30:00Z", "2026-01-19T20:00:00Z"),
+        TimezoneCase("Asia/Shanghai", "2023-03-22T01:00:00Z", "2026-01-01T00:00:00Z",
+            DateCalendar.GREGORIAN, CalendarDate(1, 2023, 3, 22, false),
+            "2026-03-21T17:30:00Z", "2026-03-21T18:30:00Z", "2026-03-22T01:00:00Z"),
+        TimezoneCase("Asia/Shanghai", "2023-03-22T01:00:00Z", "2026-01-01T00:00:00Z",
+            DateCalendar.CHINESE, CalendarDate(78, 40, 2, 1, true),
+            "2026-04-16T17:30:00Z", "2026-04-16T18:30:00Z", "2026-04-17T01:00:00Z"),
     )
 }

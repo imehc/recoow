@@ -48,7 +48,13 @@ internal fun statusLabel(status: ReminderStatus) = when (status) {
     val notifications by viewModel.notificationState.collectAsStateWithLifecycle()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val haptic = LocalHapticFeedback.current
-    LaunchedEffect(recordId) { recordId?.let(viewModel::show) }
+    var deliveredRecordId by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(recordId) {
+        if (recordId != null && recordId != deliveredRecordId) {
+            viewModel.show(recordId)
+            deliveredRecordId = recordId
+        }
+    }
     LaunchedEffect(state.feedback) { if (state.feedback > 0) haptic.performHapticFeedback(HapticFeedbackType.Confirm) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refreshNotifications() }
     LaunchedEffect(lifecycle) { lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { while (true) { viewModel.refreshTime(); delay(30_000) } } }
