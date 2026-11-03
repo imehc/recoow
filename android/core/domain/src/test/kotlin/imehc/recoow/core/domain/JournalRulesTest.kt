@@ -33,12 +33,12 @@ class JournalRulesTest {
         assertEquals(listOf("a", "b"), group.entries.map { it.id }); assertEquals("Day title", group.title)
         assertNotEquals(record.id, foodDayId(today.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()))
     }
-    @Test fun weeklyAndMilkTeaCountsUseTheirExactBoundaries() {
+    @Test fun monthlyAndMilkTeaCountsUseTheirExactBoundaries() {
         val data = FoodSnapshot(listOf(food("a", "MILK TEA", meal = MealKind.DRINK), food("b", "奶茶", day = today.withDayOfMonth(1)),
             food("c", day = today.withDayOfMonth(25), meal = MealKind.SNACK), food("d", day = today.withDayOfMonth(26), meal = MealKind.SNACK),
-            food("e", day = today.withDayOfMonth(31), meal = MealKind.LATE_NIGHT), food("f", "milk tea", today.plusMonths(1))))
-        val summary = data.summary(today, zone, DayOfWeek.MONDAY)
-        assertEquals(1, summary.snacks); assertEquals(1, summary.drinks); assertEquals(1, summary.lateNight); assertEquals(2, summary.milkTea)
+            food("e", day = today.withDayOfMonth(31), meal = MealKind.LATE_NIGHT), food("f", "milk tea", today.plusMonths(1)), food("g", "奶茶", day = today.minusMonths(1))))
+        val summary = data.summary(today, zone)
+        assertEquals(2, summary.snacks); assertEquals(1, summary.drinks); assertEquals(1, summary.lateNight); assertEquals(2, summary.milkTea)
     }
     @Test fun suggestionsRankFrequencyAndKeepMealAndPortionWithoutCopyingNotes() {
         val data = FoodSnapshot(listOf(food("a", " Noodles ", portion = "Bowl"), food("b", "noodles", today.minusDays(1), portion = "bowl"), food("c", "Toast", portion = "2")))
