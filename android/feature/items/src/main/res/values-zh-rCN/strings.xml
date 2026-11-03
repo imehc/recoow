@@ -6,10 +6,12 @@
     <string name="items_categories">分类</string>
     <string name="items_category">物品分类</string>
     <string name="items_manage_categories">管理分类</string>
+    <string name="items_filter_category">按分类筛选</string>
     <string name="items_uncategorized">未分类</string>
     <string name="items_deleted_category">原分类已不可用（保留引用）</string>
     <string name="items_tags">标签</string>
     <string name="items_keywords">搜索关键词</string>
     <string name="items_delete_category_note">删除此分类？物品及其原分类引用会保留。</string>
     <string name="items_delete_note">删除此物品？共享图片和日记中的历史摘要会保留。</string>
+    <string name="items_empty_hint">登记你有哪些东西、放在哪里，之后搜关键词就能找到。</string>
 </resources>

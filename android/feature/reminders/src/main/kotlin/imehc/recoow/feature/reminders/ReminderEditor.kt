@@ -1,5 +1,11 @@
 package imehc.recoow.feature.reminders
 
+import imehc.recoow.core.designsystem.RecordChoice
+import imehc.recoow.core.designsystem.RecordForm
+import imehc.recoow.core.designsystem.RecordFormDateTime
+import imehc.recoow.core.designsystem.RecordFormDivider
+import imehc.recoow.core.designsystem.RecordFormHint
+import imehc.recoow.core.designsystem.RecordFormText
 import imehc.recoow.core.designsystem.RecordSwitch
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,32 +33,65 @@ import java.time.Instant
     val enabled = !state.busy
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(if (draft.revision == null) R.string.reminder_add else R.string.reminder_edit)) }, navigationIcon = { BackButton(onBack) },
         actions = { TextButton(onClick = vm::save, enabled = valid && enabled, modifier = Modifier.testTag("reminder_save")) { Text(stringResource(R.string.reminder_save)) } }) }) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding().testTag("reminder_form"), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            item { OutlinedTextField(draft.title, { vm.update(draft.copy(title = it)) }, label = { Text(stringResource(R.string.reminder_title)) }, modifier = Modifier.fillMaxWidth().testTag("reminder_title"), enabled = enabled, singleLine = true) }
-            item { ChoiceField(stringResource(R.string.reminder_schedule), draft.kind, ScheduleKind.entries.map { it to resources.getString(scheduleLabel(it)) },
-                { vm.update(draft.copy(kind = it, endAt = if (it == ScheduleKind.RANGE) draft.endAt ?: draft.scheduledAt else null)) }, modifier = Modifier.testTag("reminder_schedule"), enabled = enabled) }
-            item { DateTimeField(stringResource(R.string.reminder_start), draft.scheduledAt, {
-                val date = Instant.ofEpochMilli(it).atZone(state.zone)
-                vm.update(draft.copy(scheduledAt = it, timeMinutes = date.hour * 60 + date.minute))
-            }, enabled) }
-            if (draft.kind == ScheduleKind.RANGE) item { DateTimeField(stringResource(R.string.reminder_end), draft.endAt, { vm.update(draft.copy(endAt = it)) }, enabled) }
-            if (draft.kind == ScheduleKind.WEEKLY) item { FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                (1..7).forEach { day -> FilterChip(day in draft.weekdays, { vm.update(draft.copy(weekdays = if (day in draft.weekdays) draft.weekdays - day else draft.weekdays + day)) },
-                    label = { Text(resources.getStringArray(R.array.reminder_weekday_names)[day - 1]) }, enabled = enabled) }
-            } }
-            if (draft.kind in setOf(ScheduleKind.WEEKDAYS, ScheduleKind.WEEKLY, ScheduleKind.CONTINUOUS)) item {
-                OutlinedTextField(draft.targetDays, { vm.update(draft.copy(targetDays = it)) }, label = { Text(stringResource(R.string.reminder_target_days)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    enabled = enabled, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("reminder_target"))
+        LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding().testTag("reminder_form"),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            item {
+                RecordForm {
+                    RecordFormText(stringResource(R.string.reminder_title), draft.title, { vm.update(draft.copy(title = it)) },
+                        enabled = enabled, tag = "reminder_title")
+                    RecordFormDivider()
+                    RecordChoice(stringResource(R.string.reminder_schedule), draft.kind,
+                        ScheduleKind.entries.map { it to resources.getString(scheduleLabel(it)) },
+                        { vm.update(draft.copy(kind = it, endAt = if (it == ScheduleKind.RANGE) draft.endAt ?: draft.scheduledAt else null)) },
+                        enabled = enabled, bordered = false, modifier = Modifier.testTag("reminder_schedule"))
+                    RecordFormDivider()
+                    RecordFormDateTime(stringResource(R.string.reminder_start), draft.scheduledAt, {
+                        val date = Instant.ofEpochMilli(it).atZone(state.zone)
+                        vm.update(draft.copy(scheduledAt = it, timeMinutes = date.hour * 60 + date.minute))
+                    }, enabled)
+                    if (draft.kind == ScheduleKind.RANGE) {
+                        RecordFormDivider()
+                        RecordFormDateTime(stringResource(R.string.reminder_end), draft.endAt, { vm.update(draft.copy(endAt = it)) }, enabled)
+                    }
+                    if (draft.kind == ScheduleKind.WEEKLY) {
+                        RecordFormDivider()
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+                            (1..7).forEach { day -> FilterChip(day in draft.weekdays, { vm.update(draft.copy(weekdays = if (day in draft.weekdays) draft.weekdays - day else draft.weekdays + day)) },
+                                label = { Text(resources.getStringArray(R.array.reminder_weekday_names)[day - 1]) }, enabled = enabled) }
+                        }
+                    }
+                    if (draft.kind in setOf(ScheduleKind.WEEKDAYS, ScheduleKind.WEEKLY, ScheduleKind.CONTINUOUS)) {
+                        RecordFormDivider()
+                        RecordFormText(stringResource(R.string.reminder_target_days), draft.targetDays,
+                            { vm.update(draft.copy(targetDays = it)) }, enabled = enabled, keyboard = KeyboardType.Number, tag = "reminder_target")
+                    }
+                    RecordFormDivider()
+                    RecordFormText(stringResource(R.string.reminder_imported_days), draft.importedDays,
+                        { vm.update(draft.copy(importedDays = it)) }, enabled = enabled, keyboard = KeyboardType.Number, tag = "reminder_imported")
+                    RecordFormDivider()
+                    RecordSwitch(stringResource(R.string.reminder_enabled), draft.enabled, { vm.update(draft.copy(enabled = it)) },
+                        enabled = enabled, modifier = Modifier.padding(horizontal = 14.dp).testTag("reminder_enabled"))
+                }
             }
-            item { OutlinedTextField(draft.importedDays, { vm.update(draft.copy(importedDays = it)) }, label = { Text(stringResource(R.string.reminder_imported_days)) },
-                supportingText = { Text(stringResource(R.string.reminder_imported_hint)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), enabled = enabled,
-                singleLine = true, modifier = Modifier.fillMaxWidth().testTag("reminder_imported")) }
-            item { RecordSwitch(stringResource(R.string.reminder_enabled), draft.enabled, { vm.update(draft.copy(enabled = it)) }, enabled = enabled, modifier = Modifier.testTag("reminder_enabled")) }
-            item { ChoiceField(stringResource(R.string.reminder_lead), draft.lead, leadMinutes.map { it to if (it == 0) resources.getString(R.string.reminder_no_lead) else resources.getString(R.string.reminder_lead_minutes, it) },
-                { vm.update(draft.copy(lead = it)) }, enabled = enabled) }
-            item { ChoiceField(stringResource(R.string.reminder_icon), draft.icon, (reminderIcons + draft.icon).distinct().map { it to it }, { vm.update(draft.copy(icon = it)) }, enabled = enabled) }
-            item { OutlinedTextField(draft.note, { vm.update(draft.copy(note = it)) }, label = { Text(stringResource(R.string.reminder_note)) }, enabled = enabled, minLines = 3, modifier = Modifier.fillMaxWidth()) }
-            if (!valid && draft.title.isNotBlank()) item { Text(stringResource(R.string.reminder_invalid_form), color = MaterialTheme.colorScheme.error) }
+            item { RecordFormHint(stringResource(R.string.reminder_imported_hint)) }
+            item {
+                RecordForm {
+                    RecordChoice(stringResource(R.string.reminder_lead), draft.lead,
+                        leadMinutes.map { it to if (it == 0) resources.getString(R.string.reminder_no_lead) else resources.getString(R.string.reminder_lead_minutes, it) },
+                        { vm.update(draft.copy(lead = it)) }, enabled = enabled, bordered = false)
+                    RecordFormDivider()
+                    RecordChoice(stringResource(R.string.reminder_icon), draft.icon, (reminderIcons + draft.icon).distinct().map { it to it },
+                        { vm.update(draft.copy(icon = it)) }, enabled = enabled, bordered = false)
+                    RecordFormDivider()
+                    RecordFormText(stringResource(R.string.reminder_note), draft.note, { vm.update(draft.copy(note = it)) },
+                        enabled = enabled, multiline = true)
+                }
+            }
+            if (!valid && draft.title.isNotBlank()) item {
+                Text(stringResource(R.string.reminder_invalid_form), color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 4.dp))
+            }
             state.preferences?.let { prefs -> if (enabled) item {
                 val locator = when (draft.imageEdit) {
                     ReminderImageEdit.CLEAR -> null

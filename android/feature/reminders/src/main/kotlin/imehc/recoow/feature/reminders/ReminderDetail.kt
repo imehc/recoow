@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import imehc.recoow.core.designsystem.RecoowLayout
 import imehc.recoow.core.domain.media.MediaLocator
 import imehc.recoow.core.domain.reminders.*
 import imehc.recoow.core.media.MediaImage
@@ -24,7 +25,7 @@ import java.time.*
     var preview by rememberSaveable { mutableStateOf(false) }
     Scaffold(Modifier.testTag("reminder_detail"), topBar = { TopAppBar(title = { Text(r?.title ?: stringResource(R.string.reminder_reminders)) }, navigationIcon = { BackButton(onBack) },
         actions = { if (r != null) TextButton(onClick = { vm.edit(r) }, enabled = !state.busy) { Text(stringResource(R.string.reminder_edit)) } }) }) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(RecoowLayout.sectionGap)) {
             if (r == null) item { Text(stringResource(if (state.loading) R.string.reminder_loading else R.string.reminder_missing)) }
             else {
                 item { Text("${r.icon} ${r.title}", style = MaterialTheme.typography.headlineSmall) }

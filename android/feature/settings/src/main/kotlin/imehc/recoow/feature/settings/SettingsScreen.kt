@@ -1,19 +1,18 @@
 package imehc.recoow.feature.settings
 
-import imehc.recoow.core.designsystem.RecordSwitchItem
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ListItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -25,67 +24,139 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import imehc.recoow.core.designsystem.RecoowDivider
+import imehc.recoow.core.designsystem.RecoowGroup
+import imehc.recoow.core.designsystem.RecoowLayout
 import imehc.recoow.core.designsystem.RecoowPage
+import imehc.recoow.core.designsystem.RecoowRow
+import imehc.recoow.core.designsystem.RecoowSectionHeader
+import imehc.recoow.core.designsystem.RecoowSwitchRow
+import imehc.recoow.core.designsystem.RecoowToolIcons
+import imehc.recoow.core.designsystem.R as DesignR
+import imehc.recoow.core.domain.navigation.ToolRoute
 import imehc.recoow.core.domain.preferences.AppLanguage
 import imehc.recoow.core.domain.preferences.Appearance
 
 @Composable
-fun SettingsScreen(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLanguage: (AppLanguage) -> Unit, onRetry: () -> Unit, onSync: () -> Unit = {}, onMedia: () -> Unit = {}, onData: () -> Unit = {}, onPickedPhotos: (Boolean) -> Unit = {}, onCameraPhotos: (Boolean) -> Unit = {}, onToolVisible: (String, Boolean) -> Unit = { _, _ -> }, onUpdate: () -> Unit = {}) {
+fun SettingsScreen(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLanguage: (AppLanguage) -> Unit,
+    onRetry: () -> Unit, onSync: () -> Unit = {}, onMedia: () -> Unit = {}, onData: () -> Unit = {},
+    onPickedPhotos: (Boolean) -> Unit = {}, onCameraPhotos: (Boolean) -> Unit = {},
+    onToolVisible: (String, Boolean) -> Unit = { _, _ -> }, onUpdate: () -> Unit = {}) {
     var selection by rememberSaveable { mutableStateOf<String?>(null) }
     val appearanceLabels = listOf(stringResource(R.string.follow_system), stringResource(R.string.appearance_light), stringResource(R.string.appearance_dark))
     val languageLabels = listOf(stringResource(R.string.follow_system), stringResource(R.string.language_chinese), stringResource(R.string.language_english))
-    RecoowPage(stringResource(R.string.settings_title)) {
-        item { Card { ListItem(onClick = onSync, modifier = Modifier.testTag("sync_settings")) { Text(stringResource(R.string.sync_title)) } } }
-        item { Card { ListItem(onClick = onMedia, modifier = Modifier.testTag("media_settings")) { Text(stringResource(R.string.media_library)) } } }
-        item { Card { ListItem(onClick = onData, modifier = Modifier.testTag("data_settings")) { Text(stringResource(R.string.data_title)) } } }
-        item { Card { ListItem(onClick = onUpdate, modifier = Modifier.testTag("app_update")) { Text(stringResource(R.string.update_title)) } } }
-        val preferences = state.preferences
-        if (preferences != null) {
-            item { Text(stringResource(R.string.photos_section), style = MaterialTheme.typography.titleSmall) }
-            item { Card {
-                RecordSwitchItem(stringResource(R.string.photos_picked), preferences.addsPickedPhotosToMediaLibrary, onPickedPhotos, enabled = !state.saving)
-                RecordSwitchItem(stringResource(R.string.photos_camera), preferences.savesCameraPhotosToLibrary, onCameraPhotos, enabled = !state.saving)
-            } }
-            item { Text(stringResource(R.string.display_section), style = MaterialTheme.typography.titleSmall) }
-            item {
-                Card {
-                    ListItem(
-                        onClick = { selection = "appearance" },
-                        enabled = !state.saving,
-                        supportingContent = { Text(appearanceLabels[preferences.appearance.ordinal]) },
-                        modifier = Modifier.testTag("appearance"),
-                    ) { Text(stringResource(R.string.appearance_title)) }
-                    ListItem(
-                        onClick = { selection = "language" },
-                        enabled = !state.saving,
-                        supportingContent = { Text(languageLabels[preferences.language.ordinal]) },
-                        modifier = Modifier.testTag("language"),
-                    ) { Text(stringResource(R.string.language_title)) }
+    val preferences = state.preferences
+
+    RecoowPage(stringResource(R.string.settings_title), contentSpacing = RecoowLayout.sectionGap) {
+        item(key = "data") {
+            Column {
+                RecoowSectionHeader(stringResource(R.string.data_section))
+                RecoowGroup {
+                    SettingRow(DesignR.drawable.ic_setting_sync, stringResource(R.string.sync_title), "sync_settings", onClick = onSync)
+                    RecoowDivider(RecoowLayout.dividerInset)
+                    SettingRow(DesignR.drawable.ic_setting_media, stringResource(R.string.media_library), "media_settings", onClick = onMedia)
+                    RecoowDivider(RecoowLayout.dividerInset)
+                    SettingRow(DesignR.drawable.ic_setting_data, stringResource(R.string.data_title), "data_settings", onClick = onData)
+                    RecoowDivider(RecoowLayout.dividerInset)
+                    SettingRow(DesignR.drawable.ic_setting_update, stringResource(R.string.update_title), "app_update", onClick = onUpdate)
                 }
             }
-            item { Text(stringResource(R.string.home_tools), style = MaterialTheme.typography.titleSmall) }
-            item { Card {
-                val names = androidx.compose.ui.platform.LocalResources.current.getStringArray(R.array.home_tool_names)
-                imehc.recoow.core.domain.navigation.ToolRoute.entries.forEachIndexed { index, tool ->
-                    RecordSwitchItem(names[index], tool.id !in preferences.hiddenHomeTools, { onToolVisible(tool.id, it) }, enabled = !state.saving)
+        }
+        if (preferences != null) {
+            item(key = "display") {
+                Column {
+                    RecoowSectionHeader(stringResource(R.string.display_section))
+                    RecoowGroup {
+                        SettingRow(
+                            icon = DesignR.drawable.ic_setting_appearance,
+                            title = stringResource(R.string.appearance_title),
+                            tag = "appearance",
+                            trailing = appearanceLabels[preferences.appearance.ordinal],
+                            onClick = { if (!state.saving) selection = "appearance" },
+                        )
+                        RecoowDivider(RecoowLayout.dividerInset)
+                        SettingRow(
+                            icon = DesignR.drawable.ic_setting_language,
+                            title = stringResource(R.string.language_title),
+                            tag = "language",
+                            trailing = languageLabels[preferences.language.ordinal],
+                            onClick = { if (!state.saving) selection = "language" },
+                        )
+                        RecoowDivider(RecoowLayout.dividerInset)
+                        RecoowSwitchRow(
+                            title = stringResource(R.string.photos_picked),
+                            checked = preferences.addsPickedPhotosToMediaLibrary,
+                            onChange = onPickedPhotos,
+                            enabled = !state.saving,
+                            icon = { SettingIcon(DesignR.drawable.ic_setting_media) },
+                        )
+                        RecoowDivider(RecoowLayout.dividerInset)
+                        RecoowSwitchRow(
+                            title = stringResource(R.string.photos_camera),
+                            checked = preferences.savesCameraPhotosToLibrary,
+                            onChange = onCameraPhotos,
+                            enabled = !state.saving,
+                            icon = { SettingIcon(DesignR.drawable.ic_setting_media) },
+                        )
+                    }
                 }
-            } }
-        } else if (!state.readFailed) { item { CircularProgressIndicator() } }
+            }
+            item(key = "tools") {
+                val names = LocalResources.current.getStringArray(R.array.home_tool_names)
+                Column {
+                    RecoowSectionHeader(stringResource(R.string.home_tools))
+                    RecoowGroup {
+                        ToolRoute.entries.forEachIndexed { index, tool ->
+                            RecoowSwitchRow(
+                                title = names[index],
+                                checked = tool.id !in preferences.hiddenHomeTools,
+                                onChange = { onToolVisible(tool.id, it) },
+                                enabled = !state.saving,
+                                icon = {
+                                    Icon(
+                                        painterResource(RecoowToolIcons.drawable(tool)),
+                                        contentDescription = null,
+                                        tint = RecoowToolIcons.tint(tool),
+                                        modifier = Modifier.size(RecoowLayout.iconSize),
+                                    )
+                                },
+                            )
+                            if (index < ToolRoute.entries.lastIndex) RecoowDivider(RecoowLayout.dividerInset)
+                        }
+                    }
+                }
+            }
+        } else if (!state.readFailed) {
+            item(key = "loading") { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+        }
         if (state.readFailed || state.saveFailed) {
-            item {
-                Text(stringResource(if (state.readFailed) R.string.read_failed else R.string.save_failed), color = MaterialTheme.colorScheme.error)
-                if (state.readFailed) TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
+            item(key = "error") {
+                Column {
+                    Text(
+                        stringResource(if (state.readFailed) R.string.read_failed else R.string.save_failed),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    if (state.readFailed) {
+                        TextButton(onClick = onRetry, modifier = Modifier.testTag("settings_retry")) {
+                            Text(stringResource(R.string.retry), color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
             }
         }
     }
-    if (selection != null && state.preferences != null) {
+
+    if (selection != null && preferences != null) {
         val appearance = selection == "appearance"
         val labels = if (appearance) appearanceLabels else languageLabels
-        val selected = if (appearance) state.preferences.appearance.ordinal else state.preferences.language.ordinal
+        val selected = if (appearance) preferences.appearance.ordinal else preferences.language.ordinal
         AlertDialog(
             onDismissRequest = { selection = null },
             title = { Text(stringResource(if (appearance) R.string.appearance_title else R.string.language_title)) },
@@ -112,4 +183,26 @@ fun SettingsScreen(state: SettingsUiState, onAppearance: (Appearance) -> Unit, o
             confirmButton = { TextButton(onClick = { selection = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
+}
+
+@Composable
+private fun SettingIcon(icon: Int) {
+    Icon(
+        painterResource(icon),
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.size(RecoowLayout.iconSize),
+    )
+}
+
+@Composable
+private fun SettingRow(icon: Int, title: String, tag: String, trailing: String? = null, onClick: () -> Unit) {
+    RecoowRow(
+        title = title,
+        trailingText = trailing,
+        showChevron = true,
+        onClick = onClick,
+        modifier = Modifier.testTag(tag),
+        icon = { SettingIcon(icon) },
+    )
 }

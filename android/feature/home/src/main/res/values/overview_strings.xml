@@ -8,4 +8,5 @@
     <string name="home_settings">Open Settings</string>
     <string name="home_anniversary_today">%1$d today</string>
     <string name="home_anniversary_days">In %1$d days</string>
+    <string name="home_more_pending">%1$d more to check in</string>
 </resources>

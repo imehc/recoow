@@ -1,25 +1,29 @@
 package imehc.recoow.feature.settings
 
-import imehc.recoow.core.designsystem.RecordSwitch
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import imehc.recoow.core.designsystem.RecoowDivider
+import imehc.recoow.core.designsystem.RecoowGroup
+import imehc.recoow.core.designsystem.RecoowLayout
+import imehc.recoow.core.designsystem.RecoowNotice
 import imehc.recoow.core.designsystem.RecoowPage
+import imehc.recoow.core.designsystem.RecoowRow
+import imehc.recoow.core.designsystem.RecoowSwitchRow
+import imehc.recoow.core.designsystem.RecordChoice
+import imehc.recoow.core.designsystem.R as DesignR
 import imehc.recoow.core.domain.sync.*
 
 @Composable
@@ -37,91 +41,228 @@ fun SyncScreen(state: SyncState, onBack: () -> Unit,
     var revoke by rememberSaveable { mutableStateOf<String?>(null) }
     var replace by remember { mutableStateOf(false) }
     val chinese = LocalConfiguration.current.locales[0].language == "zh"
+
     RecoowPage(stringResource(R.string.sync_title), navigationIcon = {
         IconButton(onClick = onBack, modifier = Modifier.testTag("sync_back")) {
-            Icon(painterResource(R.drawable.ic_sync_back), contentDescription = stringResource(R.string.sync_back))
+            Icon(painterResource(DesignR.drawable.ic_record_back), contentDescription = stringResource(R.string.sync_back))
         }
     }) {
         val connection = state.connection
         if (connection != null) {
-            item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(connection.endpoint, style = MaterialTheme.typography.titleMedium)
-                SelectionContainer { Text(stringResource(R.string.sync_account, connection.accountId), style = MaterialTheme.typography.bodyMedium) }
-                Text(stringResource(R.string.sync_counts, state.pending, state.conflicts.size, state.pendingMedia))
-                RecordSwitch(stringResource(R.string.sync_enabled), state.enabled, onEnabled, modifier = Modifier.testTag("sync_enabled"))
-                if (!state.enabled) Text(stringResource(R.string.sync_disabled_hint))
-                state.lastSuccessAt?.let { Text(stringResource(R.string.sync_last_success, java.text.DateFormat.getDateTimeInstance().format(java.util.Date(it)))) }
-                Button(onClick = onSync, enabled = !state.running && state.enabled, modifier = Modifier.testTag("sync_now")) { Text(stringResource(R.string.sync_now)) }
-                TextButton(onClick = onDevices, enabled = !state.running) { Text(stringResource(R.string.sync_devices)) }
-                if (connection.canPair) TextButton(onClick = onPairingCode, enabled = !state.running) { Text(stringResource(R.string.sync_pair_device)) }
-                TextButton(onClick = { disconnect = true }, enabled = !state.running) { Text(stringResource(R.string.sync_disconnect)) }
-            } } }
-            state.devices.forEach { device -> item(key = "device:${device.id}") { OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp)) {
-                Text(device.name, style = MaterialTheme.typography.titleMedium)
-                Text(stringResource(if (device.owner) R.string.sync_owner else R.string.sync_member))
-                if (device.id == connection.serverDeviceId) Text(stringResource(R.string.sync_this_device))
-                Text(device.lastSeenAt, style = MaterialTheme.typography.bodySmall)
-                if (if (connection.canPair) device.id != connection.serverDeviceId else device.id == connection.serverDeviceId)
-                    TextButton(onClick = { revoke = device.id }, enabled = !state.running) { Text(stringResource(R.string.sync_revoke)) }
-            } } } }
+            item("account") {
+                SettingsSection(stringResource(R.string.sync_section_server)) {
+                    RecoowGroup {
+                        RecoowRow(
+                            connection.endpoint,
+                            subtitle = stringResource(R.string.sync_account, connection.accountId),
+                        )
+                    }
+                }
+            }
+            item("status") {
+                SettingsSection(stringResource(R.string.sync_section_sync)) {
+                    RecoowGroup {
+                        RecoowSwitchRow(
+                            title = stringResource(R.string.sync_enabled),
+                            checked = state.enabled,
+                            onChange = onEnabled,
+                            enabled = !state.running,
+                            modifier = Modifier.testTag("sync_enabled"),
+                        )
+                        RecoowDivider()
+                        RecoowRow(
+                            stringResource(R.string.sync_pending_title),
+                            trailingText = stringResource(R.string.sync_pending_value, state.pending, state.pendingMedia),
+                        )
+                        state.lastSuccessAt?.let { at ->
+                            RecoowDivider()
+                            RecoowRow(stringResource(R.string.sync_last_success,
+                                java.text.DateFormat.getDateTimeInstance().format(java.util.Date(at))))
+                        }
+                    }
+                }
+            }
+            item("sync") {
+                SettingsPrimaryButton(
+                    stringResource(R.string.sync_now),
+                    enabled = !state.running && state.enabled,
+                    modifier = Modifier.testTag("sync_now"),
+                    onClick = onSync,
+                )
+            }
+            state.problem?.let { problem ->
+                item("problem") {
+                    SettingsBanner(
+                        stringResource(when (problem) {
+                            SyncProblem.AUTHENTICATION -> R.string.sync_error_auth
+                            SyncProblem.INCOMPATIBLE -> R.string.sync_error_contract
+                            SyncProblem.STORAGE -> R.string.sync_error_storage
+                            SyncProblem.RESET -> R.string.sync_error_reset
+                            SyncProblem.ACCOUNT_REPLACEMENT -> R.string.sync_error_account
+                            SyncProblem.MEDIA -> R.string.sync_error_media
+                            SyncProblem.PENDING -> R.string.sync_error_pending
+                            SyncProblem.CONNECTION -> R.string.sync_error_connection
+                        }),
+                        error = true,
+                        actionLabel = if (problem == SyncProblem.ACCOUNT_REPLACEMENT) stringResource(R.string.sync_replace) else null,
+                        onAction = { replace = true },
+                    )
+                }
+            }
+            if (!state.enabled) item("disabled") { RecoowNotice(stringResource(R.string.sync_disabled_hint)) }
+            if (state.conflicts.isNotEmpty()) {
+                item("conflicts") {
+                    SettingsSection(
+                        stringResource(R.string.sync_section_conflicts),
+                        trailing = state.conflicts.size.toString(),
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            RecoowNotice(stringResource(R.string.sync_conflict))
+                            state.conflicts.forEach { conflict ->
+                                ConflictCard(conflict, chinese, enabled = !state.running, onResolve = onResolve)
+                            }
+                        }
+                    }
+                }
+            }
+            item("devices") {
+                SettingsSection(
+                    stringResource(R.string.sync_section_devices),
+                    trailing = stringResource(R.string.sync_devices),
+                    onTrailingClick = onDevices,
+                ) {
+                    RecoowGroup {
+                        state.devices.forEachIndexed { index, device ->
+                            val revocable = if (connection.canPair) device.id != connection.serverDeviceId
+                            else device.id == connection.serverDeviceId
+                            if (index > 0) RecoowDivider()
+                            RecoowRow(
+                                device.name,
+                                subtitle = listOfNotNull(
+                                    stringResource(if (device.owner) R.string.sync_owner else R.string.sync_member),
+                                    if (device.id == connection.serverDeviceId) stringResource(R.string.sync_this_device) else null,
+                                    device.lastSeenAt,
+                                ).joinToString(" · "),
+                                trailing = if (revocable) {
+                                    {
+                                        Text(
+                                            stringResource(R.string.sync_revoke_short),
+                                            modifier = Modifier
+                                                .heightIn(min = 44.dp)
+                                                .clickable(enabled = !state.running) { revoke = device.id }
+                                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                } else null,
+                            )
+                        }
+                    }
+                }
+            }
+            item("actions") {
+                RecoowGroup {
+                    if (connection.canPair) {
+                        RecoowRow(stringResource(R.string.sync_pair_device), onClick = onPairingCode)
+                        RecoowDivider()
+                    }
+                    RecoowRow(
+                        stringResource(R.string.sync_disconnect),
+                        titleColor = MaterialTheme.colorScheme.error,
+                        onClick = { disconnect = true },
+                    )
+                }
+            }
         } else {
-            item { Text(stringResource(R.string.sync_intro), style = MaterialTheme.typography.bodyLarge) }
-            item { OutlinedTextField(endpoint, { endpoint = it }, Modifier.fillMaxWidth().testTag("sync_endpoint"),
-                label = { Text(stringResource(R.string.sync_endpoint)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), singleLine = true, enabled = !state.running) }
-            item { Column(Modifier.selectableGroup()) { ConnectionMethod.entries.forEach { option ->
-                Row(Modifier.fillMaxWidth().selectable(method == option, enabled = !state.running, role = Role.RadioButton,
-                    onClick = { method = option; secret = "" }).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(method == option, onClick = null)
-                    Text(stringResource(when (option) { ConnectionMethod.CREATE -> R.string.sync_create; ConnectionMethod.PAIR -> R.string.sync_pair; ConnectionMethod.RECOVER -> R.string.sync_recover }), Modifier.padding(start = 12.dp))
+            item("intro") { RecoowNotice(stringResource(R.string.sync_intro)) }
+            item("server") {
+                SettingsSection(stringResource(R.string.sync_section_server)) {
+                    OutlinedTextField(
+                        endpoint, { endpoint = it },
+                        Modifier.fillMaxWidth().testTag("sync_endpoint"),
+                        label = { Text(stringResource(R.string.sync_endpoint)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                        shape = MaterialTheme.shapes.medium,
+                        singleLine = true,
+                        enabled = !state.running,
+                    )
                 }
-            } } }
-            item { OutlinedTextField(secret, { secret = it }, Modifier.fillMaxWidth().testTag("sync_secret"),
-                label = { Text(stringResource(when (method) { ConnectionMethod.CREATE -> R.string.sync_bootstrap_token; ConnectionMethod.PAIR -> R.string.sync_pairing_code; ConnectionMethod.RECOVER -> R.string.sync_recovery_key })) },
-                visualTransformation = PasswordVisualTransformation(), singleLine = true, enabled = !state.running) }
-            if (method != ConnectionMethod.CREATE) item { OutlinedTextField(device, { device = it }, Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.sync_device_name)) }, singleLine = true, enabled = !state.running) }
-            item { Button(onClick = { onConnect(endpoint, method, secret, device, false); secret = "" },
-                enabled = !state.running && endpoint.isNotBlank() && (method == ConnectionMethod.CREATE || secret.isNotBlank()), modifier = Modifier.testTag("sync_connect")) {
-                Text(stringResource(R.string.sync_connect))
-            } }
+            }
+            item("method") {
+                SettingsSection(stringResource(R.string.sync_section_sync)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        RecoowGroup {
+                            RecordChoice(
+                                label = stringResource(R.string.sync_method_label),
+                                selected = method,
+                                options = listOf(
+                                    ConnectionMethod.CREATE to stringResource(R.string.sync_create),
+                                    ConnectionMethod.PAIR to stringResource(R.string.sync_pair),
+                                    ConnectionMethod.RECOVER to stringResource(R.string.sync_recover),
+                                ),
+                                onChange = { method = it; secret = "" },
+                                enabled = !state.running,
+                                bordered = false,
+                            )
+                        }
+                        OutlinedTextField(
+                            secret, { secret = it },
+                            Modifier.fillMaxWidth().testTag("sync_secret"),
+                            label = { Text(stringResource(when (method) {
+                                ConnectionMethod.CREATE -> R.string.sync_bootstrap_token
+                                ConnectionMethod.PAIR -> R.string.sync_pairing_code
+                                ConnectionMethod.RECOVER -> R.string.sync_recovery_key
+                            })) },
+                            visualTransformation = PasswordVisualTransformation(),
+                            shape = MaterialTheme.shapes.medium,
+                            singleLine = true,
+                            enabled = !state.running,
+                        )
+                        if (method != ConnectionMethod.CREATE) OutlinedTextField(
+                            device, { device = it },
+                            Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.sync_device_name)) },
+                            shape = MaterialTheme.shapes.medium,
+                            singleLine = true,
+                            enabled = !state.running,
+                        )
+                    }
+                }
+            }
+            item("connect") {
+                SettingsPrimaryButton(
+                    stringResource(R.string.sync_connect),
+                    enabled = !state.running && endpoint.isNotBlank() && (method == ConnectionMethod.CREATE || secret.isNotBlank()),
+                    modifier = Modifier.testTag("sync_connect"),
+                ) { onConnect(endpoint, method, secret, device, false); secret = "" }
+            }
+            state.problem?.let { problem ->
+                item("problem") {
+                    SettingsBanner(stringResource(when (problem) {
+                        SyncProblem.AUTHENTICATION -> R.string.sync_error_auth
+                        SyncProblem.INCOMPATIBLE -> R.string.sync_error_contract
+                        SyncProblem.STORAGE -> R.string.sync_error_storage
+                        SyncProblem.RESET -> R.string.sync_error_reset
+                        SyncProblem.ACCOUNT_REPLACEMENT -> R.string.sync_error_account
+                        SyncProblem.MEDIA -> R.string.sync_error_media
+                        SyncProblem.PENDING -> R.string.sync_error_pending
+                        SyncProblem.CONNECTION -> R.string.sync_error_connection
+                    }), error = true)
+                }
+            }
         }
-        if (state.running) item { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            LinearProgressIndicator(Modifier.fillMaxWidth())
-            Text(stringResource(when (state.stage) { SyncStage.PREPARING -> R.string.sync_preparing; SyncStage.UPLOADING -> R.string.sync_uploading; SyncStage.DOWNLOADING -> R.string.sync_downloading; SyncStage.APPLYING -> R.string.sync_applying; SyncStage.IDLE -> R.string.sync_working }))
-        } }
-        state.problem?.let { problem -> item {
-            Text(stringResource(when (problem) {
-                SyncProblem.AUTHENTICATION -> R.string.sync_error_auth
-                SyncProblem.INCOMPATIBLE -> R.string.sync_error_contract
-                SyncProblem.STORAGE -> R.string.sync_error_storage
-                SyncProblem.RESET -> R.string.sync_error_reset
-                SyncProblem.ACCOUNT_REPLACEMENT -> R.string.sync_error_account
-                SyncProblem.MEDIA -> R.string.sync_error_media
-                SyncProblem.PENDING -> R.string.sync_error_pending
-                SyncProblem.CONNECTION -> R.string.sync_error_connection
-            }), color = MaterialTheme.colorScheme.error)
-            if (problem == SyncProblem.ACCOUNT_REPLACEMENT) TextButton(onClick = { replace = true }) { Text(stringResource(R.string.sync_replace)) }
-        } }
-        state.conflicts.forEach { conflict -> item(key = "${conflict.table}/${conflict.id}") {
-            Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(stringResource(R.string.sync_conflict), style = MaterialTheme.typography.titleMedium)
-                Text(conflict.id, style = MaterialTheme.typography.labelMedium)
-                Text(stringResource(R.string.sync_conflict_status,
-                    stringResource(if (conflict.localDeleted) R.string.sync_deleted else R.string.sync_retained),
-                    stringResource(if (conflict.remoteDeleted) R.string.sync_deleted else R.string.sync_retained)))
-                conflict.values.forEach { field ->
-                    Text(if (chinese) field.chineseLabel else field.englishLabel, style = MaterialTheme.typography.titleSmall)
-                    SelectionContainer { Column {
-                        Text(stringResource(R.string.sync_local_value, field.local), style = MaterialTheme.typography.bodyMedium)
-                        Text(stringResource(R.string.sync_remote_value, field.remote), style = MaterialTheme.typography.bodyMedium)
-                    } }
-                }
-                if (conflict.values.isEmpty()) Text(stringResource(R.string.sync_conflict_metadata))
-                TextButton(onClick = { onResolve(conflict, true) }, enabled = !state.running) { Text(stringResource(R.string.sync_keep_local)) }
-                TextButton(onClick = { onResolve(conflict, false) }, enabled = !state.running) { Text(stringResource(R.string.sync_use_remote)) }
-            } }
-        } }
+        if (state.running) item("running") {
+            SettingsProgress(stringResource(when (state.stage) {
+                SyncStage.PREPARING -> R.string.sync_preparing
+                SyncStage.UPLOADING -> R.string.sync_uploading
+                SyncStage.DOWNLOADING -> R.string.sync_downloading
+                SyncStage.APPLYING -> R.string.sync_applying
+                SyncStage.IDLE -> R.string.sync_working
+            }))
+        }
     }
+
     revoke?.let { id -> AlertDialog(onDismissRequest = { revoke = null }, title = { Text(stringResource(R.string.sync_revoke)) },
         text = { Text(stringResource(R.string.sync_revoke_hint)) }, confirmButton = { TextButton(onClick = { revoke = null; onRevoke(id) }) { Text(stringResource(R.string.sync_revoke)) } },
         dismissButton = { TextButton(onClick = { revoke = null }) { Text(stringResource(R.string.cancel)) } }) }
@@ -141,4 +282,49 @@ fun SyncScreen(state: SyncState, onBack: () -> Unit,
         text = { Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(stringResource(R.string.sync_pair_detail)); SelectionContainer { Text(code, style = MaterialTheme.typography.headlineMedium) }
         } }, confirmButton = { TextButton(onClick = onDismissPairingCode) { Text(stringResource(R.string.sync_close)) } }) }
+}
+
+/** 冲突：一条记录一组字段对照，保住「设备 / 服务端」两列的读法。 */
+@Composable
+private fun ConflictCard(conflict: RecordConflict, chinese: Boolean, enabled: Boolean, onResolve: (RecordConflict, Boolean) -> Unit) {
+    RecoowGroup {
+        Column(
+            Modifier.padding(horizontal = RecoowLayout.rowHorizontal, vertical = 13.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(conflict.id, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                stringResource(R.string.sync_conflict_status,
+                    stringResource(if (conflict.localDeleted) R.string.sync_deleted else R.string.sync_retained),
+                    stringResource(if (conflict.remoteDeleted) R.string.sync_deleted else R.string.sync_retained)),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            conflict.values.forEach { field ->
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(if (chinese) field.chineseLabel else field.englishLabel, style = MaterialTheme.typography.titleSmall)
+                    SelectionContainer {
+                        Column {
+                            Text(stringResource(R.string.sync_local_value, field.local), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.sync_remote_value, field.remote), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+            if (conflict.values.isEmpty()) Text(stringResource(R.string.sync_conflict_metadata), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                listOf(R.string.sync_keep_local to true, R.string.sync_use_remote to false).forEach { (label, keepLocal) ->
+                    Text(
+                        stringResource(label),
+                        modifier = Modifier
+                            .heightIn(min = 44.dp)
+                            .clickable(enabled = enabled) { onResolve(conflict, keepLocal) }
+                            .padding(vertical = 10.dp),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
 }

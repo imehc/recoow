@@ -12,8 +12,14 @@
     <string name="food_missing_bill">Linked bill is no longer available</string>
     <string name="food_media">Photos and audio</string>
     <string name="food_entry_count">Entries: %1$d</string>
+    <string name="food_metric_total">Entries</string>
+    <string name="food_metric_today">Today</string>
+    <string name="food_metric_days">Days</string>
+    <string name="food_metric_meals">Meals today</string>
+    <string name="food_month_title">This month</string>
+    <string name="food_latest_label">Last entry</string>
     <string name="food_summary">Entries: %1$d · Today: %2$d\nDays: %3$d · Meal types today: %4$d</string>
-    <string name="food_week_summary">This week: %1$d snacks · %2$d drinks · %3$d late-night snacks\nThis month: %4$d milk teas</string>
+    <string name="food_month_summary">%1$d snacks · %2$d drinks · %3$d late-night snacks · %4$d milk teas</string>
     <string name="food_latest">Latest: %1$s</string>
     <string name="food_copy">Copy to date</string>
     <string name="food_copy_meal">Copy meal</string>
@@ -30,4 +36,5 @@
         <item>Drink</item>
         <item>Other</item>
     </string-array>
+    <string name="food_empty_hint">Record what you ate, grouped by meal and day.</string>
 </resources>

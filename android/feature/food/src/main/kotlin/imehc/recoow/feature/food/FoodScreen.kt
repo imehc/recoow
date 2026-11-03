@@ -7,9 +7,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import imehc.recoow.core.designsystem.*
@@ -52,6 +54,7 @@ import java.time.*
 }
 @Composable private fun FoodList(vm: FoodViewModel, state: FoodState, back: () -> Unit) {
     val query by vm.query.collectAsStateWithLifecycle(); val names = LocalResources.current.getStringArray(R.array.food_meals)
+    var searching by rememberSaveable { mutableStateOf(false) }
     val linked = stringResource(R.string.food_linked_bills); val photos = stringResource(R.string.food_media)
     val groups = state.data.days(ZoneId.systemDefault()); val summary = state.data.summary(LocalDate.now(), ZoneId.systemDefault())
     val filtered = groups.filter { group -> group.title.orEmpty().contains(query.trim(), true) || group.entries.any {
@@ -59,25 +62,61 @@ import java.time.*
             .joinToString(" ").contains(query.trim(), true)
     } }
     RecordPage(stringResource(R.string.food_title), back, tag = "tool_foodJournal", busy = state.busy,
+        searching = searching, onSearchToggle = { searching = !searching }, searchTag = "food_search_toggle",
         add = if (!state.loading && !state.failed) stringResource(R.string.food_add) else null, onAdd = { vm.edit() }) {
         item { RecordLoadState(state.loading, state.failed, vm::retry) }
         if (!state.loading && !state.failed) {
-            item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.food_summary, summary.total, summary.today, summary.days, summary.mealsToday))
-                Text(stringResource(R.string.food_week_summary, summary.snacks, summary.drinks, summary.lateNight, summary.milkTea))
-                summary.latest?.let { Text(stringResource(R.string.food_latest, recordDateTime(it)), style = MaterialTheme.typography.bodySmall) }
-            } } }
-            item { RecordField(stringResource(CommonR.string.record_search), query, vm::query, tag = "food_search") }
-            if (filtered.isEmpty()) item { Text(stringResource(if (groups.isEmpty()) CommonR.string.record_empty else CommonR.string.record_no_matches)) }
-            items(filtered, key = { it.date.toString() }) { group -> Card(Modifier.fillMaxWidth().clickable { vm.showDay(group.date) }) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(group.title ?: group.date.toString(), style = MaterialTheme.typography.titleMedium)
-                    if (group.title != null) Text(group.date.toString(), style = MaterialTheme.typography.bodySmall)
-                    Text(stringResource(R.string.food_entry_count, group.entries.size))
-                    Text(MealKind.entries.filter { meal -> group.entries.any { it.meal == meal } }.joinToString(" · ") { names[it.ordinal] })
-                    Text(group.entries.joinToString(" · ") { it.title }, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            item(key = "summary") {
+                Column {
+                    RecoowSectionHeader(stringResource(CommonR.string.record_overview))
+                    RecoowGroup {
+                        RecoowMetricGrid(
+                            listOf(
+                                RecoowMetric(stringResource(R.string.food_metric_total), summary.total.toString()),
+                                RecoowMetric(stringResource(R.string.food_metric_today), summary.today.toString()),
+                                RecoowMetric(stringResource(R.string.food_metric_days), summary.days.toString()),
+                                RecoowMetric(stringResource(R.string.food_metric_meals), summary.mealsToday.toString()),
+                            ),
+                        )
+                        // 本月一栏合并零食/饮品/夜宵/奶茶，不再拆「本周」「本月」两行。
+                        RecoowDivider()
+                        RecoowRow(
+                            title = stringResource(R.string.food_month_title),
+                            subtitle = stringResource(R.string.food_month_summary, summary.snacks, summary.drinks, summary.lateNight, summary.milkTea),
+                        )
+                        summary.latest?.let { latest ->
+                            RecoowDivider()
+                            RecoowRow(title = stringResource(R.string.food_latest_label), trailingText = recordDateTime(latest))
+                        }
+                    }
                 }
-            } }
+            }
+            if (searching) item { RecordSearchField(query, vm::query, tag = "food_search") }
+            if (filtered.isEmpty()) item {
+                val relaxed = groups.isNotEmpty()
+                RecoowGroup {
+                    RecoowEmptyState(
+                        title = stringResource(if (relaxed) CommonR.string.record_no_matches else CommonR.string.record_empty),
+                        actionLabel = if (relaxed) stringResource(CommonR.string.record_clear_filters) else null,
+                        onAction = if (relaxed) ({ vm.query("") }) else null,
+                    )
+                }
+            }
+            if (filtered.isNotEmpty()) item(key = "days") {
+                RecoowGroup {
+                    filtered.forEachIndexed { index, group ->
+                        val meals = MealKind.entries.filter { meal -> group.entries.any { it.meal == meal } }.joinToString(" · ") { names[it.ordinal] }
+                        RecoowRow(
+                            title = group.title ?: group.date.toString(),
+                            subtitle = listOf(group.date.toString(), stringResource(R.string.food_entry_count, group.entries.size), meals,
+                                group.entries.joinToString(" · ") { it.title }).joinToString(" · "),
+                            showChevron = true,
+                            onClick = { vm.showDay(group.date) },
+                        )
+                        if (index < filtered.lastIndex) RecoowDivider()
+                    }
+                }
+            }
         }
     }
 }
@@ -85,27 +124,40 @@ import java.time.*
     var deleting by remember { mutableStateOf<FoodDay?>(null) }; var copying by remember { mutableStateOf<List<FoodEntry>?>(null) }
     val names = LocalResources.current.getStringArray(R.array.food_meals)
     RecordPage(group?.title ?: date.toString(), back, tag = "food_day_detail", busy = state.busy,
-        action = if (group != null) stringResource(R.string.food_day_title) else null, onAction = { group?.let(vm::editTitle) },
+        more = if (group != null) listOf(
+            RecoowAction(stringResource(R.string.food_day_title), onClick = { vm.editTitle(group) }),
+            RecoowAction(stringResource(R.string.food_delete_day), enabled = !state.busy, onClick = { deleting = group }),
+        ) else emptyList(),
         add = if (!state.loading && !state.failed) stringResource(R.string.food_add) else null, onAdd = { vm.edit() }) {
         if (group == null) item { if (state.loading || state.failed) RecordLoadState(state.loading, state.failed, vm::retry) else Text(stringResource(CommonR.string.record_empty)) }
         else {
-            if (group.title != null) item { Text(group.date.toString()) }
+            if (group.title != null) item { Text(group.date.toString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             MealKind.entries.forEach { meal -> val entries = group.entries.filter { it.meal == meal }
                 if (entries.isNotEmpty()) {
-                    item(key = meal.wire) { FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(names[meal.ordinal], Modifier.padding(vertical = 12.dp), style = MaterialTheme.typography.titleMedium)
-                        TextButton(onClick = { copying = entries }, enabled = !state.busy) { Text(stringResource(R.string.food_copy_meal)) }
-                    } }
-                    items(entries, key = { it.id }) { entry -> OutlinedCard(Modifier.fillMaxWidth().clickable { vm.show(entry.id) }) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(entry.title, style = MaterialTheme.typography.titleMedium); Text(recordDateTime(entry.occurredAt), style = MaterialTheme.typography.bodySmall)
-                            entry.portion?.let { Text(it) }; entry.note?.let { Text(it, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
-                            if (entry.billIds.isNotEmpty() || entry.attachments.isNotEmpty()) Text(stringResource(R.string.food_relations, entry.billIds.size, entry.attachments.size), style = MaterialTheme.typography.bodySmall)
+                    item(key = meal.wire) {
+                        Column {
+                            // 复制整餐收进分组标题右侧，不再单独占一行。
+                            RecoowSectionHeader(names[meal.ordinal], trailing = stringResource(R.string.food_copy_meal), onTrailingClick = { if (!state.busy) copying = entries })
+                            RecoowGroup {
+                                entries.forEachIndexed { index, entry ->
+                                    RecoowRow(
+                                        title = entry.title,
+                                        subtitle = listOfNotNull(
+                                            recordDateTime(entry.occurredAt),
+                                            entry.portion,
+                                            entry.note,
+                                            if (entry.billIds.isNotEmpty() || entry.attachments.isNotEmpty()) stringResource(R.string.food_relations, entry.billIds.size, entry.attachments.size) else null,
+                                        ).joinToString(" · "),
+                                        showChevron = true,
+                                        onClick = { vm.show(entry.id) },
+                                    )
+                                    if (index < entries.lastIndex) RecoowDivider()
+                                }
+                            }
                         }
-                    } }
+                    }
                 }
             }
-            item { TextButton(onClick = { deleting = group }, enabled = !state.busy) { Text(stringResource(R.string.food_delete_day)) } }
         }
     }
     copying?.let { entries -> CopyFoodDate({ copying = null }) { target -> copying = null; vm.duplicate(entries, target) } }
@@ -114,26 +166,57 @@ import java.time.*
 @Composable private fun FoodEditor(vm: FoodViewModel, state: FoodState, d: FoodDraft, back: () -> Unit) {
     val names = LocalResources.current.getStringArray(R.array.food_meals)
     val suggestions = state.data.suggestions(d.id)
+    var attempted by rememberSaveable { mutableStateOf(false) }
+    val titleError = if (attempted && !d.valid) stringResource(CommonR.string.record_field_required) else null
     RecordPage(stringResource(if (d.revision == null) R.string.food_add else R.string.food_edit), back, busy = state.busy,
-        action = stringResource(CommonR.string.record_save), actionEnabled = d.valid && !state.loading && !state.failed, onAction = vm::save) {
-        item { RecordField(stringResource(R.string.food_name), d.title, { vm.update(d.copy(title = it)) }, !state.busy, tag = "food_title") }
-        if (suggestions.isNotEmpty()) item { Text(stringResource(R.string.food_suggestions), style = MaterialTheme.typography.labelLarge)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { suggestions.forEach { suggestion ->
-                SuggestionChip(onClick = { vm.update(d.copy(title = suggestion.title, meal = suggestion.meal, portion = suggestion.portion.orEmpty())) }, label = { Text(suggestion.title + " · " + names[suggestion.meal.ordinal]) }, enabled = !state.busy)
-            } }
+        action = stringResource(CommonR.string.record_save), onAction = { if (d.valid && !state.loading && !state.failed) vm.save() else attempted = true }) {
+        item {
+            RecordForm {
+                RecordFormText(stringResource(R.string.food_name), d.title, { vm.update(d.copy(title = it)) },
+                    enabled = !state.busy, error = titleError, tag = "food_title")
+                RecordFormDivider()
+                RecordChoice(stringResource(R.string.food_meal), d.meal, MealKind.entries.map { it to names[it.ordinal] },
+                    { vm.update(d.copy(meal = it)) }, enabled = !state.busy, bordered = false)
+                RecordFormDivider()
+                RecordFormDateTime(stringResource(CommonR.string.record_date), d.occurredAt, { vm.update(d.copy(occurredAt = it)) }, !state.busy)
+                RecordFormDivider()
+                RecordFormText(stringResource(R.string.food_portion), d.portion, { vm.update(d.copy(portion = it)) }, enabled = !state.busy)
+                RecordFormDivider()
+                RecordFormText(stringResource(CommonR.string.record_note), d.note, { vm.update(d.copy(note = it)) },
+                    enabled = !state.busy, multiline = true)
+            }
         }
-        item { RecordChoice(stringResource(R.string.food_meal), d.meal, MealKind.entries.map { it to names[it.ordinal] }, { vm.update(d.copy(meal = it)) }, !state.busy) }
-        item { RecordDateTime(stringResource(CommonR.string.record_date), d.occurredAt, { vm.update(d.copy(occurredAt = it)) }, !state.busy) }
-        item { RecordField(stringResource(R.string.food_portion), d.portion, { vm.update(d.copy(portion = it)) }, !state.busy) }
-        item { RecordField(stringResource(CommonR.string.record_note), d.note, { vm.update(d.copy(note = it)) }, !state.busy, multiline = true) }
-        item { Text(stringResource(R.string.food_linked_bills), style = MaterialTheme.typography.titleMedium)
-            FilledTonalButton(onClick = vm::pickBills, enabled = !state.busy) { Text(stringResource(R.string.food_select_bills)) } }
-        items(d.billIds, key = { "bill:$it" }) { id -> val bill = state.bills.firstOrNull { it.id == id }
-            OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) {
-                Text(bill?.title ?: stringResource(R.string.food_missing_bill))
-                if (bill != null) Text(BigDecimal.valueOf(bill.amounts.final, 2).toPlainString())
-                TextButton(onClick = { vm.update(d.copy(billIds = d.billIds - id)) }, enabled = !state.busy) { Text(stringResource(CommonR.string.record_remove)) }
-            } }
+        if (suggestions.isNotEmpty()) item {
+            RecordForm {
+                Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { suggestions.forEach { suggestion ->
+                        SuggestionChip(onClick = { vm.update(d.copy(title = suggestion.title, meal = suggestion.meal, portion = suggestion.portion.orEmpty())) }, label = { Text(suggestion.title + " · " + names[suggestion.meal.ordinal]) }, enabled = !state.busy)
+                    } }
+                }
+            }
+        }
+        item {
+            RecordForm {
+                RecordFormAction(stringResource(R.string.food_select_bills), onClick = vm::pickBills, enabled = !state.busy)
+                if (d.billIds.isNotEmpty()) RecordFormDivider()
+                if (d.billIds.isNotEmpty()) Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+                    d.billIds.forEach { id ->
+                        val bill = state.bills.firstOrNull { it.id == id }
+                        Row(Modifier.fillMaxWidth().heightIn(min = 36.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(bill?.title ?: stringResource(R.string.food_missing_bill), style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            bill?.let {
+                                Text(BigDecimal.valueOf(it.amounts.final, 2).toPlainString(), style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Text(stringResource(CommonR.string.record_remove), style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.clickable(enabled = !state.busy) { vm.update(d.copy(billIds = d.billIds - id)) }
+                                    .padding(start = 12.dp, top = 8.dp, bottom = 8.dp))
+                        }
+                    }
+                }
+            }
         }
         item { AttachmentInput(d.attachments, { vm.update(d.copy(attachments = it)) }, vm.media, vm.processor, state.preferences) }
     }
@@ -157,16 +240,16 @@ import java.time.*
     var deleting by remember { mutableStateOf<FoodEntry?>(null) }; var copying by remember { mutableStateOf<FoodEntry?>(null) }
     val names = LocalResources.current.getStringArray(R.array.food_meals)
     RecordPage(entry?.title ?: stringResource(R.string.food_title), back, tag = "food_detail", busy = state.busy,
-        action = if (entry != null) stringResource(CommonR.string.record_edit) else null, onAction = { entry?.let(vm::edit) }) {
+        more = if (entry != null) listOf(
+            RecoowAction(stringResource(CommonR.string.record_edit), enabled = !state.busy, onClick = { vm.edit(entry) }),
+            RecoowAction(stringResource(R.string.food_copy), enabled = !state.busy, onClick = { copying = entry }),
+            RecoowAction(stringResource(CommonR.string.record_delete), enabled = !state.busy, onClick = { deleting = entry }),
+        ) else emptyList()) {
         if (entry == null) item { if (state.loading || state.failed) RecordLoadState(state.loading, state.failed, vm::retry) else Text(stringResource(CommonR.string.record_missing)) }
         else {
             item { Text(names[entry.meal.ordinal], style = MaterialTheme.typography.titleMedium); Text(recordDateTime(entry.occurredAt)) }
             entry.portion?.let { item { Text(stringResource(R.string.food_portion), style = MaterialTheme.typography.labelLarge); Text(it) } }
             entry.note?.let { item { Text(stringResource(CommonR.string.record_note), style = MaterialTheme.typography.labelLarge); Text(it) } }
-            item { FlowRow {
-                OutlinedButton(onClick = { copying = entry }, enabled = !state.busy) { Text(stringResource(R.string.food_copy)) }
-                TextButton(onClick = { deleting = entry }, enabled = !state.busy) { Text(stringResource(CommonR.string.record_delete)) }
-            } }
             if (entry.billIds.isNotEmpty()) item { Text(stringResource(R.string.food_linked_bills), style = MaterialTheme.typography.titleMedium) }
             items(entry.billIds, key = { "bill:$it" }) { id -> val bill = state.bills.firstOrNull { it.id == id }
                 OutlinedCard(onClick = { if (bill != null) onBill(id) }, modifier = Modifier.fillMaxWidth(), enabled = bill != null) { Column(Modifier.padding(16.dp)) {

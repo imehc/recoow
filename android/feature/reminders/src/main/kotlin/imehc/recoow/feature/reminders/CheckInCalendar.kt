@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import imehc.recoow.core.designsystem.RecoowLayout
 import imehc.recoow.core.domain.reminders.Reminder
 import java.time.*
 
@@ -33,7 +34,7 @@ import java.time.*
         .withLocale(LocalConfiguration.current.locales[0])
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.reminder_make_up)) }, navigationIcon = { BackButton(onBack) }, actions = {
         TextButton(enabled = r != null && allowed.isNotEmpty() && !state.busy, onClick = { vm.saveMakeup(requireNotNull(r).id, allowed, note) }, modifier = Modifier.testTag("makeup_save")) { Text(stringResource(R.string.reminder_save)) }
-    }) }) { padding -> LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    }) }) { padding -> LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(RecoowLayout.sectionGap)) {
         if (r == null) item { Text(stringResource(R.string.reminder_missing)) }
         else {
             item { Text(stringResource(R.string.reminder_makeup_hint)); Text(stringResource(R.string.reminder_calendar_legend), style = MaterialTheme.typography.bodySmall) }

@@ -84,4 +84,10 @@
     <string name="reminder_calendar_legend">✓ Check-in · ↺ Make-up</string>
     <string name="reminder_calendar_checked_in">Checked in</string>
     <string name="reminder_calendar_made_up">Made up</string>
+    <string name="reminder_empty_active">No active check-ins</string>
+    <string name="reminder_empty_active_hint">Add a check-in task here; it reminds you before the deadline and moves to history when done.</string>
+    <string name="reminder_empty_paused">No paused check-ins</string>
+    <string name="reminder_empty_paused_hint">Paused tasks wait here and continue counting once resumed.</string>
+    <string name="reminder_empty_history">No finished check-ins</string>
+    <string name="reminder_empty_history_hint">Finished tasks are archived here; a missed day can be made up from the task.</string>
 </resources>

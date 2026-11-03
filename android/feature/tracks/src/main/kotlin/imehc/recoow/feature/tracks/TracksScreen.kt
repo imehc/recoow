@@ -9,6 +9,7 @@ import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
@@ -17,7 +18,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -49,19 +53,40 @@ import kotlin.math.roundToInt
     when {
         draft != null -> {
             val d = requireNotNull(draft)
-            RecordPage(stringResource(R.string.track_edit), back, busy = state.busy, action = stringResource(CommonR.string.record_save), actionEnabled = d.name.isNotBlank(), onAction = vm::save) {
-                item { RecordField(stringResource(CommonR.string.record_name), d.name, { vm.update(d.copy(name = it)) }, !state.busy, tag = "track_name") }
-                item { RecordField(stringResource(CommonR.string.record_note), d.note, { vm.update(d.copy(note = it)) }, !state.busy, multiline = true) }
+            var attempted by rememberSaveable { mutableStateOf(false) }
+            val nameError = if (attempted && d.name.isBlank()) stringResource(CommonR.string.record_field_required) else null
+            RecordPage(stringResource(R.string.track_edit), back, busy = state.busy, action = stringResource(CommonR.string.record_save),
+                onAction = { if (d.name.isNotBlank()) vm.save() else attempted = true }) {
+                item {
+                    RecordForm {
+                        RecordFormText(stringResource(CommonR.string.record_name), d.name, { vm.update(d.copy(name = it)) },
+                            enabled = !state.busy, error = nameError, tag = "track_name")
+                        RecordFormDivider()
+                        RecordFormText(stringResource(CommonR.string.record_note), d.note, { vm.update(d.copy(note = it)) },
+                            enabled = !state.busy, multiline = true)
+                    }
+                }
             }
         }
         detailId != null -> key(detailId) { TrackDetails(vm, state, back, onSource) }
         history -> RecordPage(stringResource(R.string.track_history), back, tag = "track_history") {
             item { RecordLoadState(state.loading, state.failed, vm::retry) }
-            if (!state.loading && !state.failed && state.tracks.isEmpty()) item { Text(stringResource(CommonR.string.record_empty)) }
-            items(state.tracks, key = { it.id }) { track -> OutlinedCard(Modifier.fillMaxWidth().clickable { vm.show(track.id) }) { Column(Modifier.padding(16.dp)) {
-                Text(track.name, style = MaterialTheme.typography.titleMedium); Text(trackDateTime(track.startedAt)); Text(statusName(track.status))
-                Text(stringResource(R.string.track_summary, track.pointCount, track.distance / 1000, track.duration))
-            } } }
+            if (!state.loading && !state.failed && state.tracks.isEmpty()) item {
+                RecoowGroup { RecoowEmptyState(stringResource(CommonR.string.record_empty)) }
+            } else if (state.tracks.isNotEmpty()) item(key = "rows") {
+                RecoowGroup {
+                    state.tracks.forEachIndexed { index, track ->
+                        RecoowRow(
+                            title = track.name,
+                            subtitle = listOf(statusName(track.status), trackDateTime(track.startedAt)).joinToString(" · "),
+                            trailingText = stringResource(R.string.track_km_value, track.distance / 1000.0),
+                            showChevron = true,
+                            onClick = { vm.show(track.id) },
+                        )
+                        if (index < state.tracks.lastIndex) RecoowDivider(RecoowLayout.dividerInset)
+                    }
+                }
+            }
         }
         else -> RecordingPage(vm, state, recording, back)
     }
@@ -79,45 +104,98 @@ import kotlin.math.roundToInt
     val notification = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     val current = recording.current
     RecordPage(stringResource(R.string.track_title), back, tag = "tool_locationTracker", busy = state.busy || recording.busy,
-        action = stringResource(R.string.track_history), onAction = vm::showHistory) {
-        item { Text(stringResource(R.string.track_background_help)) }
-        item { RecordLoadState(state.loading, state.failed, vm::retry) }
-        item {
-            RecordChoice(stringResource(R.string.track_accuracy), current?.accuracy ?: precision, listOf(100, 10, 5).map { it to stringResource(R.string.track_accuracy_value, it) }, vm::accuracy, current == null && !recording.busy)
-            Text(stringResource(R.string.track_accuracy_help), style = MaterialTheme.typography.bodySmall)
+        more = listOf(RecoowAction(stringResource(R.string.track_history)) { vm.showHistory() })) {
+        item(key = "help") { RecoowNotice(stringResource(R.string.track_background_help)) }
+        item(key = "loading") { RecordLoadState(state.loading, state.failed, vm::retry) }
+        item(key = "settings") {
+            Column {
+                RecoowSectionHeader(stringResource(R.string.track_settings))
+                RecoowGroup {
+                        RecordChoice(
+                        stringResource(R.string.track_accuracy), current?.accuracy ?: precision,
+                        listOf(100, 10, 5).map { it to stringResource(R.string.track_accuracy_value, it) },
+                        vm::accuracy, enabled = current == null && !recording.busy, bordered = false,
+                    )
+                    RecoowDivider()
+                    Text(
+                        stringResource(R.string.track_accuracy_help),
+                        Modifier.fillMaxWidth().padding(horizontal = RecoowLayout.rowHorizontal, vertical = 10.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
-        if (current != null) item {
-            Text(current.name, style = MaterialTheme.typography.titleLarge); Text(statusName(current.status))
-            Text(stringResource(R.string.track_summary, recording.pointCount,
-                current.distance / 1000, recording.duration))
-            Text(stringResource(R.string.track_max_speed, current.maxSpeed?.times(3.6)?.let { "%.1f".format(it) } ?: "—"))
-            Text(recording.latest?.let { stringResource(R.string.track_coordinate, it.coordinate.latitude, it.coordinate.longitude) } ?: stringResource(R.string.track_waiting))
-            TextButton(onClick = { vm.show(current.id) }) { Text(stringResource(R.string.track_details)) }
+        if (current != null) item(key = "current") {
+            Column {
+                RecoowSectionHeader(current.name, trailing = statusName(current.status))
+                RecoowGroup {
+                    RecoowMetricGrid(
+                        listOf(
+                            RecoowMetric(stringResource(R.string.track_points), recording.pointCount.toString()),
+                            RecoowMetric(stringResource(R.string.track_distance), stringResource(R.string.track_km_value, current.distance / 1000.0)),
+                            RecoowMetric(stringResource(R.string.track_duration), stringResource(R.string.track_seconds_value, recording.duration)),
+                            RecoowMetric(
+                                stringResource(R.string.track_max_speed_label),
+                                current.maxSpeed?.let { stringResource(R.string.track_speed_value, "%.1f".format(it * 3.6)) } ?: "—",
+                            ),
+                        ),
+                    )
+                    RecoowDivider()
+                    RecoowRow(
+                        title = stringResource(R.string.track_latest_point),
+                        trailingText = recording.latest?.let { stringResource(R.string.track_coordinate, it.coordinate.latitude, it.coordinate.longitude) }
+                            ?: stringResource(R.string.track_waiting),
+                    )
+                    RecoowDivider()
+                    RecoowRow(title = stringResource(R.string.track_details), showChevron = true, onClick = { vm.show(current.id) })
+                }
+            }
         }
-        item { FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (!recording.running) Button(onClick = {
-                if (context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) start()
-                else permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
-            }, enabled = !recording.busy && !state.loading && !state.failed) { Text(stringResource(if (current == null) R.string.track_start else R.string.track_resume)) }
-            else Button(onClick = vm.recorder::requestPause, enabled = !recording.busy) { Text(stringResource(R.string.track_pause)) }
-            if (current != null) OutlinedButton(onClick = vm.recorder::requestFinish, enabled = !recording.busy) { Text(stringResource(R.string.track_finish)) }
-        } }
-        if (permissionDenied || recording.problem != null) item {
-            Text(stringResource(if (permissionDenied) R.string.track_permission else when (recording.problem) {
-                RecordingProblem.PERMISSION -> R.string.track_permission; RecordingProblem.PROVIDER -> R.string.track_provider
-                RecordingProblem.CHANGED -> R.string.track_dataset_changed; RecordingProblem.INTERRUPTED -> R.string.track_interrupted; RecordingProblem.SAVE -> R.string.track_save_failed; else -> R.string.track_start_failed
-            }))
-            if (permissionDenied || recording.problem == RecordingProblem.PERMISSION) TextButton(onClick = { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))) }) { Text(stringResource(R.string.track_app_settings)) }
-            if (recording.problem == RecordingProblem.PROVIDER) TextButton(onClick = { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) { Text(stringResource(R.string.track_location_settings)) }
+        item(key = "actions") {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(
+                    onClick = {
+                        if (context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) start()
+                        else permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+                    },
+                    enabled = !recording.busy && !state.loading && !state.failed,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp),
+                    shape = RoundedCornerShape(12.dp),
+                ) { Text(stringResource(if (recording.running) R.string.track_pause else if (current == null) R.string.track_start else R.string.track_resume), style = MaterialTheme.typography.titleSmall) }
+                if (current != null) OutlinedButton(
+                    onClick = vm.recorder::requestFinish,
+                    enabled = !recording.busy,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp),
+                    shape = RoundedCornerShape(12.dp),
+                ) { Text(stringResource(R.string.track_finish), style = MaterialTheme.typography.titleSmall) }
+            }
         }
-        if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) item {
-            TextButton(onClick = { notification.launch(Manifest.permission.POST_NOTIFICATIONS) }) { Text(stringResource(R.string.track_enable_notification)) }
+        if (permissionDenied || recording.problem != null) item(key = "problem") {
+            RecoowNotice(
+                stringResource(if (permissionDenied) R.string.track_permission else when (recording.problem) {
+                    RecordingProblem.PERMISSION -> R.string.track_permission; RecordingProblem.PROVIDER -> R.string.track_provider
+                    RecordingProblem.CHANGED -> R.string.track_dataset_changed; RecordingProblem.INTERRUPTED -> R.string.track_interrupted; RecordingProblem.SAVE -> R.string.track_save_failed; else -> R.string.track_start_failed
+                }),
+                actions = buildList {
+                    if (permissionDenied || recording.problem == RecordingProblem.PERMISSION) add(RecoowAction(stringResource(R.string.track_app_settings)) {
+                        context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
+                    })
+                    if (recording.problem == RecordingProblem.PROVIDER) add(RecoowAction(stringResource(R.string.track_location_settings)) {
+                        context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                    })
+                },
+            )
         }
-        item { TrackMapPanel(detail.points, detail.segments, marker = recording.latest?.coordinate,
+        if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) item(key = "notification") {
+            RecoowGroup {
+                RecoowRow(title = stringResource(R.string.track_enable_notification), showChevron = true, onClick = { notification.launch(Manifest.permission.POST_NOTIFICATIONS) })
+            }
+        }
+        item(key = "map") { TrackMapPanel(detail.points, detail.segments, marker = recording.latest?.coordinate,
             focus = recording.latest?.let { MapFocus(listOf(it.coordinate), it.time.toString()) }) }
     }
 }
-
 @Composable private fun TrackDetails(vm: TracksViewModel, state: TracksState, back: () -> Unit, onSource: (ToolRoute, String) -> Unit) {
     val detail = state.detail; val track = detail.track; val points = detail.points; val segments = detail.segments
     var mode by rememberSaveable { mutableIntStateOf(0) }; var index by rememberSaveable { mutableIntStateOf(0) }
@@ -143,69 +221,196 @@ import kotlin.math.roundToInt
         if (mode == 1 && showIssues) issues.flatMap { it.occurrences }.forEach { add(MapMarker(it.point.coordinate, Color(0xFFE67E22).toArgb())) }
     }
     RecordPage(track?.name ?: stringResource(R.string.track_details), back, tag = "track_detail", busy = state.busy,
-        action = if (track != null) stringResource(CommonR.string.record_edit) else null, onAction = { track?.let(vm::edit) }) {
-        item { RecordLoadState(state.detailLoading, state.detailFailed, vm::observeDetail) }
-        if (track == null && !state.detailLoading && !state.detailFailed) item { Text(stringResource(CommonR.string.record_missing)) }
+        action = if (track != null) stringResource(CommonR.string.record_edit) else null, onAction = { track?.let(vm::edit) },
+        more = if (track != null && track.status != TrackStatus.RECORDING) listOf(RecoowAction(stringResource(CommonR.string.record_delete), enabled = !state.busy, onClick = { deleting = true })) else emptyList()) {
+        item(key = "loading") { RecordLoadState(state.detailLoading, state.detailFailed, vm::observeDetail) }
+        if (track == null && !state.detailLoading && !state.detailFailed) item(key = "missing") {
+            RecoowGroup { RecoowEmptyState(stringResource(CommonR.string.record_missing)) }
+        }
         if (track != null) {
-            item { Text(statusName(track.status)); Text(trackDateTime(track.startedAt)); track.note?.let { Text(it) }
-                Text(stringResource(R.string.track_summary, points.size, track.distance / 1000, track.duration))
-                Text(stringResource(R.string.track_max_speed, track.maxSpeed?.times(3.6)?.let { "%.1f".format(it) } ?: "—")) }
-            item { TrackMapPanel(points, segments, selected, if (mode == 0) current?.coordinate else null, markers, focus, if (mode == 0 && showPath) points.take(index + 1) else emptyList())
-                TextButton(onClick = { focus = MapFocus(points.map { it.coordinate }, "overview:${System.nanoTime()}"); selected = null; playing = false }) { Text(stringResource(R.string.track_overview)) } }
-            item { FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(mode == 0, { mode = 0 }, label = { Text(stringResource(R.string.track_playback)) })
-                FilterChip(mode == 1, { mode = 1; playing = false }, label = { Text(stringResource(R.string.track_insights)) })
-            } }
-            if (mode == 0) item {
-                if (current == null) Text(stringResource(R.string.track_no_points)) else {
-                    Text(trackDateTime(current.time)); Text(stringResource(R.string.track_point_number, index + 1, points.size))
-                    Text(stringResource(R.string.track_coordinate, current.coordinate.latitude, current.coordinate.longitude))
-                    Text(stringResource(R.string.track_point_metrics, current.speed?.times(3.6)?.let { "%.1f".format(it) } ?: "—", current.accuracy?.let { "%.0f".format(it) } ?: "—"))
-                    Slider(index.toFloat().coerceIn(0f, points.lastIndex.coerceAtLeast(1).toFloat()), { playing = false; seek(it.roundToInt()) }, valueRange = 0f..points.lastIndex.coerceAtLeast(1).toFloat(), enabled = points.size > 1, modifier = Modifier.testTag("track_playback_progress").recordControlDescription(stringResource(R.string.track_playback), stringResource(R.string.track_point_number, index + 1, points.size)))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { if (index == points.lastIndex) seek(0); playing = !playing }, enabled = points.size > 1) { Text(stringResource(if (playing) R.string.track_pause else R.string.track_play)) }
-                        listOf(1, 2, 4).forEach { value -> FilterChip(speed == value, { speed = value }, label = { Text("${value}×") }) }
+            item(key = "summary") {
+                RecoowGroup {
+                    RecoowMetricGrid(
+                        listOf(
+                            RecoowMetric(stringResource(R.string.track_points), points.size.toString()),
+                            RecoowMetric(stringResource(R.string.track_distance), stringResource(R.string.track_km_value, track.distance / 1000.0)),
+                            RecoowMetric(stringResource(R.string.track_duration), stringResource(R.string.track_seconds_value, track.duration)),
+                            RecoowMetric(
+                                stringResource(R.string.track_max_speed_label),
+                                track.maxSpeed?.let { stringResource(R.string.track_speed_value, "%.1f".format(it * 3.6)) } ?: "—",
+                            ),
+                        ),
+                    )
+                    RecoowDivider()
+                    RecoowRow(title = stringResource(R.string.track_status), trailingText = statusName(track.status))
+                    RecoowDivider()
+                    RecoowRow(title = stringResource(R.string.track_started_at), trailingText = trackDateTime(track.startedAt))
+                    track.note?.takeIf { it.isNotBlank() }?.let { note ->
+                        RecoowDivider()
+                        RecoowRow(title = stringResource(CommonR.string.record_note), subtitle = note)
                     }
-                    RecordSwitch(stringResource(R.string.track_playback_path), showPath, { showPath = it })
-                    RecordSwitch(stringResource(R.string.track_follow), follow, { follow = it; if (it) focus = MapFocus(listOf(current.coordinate), "follow:$index") })
+                }
+            }
+            item(key = "map") {
+                Column {
+                    TrackMapPanel(points, segments, selected, if (mode == 0) current?.coordinate else null, markers, focus, if (mode == 0 && showPath) points.take(index + 1) else emptyList())
+                    Spacer(Modifier.height(8.dp))
+                    RecoowGroup {
+                        RecoowRow(
+                            title = stringResource(R.string.track_overview),
+                            showChevron = true,
+                            onClick = { focus = MapFocus(points.map { it.coordinate }, "overview:${System.nanoTime()}"); selected = null; playing = false },
+                        )
+                    }
+                }
+            }
+            item(key = "modes") {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(mode == 0, { mode = 0 }, label = { Text(stringResource(R.string.track_playback)) })
+                    FilterChip(mode == 1, { mode = 1; playing = false }, label = { Text(stringResource(R.string.track_insights)) })
+                }
+            }
+            if (mode == 0) item(key = "playback") {
+                RecoowGroup {
+                    if (current == null) {
+                        RecoowEmptyState(stringResource(R.string.track_no_points))
+                    } else {
+                        Column(Modifier.fillMaxWidth().padding(horizontal = RecoowLayout.rowHorizontal, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(stringResource(R.string.track_point_number, index + 1, points.size), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                            Text(trackDateTime(current.time), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.track_coordinate, current.coordinate.latitude, current.coordinate.longitude), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                stringResource(R.string.track_point_metrics, current.speed?.times(3.6)?.let { "%.1f".format(it) } ?: "—", current.accuracy?.let { "%.0f".format(it) } ?: "—"),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Slider(index.toFloat().coerceIn(0f, points.lastIndex.coerceAtLeast(1).toFloat()), { playing = false; seek(it.roundToInt()) }, valueRange = 0f..points.lastIndex.coerceAtLeast(1).toFloat(), enabled = points.size > 1, modifier = Modifier.testTag("track_playback_progress").recordControlDescription(stringResource(R.string.track_playback), stringResource(R.string.track_point_number, index + 1, points.size)))
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = { if (index == points.lastIndex) seek(0); playing = !playing }, enabled = points.size > 1, shape = RoundedCornerShape(12.dp)) {
+                                    Text(stringResource(if (playing) R.string.track_pause else R.string.track_play))
+                                }
+                                listOf(1, 2, 4).forEach { value -> FilterChip(speed == value, { speed = value }, label = { Text("${value}×") }) }
+                            }
+                        }
+                        RecoowDivider()
+                        RecoowSwitchRow(stringResource(R.string.track_playback_path), showPath, { showPath = it })
+                        RecoowDivider()
+                        RecoowSwitchRow(stringResource(R.string.track_follow), follow, { follow = it; if (it) focus = MapFocus(listOf(current.coordinate), "follow:$index") })
+                    }
                 }
             }
             if (mode == 1) {
-                item { Text(stringResource(R.string.track_motion_summary), style = MaterialTheme.typography.titleMedium)
-                    segments.groupBy { it.motion }.forEach { (motion, values) -> Text(stringResource(R.string.track_motion_metrics, motionName(motion), values.sumOf { it.distance } / 1000, values.sumOf { it.duration })) }
-                    RecordSwitch(stringResource(R.string.track_places), showPlaces, { showPlaces = it })
-                    RecordSwitch(stringResource(R.string.track_quality), showIssues, { showIssues = it })
+                item(key = "insights") {
+                    Column {
+                        RecoowSectionHeader(stringResource(R.string.track_motion_summary))
+                        RecoowGroup {
+                            val byMotion = segments.groupBy { it.motion }
+                            byMotion.entries.forEachIndexed { at, (motion, values) ->
+                                RecoowRow(
+                                    title = motionName(motion),
+                                    trailingText = stringResource(R.string.track_motion_value, values.sumOf { it.distance } / 1000.0, values.sumOf { it.duration }),
+                                )
+                                if (at < byMotion.size - 1) RecoowDivider()
+                            }
+                            RecoowDivider()
+                            RecoowSwitchRow(stringResource(R.string.track_places), showPlaces, { showPlaces = it })
+                            RecoowDivider()
+                            RecoowSwitchRow(stringResource(R.string.track_quality), showIssues, { showIssues = it })
+                        }
+                    }
                 }
-                items(places) { place -> OutlinedCard(onClick = { playing = false; focus = MapFocus(listOf(place.coordinate), "place:${place.start}"); selected = segments.firstOrNull { place.start in it.start..it.end }?.id }) {
-                    Column(Modifier.padding(12.dp)) { Text(stringResource(R.string.track_stay, (place.end - place.start) / 60_000)); Text(trackDateTime(place.start)) }
+                if (places.isEmpty() && issues.isEmpty()) item(key = "no_insights") {
+                    RecoowGroup { RecoowEmptyState(stringResource(R.string.track_no_insights)) }
+                }
+                if (places.isNotEmpty()) item(key = "places") {
+                    Column {
+                        RecoowSectionHeader(stringResource(R.string.track_places))
+                        RecoowGroup {
+                            places.forEachIndexed { at, place ->
+                                RecoowRow(
+                                    title = stringResource(R.string.track_stay, (place.end - place.start) / 60_000),
+                                    subtitle = trackDateTime(place.start),
+                                    showChevron = true,
+                                    onClick = { playing = false; focus = MapFocus(listOf(place.coordinate), "place:${place.start}"); selected = segments.firstOrNull { place.start in it.start..it.end }?.id },
+                                )
+                                if (at < places.lastIndex) RecoowDivider(RecoowLayout.dividerInset)
+                            }
+                        }
+                    }
+                }
+                issues.forEach { issue -> item(key = "issue:${issue.kind}") {
+                    Column {
+                        RecoowSectionHeader(stringResource(R.string.track_issue_count, qualityName(issue.kind), issue.count))
+                        RecoowGroup {
+                            issue.occurrences.forEachIndexed { at, occurrence ->
+                                RecoowRow(
+                                    title = trackDateTime(occurrence.point.time),
+                                    trailingText = "%.1f".format(occurrence.value) + (if (issue.kind == TrackQuality.TIME_GAP) " s" else if (issue.kind == TrackQuality.WEAK_ACCURACY) " m" else " m/s"),
+                                    showChevron = true,
+                                    onClick = { playing = false; seek(points.indexOfFirst { it.id == occurrence.point.id }); focus = MapFocus(listOf(occurrence.point.coordinate), "issue:${issue.kind}:${occurrence.point.time}") },
+                                )
+                                if (at < issue.occurrences.lastIndex) RecoowDivider(RecoowLayout.dividerInset)
+                            }
+                        }
+                    }
                 } }
-                items(issues) { issue -> Column { Text(stringResource(R.string.track_issue_count, qualityName(issue.kind), issue.count), style = MaterialTheme.typography.titleMedium)
-                    issue.occurrences.forEach { occurrence -> TextButton(onClick = { playing = false; seek(points.indexOfFirst { it.id == occurrence.point.id }); focus = MapFocus(listOf(occurrence.point.coordinate), "issue:${issue.kind}:${occurrence.point.time}") }) {
-                        Text("${trackDateTime(occurrence.point.time)} · ${"%.1f".format(occurrence.value)} ${if (issue.kind == TrackQuality.TIME_GAP) "s" else if (issue.kind == TrackQuality.WEAK_ACCURACY) "m" else "m/s"}")
-                    } }
-                } }
-                if (places.isEmpty() && issues.isEmpty()) item { Text(stringResource(R.string.track_no_insights)) }
             }
-            item { Text(stringResource(R.string.track_segments), style = MaterialTheme.typography.titleMedium) }
-            items(segments, key = { it.id }) { s -> OutlinedCard(onClick = { selected = s.id; playing = false; focus = MapFocus(points.filter { it.time in s.start..s.end }.map { it.coordinate }, "segment:${s.id}") }) {
-                Column(Modifier.padding(12.dp)) { Text(motionName(s.motion), style = MaterialTheme.typography.titleMedium)
-                    Text("${trackDateTime(s.start)} — ${trackDateTime(s.end)}"); Text(stringResource(R.string.track_segment_metrics, s.distance / 1000, s.duration, stringResource(if (s.manual) R.string.track_manual else R.string.track_auto)))
-                }
-            } }
-            if (segment != null && track.status == TrackStatus.FINISHED) item {
-                RecordChoice(stringResource(R.string.track_segment_type), segment.motion, MotionType.entries.map { it to motionName(it) }, { vm.editSegment(detail, segment.id, SegmentEdit.Type(it)) }, !state.busy)
-                val position = segments.indexOf(segment)
-                FlowRow { TextButton(onClick = { editor = "split" }, enabled = !state.busy && points.count { it.time in segment.start..segment.end } > 2) { Text(stringResource(R.string.track_split)) }
-                    TextButton(onClick = { editor = "bounds" }, enabled = !state.busy) { Text(stringResource(R.string.track_boundaries)) }
-                    TextButton(onClick = { vm.editSegment(detail, segment.id, SegmentEdit.Merge(true)) }, enabled = !state.busy && segments.getOrNull(position - 1)?.end == segment.start) { Text(stringResource(R.string.track_merge_previous)) }
-                    TextButton(onClick = { vm.editSegment(detail, segment.id, SegmentEdit.Merge(false)) }, enabled = !state.busy && segments.getOrNull(position + 1)?.start == segment.end) { Text(stringResource(R.string.track_merge_next)) }
+            item(key = "segments") {
+                Column {
+                    RecoowSectionHeader(stringResource(R.string.track_segments))
+                    RecoowGroup {
+                        segments.forEachIndexed { at, value ->
+                            RecoowRow(
+                                title = motionName(value.motion),
+                                subtitle = "${trackDateTime(value.start)} — ${trackDateTime(value.end)} · " + stringResource(if (value.manual) R.string.track_manual else R.string.track_auto),
+                                trailingText = stringResource(R.string.track_km_value, value.distance / 1000.0),
+                                showChevron = true,
+                                onClick = { selected = value.id; playing = false; focus = MapFocus(points.filter { it.time in value.start..value.end }.map { it.coordinate }, "segment:${value.id}") },
+                            )
+                            if (at < segments.lastIndex) RecoowDivider(RecoowLayout.dividerInset)
+                        }
+                    }
                 }
             }
-            item { Text(stringResource(R.string.track_related), style = MaterialTheme.typography.titleMedium); Text(stringResource(R.string.track_related_help), style = MaterialTheme.typography.bodySmall) }
-            items(detail.related, key = { "${it.route}:${it.id}" }) { related -> OutlinedCard(onClick = { onSource(related.route, related.id) }) { Column(Modifier.padding(12.dp)) {
-                Text(related.title); Text(trackDateTime(related.time)); Text(stringResource(if (related.route == ToolRoute.BILLS) R.string.track_bill else R.string.track_diary))
-            } } }
-            if (track.status != TrackStatus.RECORDING) item { TextButton(onClick = { deleting = true }) { Text(stringResource(CommonR.string.record_delete)) } }
+            if (segment != null && track.status == TrackStatus.FINISHED) item(key = "segment_edit") {
+                Column {
+                    RecoowGroup {
+                        RecordChoice(stringResource(R.string.track_segment_type), segment.motion, MotionType.entries.map { it to motionName(it) }, { vm.editSegment(detail, segment.id, SegmentEdit.Type(it)) }, !state.busy, bordered = false)
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    RecoowGroup {
+                        val position = segments.indexOf(segment)
+                        RecoowRow(title = stringResource(R.string.track_split), showChevron = true, onClick = { if (!state.busy && points.count { it.time in segment.start..segment.end } > 2) editor = "split" })
+                        RecoowDivider(RecoowLayout.dividerInset)
+                        RecoowRow(title = stringResource(R.string.track_boundaries), showChevron = true, onClick = { editor = "bounds" })
+                        RecoowDivider(RecoowLayout.dividerInset)
+                        RecoowRow(title = stringResource(R.string.track_merge_previous), showChevron = true, onClick = { vm.editSegment(detail, segment.id, SegmentEdit.Merge(true)) })
+                        RecoowDivider(RecoowLayout.dividerInset)
+                        RecoowRow(title = stringResource(R.string.track_merge_next), showChevron = true, onClick = { vm.editSegment(detail, segment.id, SegmentEdit.Merge(false)) })
+                    }
+                }
+            }
+            item(key = "related") {
+                Column {
+                    RecoowSectionHeader(stringResource(R.string.track_related), trailing = stringResource(R.string.track_related_help))
+                    if (detail.related.isEmpty()) {
+                        RecoowGroup { RecoowEmptyState(stringResource(CommonR.string.record_empty)) }
+                    } else {
+                        RecoowGroup {
+                            detail.related.forEachIndexed { at, related ->
+                                RecoowRow(
+                                    title = related.title,
+                                    subtitle = trackDateTime(related.time),
+                                    trailingText = stringResource(if (related.route == ToolRoute.BILLS) R.string.track_bill else R.string.track_diary),
+                                    showChevron = true,
+                                    onClick = { onSource(related.route, related.id) },
+                                )
+                                if (at < detail.related.lastIndex) RecoowDivider(RecoowLayout.dividerInset)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
     if (editor != null && segment != null) key(segment.id, detail.revision) { SegmentEditor(segment, segments, points, editor == "split", { editor = null }) { edit -> editor = null; vm.editSegment(detail, segment.id, edit) } }
@@ -250,10 +455,16 @@ import kotlin.math.roundToInt
         else segments.map { s -> MapLine(points.filter { it.time in s.start..s.end }.map { it.coordinate }, if (selected == s.id) primary else motionColor(s.motion)) }
     }
     val traversed = remember(playback, segments, primary) { segments.map { s -> MapLine(playback.filter { it.time in s.start..s.end }.map { it.coordinate }, primary) }.filter { it.points.size > 1 } }
-    key(offline, attempt) { TrackMap(style, points.map { it.coordinate }, primary, Modifier.fillMaxWidth().height(270.dp).testTag("track_map"),
-        onReady = { ready = true }, onFailure = { offline = true }, lines = lines + traversed,
-        markers = markers + listOfNotNull(marker?.let { MapMarker(it, primary) }), focus = focus ?: MapFocus(points.map { it.coordinate }, "initial")) }
-    if (offline) { Text(stringResource(R.string.track_map_offline)); TextButton(onClick = { offline = false; attempt++ }) { Text(stringResource(CommonR.string.record_retry)) } }
+    val shape = RoundedCornerShape(RecoowLayout.cardRadius)
+    Box(Modifier.fillMaxWidth().height(270.dp).clip(shape).border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)) {
+        key(offline, attempt) { TrackMap(style, points.map { it.coordinate }, primary, Modifier.fillMaxSize().testTag("track_map"),
+            onReady = { ready = true }, onFailure = { offline = true }, lines = lines + traversed,
+            markers = markers + listOfNotNull(marker?.let { MapMarker(it, primary) }), focus = focus ?: MapFocus(points.map { it.coordinate }, "initial")) }
+    }
+    if (offline) {
+        Spacer(Modifier.height(8.dp))
+        RecoowNotice(stringResource(R.string.track_map_offline), actions = listOf(RecoowAction(stringResource(CommonR.string.record_retry)) { offline = false; attempt++ }))
+    }
     Text("© OpenStreetMap contributors · OpenFreeMap", style = MaterialTheme.typography.labelSmall)
 }
 

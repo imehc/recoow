@@ -3,7 +3,6 @@ package imehc.recoow.core.domain.food
 import imehc.recoow.core.domain.media.MediaAttachment
 import java.io.Serializable
 import java.time.*
-import java.time.temporal.TemporalAdjusters
 import java.time.temporal.WeekFields
 import java.util.Locale
 import java.util.UUID
@@ -49,12 +48,10 @@ data class FoodSnapshot(val entries: List<FoodEntry> = emptyList(), val dayRecor
         .sortedWith(compareByDescending<FoodSuggestion> { it.uses }.thenByDescending { it.latest }.thenBy { it.title }).take(8)
     fun summary(today: LocalDate, zone: ZoneId, firstWeekday: DayOfWeek = WeekFields.of(Locale.getDefault()).firstDayOfWeek): FoodSummary {
         val dayEntries = entries.groupBy { Instant.ofEpochMilli(it.occurredAt).atZone(zone).toLocalDate() }
-        val week = today.with(TemporalAdjusters.previousOrSame(firstWeekday))
-        val weekly = dayEntries.filterKeys { it >= week && it < week.plusDays(7) }.values.flatten()
         val month = dayEntries.filterKeys { it.year == today.year && it.month == today.month }.values.flatten()
         val todays = dayEntries[today].orEmpty()
         return FoodSummary(entries.size, todays.size, dayEntries.size, todays.map { it.meal }.distinct().size,
-            weekly.count { it.meal == MealKind.SNACK }, weekly.count { it.meal == MealKind.DRINK }, weekly.count { it.meal == MealKind.LATE_NIGHT },
+            month.count { it.meal == MealKind.SNACK }, month.count { it.meal == MealKind.DRINK }, month.count { it.meal == MealKind.LATE_NIGHT },
             month.count { it.title.contains("奶茶") || it.title.contains("milk tea", ignoreCase = true) }, entries.maxOfOrNull { it.occurredAt })
     }
 }

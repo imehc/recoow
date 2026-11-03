@@ -2,7 +2,7 @@
     <string name="home_diary_description">记录心情、生活与关联记忆</string>
     <string name="home_food_description">每日饮食、照片与账单</string>
     <string name="home_items_description">管理物品分类与存放位置</string>
-    <string name="home_title">首页</string>
+    <string name="home_title">记录</string>
     <string name="home_empty">还没有记录</string>
     <string name="home_empty_description">日常记录将在这里显示。</string>
     <string name="home_bills">账单与储值</string>

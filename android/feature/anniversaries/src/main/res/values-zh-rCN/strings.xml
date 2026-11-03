@@ -35,5 +35,15 @@
     <string name="ann_access_inexact">当前为非精确提醒，系统可能延迟送达。</string>
     <string name="ann_access_settings">通知设置</string>
     <string name="ann_access_exact">精确提醒权限</string>
+    <string name="ann_empty_hint">记下生日、纪念日，到点前提醒你。</string>
+    <string name="ann_date">日期</string>
+    <string name="ann_years_label">周年</string>
+    <string name="ann_next_reminder">下次提醒</string>
+    <string name="ann_next_date">提醒日期</string>
+    <string name="ann_next_time">提醒时间</string>
+    <string name="ann_rules">提醒规则</string>
+    <string name="ann_repeat">重复</string>
+    <string name="ann_notifications">通知</string>
     <string-array name="ann_categories"><item>生日</item><item>恋爱/婚姻</item><item>家庭</item><item>工作/学习</item><item>个人目标</item><item>其他</item></string-array>
+    <string name="ann_time_label">提醒时间</string>
 </resources>

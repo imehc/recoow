@@ -40,6 +40,7 @@
   <string name="next">Next</string>
   <string name="page">%1$d / %2$d</string>
   <string name="attachments">Attachments</string>
+  <string name="add_attachment">Add attachment</string>
   <string name="remove">Remove</string>
   <string name="record">Record audio</string>
   <string name="stop">Finish recording</string>
@@ -62,4 +63,8 @@
     <string name="crop_move_right">Move image right</string>
     <string name="crop_move_up">Move image up</string>
     <string name="crop_move_down">Move image down</string>
+  <string name="view_grid">Grid view</string>
+  <string name="view_list">List view</string>
+  <string name="empty_library_detail">Photos you add and attachments you keep appear here.</string>
+  <string name="assets_section">Assets</string>
 </resources>

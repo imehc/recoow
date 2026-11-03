@@ -3,6 +3,8 @@
     <string name="history_select">选择</string>
     <string name="history_done">完成</string>
     <string name="history_tool">工具</string>
+    <string name="history_filter_tool">按工具筛选</string>
+    <string name="history_filter_date">按日期筛选</string>
     <string name="history_all">全部工具</string>
     <string name="history_all_dates">全部日期</string>
     <string name="history_choose_date">选择日期</string>
@@ -22,4 +24,5 @@
     <string name="history_delete_result">已删除 %1$d 条 · 失败 %2$d 条</string>
     <string name="history_changed">记录已变化或无法读取，请刷新后重新选择。</string>
     <string name="history_delete_effects">将删除下列记录。打卡仅删除所选明细，保留任务；饮食日删除当天条目和日标题；轨迹删除采样点和分段。账单余额、附件及同步删除按各工具规则处理，保留关联日记与其他来源记录。</string>
+    <string name="history_select_many">选择多条</string>
 </resources>

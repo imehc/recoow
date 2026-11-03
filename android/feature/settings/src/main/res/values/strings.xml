@@ -1,6 +1,7 @@
 <resources>
     <string name="settings_title">Settings</string>
     <string name="display_section">Display</string>
+    <string name="data_section">Data</string>
     <string name="follow_system">Follow system</string>
     <string name="appearance_title">Appearance</string>
     <string name="appearance_light">Light</string>
@@ -110,4 +111,19 @@
     <string name="photos_picked">Add picked photos to media library</string>
     <string name="photos_camera">Save camera photos to system gallery</string>
     <string name="photos_section">Photos</string>
+    <string name="sync_section_server">Server</string>
+    <string name="sync_section_sync">Sync</string>
+    <string name="sync_section_devices">Paired devices</string>
+    <string name="sync_section_conflicts">Conflicts</string>
+    <string name="sync_pending_title">Waiting to sync</string>
+    <string name="sync_pending_value">%1$d records · %2$d attachments</string>
+    <string name="sync_revoke_short">Revoke</string>
+    <string name="sync_method_label">Connection method</string>
+    <string name="data_section_backup">Backup</string>
+    <string name="data_section_preview">Backup contents</string>
+    <string name="data_section_scope">What to import</string>
+    <string name="data_section_maintenance">Maintenance</string>
+    <string name="update_section_current">Installed</string>
+    <string name="update_section_available">Available update</string>
+    <string name="update_notes">What\'s new</string>
 </resources>

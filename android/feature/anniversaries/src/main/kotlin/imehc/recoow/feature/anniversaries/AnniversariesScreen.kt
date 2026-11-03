@@ -20,6 +20,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.repeatOnLifecycle
@@ -31,6 +32,7 @@ import imehc.recoow.core.designsystem.R as CommonR
 import imehc.recoow.core.domain.anniversaries.*
 import imehc.recoow.core.domain.calendar.DateCalendar
 import java.time.*
+import java.util.Locale
 import kotlinx.coroutines.delay
 
 @Composable fun AnniversariesScreen(vm: AnniversariesViewModel, onBack: () -> Unit, recordId: String? = null) {
@@ -52,23 +54,48 @@ import kotlinx.coroutines.delay
 }
 @Composable private fun AnniversaryList(vm: AnniversariesViewModel, state: AnniversaryState, clock: Long, back: () -> Unit) {
     val query by vm.query.collectAsStateWithLifecycle(); val zone = ZoneId.systemDefault(); val names = LocalResources.current.getStringArray(R.array.ann_categories)
+    var searching by rememberSaveable { mutableStateOf(false) }
     val rows = state.records.filter { (it.title + " " + it.note.orEmpty() + " " + names[it.category.ordinal]).contains(query.trim(), true) }
     val next = rows.associate { it.id to it.next(clock, zone, vm.calendar) }
     RecordPage(stringResource(R.string.ann_title), back, tag = "tool_anniversaries", busy = state.busy,
+        searching = searching, onSearchToggle = { searching = !searching }, searchTag = "anniversary_search_toggle",
         add = if (!state.loading && !state.failed) stringResource(R.string.ann_add) else null, onAdd = { vm.edit() }) {
         item { RecordLoadState(state.loading, state.failed, vm::retry) }
         if (!state.loading && !state.failed) {
             item { AnniversaryNotificationControls(vm) }
-            item { RecordField(stringResource(CommonR.string.record_search), query, vm::query) }
-            if (rows.isEmpty()) item { Text(stringResource(if (state.records.isEmpty()) CommonR.string.record_empty else CommonR.string.record_no_matches)) }
+            if (searching) item { RecordSearchField(query, vm::query, tag = "anniversary_search") }
+            if (rows.isEmpty()) item {
+                val relaxed = state.records.isNotEmpty()
+                RecoowGroup {
+                    RecoowEmptyState(
+                        title = stringResource(if (relaxed) CommonR.string.record_no_matches else CommonR.string.record_empty),
+                        actionLabel = if (relaxed) stringResource(CommonR.string.record_clear_filters) else null,
+                        onAction = if (relaxed) ({ vm.query("") }) else null,
+                    )
+                }
+            }
             for (past in listOf(false, true)) {
                 val group = rows.filter { (next[it.id] == null) == past }.let { if (past) it.sortedByDescending { r -> r.occurredAt } else it.sortedBy { r -> next[r.id] } }
-                if (group.isNotEmpty()) item { Text(stringResource(if (past) R.string.ann_past else R.string.ann_upcoming), style = MaterialTheme.typography.titleMedium) }
-                items(group, key = { it.id }) { record -> Card(Modifier.fillMaxWidth().clickable { vm.show(record.id) }) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(record.title, style = MaterialTheme.typography.titleMedium); Text(names[record.category.ordinal])
-                    Text(record.daysUntil(clock, zone, vm.calendar)?.let { stringResource(R.string.ann_days_until, it) } ?: stringResource(R.string.ann_days_since, record.daysSince(clock, zone)))
-                    Text(anniversaryDate(record.occurredAt, record.calendar), style = MaterialTheme.typography.bodySmall)
-                } } }
+                if (group.isNotEmpty()) item(key = "group:$past") {
+                    Column {
+                        RecoowSectionHeader(stringResource(if (past) R.string.ann_past else R.string.ann_upcoming))
+                        RecoowGroup {
+                            group.forEachIndexed { index, record ->
+                                val days = record.daysUntil(clock, zone, vm.calendar)
+                                RecoowRow(
+                                    title = record.title,
+                                    subtitle = names[record.category.ordinal] + " · " + anniversaryDate(record.occurredAt, record.calendar).replace("\n", " · "),
+                                    trailingText = if (days != null) stringResource(R.string.ann_days_until, days)
+                                        else stringResource(R.string.ann_days_since, record.daysSince(clock, zone)),
+                                    showChevron = true,
+                                    onClick = { vm.show(record.id) },
+                                    modifier = Modifier.testTag("anniversary_${record.id}"),
+                                )
+                                if (index < group.lastIndex) RecoowDivider(RecoowLayout.dividerInset)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -76,19 +103,59 @@ import kotlinx.coroutines.delay
 @Composable private fun AnniversaryDetail(vm: AnniversariesViewModel, state: AnniversaryState, record: Anniversary?, clock: Long, back: () -> Unit) {
     var deleting by remember { mutableStateOf(false) }; val zone = ZoneId.systemDefault(); val names = LocalResources.current.getStringArray(R.array.ann_categories)
     RecordPage(record?.title ?: stringResource(R.string.ann_title), back, tag = "anniversary_detail", busy = state.busy,
-        action = record?.let { stringResource(CommonR.string.record_edit) }, onAction = { record?.let(vm::edit) }) {
+        action = record?.let { stringResource(CommonR.string.record_edit) }, onAction = { record?.let(vm::edit) },
+        more = if (record != null) listOf(RecoowAction(stringResource(CommonR.string.record_delete), enabled = !state.busy, onClick = { deleting = true })) else emptyList()) {
         if (record == null) item { if (state.loading || state.failed) RecordLoadState(state.loading, state.failed, vm::retry) else Text(stringResource(CommonR.string.record_missing)) }
         else {
-            item { Text(names[record.category.ordinal], style = MaterialTheme.typography.titleMedium); Text(anniversaryDate(record.occurredAt, record.calendar)) }
-            item { Text(stringResource(R.string.ann_days_since, record.daysSince(clock, zone)))
-                Text(stringResource(R.string.ann_years, vm.calendar.yearsBetween(Instant.ofEpochMilli(record.occurredAt), Instant.ofEpochMilli(clock), record.calendar, zone))) }
-            record.next(clock, zone, vm.calendar)?.let { time -> item { Text(stringResource(R.string.ann_next), style = MaterialTheme.typography.titleMedium)
-                Text(anniversaryDate(time, record.calendar)); Text(recordDateTime(time)); Text(stringResource(R.string.ann_days_until, record.daysUntil(clock, zone, vm.calendar)!!)) } }
-            item { Text(stringResource(if (record.yearly) R.string.ann_yearly else R.string.ann_once)); Text(stringResource(if (record.enabled) R.string.ann_notifications_on else R.string.ann_notifications_off))
-                Text(stringResource(R.string.ann_lead_value, record.lead)) }
-            item { AnniversaryNotificationControls(vm) }
-            record.note?.let { item { Text(it) } }
-            item { TextButton(onClick = { deleting = true }, enabled = !state.busy) { Text(stringResource(CommonR.string.record_delete)) } }
+            item(key = "facts") {
+                Column {
+                    RecoowGroup {
+                        RecoowRow(title = stringResource(R.string.ann_category), trailingText = names[record.category.ordinal])
+                        RecoowDivider()
+                        RecoowRow(title = stringResource(R.string.ann_date), trailingText = anniversaryDate(record.occurredAt, record.calendar).replace("\n", " · "))
+                        RecoowDivider()
+                        RecoowRow(
+                            title = stringResource(R.string.ann_next),
+                            trailingText = record.daysUntil(clock, zone, vm.calendar)?.let { stringResource(R.string.ann_days_until, it) }
+                                ?: stringResource(R.string.ann_days_since, record.daysSince(clock, zone)),
+                        )
+                        RecoowDivider()
+                        RecoowRow(
+                            title = stringResource(R.string.ann_years_label),
+                            trailingText = stringResource(R.string.ann_years, vm.calendar.yearsBetween(Instant.ofEpochMilli(record.occurredAt), Instant.ofEpochMilli(clock), record.calendar, zone)),
+                        )
+                    }
+                }
+            }
+            record.next(clock, zone, vm.calendar)?.let { time -> item(key = "next") {
+                Column {
+                    RecoowSectionHeader(stringResource(R.string.ann_next_reminder))
+                    RecoowGroup {
+                        RecoowRow(title = stringResource(R.string.ann_next_date), trailingText = anniversaryDate(time, record.calendar).replace("\n", " · "))
+                        RecoowDivider()
+                        RecoowRow(title = stringResource(R.string.ann_next_time), trailingText = recordDateTime(time))
+                    }
+                }
+            } }
+            item(key = "rules") {
+                Column {
+                    RecoowSectionHeader(stringResource(R.string.ann_rules))
+                    RecoowGroup {
+                        RecoowRow(title = stringResource(R.string.ann_repeat), trailingText = stringResource(if (record.yearly) R.string.ann_yearly else R.string.ann_once))
+                        RecoowDivider()
+                        RecoowRow(title = stringResource(R.string.ann_notifications), trailingText = stringResource(if (record.enabled) R.string.ann_notifications_on else R.string.ann_notifications_off))
+                        RecoowDivider()
+                        RecoowRow(title = stringResource(R.string.ann_lead), trailingText = stringResource(R.string.ann_lead_value, record.lead))
+                    }
+                }
+            }
+            item(key = "notify") { AnniversaryNotificationControls(vm) }
+            record.note?.let { note -> item(key = "note") {
+                Column {
+                    RecoowSectionHeader(stringResource(CommonR.string.record_note))
+                    RecoowGroup { RecoowRow(title = note) }
+                }
+            } }
         }
     }
     if (deleting && record != null) RecordDeleteConfirmation(record.title, stringResource(R.string.ann_delete_note), { deleting = false }) { deleting = false; vm.delete(record) }
@@ -97,17 +164,45 @@ import kotlinx.coroutines.delay
 @Composable private fun AnniversaryEditor(vm: AnniversariesViewModel, state: AnniversaryState, d: AnniversaryDraft, back: () -> Unit) {
     val names = LocalResources.current.getStringArray(R.array.ann_categories)
     var dateOpen by rememberSaveable { mutableStateOf(false) }; var timeOpen by rememberSaveable { mutableStateOf(false) }; val zone = ZoneId.systemDefault()
+    var attempted by rememberSaveable { mutableStateOf(false) }
+    val titleError = if (attempted && d.title.isBlank()) stringResource(CommonR.string.record_field_required) else null
     RecordPage(stringResource(if (d.revision == null) R.string.ann_add else R.string.ann_edit), back, busy = state.busy,
-        action = stringResource(CommonR.string.record_save), actionEnabled = d.valid && !state.loading && !state.failed, onAction = vm::save) {
-        item { RecordField(stringResource(R.string.ann_name), d.title, { vm.update(d.copy(title = it)) }, !state.busy, tag = "anniversary_title") }
-        item { RecordChoice(stringResource(R.string.ann_category), d.category, AnniversaryCategory.entries.map { it to names[it.ordinal] }, { vm.update(d.copy(category = it)) }, !state.busy) }
-        item { RecordField(stringResource(CommonR.string.record_note), d.note, { vm.update(d.copy(note = it)) }, !state.busy, multiline = true) }
-        item { RecordChoice(stringResource(R.string.ann_calendar), d.calendar, listOf(DateCalendar.GREGORIAN to stringResource(R.string.ann_solar), DateCalendar.CHINESE to stringResource(R.string.ann_lunar)), { vm.update(d.copy(calendar = it)) }, !state.busy) }
-        item { OutlinedButton(onClick = { dateOpen = true }, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) { Text(anniversaryDate(d.occurredAt, d.calendar)) } }
-        item { AnniversaryToggle(stringResource(R.string.ann_yearly), d.yearly, !state.busy) { vm.update(d.copy(yearly = it)) } }
-        item { OutlinedButton(onClick = { timeOpen = true }, enabled = !state.busy) { Text(stringResource(R.string.ann_time, d.minutes / 60, d.minutes % 60)) } }
-        item { RecordChoice(stringResource(R.string.ann_lead), d.lead, imehc.recoow.core.domain.reminders.leadMinutes.map { it to stringResource(R.string.ann_lead_value, it) }, { vm.update(d.copy(lead = it)) }, !state.busy) }
-        item { AnniversaryToggle(stringResource(R.string.ann_enabled), d.enabled, !state.busy) { vm.update(d.copy(enabled = it)) }; AnniversaryNotificationControls(vm) }
+        action = stringResource(CommonR.string.record_save), onAction = { if (d.valid && !state.loading && !state.failed) vm.save() else attempted = true }) {
+        item {
+            RecordForm {
+                RecordFormText(stringResource(R.string.ann_name), d.title, { vm.update(d.copy(title = it)) },
+                    enabled = !state.busy, error = titleError, tag = "anniversary_title")
+                RecordFormDivider()
+                RecordChoice(stringResource(R.string.ann_category), d.category,
+                    AnniversaryCategory.entries.map { it to names[it.ordinal] },
+                    { vm.update(d.copy(category = it)) }, enabled = !state.busy, bordered = false)
+                RecordFormDivider()
+                RecordChoice(stringResource(R.string.ann_calendar), d.calendar,
+                    listOf(DateCalendar.GREGORIAN to stringResource(R.string.ann_solar), DateCalendar.CHINESE to stringResource(R.string.ann_lunar)),
+                    { vm.update(d.copy(calendar = it)) }, enabled = !state.busy, bordered = false)
+                RecordFormDivider()
+                RecordFormAction(stringResource(CommonR.string.record_date), value = anniversaryDate(d.occurredAt, d.calendar),
+                    enabled = !state.busy, valueMaxLines = 2, onClick = { dateOpen = true })
+                RecordFormDivider()
+                RecordSwitch(stringResource(R.string.ann_yearly), d.yearly, { vm.update(d.copy(yearly = it)) },
+                    enabled = !state.busy, modifier = Modifier.padding(horizontal = 14.dp))
+                RecordFormDivider()
+                RecordFormAction(stringResource(R.string.ann_time_label),
+                    value = String.format(Locale.US, "%02d:%02d", d.minutes / 60, d.minutes % 60),
+                    enabled = !state.busy, onClick = { timeOpen = true })
+                RecordFormDivider()
+                RecordChoice(stringResource(R.string.ann_lead), d.lead,
+                    imehc.recoow.core.domain.reminders.leadMinutes.map { it to stringResource(R.string.ann_lead_value, it) },
+                    { vm.update(d.copy(lead = it)) }, enabled = !state.busy, bordered = false)
+                RecordFormDivider()
+                RecordSwitch(stringResource(R.string.ann_enabled), d.enabled, { vm.update(d.copy(enabled = it)) },
+                    enabled = !state.busy, modifier = Modifier.padding(horizontal = 14.dp))
+                RecordFormDivider()
+                RecordFormText(stringResource(CommonR.string.record_note), d.note, { vm.update(d.copy(note = it)) },
+                    enabled = !state.busy, multiline = true)
+            }
+        }
+        item { AnniversaryNotificationControls(vm) }
     }
     val onDate: (LocalDate) -> Unit = { day -> vm.update(d.copy(occurredAt = day.atTime(Instant.ofEpochMilli(d.occurredAt).atZone(zone).toLocalTime()).atZone(zone).toInstant().toEpochMilli())); dateOpen = false }
     if (dateOpen) { if (d.calendar == DateCalendar.CHINESE) LunarPicker(d.occurredAt, { dateOpen = false }, onDate)
@@ -146,12 +241,17 @@ import kotlinx.coroutines.delay
 @Composable private fun AnniversaryNotificationControls(vm: AnniversariesViewModel) {
     val state by vm.notificationState.collectAsStateWithLifecycle(); val context = LocalContext.current
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refreshNotifications() }
-    if (!state.allowed || !state.exact || state.failed) Column {
-        Text(stringResource(if (!state.allowed) R.string.ann_access_off else if (state.failed) R.string.ann_access_failed else R.string.ann_access_inexact))
-        FlowRow {
-            TextButton(onClick = { if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) permission.launch(Manifest.permission.POST_NOTIFICATIONS)
-                else context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)) }) { Text(stringResource(R.string.ann_access_settings)) }
-            if (Build.VERSION.SDK_INT >= 31 && !state.exact) TextButton(onClick = { context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}"))) }) { Text(stringResource(R.string.ann_access_exact)) }
-        }
-    }
+    if (!state.allowed || !state.exact || state.failed) RecoowNotice(
+        text = stringResource(if (!state.allowed) R.string.ann_access_off else if (state.failed) R.string.ann_access_failed else R.string.ann_access_inexact),
+        actions = buildList {
+            add(RecoowAction(stringResource(R.string.ann_access_settings)) {
+                if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+                    permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                else context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
+            })
+            if (Build.VERSION.SDK_INT >= 31 && !state.exact) add(RecoowAction(stringResource(R.string.ann_access_exact)) {
+                context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}")))
+            })
+        },
+    )
 }

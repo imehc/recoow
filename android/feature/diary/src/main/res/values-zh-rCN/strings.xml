@@ -18,11 +18,17 @@
     <string name="diary_clear_date">清除日期筛选</string>
     <string name="diary_photos">照片</string>
     <string name="diary_audio">录音</string>
+    <string name="diary_metric_total">累计篇数</string>
+    <string name="diary_metric_today">今天</string>
+    <string name="diary_metric_days">记录天数</string>
+    <string name="diary_metric_streak">连续天数</string>
     <string name="diary_summary">共 %1$d 篇 · 今日 %2$d 篇\n记录 %3$d 天 · 连续 %4$d 天</string>
     <string name="diary_relations_count">关联 %1$d 条 · 附件 %2$d 个</string>
     <string name="diary_delete_tag_note">删除此标签？已有日记保留历史标签引用。</string>
     <string name="diary_delete_note">删除此日记及其关联和附件？来源记录会保留。</string>
     <string name="diary_location">位置：%1$.5f，%2$.5f</string>
+    <string name="diary_location_label">位置</string>
+    <string name="diary_filter_tags">按标签筛选</string>
     <string name="diary_remove_location">移除位置</string>
     <string-array name="diary_moods">
         <item>平常</item>
@@ -40,4 +46,6 @@
         <item>物品</item>
         <item>抽选历史</item>
     </string-array>
+    <string name="diary_empty_hint">记下当天发生了什么，可以带照片、位置和心情。</string>
+    <string name="diary_need_content">先写个标题或正文再保存。</string>
 </resources>

@@ -32,6 +32,10 @@ class BillsFlowTest {
         compose.waitForIdle()
     }
     private fun scroll(tag: String) {
+        // 搜索框默认收在顶栏的搜索图标里，先展开再滚动。
+        if (tag == "bill_search" && compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isEmpty()) {
+            compose.onNodeWithTag("bill_search_toggle").performClick(); compose.waitForIdle()
+        }
         if (!tag.startsWith("account_")) compose.onNodeWithTag(if (tag == "bill_search") "bills_list" else "bill_form").performScrollToNode(hasTestTag(tag))
     }
     private fun text(tag: String, value: String) { scroll(tag); compose.onNodeWithTag(tag).performScrollTo().performTextReplacement(value) }
@@ -66,7 +70,9 @@ class BillsFlowTest {
         compose.onNodeWithTag("bill_save").performClick(); ready()
         compose.waitUntil(10_000) { viewModel.draft.value == null && viewModel.state.value.bills.any { it.title == title } }
         assertEquals(17_600L, viewModel.state.value.bills.single { it.title == title }.amounts.final)
-        clickText(BillsR.string.copy)
+        // 复制动作已收进详情页顶栏「⋯」菜单。
+        compose.onNodeWithTag("bill_detail_more").performClick()
+        compose.onNodeWithText(label(BillsR.string.copy)).performClick()
         compose.activityRule.scenario.recreate()
         compose.onNodeWithTag("bill_title").assertTextContains(title)
         back()
@@ -103,8 +109,11 @@ class BillsFlowTest {
         compose.onNode(hasText(title) and hasAnyAncestor(isPopup())).performClick()
         compose.onNodeWithTag("bill_save").performClick(); ready()
         compose.waitUntil(10_000) { viewModel.state.value.accounts.any { it.id == id && it.balance == 13_000L && it.references == 2 } }
-        back(); compose.onNodeWithTag("bill_accounts").performClick()
+        back(); compose.onNodeWithTag("bills_more").performClick()
+        compose.onNodeWithTag("bill_accounts").performClick()
         compose.onNodeWithText(title).assertIsDisplayed()
+        // 编辑/删除收进账户行的长按菜单：引用未清零时删除不可用。
+        compose.onNodeWithText(title).performTouchInput { longClick() }
         compose.onNodeWithText(label(BillsR.string.delete)).assertIsNotEnabled()
     }
 }

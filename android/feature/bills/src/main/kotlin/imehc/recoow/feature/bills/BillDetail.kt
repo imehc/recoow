@@ -2,18 +2,23 @@ package imehc.recoow.feature.bills
 
 import android.content.ClipData
 import android.content.ClipboardManager
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import imehc.recoow.core.designsystem.RecoowPage
+import imehc.recoow.core.designsystem.*
 import imehc.recoow.core.domain.bills.*
 import imehc.recoow.core.domain.media.MediaLocator
 import imehc.recoow.core.domain.media.ResolvedMedia
@@ -23,6 +28,7 @@ import imehc.recoow.core.media.MediaImage
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.catch
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable internal fun BillDetail(bill: BillRecord?, state: BillsState, viewModel: BillsViewModel, onBack: () -> Unit) {
     val locale = LocalConfiguration.current.locales[0]
     val context = LocalContext.current
@@ -32,55 +38,124 @@ import kotlinx.coroutines.flow.catch
     var refunding by rememberSaveable { mutableStateOf(false) }
     var reason by rememberSaveable { mutableStateOf("") }
     var copied by remember { mutableStateOf(false) }
-    RecoowPage(stringResource(R.string.bill_details), navigationIcon = { BackButton(onBack) }) {
-        if (bill == null) item { if (state.loading) CircularProgressIndicator() else Text(stringResource(R.string.missing_bill)) }
-        else {
-            item { Card { Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(bill.title, style = MaterialTheme.typography.titleLarge)
-                Text((if (bill.type == BillType.INCOME) "+" else "−") + money(bill.amounts.final, locale), style = MaterialTheme.typography.headlineSmall)
-                Text("${resources.getString(labelId(bill.type.wire))} · ${categoryLabel(resources, bill)}")
-                Text(dateTime(bill.occurredAt, state.zone))
-                Text(stringResource(when { bill.voided(state.now) -> R.string.refunded; bill.settlement == Settlement.REDEEMED -> R.string.redeemed; else -> R.string.active }))
-                if (bill.expired(state.now)) Text(stringResource(R.string.expired_info), style = MaterialTheme.typography.bodySmall)
-            } } }
-            item { FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilledTonalButton(onClick = { viewModel.edit(bill) }, enabled = !state.busy) { Text(stringResource(R.string.edit)) }
-                TextButton(onClick = { viewModel.edit(bill, duplicate = true) }, enabled = !state.busy) { Text(stringResource(R.string.copy)) }
-                if (bill.canRedeem(state.now)) TextButton(onClick = { viewModel.redeem(bill) }, enabled = !state.busy) { Text(stringResource(R.string.redeem)) }
-                if (bill.canRefund(state.now)) TextButton(onClick = { refunding = true }, enabled = !state.busy) { Text(stringResource(R.string.refund_action)) }
-                TextButton(onClick = { deleting = true }, enabled = !state.busy) { Text(stringResource(R.string.delete)) }
-            } }
-            if (state.busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
-            if (bill.hasImage) item {
+    var menu by rememberSaveable { mutableStateOf(false) }
+    // 操作不占正文：顶栏「⋯」与长按摘要卡共用同一组动作。
+    val menuActions: List<Pair<String, (() -> Unit)>> = bill?.let { b -> listOfNotNull(
+        stringResource(R.string.edit) to { viewModel.edit(b) },
+        stringResource(R.string.copy) to { viewModel.edit(b, duplicate = true) },
+        if (b.canRedeem(state.now)) stringResource(R.string.redeem) to { viewModel.redeem(b) } else null,
+        if (b.canRefund(state.now)) stringResource(R.string.refund_action) to { refunding = true } else null,
+        b.utilityAccountNumber?.let { number ->
+            stringResource(if (copied) R.string.copied else R.string.copy_number) to {
+                context.getSystemService(ClipboardManager::class.java)
+                    .setPrimaryClip(ClipData.newPlainText(resources.getString(R.string.utility_number), number))
+                copied = true
+            }
+        },
+        stringResource(R.string.delete) to { deleting = true },
+    ) } ?: emptyList()
+    val deleteLabel = stringResource(R.string.delete)
+    RecoowPage(stringResource(R.string.bill_details), navigationIcon = { BackButton(onBack) }, contentSpacing = RecoowLayout.sectionGap,
+        action = { if (bill != null && menuActions.isNotEmpty()) RecoowOverflowMenu(menuActions.map { (label, onClick) -> RecoowAction(label, enabled = !state.busy, onClick = onClick) }, tag = "bill_detail_more") }) {
+        if (bill == null) item(key = "missing") {
+            RecoowGroup {
+                if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+                else RecoowEmptyState(stringResource(R.string.missing_bill))
+            }
+        } else {
+            item(key = "head") {
+                Box {
+                    RecoowGroup(Modifier.combinedClickable(onClick = {}, onLongClick = { if (!state.busy) menu = true })) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                            Row(verticalAlignment = androidx.compose.ui.Alignment.Top) {
+                                Text(bill.title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 3)
+                                Text(
+                                    stringResource(when { bill.voided(state.now) -> R.string.refunded; bill.settlement == Settlement.REDEEMED -> R.string.redeemed; else -> R.string.active }),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Text(
+                                (if (bill.type == BillType.INCOME) "+" else "−") + money(bill.amounts.final, locale),
+                                modifier = Modifier.padding(top = 8.dp),
+                                style = MaterialTheme.typography.titleLarge,
+                                color = if (bill.type == BillType.INCOME) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                "${resources.getString(labelId(bill.type.wire))} · ${categoryLabel(resources, bill)} · ${dateTime(bill.occurredAt, state.zone)}",
+                                modifier = Modifier.padding(top = 6.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            if (bill.expired(state.now)) Text(
+                                stringResource(R.string.expired_info),
+                                modifier = Modifier.padding(top = 6.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                    DropdownMenu(menu, { menu = false }, shape = MaterialTheme.shapes.medium,
+                        containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+                        menuActions.forEach { (label, onClick) ->
+                            DropdownMenuItem(text = { Text(label, color = if (label == deleteLabel) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface) },
+                                enabled = !state.busy, onClick = { menu = false; onClick() })
+                        }
+                    }
+                }
+            }
+            if (state.busy) item(key = "busy") { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+            if (bill.hasImage) item(key = "image") {
                 val locator = MediaLocator(bill.imageAssetId, "bills", bill.id)
                 val flow = remember(locator) { viewModel.media.observeContent(locator).catch { emit(ResolvedMedia(MediaAvailability.DAMAGED)) } }
                 val resolved by flow.collectAsStateWithLifecycle(ResolvedMedia(MediaAvailability.PENDING))
-                MediaImage(locator, viewModel.media, Modifier.fillMaxWidth().height(240.dp).clickable { preview = true })
-                resolved.title?.let { Text(it) }
+                Column {
+                    MediaImage(
+                        locator, viewModel.media,
+                        Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(RecoowLayout.cardRadius)).clickable { preview = true },
+                    )
+                    resolved.title?.let { Text(it, modifier = Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                }
             }
-            if (bill.type == BillType.EXPENSE) {
-                item { DetailValue(stringResource(R.string.original), money(bill.amounts.original, locale)) }
-                item { DetailValue(stringResource(R.string.discount), money(bill.amounts.discount, locale)) }
+            item(key = "details") {
+                val account = bill.accountId?.let { id -> state.accounts.firstOrNull { it.id == id } }
+                val details = listOfNotNull(
+                    if (bill.type == BillType.EXPENSE) stringResource(R.string.original) to money(bill.amounts.original, locale) else null,
+                    if (bill.type == BillType.EXPENSE) stringResource(R.string.discount) to money(bill.amounts.discount, locale) else null,
+                    if (bill.type != BillType.STORED_VALUE_USE) {
+                        stringResource(if (bill.type == BillType.INCOME) R.string.channel else R.string.payment) to resources.getString(labelId(bill.payment.wire))
+                    } else null,
+                    bill.accountId?.let { id ->
+                        stringResource(if (bill.type == BillType.STORED_VALUE_USE) R.string.deduction_account else R.string.recharge_account) to (account?.name ?: id)
+                    },
+                    account?.let { stringResource(R.string.balance) to money(it.balance, locale) },
+                    bill.validUntil?.let { stringResource(R.string.expiry_date) to dateTime(it, state.zone) },
+                    bill.redeemedAt?.let { stringResource(R.string.redeemed_at) to dateTime(it, state.zone) },
+                    bill.refundReason?.let { stringResource(R.string.refund_reason) to it },
+                    bill.startLocation?.let { stringResource(R.string.start) to it },
+                    bill.endLocation?.let { stringResource(R.string.end) to it },
+                    bill.transportLines?.let { stringResource(R.string.lines) to it },
+                    bill.utilityAccountNumber?.let { stringResource(R.string.utility_number) to it },
+                )
+                if (details.isNotEmpty()) Column {
+                    RecoowSectionHeader(stringResource(R.string.bills_detail_section))
+                    RecoowGroup {
+                        details.forEachIndexed { index, (label, value) ->
+                            RecoowRow(title = label, trailingText = value)
+                            if (index < details.lastIndex) RecoowDivider()
+                        }
+                    }
+                }
             }
-            if (bill.type != BillType.STORED_VALUE_USE) item { DetailValue(stringResource(if (bill.type == BillType.INCOME) R.string.channel else R.string.payment), resources.getString(labelId(bill.payment.wire))) }
-            bill.accountId?.let { id ->
-                val account = state.accounts.firstOrNull { it.id == id }
-                item { DetailValue(stringResource(if (bill.type == BillType.STORED_VALUE_USE) R.string.deduction_account else R.string.recharge_account), account?.name ?: id) }
-                account?.let { item { DetailValue(stringResource(R.string.balance), money(it.balance, locale)) } }
-            }
-            bill.validUntil?.let { item { DetailValue(stringResource(R.string.expiry_date), dateTime(it, state.zone)) } }
-            bill.redeemedAt?.let { item { DetailValue(stringResource(R.string.redeemed_at), dateTime(it, state.zone)) } }
-            bill.refundReason?.let { item { DetailValue(stringResource(R.string.refund_reason), it) } }
-            bill.startLocation?.let { item { DetailValue(stringResource(R.string.start), it) } }
-            bill.endLocation?.let { item { DetailValue(stringResource(R.string.end), it) } }
-            bill.transportLines?.let { item { DetailValue(stringResource(R.string.lines), it) } }
-            bill.utilityAccountNumber?.let { number -> item {
-                DetailValue(stringResource(R.string.utility_number), number)
-                TextButton(onClick = {
-                    context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText(resources.getString(R.string.utility_number), number)); copied = true
-                }) { Text(stringResource(if (copied) R.string.copied else R.string.copy_number)) }
+            bill.note?.takeIf { it.isNotBlank() }?.let { note -> item(key = "note") {
+                Column {
+                    RecoowSectionHeader(stringResource(R.string.note))
+                    RecoowGroup {
+                        Text(note, modifier = Modifier.fillMaxWidth().padding(14.dp), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                    }
+                }
             } }
-            bill.note?.let { item { DetailValue(stringResource(R.string.note), it) } }
         }
     }
     if (preview && bill != null) ImagePreview(listOf(MediaLocator(bill.imageAssetId, "bills", bill.id)), 0, viewModel.media) { preview = false }
@@ -94,8 +169,5 @@ import kotlinx.coroutines.flow.catch
 }
 
 @Composable internal fun DetailValue(label: String, value: String) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.bodyLarge)
-    }
+    RecoowRow(title = label, trailingText = value)
 }

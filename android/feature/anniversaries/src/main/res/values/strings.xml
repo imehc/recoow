@@ -35,5 +35,15 @@
     <string name="ann_access_inexact">The system may delay inexact reminders.</string>
     <string name="ann_access_settings">Notification settings</string>
     <string name="ann_access_exact">Exact alarm access</string>
+    <string name="ann_empty_hint">Save birthdays and anniversaries, and get a reminder before they arrive.</string>
+    <string name="ann_date">Date</string>
+    <string name="ann_years_label">Anniversary years</string>
+    <string name="ann_next_reminder">Next reminder</string>
+    <string name="ann_next_date">Reminder date</string>
+    <string name="ann_next_time">Reminder time</string>
+    <string name="ann_rules">Reminder rules</string>
+    <string name="ann_repeat">Repeat</string>
+    <string name="ann_notifications">Notifications</string>
     <string-array name="ann_categories"><item>Birthday</item><item>Relationship</item><item>Family</item><item>Work / study</item><item>Personal goal</item><item>Other</item></string-array>
+    <string name="ann_time_label">Reminder time</string>
 </resources>

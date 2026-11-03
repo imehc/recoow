@@ -40,6 +40,7 @@
   <string name="next">下一张</string>
   <string name="page">%1$d / %2$d</string>
   <string name="attachments">附件</string>
+  <string name="add_attachment">添加附件</string>
   <string name="remove">移除</string>
   <string name="record">录音</string>
   <string name="stop">完成录音</string>
@@ -62,4 +63,8 @@
     <string name="crop_move_right">向右移动图片</string>
     <string name="crop_move_up">向上移动图片</string>
     <string name="crop_move_down">向下移动图片</string>
+  <string name="view_grid">网格视图</string>
+  <string name="view_list">列表视图</string>
+  <string name="empty_library_detail">添加的照片和保留的附件会出现在这里。</string>
+  <string name="assets_section">素材</string>
 </resources>

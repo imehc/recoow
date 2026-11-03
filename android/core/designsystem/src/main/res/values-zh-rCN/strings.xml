@@ -7,4 +7,13 @@
     <string name="record_retry">重试</string><string name="record_stale">记录已发生变化，请重新打开以使用最新版本。</string>
     <string name="record_invalid">请检查必填内容及关联记录。</string><string name="record_search">搜索</string>
     <string name="record_all">全部</string><string name="record_remove">移除</string><string name="record_date">日期与时间</string>
+    <string name="record_more">更多操作</string>
+    <string name="record_overview">记录概览</string>
+    <string name="record_loading">正在加载</string>
+    <string name="record_clear_filters">清空筛选</string>
+    <string name="record_no_matches_hint">换个关键词，或者清空筛选条件再看看。</string>
+    <string name="record_field_required">请填写</string>
+    <string name="record_field_choose">请选择</string>
+    <string name="record_load_more">加载更多</string>
+    <string name="record_end">已经到底了</string>
 </resources>

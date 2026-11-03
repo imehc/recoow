@@ -1,12 +1,23 @@
 package imehc.recoow.feature.bills
 
+import imehc.recoow.core.designsystem.RecordChoice
+import imehc.recoow.core.designsystem.RecordForm
+import imehc.recoow.core.designsystem.RecordFormAction
+import imehc.recoow.core.designsystem.RecordFormDateTime
+import imehc.recoow.core.designsystem.RecordFormDivider
+import imehc.recoow.core.designsystem.RecordFormHint
+import imehc.recoow.core.designsystem.RecordFormText
+import imehc.recoow.core.designsystem.RecordFormValue
 import imehc.recoow.core.designsystem.RecordSwitch
+import imehc.recoow.core.designsystem.R as CommonR
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalConfiguration
@@ -24,75 +35,155 @@ import java.io.File
     val resources = LocalResources.current
     val locale = LocalConfiguration.current.locales[0]
     val enabled = !state.busy
+    var attempted by rememberSaveable { mutableStateOf(false) }
+    val titleError = if (attempted && draft.title.isBlank()) stringResource(CommonR.string.record_field_required) else null
+    val amountMissing = draft.amounts.values(draft.type) == null
+    val originalMissing = draft.type == BillType.EXPENSE && (BillMoney.cents(draft.amounts.original) ?: 0L) <= 0L
+    val finalMissing = draft.type != BillType.EXPENSE && (BillMoney.cents(draft.amounts.final) ?: 0L) <= 0L
+    val amountError = when {
+        !attempted || !amountMissing -> null
+        originalMissing -> stringResource(R.string.amount_original_required)
+        finalMissing -> stringResource(CommonR.string.record_field_required)
+        else -> stringResource(R.string.amount_invalid)
+    }
+    val accountError = if (attempted && draft.requiresAccount && draft.accountId == null) stringResource(CommonR.string.record_field_choose) else null
+    val validUntilError = if (attempted && draft.isGroupBuy && draft.validUntil == null) stringResource(CommonR.string.record_field_choose) else null
     Scaffold(topBar = {
         TopAppBar(title = { Text(stringResource(if (draft.revision == null) R.string.add_bill else R.string.edit_bill)) },
             navigationIcon = { BackButton(onBack) }, actions = {
-                TextButton(enabled = enabled && draft.valid, onClick = viewModel::save, modifier = Modifier.testTag("bill_save")) { Text(stringResource(R.string.save)) }
+                TextButton(enabled = enabled, onClick = { if (draft.valid) viewModel.save() else attempted = true },
+                    modifier = Modifier.testTag("bill_save")) { Text(stringResource(R.string.save)) }
             })
     }) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding().testTag("bill_form"), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding).imePadding().testTag("bill_form"),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
             if (state.busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
-            item { OutlinedTextField(draft.title, { viewModel.update(draft.copy(title = it)) }, label = { Text(stringResource(R.string.title)) }, singleLine = true, enabled = enabled, modifier = Modifier.fillMaxWidth().testTag("bill_title")) }
-            item { ChoiceField(stringResource(R.string.bills), draft.type, BillType.entries.map { it to resources.getString(labelId(it.wire)) }, { viewModel.update(draft.withType(it)) }, modifier = Modifier.testTag("bill_type"), enabled = enabled) }
-            if (draft.type == BillType.EXPENSE) item { AmountField(draft, AmountField.ORIGINAL, R.string.original, enabled, viewModel) }
-            item { AmountField(draft, AmountField.FINAL, when (draft.type) { BillType.EXPENSE -> R.string.final_amount; BillType.INCOME -> R.string.amount; else -> R.string.deduction }, enabled, viewModel) }
-            if (draft.type == BillType.EXPENSE) {
-                item { AmountField(draft, AmountField.DISCOUNT, R.string.discount, enabled, viewModel) }
-                item { AmountField(draft, AmountField.RATE, R.string.rate, enabled, viewModel) }
-            }
-            if (draft.amounts.values(draft.type) == null && (draft.amounts.original.isNotBlank() || draft.amounts.final.isNotBlank())) item {
-                Text(stringResource(R.string.amount_invalid), color = MaterialTheme.colorScheme.error)
-            }
-            item { ChoiceField(stringResource(R.string.category), draft.category,
-                (if (draft.type == BillType.INCOME) incomeCategories else expenseCategories).map {
-                    it to resources.getString(if (draft.type == BillType.INCOME && it == "other") R.string.other_income else labelId(it))
-                }, { viewModel.update(draft.copy(category = it)) }, modifier = Modifier.testTag("bill_category"), enabled = enabled) }
-            if (draft.type != BillType.STORED_VALUE_USE) item { ChoiceField(stringResource(if (draft.type == BillType.INCOME) R.string.channel else R.string.payment), draft.payment,
-                PaymentMethod.entries.map { it to resources.getString(labelId(it.wire)) }, { viewModel.update(draft.copy(payment = it)) }, enabled = enabled) }
-            item { DateTimeField(stringResource(R.string.date), draft.occurredAt, { viewModel.update(draft.copy(occurredAt = it)) }, enabled) }
-            if (draft.isGroupBuy) item { DateTimeField(stringResource(R.string.valid_until), draft.validUntil, { viewModel.update(draft.copy(validUntil = it)) }, enabled) }
-            if (draft.type != BillType.INCOME) item { Card {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (draft.type == BillType.EXPENSE) RecordSwitch(stringResource(R.string.recharge), draft.recharge, { viewModel.update(draft.copy(recharge = it)) }, enabled = enabled, modifier = Modifier.testTag("bill_recharge"))
-                    if (draft.requiresAccount) {
-                        ChoiceField(stringResource(R.string.select_account), draft.accountId, state.accounts.map { it.id as String? to it.name },
-                            { viewModel.update(draft.copy(accountId = it)) }, enabled = enabled)
-                        state.accounts.firstOrNull { it.id == draft.accountId }?.let { account ->
-                            Text("${stringResource(R.string.balance)}: ${money(account.balance, locale)}")
-                        }
-                        TextButton(onClick = { viewModel.editAccount() }, enabled = enabled, modifier = Modifier.testTag("bill_add_account")) { Text(stringResource(R.string.add_account)) }
-                        Text(stringResource(R.string.recharge_hint), style = MaterialTheme.typography.bodySmall)
+            item {
+                RecordForm {
+                    RecordFormText(stringResource(R.string.title), draft.title, { viewModel.update(draft.copy(title = it)) },
+                        enabled = enabled, error = titleError, tag = "bill_title")
+                    RecordFormDivider()
+                    RecordChoice(stringResource(R.string.bills), draft.type,
+                        BillType.entries.map { it to resources.getString(labelId(it.wire)) },
+                        { viewModel.update(draft.withType(it)) }, enabled = enabled, bordered = false,
+                        modifier = Modifier.testTag("bill_type"))
+                    RecordFormDivider()
+                    RecordChoice(stringResource(R.string.category), draft.category,
+                        (if (draft.type == BillType.INCOME) incomeCategories else expenseCategories).map {
+                            it to resources.getString(if (draft.type == BillType.INCOME && it == "other") R.string.other_income else labelId(it))
+                        }, { viewModel.update(draft.copy(category = it)) }, enabled = enabled, bordered = false,
+                        modifier = Modifier.testTag("bill_category"))
+                    if (draft.type != BillType.STORED_VALUE_USE) {
+                        RecordFormDivider()
+                        RecordChoice(stringResource(if (draft.type == BillType.INCOME) R.string.channel else R.string.payment), draft.payment,
+                            PaymentMethod.entries.map { it to resources.getString(labelId(it.wire)) },
+                            { viewModel.update(draft.copy(payment = it)) }, enabled = enabled, bordered = false)
+                    }
+                    RecordFormDivider()
+                    RecordFormDateTime(stringResource(R.string.date), draft.occurredAt, { viewModel.update(draft.copy(occurredAt = it)) }, enabled)
+                    if (draft.isGroupBuy) {
+                        RecordFormDivider()
+                        RecordFormDateTime(stringResource(R.string.valid_until), draft.validUntil ?: 0L,
+                            { viewModel.update(draft.copy(validUntil = it)) }, enabled)
+                        validUntilError?.let { message -> RecordFormDivider(); RecordFormHint(message) }
                     }
                 }
-            } }
-            if (draft.isTransport) {
-                item { OutlinedTextField(draft.start, { viewModel.update(draft.copy(start = it)) }, label = { Text(stringResource(R.string.start)) }, enabled = enabled, modifier = Modifier.fillMaxWidth()) }
-                item { TextButton(onClick = { viewModel.update(draft.copy(start = draft.end, end = draft.start)) }, enabled = enabled) { Text(stringResource(R.string.swap)) } }
-                item { OutlinedTextField(draft.end, { viewModel.update(draft.copy(end = it)) }, label = { Text(stringResource(R.string.end)) }, enabled = enabled, modifier = Modifier.fillMaxWidth()) }
-                item { OutlinedTextField(draft.lines, { viewModel.update(draft.copy(lines = it)) }, label = { Text(stringResource(R.string.lines)) }, minLines = 2, enabled = enabled, modifier = Modifier.fillMaxWidth()) }
             }
-            if (draft.isUtility) item { OutlinedTextField(draft.utilityNumber, { viewModel.update(draft.copy(utilityNumber = it)) }, label = { Text(stringResource(R.string.utility_number)) }, singleLine = true, enabled = enabled, modifier = Modifier.fillMaxWidth().testTag("bill_utility_number")) }
-            item { OutlinedTextField(draft.note, { viewModel.update(draft.copy(note = it)) }, label = { Text(stringResource(R.string.note)) }, minLines = 3, enabled = enabled, modifier = Modifier.fillMaxWidth()) }
-            if (state.preferences != null && enabled) item {
-                Text(stringResource(R.string.receipt), style = MaterialTheme.typography.titleMedium)
-                val locator = when (draft.imageEdit) {
-                    BillImageEdit.CLEAR -> null
-                    BillImageEdit.FILE -> draft.imageFile?.let { MediaLocator(draft = File(it)) }
-                    BillImageEdit.ASSET -> MediaLocator(assetId = draft.imageAssetId)
-                    BillImageEdit.KEEP -> if (draft.hasImage) MediaLocator(draft.imageAssetId, "bills", draft.imageSourceId) else null
+            item {
+                RecordForm {
+                    if (draft.type == BillType.EXPENSE) {
+                        AmountRow(draft, AmountField.ORIGINAL, R.string.original, enabled, viewModel, amountError.takeIf { originalMissing })
+                        RecordFormDivider()
+                    }
+                    AmountRow(draft, AmountField.FINAL, when (draft.type) {
+                        BillType.EXPENSE -> R.string.final_amount; BillType.INCOME -> R.string.amount; else -> R.string.deduction
+                    }, enabled, viewModel, amountError.takeIf { draft.type != BillType.EXPENSE && finalMissing })
+                    if (draft.type == BillType.EXPENSE) {
+                        RecordFormDivider()
+                        AmountRow(draft, AmountField.DISCOUNT, R.string.discount, enabled, viewModel)
+                        RecordFormDivider()
+                        AmountRow(draft, AmountField.RATE, R.string.rate, enabled, viewModel)
+                    }
+                    if (amountError != null && !originalMissing && !finalMissing) {
+                        RecordFormDivider()
+                        RecordFormHint(amountError)
+                    }
                 }
-                PhotoInput(locator, { photo ->
-                    viewModel.update(draft.copy(imageEdit = when { photo == null -> BillImageEdit.CLEAR; photo.assetId != null -> BillImageEdit.ASSET; else -> BillImageEdit.FILE },
-                        imageAssetId = photo?.assetId, imageFile = photo?.content?.file?.path, hasImage = photo != null))
-                }, viewModel.media, viewModel.processor, state.preferences)
+            }
+            if (draft.type != BillType.INCOME) item {
+                RecordForm {
+                    if (draft.type == BillType.EXPENSE) {
+                        RecordSwitch(stringResource(R.string.recharge), draft.recharge, { viewModel.update(draft.copy(recharge = it)) },
+                            enabled = enabled, modifier = Modifier.padding(horizontal = 14.dp).testTag("bill_recharge"))
+                        if (draft.requiresAccount) RecordFormDivider()
+                    }
+                    if (draft.requiresAccount) {
+                        RecordChoice(stringResource(R.string.select_account), draft.accountId, state.accounts.map { it.id as String? to it.name },
+                            { viewModel.update(draft.copy(accountId = it)) }, enabled = enabled, bordered = false, error = accountError)
+                        state.accounts.firstOrNull { it.id == draft.accountId }?.let { account ->
+                            RecordFormDivider()
+                            RecordFormValue(stringResource(R.string.balance), money(account.balance, locale))
+                        }
+                        RecordFormDivider()
+                        RecordFormAction(stringResource(R.string.add_account), onClick = { viewModel.editAccount() },
+                            enabled = enabled, tag = "bill_add_account")
+                    }
+                }
+            }
+            if (draft.requiresAccount) item { RecordFormHint(stringResource(R.string.recharge_hint)) }
+            if (draft.isTransport) item {
+                RecordForm {
+                    RecordFormText(stringResource(R.string.start), draft.start, { viewModel.update(draft.copy(start = it)) }, enabled = enabled)
+                    RecordFormDivider()
+                    RecordFormAction(stringResource(R.string.swap), onClick = { viewModel.update(draft.copy(start = draft.end, end = draft.start)) }, enabled = enabled)
+                    RecordFormDivider()
+                    RecordFormText(stringResource(R.string.end), draft.end, { viewModel.update(draft.copy(end = it)) }, enabled = enabled)
+                    RecordFormDivider()
+                    RecordFormText(stringResource(R.string.lines), draft.lines, { viewModel.update(draft.copy(lines = it)) }, enabled = enabled, multiline = true)
+                }
+            }
+            if (draft.isUtility) item {
+                RecordForm {
+                    RecordFormText(stringResource(R.string.utility_number), draft.utilityNumber,
+                        { viewModel.update(draft.copy(utilityNumber = it)) }, enabled = enabled, tag = "bill_utility_number")
+                }
+            }
+            item {
+                RecordForm {
+                    RecordFormText(stringResource(R.string.note), draft.note, { viewModel.update(draft.copy(note = it)) },
+                        enabled = enabled, multiline = true)
+                }
+            }
+            if (state.preferences != null && enabled) item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.receipt), style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp))
+                    val locator = when (draft.imageEdit) {
+                        BillImageEdit.CLEAR -> null
+                        BillImageEdit.FILE -> draft.imageFile?.let { MediaLocator(draft = File(it)) }
+                        BillImageEdit.ASSET -> MediaLocator(assetId = draft.imageAssetId)
+                        BillImageEdit.KEEP -> if (draft.hasImage) MediaLocator(draft.imageAssetId, "bills", draft.imageSourceId) else null
+                    }
+                    PhotoInput(locator, { photo ->
+                        viewModel.update(draft.copy(imageEdit = when { photo == null -> BillImageEdit.CLEAR; photo.assetId != null -> BillImageEdit.ASSET; else -> BillImageEdit.FILE },
+                            imageAssetId = photo?.assetId, imageFile = photo?.content?.file?.path, hasImage = photo != null))
+                    }, viewModel.media, viewModel.processor, state.preferences)
+                }
             }
         }
     }
 }
 
-@Composable private fun AmountField(draft: BillDraft, field: AmountField, label: Int, enabled: Boolean, viewModel: BillsViewModel) {
-    val value = when (field) { AmountField.ORIGINAL -> draft.amounts.original; AmountField.FINAL -> draft.amounts.final; AmountField.DISCOUNT -> draft.amounts.discount; AmountField.RATE -> draft.amounts.rate }
-    OutlinedTextField(value, { viewModel.update(draft.copy(amounts = draft.amounts.edit(field, it, draft.type))) },
-        label = { Text(stringResource(label)) }, singleLine = true, enabled = enabled, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        modifier = Modifier.fillMaxWidth().testTag("amount_${field.name.lowercase()}"))
+@Composable private fun AmountRow(draft: BillDraft, field: AmountField, label: Int, enabled: Boolean, viewModel: BillsViewModel, error: String? = null) {
+    val value = when (field) {
+        AmountField.ORIGINAL -> draft.amounts.original
+        AmountField.FINAL -> draft.amounts.final
+        AmountField.DISCOUNT -> draft.amounts.discount
+        AmountField.RATE -> draft.amounts.rate
+    }
+    RecordFormText(stringResource(label), value, { viewModel.update(draft.copy(amounts = draft.amounts.edit(field, it, draft.type))) },
+        enabled = enabled, keyboard = KeyboardType.Decimal, error = error, tag = "amount_${field.name.lowercase()}")
 }

@@ -18,11 +18,17 @@
     <string name="diary_clear_date">Clear date</string>
     <string name="diary_photos">Photos</string>
     <string name="diary_audio">Audio</string>
+    <string name="diary_metric_total">Entries</string>
+    <string name="diary_metric_today">Today</string>
+    <string name="diary_metric_days">Active days</string>
+    <string name="diary_metric_streak">Streak</string>
     <string name="diary_summary">Entries: %1$d · Today: %2$d\nActive days: %3$d · Streak: %4$d</string>
     <string name="diary_relations_count">%1$d linked records · %2$d attachments</string>
     <string name="diary_delete_tag_note">Delete this tag? Existing diary entries keep their tag references.</string>
     <string name="diary_delete_note">Delete this entry and its links and attachments? Source records are kept.</string>
     <string name="diary_location">Location: %1$.5f, %2$.5f</string>
+    <string name="diary_location_label">Location</string>
+    <string name="diary_filter_tags">Filter by tag</string>
     <string name="diary_remove_location">Remove location</string>
     <string-array name="diary_moods">
         <item>Neutral</item>
@@ -40,4 +46,6 @@
         <item>Items</item>
         <item>Choice history</item>
     </string-array>
+    <string name="diary_empty_hint">Write down what happened, with photos, place and mood.</string>
+    <string name="diary_need_content">Write a title or some text before saving.</string>
 </resources>

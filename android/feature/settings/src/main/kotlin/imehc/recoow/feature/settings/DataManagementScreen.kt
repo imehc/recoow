@@ -1,22 +1,33 @@
 package imehc.recoow.feature.settings
 
-import imehc.recoow.core.designsystem.recordToggleState
 import android.text.format.Formatter
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import imehc.recoow.core.designsystem.RecoowDivider
+import imehc.recoow.core.designsystem.RecoowGroup
+import imehc.recoow.core.designsystem.RecoowLayout
+import imehc.recoow.core.designsystem.RecoowMetric
+import imehc.recoow.core.designsystem.RecoowMetricGrid
+import imehc.recoow.core.designsystem.RecoowNotice
 import imehc.recoow.core.designsystem.RecoowPage
+import imehc.recoow.core.designsystem.RecoowRow
+import imehc.recoow.core.designsystem.R as DesignR
 import imehc.recoow.core.domain.backup.*
 import java.time.Instant
 import java.time.ZoneId
@@ -40,76 +51,203 @@ fun DataManagementScreen(viewModel: DataManagementViewModel, onBack: () -> Unit)
     val names = LocalResources.current.getStringArray(R.array.home_tool_names)
     fun size(value: Long) = Formatter.formatFileSize(context, value)
     fun date(value: Long?) = value?.let { DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(it)) }
-    RecoowPage(stringResource(if (preview == null) R.string.data_title else R.string.backup_preview), navigationIcon = {
-        TextButton(onClick = { if (preview != null) viewModel.dismissPreview() else onBack() }, enabled = !state.busy) { Text(stringResource(R.string.sync_back)) }
-    }) {
-        if (state.busy) item { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            LinearProgressIndicator(Modifier.fillMaxWidth())
-            Text(stringResource(R.string.data_working), style = MaterialTheme.typography.bodyMedium)
-        } }
-        state.result?.let { result -> item {
-            val text = when (result) {
-                DataResult.EXPORTED -> stringResource(R.string.backup_exported)
-                DataResult.IMPORTED -> stringResource(R.string.backup_imported, state.count)
-                DataResult.OPTIMIZED -> stringResource(R.string.data_optimized, size(state.count))
-                DataResult.RESET -> stringResource(R.string.data_reset_done)
-                DataResult.INVALID_BACKUP -> stringResource(R.string.backup_invalid)
-                DataResult.LEGACY_BACKUP -> stringResource(R.string.backup_legacy)
-                DataResult.FAILED -> stringResource(R.string.data_failed)
+
+    RecoowPage(
+        stringResource(if (preview == null) R.string.data_title else R.string.backup_preview),
+        navigationIcon = {
+            IconButton(
+                onClick = { if (preview != null) viewModel.dismissPreview() else onBack() },
+                enabled = !state.busy,
+            ) {
+                Icon(painterResource(DesignR.drawable.ic_record_back), stringResource(R.string.sync_back))
             }
-            Text(text, color = if (result in setOf(DataResult.FAILED, DataResult.INVALID_BACKUP, DataResult.LEGACY_BACKUP)) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
-            if (state.usage == null && !state.busy) TextButton(onClick = viewModel::refresh) { Text(stringResource(R.string.retry)) }
-        } }
+        },
+    ) {
+        if (state.busy) item("busy") { SettingsProgress(stringResource(R.string.data_working)) }
+
+        state.result?.let { result ->
+            item("result") {
+                val error = result in setOf(DataResult.FAILED, DataResult.INVALID_BACKUP, DataResult.LEGACY_BACKUP)
+                SettingsBanner(
+                    when (result) {
+                        DataResult.EXPORTED -> stringResource(R.string.backup_exported)
+                        DataResult.IMPORTED -> stringResource(R.string.backup_imported, state.count)
+                        DataResult.OPTIMIZED -> stringResource(R.string.data_optimized, size(state.count))
+                        DataResult.RESET -> stringResource(R.string.data_reset_done)
+                        DataResult.INVALID_BACKUP -> stringResource(R.string.backup_invalid)
+                        DataResult.LEGACY_BACKUP -> stringResource(R.string.backup_legacy)
+                        DataResult.FAILED -> stringResource(R.string.data_failed)
+                    },
+                    error = error,
+                    actionLabel = if (state.usage == null && !state.busy) stringResource(R.string.retry) else null,
+                    onAction = viewModel::refresh,
+                )
+            }
+        }
+
         if (preview != null) {
-            item { Card { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.backup_source, preview.preview.sourcePlatform, preview.preview.appVersion, preview.preview.appBuild), style = MaterialTheme.typography.titleMedium)
-                Text(date(preview.preview.exportedAt.toEpochMilli()).orEmpty())
-                Text(stringResource(R.string.backup_summary, preview.preview.tableCounts.values.sum(), size(preview.preview.embeddedMediaBytes)))
-                Text(stringResource(R.string.backup_schema, preview.preview.formatVersion, preview.preview.databaseSchemaVersion), style = MaterialTheme.typography.bodySmall)
-            } } }
-            item { Text(stringResource(R.string.backup_merge_detail), style = MaterialTheme.typography.bodyMedium) }
-            item { Card { ImportScope.entries.forEachIndexed { index, scope ->
-                val checked = scope.name in selected
-                val toggle = { value: Boolean -> selected = if (value) (selected + scope.name).distinct() else selected - scope.name }
-                ListItem(onClick = { toggle(!checked) }, enabled = !state.busy, modifier = Modifier.recordToggleState(checked),
-                    trailingContent = { Checkbox(checked, null, enabled = !state.busy) },
-                    supportingContent = { Text(stringResource(R.string.backup_rows, scope.tables.sumOf { preview.preview.tableCounts[it] ?: 0 })) }) { Text(names[index]) }
-            } } }
-            item { Button(onClick = { viewModel.import(ImportMode.MERGE_MISSING, selected.map(ImportScope::valueOf).toSet()) }, enabled = !state.busy && selected.isNotEmpty(), modifier = Modifier.fillMaxWidth().testTag("backup_merge")) { Text(stringResource(R.string.backup_merge)) } }
-            item { OutlinedButton(onClick = { confirmation = "replace" }, enabled = !state.busy, modifier = Modifier.fillMaxWidth().testTag("backup_replace")) { Text(stringResource(R.string.backup_replace)) } }
-        } else {
-            item { Card {
-                ListItem(onClick = { exporter.launch("Recoow-${java.time.LocalDate.now()}.recoowbackup") }, enabled = !state.busy,
-                    supportingContent = { Text(stringResource(R.string.backup_export_detail)) }, modifier = Modifier.testTag("backup_export")) { Text(stringResource(R.string.backup_export)) }
-                ListItem(onClick = { picker.launch(arrayOf("*/*")) }, enabled = !state.busy,
-                    supportingContent = { Text(stringResource(R.string.backup_import_detail)) }, modifier = Modifier.testTag("backup_import")) { Text(stringResource(R.string.backup_import)) }
-            } }
-            state.usage?.let { usage ->
-                item { Text(stringResource(R.string.storage_title), style = MaterialTheme.typography.titleSmall) }
-                item { Card { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(size(usage.total), style = MaterialTheme.typography.headlineSmall)
-                    listOf(R.string.storage_database to usage.database, R.string.storage_media to usage.media,
-                        R.string.storage_backups to usage.backups, R.string.storage_cache to usage.cache).forEach { (label, bytes) ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(stringResource(label), Modifier.weight(1f)); Text(size(bytes)) }
+            val source = preview.preview
+            item("source") {
+                SettingsSection(stringResource(R.string.data_section_preview)) {
+                    RecoowGroup {
+                        RecoowRow(
+                            stringResource(R.string.backup_source, source.sourcePlatform, source.appVersion, source.appBuild),
+                            subtitle = date(source.exportedAt.toEpochMilli()).orEmpty(),
+                        )
+                        RecoowDivider()
+                        RecoowRow(
+                            stringResource(R.string.backup_summary, source.tableCounts.values.sum(), size(source.embeddedMediaBytes)),
+                            subtitle = stringResource(R.string.backup_schema, source.formatVersion, source.databaseSchemaVersion),
+                        )
                     }
-                    Text(stringResource(R.string.storage_embedded, size(usage.embedded)), style = MaterialTheme.typography.bodySmall)
-                    Text(stringResource(R.string.storage_schema, usage.schemaVersion), style = MaterialTheme.typography.bodySmall)
-                    date(usage.lastExport)?.let { Text(stringResource(R.string.backup_last_export, it), style = MaterialTheme.typography.bodySmall) }
-                    date(usage.lastImport)?.let { Text(stringResource(R.string.backup_last_import, it), style = MaterialTheme.typography.bodySmall) }
-                } } }
+                }
             }
-            item { Card {
-                ListItem(onClick = viewModel::optimize, enabled = !state.busy, supportingContent = { Text(stringResource(R.string.data_optimize_detail)) }, modifier = Modifier.testTag("data_optimize")) { Text(stringResource(R.string.data_optimize)) }
-                ListItem(onClick = { confirmation = "reset" }, enabled = !state.busy, modifier = Modifier.testTag("data_reset")) { Text(stringResource(R.string.data_reset), color = MaterialTheme.colorScheme.error) }
-            } }
+            item("scope") {
+                SettingsSection(
+                    stringResource(R.string.data_section_scope),
+                    trailing = "${selected.size}/${ImportScope.entries.size}",
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        RecoowNotice(stringResource(R.string.backup_merge_detail))
+                        RecoowGroup {
+                            ImportScope.entries.forEachIndexed { index, scope ->
+                                val checked = scope.name in selected
+                                val toggle = {
+                                    selected = if (checked) selected - scope.name else (selected + scope.name).distinct()
+                                }
+                                if (index > 0) RecoowDivider()
+                                ScopeRow(
+                                    title = names[index],
+                                    subtitle = stringResource(R.string.backup_rows, scope.tables.sumOf { source.tableCounts[it] ?: 0 }),
+                                    checked = checked,
+                                    enabled = !state.busy,
+                                    onToggle = toggle,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            item("merge") {
+                SettingsPrimaryButton(
+                    stringResource(R.string.backup_merge),
+                    enabled = !state.busy && selected.isNotEmpty(),
+                    modifier = Modifier.testTag("backup_merge"),
+                ) { viewModel.import(ImportMode.MERGE_MISSING, selected.map(ImportScope::valueOf).toSet()) }
+            }
+            item("replace") {
+                RecoowGroup {
+                    RecoowRow(
+                        stringResource(R.string.backup_replace),
+                        titleColor = MaterialTheme.colorScheme.error,
+                        onClick = { confirmation = "replace" },
+                    )
+                }
+            }
+        } else {
+            item("backup") {
+                SettingsSection(stringResource(R.string.data_section_backup)) {
+                    RecoowGroup {
+                        RecoowRow(
+                            stringResource(R.string.backup_export),
+                            subtitle = stringResource(R.string.backup_export_detail),
+                            onClick = { exporter.launch("Recoow-${java.time.LocalDate.now()}.recoowbackup") },
+                            modifier = Modifier.testTag("backup_export"),
+                        )
+                        RecoowDivider()
+                        RecoowRow(
+                            stringResource(R.string.backup_import),
+                            subtitle = stringResource(R.string.backup_import_detail),
+                            onClick = { picker.launch(arrayOf("*/*")) },
+                            modifier = Modifier.testTag("backup_import"),
+                        )
+                    }
+                }
+            }
+            state.usage?.let { usage ->
+                item("storage") {
+                    SettingsSection(stringResource(R.string.storage_title), trailing = size(usage.total)) {
+                        RecoowGroup {
+                            RecoowMetricGrid(
+                                listOf(
+                                    RecoowMetric(stringResource(R.string.storage_database), size(usage.database)),
+                                    RecoowMetric(stringResource(R.string.storage_media), size(usage.media)),
+                                    RecoowMetric(stringResource(R.string.storage_backups), size(usage.backups)),
+                                    RecoowMetric(stringResource(R.string.storage_cache), size(usage.cache)),
+                                ),
+                            )
+                            RecoowDivider()
+                            Column(
+                                Modifier.padding(horizontal = RecoowLayout.rowHorizontal, vertical = 11.dp),
+                                verticalArrangement = Arrangement.spacedBy(3.dp),
+                            ) {
+                                listOfNotNull(
+                                    stringResource(R.string.storage_embedded, size(usage.embedded)),
+                                    stringResource(R.string.storage_schema, usage.schemaVersion),
+                                    date(usage.lastExport)?.let { stringResource(R.string.backup_last_export, it) },
+                                    date(usage.lastImport)?.let { stringResource(R.string.backup_last_import, it) },
+                                ).forEach {
+                                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            item("maintenance") {
+                SettingsSection(stringResource(R.string.data_section_maintenance)) {
+                    RecoowGroup {
+                        RecoowRow(
+                            stringResource(R.string.data_optimize),
+                            subtitle = stringResource(R.string.data_optimize_detail),
+                            onClick = viewModel::optimize,
+                            modifier = Modifier.testTag("data_optimize"),
+                        )
+                        RecoowDivider()
+                        RecoowRow(
+                            stringResource(R.string.data_reset),
+                            subtitle = stringResource(R.string.data_reset_detail),
+                            titleColor = MaterialTheme.colorScheme.error,
+                            onClick = { confirmation = "reset" },
+                            modifier = Modifier.testTag("data_reset"),
+                        )
+                    }
+                }
+            }
         }
     }
-    confirmation?.let { action -> AlertDialog(onDismissRequest = { confirmation = null },
-        title = { Text(stringResource(if (action == "reset") R.string.data_reset else R.string.backup_replace)) },
-        text = { Text(stringResource(if (action == "reset") R.string.data_reset_detail else R.string.backup_replace_detail)) },
-        confirmButton = { TextButton(onClick = {
-            confirmation = null
-            if (action == "reset") viewModel.reset() else viewModel.import(ImportMode.REPLACE_ALL, ImportScope.entries.toSet())
-        }) { Text(stringResource(if (action == "reset") R.string.data_reset else R.string.backup_replace)) } },
-        dismissButton = { TextButton(onClick = { confirmation = null }) { Text(stringResource(R.string.cancel)) } }) }
+
+    confirmation?.let { action ->
+        AlertDialog(
+            onDismissRequest = { confirmation = null },
+            title = { Text(stringResource(if (action == "reset") R.string.data_reset else R.string.backup_replace)) },
+            text = { Text(stringResource(if (action == "reset") R.string.data_reset_detail else R.string.backup_replace_detail)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmation = null
+                    if (action == "reset") viewModel.reset() else viewModel.import(ImportMode.REPLACE_ALL, ImportScope.entries.toSet())
+                }) { Text(stringResource(if (action == "reset") R.string.data_reset else R.string.backup_replace)) }
+            },
+            dismissButton = { TextButton(onClick = { confirmation = null }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
+}
+
+/** 导入范围勾选行：整行可点，勾选框只是右侧状态指示。 */
+@Composable
+private fun ScopeRow(title: String, subtitle: String, checked: Boolean, enabled: Boolean, onToggle: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth()
+            .heightIn(min = RecoowLayout.rowMinHeight)
+            .toggleable(value = checked, enabled = enabled, role = Role.Checkbox, onValueChange = { onToggle() })
+            .padding(horizontal = RecoowLayout.rowHorizontal, vertical = RecoowLayout.rowVertical),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Spacer(Modifier.width(10.dp))
+        Checkbox(checked = checked, onCheckedChange = null, enabled = enabled)
+    }
 }

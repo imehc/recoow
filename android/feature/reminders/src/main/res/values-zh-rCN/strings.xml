@@ -84,4 +84,10 @@
     <string name="reminder_calendar_legend">✓ 正常打卡 · ↺ 补签</string>
     <string name="reminder_calendar_checked_in">已打卡</string>
     <string name="reminder_calendar_made_up">已补签</string>
+    <string name="reminder_empty_active">没有进行中的打卡</string>
+    <string name="reminder_empty_active_hint">在这里新建打卡任务，到点前提醒你，完成后归档到历史。</string>
+    <string name="reminder_empty_paused">没有暂停的打卡</string>
+    <string name="reminder_empty_paused_hint">暂停中的任务会留在这里，恢复后继续计算。</string>
+    <string name="reminder_empty_history">还没有完成的打卡</string>
+    <string name="reminder_empty_history_hint">完成的任务会归档到这里，漏掉的天可以在详情里补签。</string>
 </resources>

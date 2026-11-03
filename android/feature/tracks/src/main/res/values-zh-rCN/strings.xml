@@ -1,4 +1,5 @@
 <resources>
+    <string name="track_history_hint">保存的轨迹会按时间倒序列在这里。</string>
     <string name="track_title">轨迹</string>
     <string name="track_edit">编辑轨迹</string>
     <string name="track_history">轨迹历史</string>
@@ -12,6 +13,18 @@
     <string name="track_default_name">轨迹 %1$s</string>
     <string name="track_waiting">等待定位</string>
     <string name="track_details">轨迹详情</string>
+    <string name="track_max_speed_label">最高速度</string>
+    <string name="track_started_at">开始时间</string>
+    <string name="track_settings">记录设置</string>
+    <string name="track_status">状态</string>
+    <string name="track_motion_value">%1$.2f 公里 · %2$d 秒</string>
+    <string name="track_points">采样点</string>
+    <string name="track_distance">距离</string>
+    <string name="track_duration">时长</string>
+    <string name="track_km_value">%1$.2f 公里</string>
+    <string name="track_seconds_value">%1$d 秒</string>
+    <string name="track_speed_value">%1$s 公里/小时</string>
+    <string name="track_latest_point">最新坐标</string>
     <string name="track_start">开始记录</string>
     <string name="track_resume">继续记录</string>
     <string name="track_pause">暂停</string>

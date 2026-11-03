@@ -7,4 +7,13 @@
     <string name="record_retry">Retry</string><string name="record_stale">This record has changed. Reopen it to use the latest version.</string>
     <string name="record_invalid">Check the required fields and linked records.</string><string name="record_search">Search</string>
     <string name="record_all">All</string><string name="record_remove">Remove</string><string name="record_date">Date and time</string>
+    <string name="record_more">More actions</string>
+    <string name="record_overview">Overview</string>
+    <string name="record_loading">Loading</string>
+    <string name="record_clear_filters">Clear filters</string>
+    <string name="record_no_matches_hint">Try another keyword, or clear the filters and look again.</string>
+    <string name="record_field_required">Required</string>
+    <string name="record_field_choose">Choose an option</string>
+    <string name="record_load_more">Load more</string>
+    <string name="record_end">That is everything</string>
 </resources>

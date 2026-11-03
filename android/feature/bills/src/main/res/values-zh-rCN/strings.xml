@@ -4,6 +4,9 @@
   <string name="add_bill">记一笔</string>
   <string name="edit_bill">编辑账单</string>
   <string name="bill_details">账单详情</string>
+  <string name="bills_summary">收支概览</string>
+  <string name="bills_detail_section">详情</string>
+  <string name="bills_actions">操作</string>
   <string name="back">返回</string>
   <string name="cancel">取消</string>
   <string name="save">保存</string>
@@ -120,4 +123,5 @@
   <string name="gift_card">礼品卡</string>
   <string name="phone_balance">话费余额</string>
   <string name="other_account">其他储值</string>
+  <string name="amount_original_required">请先填写原价（面值）</string>
 </resources>

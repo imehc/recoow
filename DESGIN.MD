@@ -1,6 +1,6 @@
 # recoow UI 设计规范
 
-本文件是项目后续 UI 新增、调整和验收的统一依据，适用于 `ios/recoow/` 的首页、统计、设置、功能页、详情页和 Sheet。文件名按项目约定保留为 `DESGIN.MD`。
+本文件是项目后续 UI 新增、调整和验收的统一依据，适用于 `ios/recoow/` 与 `android/` 的首页、统计、设置、功能页、详情页和 Sheet。文件名按项目约定保留为 `DESGIN.MD`。两端遵循相同的信息层级、色彩角色、密度和交互边界，具体实现分别使用平台原生组件。
 
 ## 1. 已确认的方向与本轮调整
 
@@ -23,8 +23,15 @@
 | `ios/recoow/Shared/Views/FormRowIconView.swift` | 统一图标底板、表单图标、图标按钮 |
 | `ios/recoow/Shared/Views/MetricTile.swift` | 共享统计指标，`CompactSummaryMetricView` 用于功能页与统计页概览 |
 | `ios/recoow/Features/Home/Views/HomeStyle.swift` | 首页专用排布，通用规格引用 `AppDesign` |
+| `android/core/designsystem/src/main/kotlin/imehc/recoow/core/designsystem/RecoowTheme.kt` | Android Material 3 明暗色板、统一语义字号与功能入口语义色 |
+| `android/core/designsystem/src/main/kotlin/imehc/recoow/core/designsystem/RecoowChrome.kt` | Android 紧凑顶栏、Tab 栏、分组标题 / 卡片、行式列表、指标网格、空状态与布局令牌 |
+| `android/core/designsystem/src/main/kotlin/imehc/recoow/core/designsystem/RecordSkeleton.kt` | Android 首屏骨架屏（`RecordSkeleton`，经 `RecordLoadState` 用于各列表首帧） |
+| `android/feature/home/src/main/kotlin/imehc/recoow/feature/home/HomeScreen.kt` | Android 首页：两段式行式入口，状态位放真实数据；方向已确认 |
+| `android/feature/statistics/src/main/kotlin/imehc/recoow/feature/statistics/StatisticsScreen.kt` | Android 统计：2×2 概览网格、带标签的近七日柱状、占比条与打卡进度 |
+| `android/feature/settings/src/main/kotlin/imehc/recoow/feature/settings/SettingsScreen.kt` | Android 设置：数据 / 显示 / 首页工具三段分组卡片，行内显示当前值与开关 |
+| `android/feature/settings/src/main/kotlin/imehc/recoow/feature/settings/SettingsComponents.kt` | Android 设置子页共用件：`SettingsSection`（分组标题 + 容器）、`SettingsPrimaryButton`（46dp 主操作）、`SettingsBanner`（结果/错误条）、`SettingsProgress`（进行中任务） |
 
-新增 UI 必须先复用这些入口。不要在单个页面复制一套颜色、字号、圆角或顶部偏移。经确认的规范变更应同时更新共享实现和本文件；发现两者不一致时应修正差异，而不是建立第三套局部规则。
+新增 UI 必须先复用这些入口。不要在单个页面复制一套颜色、字号、圆角或顶部偏移。经确认的规范变更应同时更新共享实现和本文件；发现两者不一致时应修正差异，而不是建立第三套局部规则。Android 页面不得绕过 `RecoowTheme` 在功能页定义局部主题色；iOS 页面继续使用 `AppDesign`、`AppPalette` 和 `AppViewStyle`。
 
 ## 3. 字体与信息层级
 
@@ -42,6 +49,7 @@
 | 概览指标数值 | `AppDesign.summaryValueFont`，`.subheadline.weight(.medium)`，需要时 `.monospacedDigit()` | 15 pt |
 | 列表行的数量 / 金额 | 与行标题一致的 `AppDesign.rowTitleFont` | 17 pt |
 
+- Android 使用 `MaterialTheme.typography` 的语义槽位跟随系统字体缩放：`titleLarge` 对应导航标题，`bodyLarge` 对应列表 / 正文，`bodyMedium` 对应入口状态，`bodySmall` 对应日期和元信息；页面不直接写固定 `fontSize`。
 - 表中的 pt 仅表示默认 Dynamic Type 下的参考值，实现必须使用语义字体，不能写成固定字号。
 - 原生分组标题沿用系统 `Section` 规格；需要显式样式时使用 `.appSectionHeaderStyle()`。其字体与同一系统版本的默认分组标题一致，不将首页的自绘分组标题写成固定 15 pt。
 - `.subheadline`、`.footnote` 等现有语义字体与相应共享 token 的字号完全一致，无须仅为改名批量重写功能页；新增自绘组件优先引用 `AppDesign`。
@@ -75,7 +83,27 @@
 | 图标 / 小型指标底板圆角 | `AppDesign.iconCornerRadius` = 10 pt |
 | Sheet 圆角 | `AppDesign.sheetCornerRadius` = 24 pt |
 
-- 首页使用 `ScrollView`，统计和设置使用原生 `List` / `Form`。原生分组头自身占据布局空间，所以顶部参数不应机械地全部设成 12 pt；目标是最终可见位置一致。
+- Android 通过 `RecoowLayout` 管理：页面边距 16dp、组间距 22dp、组标题到卡片 8dp、行最小高度 56dp、卡片圆角 14dp、图标 23dp、分隔线起点 52dp。入口行左右内边距 14dp、上下 9dp，图标到文字 14dp；分隔线避开图标并与文字左对齐。字号增加时行高自然增长，状态文字允许换行。
+- Android 组间距只有一个来源：`RecoowPage` / `RecordPage` 的 `spacedBy(RecoowLayout.sectionGap)`，页面不再各自传间距（早期 12 / 16 / 22 混用会导致同一屏节奏忽宽忽窄）。内容顶部留白统一 8dp，底部 24dp。
+- Android 账单页把首屏让给列表：概览默认只显示「本月支出 / 本月收入」两格，展开与收起是分组标题右侧的文字动作；搜索收在顶栏搜索图标里，点开才插入输入框并自动聚焦。
+- Android 顶栏统一使用 `RecoowCompactTopBar`（标题 20sp 半粗、最小高度 48dp、系统状态栏安全区独立保留），Tab 根页、设置子页与功能页共用 `RecoowPage` 骨架，不再出现第二套顶栏或第二套首屏节奏。日期并入首个可见分组的标题行，字体缩放 ≥1.5 时标题与日期分行。
+- Android 分组卡片使用 `RecoowGroup`（表面色 + 1dp 发丝线，不用阴影）；行式列表统一为 `RecoowRow` / `RecoowToolRow` / `RecoowSwitchRow`，只有跳转行显示箭头；概览指标使用 `RecoowMetricGrid`（默认 2×2，字体缩放 ≥1.5 退化为单列）；空状态使用 `RecoowEmptyState`，不给页面只留两行灰字。
+- Android 列表与详情页不再使用悬浮按钮：新建统一为顶栏右侧的 `+` 图标（`RecoowAddAction`），次要操作（账户、分类、标签、历史等）收进顶栏的 `⋯` 下拉（`RecoowOverflowMenu`），顶栏最多两个图标。下拉容器用表面色 + 发丝线 + 12dp 圆角，与分组卡片同一套材质。
+- Android 取值/筛选类控件用行式选择器 `RecordChoice`（标签在左、当前值 + 箭头在右），与设置页取值行同一读法，不再用整宽描边空按钮；权限类提示用 `RecoowNotice`（白卡 + 说明 + 文字动作），不使用另一种灰底卡片。
+- Android 空状态左对齐、标题与正文同一档字号，与列表行起点对齐；不用居中大标题，避免被读成按钮。
+- Android 空状态分两档，文案不能混用：「还没有数据」讲怎么开始（一句引导，只有引导不重复顶栏的 `+`）；「没有符合条件的记录」必须同时给出原因和出口——说明「换个关键词，或者清空筛选条件再看看」并提供「清空筛选」文字动作（`RecoowEmptyState(actionLabel/onAction)`），清空后连带收起搜索框与筛选面板。没有数据的列表不能只留一片空白。
+- Android 表单校验走行内报错：字段描边与文字染红、下方给出具体原因（`RecordField(error)` / `RecordChoice(error)` / `ChoiceField(error)`），顶栏保存按钮不再灰着不解释；点保存时若表单不合法，第一次点击只负责把错误标出来，不提交。金额这类相邻字段的错误挂在真正缺的那一格上（缺原价就标原价），不要用一句笼统的「请输入有效金额」盖住整组。
+- Android 列表底部统一 `RecordListFooter`：追加中复用骨架、失败给「重试」、还有下一页给「加载更多」行、到底给一行居中的「已经到底了」（`record_end`）。各页面不再各自写「加载更多」按钮或裸错误文字。
+- Android 首屏加载用骨架屏 `RecordSkeleton`（行高、内边距、分隔线缩进与真实行一致：可选图标位 + 标题条 + 副标题条 + 行尾取值条），整屏共用一次 900ms 明暗呼吸，不做逐块流光；不再用居中转圈占位。已有内容后的刷新仍用顶部细进度条，不能换成骨架，避免每次刷新整屏闪一下。
+- Android 三维场景与地图这类自绘面板统一放在 14dp 圆角 + 1dp 发丝线的容器里（`Modifier.clip` + `border`），不裸铺在页面底色上；面板自身的离线/失败提示用 `RecoowNotice`，不再用裸文字加文字按钮。
+- Android 详情页的操作统一沉到底部：主操作是 46dp 高、12dp 圆角的整宽按钮，删除是红字行，编辑/定位等次级操作是带箭头的行；顶部 `⋯` 只放页面级动作（历史、编辑集合、删除集合）。
+- Android 三个 Tab 共用 `RecoowTabBar`：中性表面色、0.5dp 顶部分隔线、最小内容高度 60dp、23dp 图标、12sp 语义标签；选中图标与文字使用品牌蓝，无彩色胶囊和独立阴影。系统底部导航安全区单独保留，大字体允许栏高增长，保留原有 Tab 显隐、选中语义与导航状态。
+- Android 功能页列表统一「分组标题 + 分组卡片 + 行式条目」：账单按日期分组、条目双行（标题 / 分类·支付·时间）并用右侧金额代替整块卡片；日记多一行正文摘要；饮食按餐别分组；详情页把字段压成 label 右值行，删除等破坏性操作单独成组并只给红色标题。分隔线缩进跟随有无图标（有图标 52dp，纯文字 14dp）。
+- Android 设置子页（云同步 / 数据管理 / 应用更新 / 素材库）与功能页同一套节奏：分组标题 + 分组卡片 + 行，行内左标题右取值；主操作是整宽 46dp、12dp 圆角按钮并紧跟在相关分组之后，破坏性操作（重置、断开、覆盖导入）只给红色标题行，不进主按钮。进行中的任务用细进度条卡片（`SettingsProgress`），结果与错误用同材质提示条（`SettingsBanner`，错误才染成 error 色），不再用裸文字或第二套灰底横幅。
+- 可切换视图、刷新列表这类「非跳转」动作放到分组标题右侧的文字动作（`RecoowSectionHeader(onTrailingClick)`），列表为空时不显示无意义的切换入口；需要二次确认的危险动作一律走对话框，同行内只保留入口。
+- Android 更新说明按发布用的轻量 Markdown 渲染：`#` 起行作为小节标题、`-` 作为项目符号，其余按正文；不引入完整渲染器，也不把 `##` 原样显示给用户。
+- Android 素材库沿用同一卡片材质（表面色 + 1dp 发丝线 + 14dp 圆角）：图片只在上方裁圆角，标题一档正文、格式与尺寸一档元信息，每张图的操作收进 `⋯` 下拉，不再每张卡片铺四个文字按钮。
+- iOS 首页使用 `ScrollView`，统计和设置使用原生 `List` / `Form`。原生分组头自身占据布局空间，所以顶部参数不应机械地全部设成 12 pt；目标是最终可见位置一致。Android 使用 Compose `LazyColumn`、`Scaffold` 和 Material 3 分组组件实现相同层级。
 - 统计根页使用 `.appGroupedListStyle(topContentMargin: AppDesign.tabContentTopMargin)`；设置根页使用对应的 `.appFormStyle(topContentMargin: AppDesign.tabContentTopMargin)`。
 - 普通子页和 Sheet 使用容器样式的默认边距，不无条件套用 Tab 根页的参数。
 - 首页分组标题到卡片间距为 `HomeStyle.cardSpacing`（10 pt）；入口行水平内边距 14 pt、垂直内边距 12 pt，图标到文字间距 12 pt。
@@ -125,9 +153,9 @@
 - 分隔线避开图标区域，与正文起点对齐；只在有跳转的行显示箭头。
 - 统计指标使用中性底板、小图标和紧凑数值；默认两列，无障碍大字体通过 `AppDesign.metricColumns(for:)` 切换一列。
 - 时间、数量、金额等频繁变化的数值按需使用等宽数字；概览指标使用共享的 15 pt 语义字号，列表行数值与行标题同级，不为突出指标额外扩大字号。
-- SF Symbols 复用 `AppIconTileView`，默认实色底板和单色符号。不要各页面自行实现不同透明度的同类图标。
+- iOS SF Symbols 复用 `AppIconTileView`，默认实色底板和单色符号。不要各页面自行实现不同透明度的同类图标。
 - 图标尺寸按场景引用 `AppDesign`：表单 32、紧凑 34、入口行 38、列表 44、历史 48、统计指标 26 / 28 pt。
-- 点击目标最小为 44 × 44 pt；图标本身较小时扩大点击区域，而不是随意放大图标。
+- iOS 点击目标最小为 44 × 44 pt，Android 为 48 × 48dp；图标本身较小时扩大点击区域，而不是随意放大图标。
 - 有用户照片或媒体内容时优先呈现真实内容；无图片使用对应功能图标，不使用装饰插画填充空白。
 - 标签和状态短文本使用简单中性底板或语义色，不叠加多层胶囊、边框与阴影。
 - 地图、照片预览、图片裁剪等内容画布保留适合内容的布局，不强制套上列表卡片。

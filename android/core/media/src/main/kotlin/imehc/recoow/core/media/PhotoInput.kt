@@ -6,6 +6,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -30,7 +31,7 @@ fun PhotoInput(locator: MediaLocator?, onChange: (SelectedPhoto?) -> Unit, repos
         if (locator != null) {
             val content = remember(locator, repository) { repository.observeContent(locator).catch { emit(ResolvedMedia(MediaAvailability.DAMAGED)) } }
             val resolved by content.collectAsStateWithLifecycle(ResolvedMedia(MediaAvailability.PENDING))
-            MediaImage(locator, repository, Modifier.fillMaxWidth().height(200.dp).clickable { preview = true })
+            MediaImage(locator, repository, Modifier.fillMaxWidth().height(200.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).clickable { preview = true })
             resolved.title?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(enabled = !loading && resolved.availability == MediaAvailability.READY, onClick = {
@@ -44,7 +45,11 @@ fun PhotoInput(locator: MediaLocator?, onChange: (SelectedPhoto?) -> Unit, repos
                 TextButton(onClick = { onChange(null) }) { Text(stringResource(R.string.remove)) }
             }
         }
-        FilledTonalButton(onClick = { picking = true }) { Text(stringResource(if (locator == null) R.string.add_photo else R.string.replace)) }
+        OutlinedButton(
+            onClick = { picking = true },
+            modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp),
+            shape = MaterialTheme.shapes.medium,
+        ) { Text(stringResource(if (locator == null) R.string.add_photo else R.string.replace), style = MaterialTheme.typography.titleSmall) }
         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (error) Text(stringResource(R.string.failed), color = MaterialTheme.colorScheme.error)
     }

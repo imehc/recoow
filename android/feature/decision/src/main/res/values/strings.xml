@@ -3,6 +3,9 @@
     <string name="decision_collection">Collection</string>
     <string name="decision_history">Choice history</string>
     <string name="decision_add_collection">Add collection</string>
+    <string name="decision_empty_title">No collections yet</string>
+    <string name="decision_history_hint">Every draw result is saved here.</string>
+    <string name="decision_selected_at">Drawn at</string>
     <string name="decision_empty">Create a collection and add candidates to make your first choice.</string>
     <string name="decision_option_count">Enabled candidates: %1$d</string>
     <string name="decision_delete_collection">Delete this collection and its options? Choice history and snapshots will be kept.</string>
@@ -30,4 +33,5 @@
     <string name="decision_enabled">Enabled</string>
     <string name="decision_delete_history">Delete this choice record? The collection and candidates will be kept.</string>
     <string name="decision_unavailable">The collection or candidates changed. Check enabled candidates, weights and required fields.</string>
+    <string name="decision_weight_invalid">Enter a weight between 1 and 100.</string>
 </resources>

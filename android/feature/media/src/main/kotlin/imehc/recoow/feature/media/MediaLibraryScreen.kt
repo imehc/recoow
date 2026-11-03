@@ -1,19 +1,32 @@
 package imehc.recoow.feature.media
 
-import imehc.recoow.core.designsystem.RecordSwitch
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import imehc.recoow.core.designsystem.RecoowAddAction
+import imehc.recoow.core.designsystem.RecoowCompactTopBar
+import imehc.recoow.core.designsystem.RecoowDivider
+import imehc.recoow.core.designsystem.RecoowEmptyState
+import imehc.recoow.core.designsystem.RecoowGroup
+import imehc.recoow.core.designsystem.RecoowLayout
+import imehc.recoow.core.designsystem.RecoowSectionHeader
+import imehc.recoow.core.designsystem.RecoowSwitchRow
+import imehc.recoow.core.designsystem.R as CommonR
 import imehc.recoow.core.domain.media.*
 import imehc.recoow.core.media.*
 import imehc.recoow.core.media.R
@@ -36,66 +49,153 @@ fun MediaLibraryScreen(viewModel: MediaLibraryViewModel, onBack: () -> Unit) {
     var cropError by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val repository = viewModel.repository
-    Scaffold(topBar = {
-        TopAppBar(title = { Text(stringResource(R.string.media_library)) }, navigationIcon = {
-            TextButton(onClick = onBack) { Text(stringResource(R.string.back)) }
+    Scaffold(containerColor = MaterialTheme.colorScheme.background, topBar = {
+        RecoowCompactTopBar(stringResource(R.string.media_library), navigationIcon = {
+            IconButton(onClick = onBack) { Icon(painterResource(CommonR.drawable.ic_record_back), stringResource(R.string.back)) }
+        }, action = {
+            if (!state.busy && state.preferences != null && !state.readFailed)
+                RecoowAddAction(stringResource(R.string.add_photo), onClick = { replacing = null; picking = true }, tag = "media_add")
         })
-    }, floatingActionButton = {
-        if (!state.busy && state.preferences != null && !state.readFailed) ExtendedFloatingActionButton(
-            onClick = { replacing = null; picking = true }, modifier = Modifier.testTag("media_add")) { Text(stringResource(R.string.add_photo)) }
     }) { padding ->
         LazyVerticalGrid(if (grid) GridCells.Adaptive(160.dp) else GridCells.Fixed(1),
-            Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 100.dp),
+            Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(start = RecoowLayout.pagePadding, end = RecoowLayout.pagePadding, top = 8.dp, bottom = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(RecoowLayout.sectionGap)) {
                     state.preferences?.let { prefs ->
-                        Card {
-                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(stringResource(R.string.photo_settings), style = MaterialTheme.typography.titleMedium)
-                                PhotoPreference(stringResource(R.string.add_to_assets), prefs.addsPickedPhotosToMediaLibrary, !state.busy, viewModel::addToAssets)
-                                PhotoPreference(stringResource(R.string.save_camera), prefs.savesCameraPhotosToLibrary, !state.busy, viewModel::saveCamera)
-                                Text(stringResource(R.string.photo_settings_detail), style = MaterialTheme.typography.bodySmall)
+                        Column {
+                            RecoowSectionHeader(stringResource(R.string.photo_settings))
+                            RecoowGroup {
+                                RecoowSwitchRow(
+                                    title = stringResource(R.string.add_to_assets),
+                                    checked = prefs.addsPickedPhotosToMediaLibrary,
+                                    onChange = viewModel::addToAssets,
+                                    enabled = !state.busy,
+                                )
+                                RecoowDivider()
+                                RecoowSwitchRow(
+                                    title = stringResource(R.string.save_camera),
+                                    checked = prefs.savesCameraPhotosToLibrary,
+                                    onChange = viewModel::saveCamera,
+                                    enabled = !state.busy,
+                                )
+                            }
+                            Text(
+                                stringResource(R.string.photo_settings_detail),
+                                modifier = Modifier.padding(start = 4.dp, top = 6.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Column {
+                        val hasAssets = state.assets.isNotEmpty()
+                        RecoowSectionHeader(
+                            stringResource(R.string.assets_section),
+                            trailing = if (hasAssets) stringResource(if (grid) R.string.view_list else R.string.view_grid) else null,
+                            onTrailingClick = if (hasAssets) ({ grid = !grid }) else null,
+                        )
+                        if (state.loading || state.busy) {
+                            LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 4.dp))
+                        } else if (state.readFailed) {
+                            RecoowGroup {
+                                RecoowEmptyState(
+                                    title = stringResource(R.string.failed),
+                                    actionLabel = stringResource(R.string.retry),
+                                    onAction = viewModel::retry,
+                                )
+                            }
+                        } else if (state.assets.isEmpty()) {
+                            RecoowGroup {
+                                RecoowEmptyState(
+                                    title = stringResource(R.string.empty_library),
+                                    actionLabel = stringResource(R.string.add_photo),
+                                    onAction = { replacing = null; picking = true },
+                                )
                             }
                         }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(grid, onClick = { grid = true }, label = { Text(stringResource(R.string.grid)) })
-                        FilterChip(!grid, onClick = { grid = false }, label = { Text(stringResource(R.string.list)) })
-                    }
-                    if (state.loading || state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                    if (state.readFailed) TextButton(onClick = viewModel::retry) { Text(stringResource(R.string.retry)) }
-                    else if (!state.loading && state.assets.isEmpty()) Text(stringResource(R.string.empty_library), Modifier.padding(vertical = 24.dp))
                 }
             }
             itemsIndexed(state.assets, key = { _, asset -> asset.id }) { index, asset ->
                 var menu by remember { mutableStateOf(false) }
-                Card(Modifier.testTag("asset_${asset.id}")) {
-                    MediaImage(MediaLocator(asset.id), repository, Modifier.fillMaxWidth().height(if (grid) 160.dp else 220.dp).clickable { preview = asset.id })
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(asset.title ?: stringResource(R.string.untitled), style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Text(stringResource(R.string.references, asset.references), style = MaterialTheme.typography.bodySmall)
-                        Text(stringResource(R.string.details, asset.mimeType, asset.width ?: 0, asset.height ?: 0, (asset.byteCount + 1023) / 1024), style = MaterialTheme.typography.bodySmall)
-                        Box {
-                            TextButton(onClick = { menu = true }, enabled = !state.busy) { Text(stringResource(R.string.more)) }
-                            DropdownMenu(menu, onDismissRequest = { menu = false }) {
-                                DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, onClick = { menu = false; renaming = asset.id; title = asset.title.orEmpty() })
-                                DropdownMenuItem(text = { Text(stringResource(R.string.replace)) }, onClick = { menu = false; replacing = asset.id; picking = true })
-                                DropdownMenuItem(text = { Text(stringResource(R.string.crop)) }, onClick = {
-                                    menu = false
-                                    scope.launch {
-                                        try {
-                                            val resolved = repository.resolve(MediaLocator(asset.id))
-                                            val file = requireNotNull(resolved.file)
-                                            cropSource = viewModel.processor.prepare(android.net.Uri.fromFile(file)); cropId = asset.id
-                                        } catch (e: CancellationException) { throw e } catch (_: Exception) { cropError = true }
-                                    }
-                                })
-                                DropdownMenuItem(text = { Text(stringResource(R.string.move_up)) }, enabled = index > 0,
-                                    onClick = { menu = false; viewModel.move(asset.id, -1) })
-                                DropdownMenuItem(text = { Text(stringResource(R.string.move_down)) }, enabled = index < state.assets.lastIndex,
-                                    onClick = { menu = false; viewModel.move(asset.id, 1) })
-                                DropdownMenuItem(text = { Text(stringResource(R.string.delete)) }, onClick = { menu = false; deleting = asset.id })
+                Surface(
+                    modifier = Modifier.testTag("asset_${asset.id}"),
+                    shape = RoundedCornerShape(RecoowLayout.cardRadius),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                ) {
+                    Column {
+                        MediaImage(
+                            MediaLocator(asset.id), repository,
+                            Modifier.fillMaxWidth().height(if (grid) 150.dp else 220.dp)
+                                .clip(RoundedCornerShape(topStart = RecoowLayout.cardRadius, topEnd = RecoowLayout.cardRadius))
+                                .clickable { preview = asset.id },
+                        )
+                        Row(
+                            Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    asset.title ?: stringResource(R.string.untitled),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = if (grid) 1 else 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Text(
+                                    stringResource(R.string.details, asset.mimeType, asset.width ?: 0, asset.height ?: 0, (asset.byteCount + 1023) / 1024),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                if (!grid && asset.references > 0) Text(
+                                    stringResource(R.string.references, asset.references),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                )
+                            }
+                            Box {
+                                IconButton(onClick = { menu = true }, enabled = !state.busy) {
+                                    Icon(
+                                        painterResource(CommonR.drawable.ic_more),
+                                        contentDescription = stringResource(R.string.more),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = menu,
+                                    onDismissRequest = { menu = false },
+                                    offset = DpOffset(x = 0.dp, y = 4.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    tonalElevation = 0.dp,
+                                    shadowElevation = 6.dp,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                ) {
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, onClick = { menu = false; renaming = asset.id; title = asset.title.orEmpty() })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.replace)) }, onClick = { menu = false; replacing = asset.id; picking = true })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.crop)) }, onClick = {
+                                        menu = false
+                                        scope.launch {
+                                            try {
+                                                val resolved = repository.resolve(MediaLocator(asset.id))
+                                                val file = requireNotNull(resolved.file)
+                                                cropSource = viewModel.processor.prepare(android.net.Uri.fromFile(file)); cropId = asset.id
+                                            } catch (e: CancellationException) { throw e } catch (_: Exception) { cropError = true }
+                                        }
+                                    })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.move_up)) }, enabled = index > 0,
+                                        onClick = { menu = false; viewModel.move(asset.id, -1) })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.move_down)) }, enabled = index < state.assets.lastIndex,
+                                        onClick = { menu = false; viewModel.move(asset.id, 1) })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.delete)) }, onClick = { menu = false; deleting = asset.id })
+                                }
                             }
                         }
                     }
@@ -127,9 +227,4 @@ fun MediaLibraryScreen(viewModel: MediaLibraryViewModel, onBack: () -> Unit) {
     if (state.error != null || cropError) AlertDialog(onDismissRequest = { viewModel.clearError(); cropError = false },
         text = { Text(stringResource(state.error ?: R.string.failed)) },
         confirmButton = { TextButton(onClick = { viewModel.clearError(); cropError = false }) { Text(stringResource(R.string.confirm)) } })
-}
-
-@Composable
-private fun PhotoPreference(label: String, checked: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
-    RecordSwitch(label, checked, onChange, enabled = enabled)
 }

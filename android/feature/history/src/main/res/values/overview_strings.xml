@@ -3,6 +3,8 @@
     <string name="history_select">Select</string>
     <string name="history_done">Done</string>
     <string name="history_tool">Tool</string>
+    <string name="history_filter_tool">Filter by tool</string>
+    <string name="history_filter_date">Filter by date</string>
     <string name="history_all">All tools</string>
     <string name="history_all_dates">All dates</string>
     <string name="history_choose_date">Choose date</string>
@@ -22,4 +24,5 @@
     <string name="history_delete_result">Deleted %1$d · Failed %2$d</string>
     <string name="history_changed">Records changed or could not be read. Refresh and select them again.</string>
     <string name="history_delete_effects">This deletes the listed records. Check-ins delete only the selected completion, preserving the task. A food day deletes its entries and day title. Tracks delete their points and segments. Bill balances, attachments and sync deletions follow each tool’s rules. Linked diary entries and other source records are preserved.</string>
+    <string name="history_select_many">Select multiple</string>
 </resources>

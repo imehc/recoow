@@ -27,6 +27,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.*
 import androidx.lifecycle.repeatOnLifecycle
+import imehc.recoow.core.designsystem.RecoowAction
+import imehc.recoow.core.designsystem.RecoowAddAction
+import imehc.recoow.core.designsystem.RecoowCompactTopBar
+import imehc.recoow.core.designsystem.RecoowDivider
+import imehc.recoow.core.designsystem.RecoowEmptyState
+import imehc.recoow.core.designsystem.RecoowGroup
+import imehc.recoow.core.designsystem.RecoowLayout
+import imehc.recoow.core.designsystem.RecordListFooter
+import imehc.recoow.core.designsystem.RecordSkeleton
+import imehc.recoow.core.designsystem.RecoowNotice
+import imehc.recoow.core.designsystem.RecoowRow
 import imehc.recoow.core.domain.reminders.*
 import kotlinx.coroutines.delay
 
@@ -69,44 +80,81 @@ internal fun statusLabel(status: ReminderStatus) = when (status) {
     state.error?.let { AlertDialog(onDismissRequest = viewModel::clearError, text = { Text(stringResource(it)) },
         confirmButton = { TextButton(onClick = viewModel::clearError) { Text(stringResource(R.string.reminder_confirm)) } }) }
 }
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun ReminderList(state: RemindersState, tab: Int, notifications: ReminderNotificationState, vm: RemindersViewModel, onBack: () -> Unit) {
     LaunchedEffect(Unit) { vm.settle() }
-    Scaffold(Modifier.testTag("tool_reminders"), topBar = { TopAppBar(title = { Text(stringResource(R.string.reminder_reminders)) }, navigationIcon = { BackButton(onBack) }) },
-        floatingActionButton = { if (!state.failed) ExtendedFloatingActionButton(onClick = { vm.edit() }, modifier = Modifier.testTag("reminder_add")) { Text(stringResource(R.string.reminder_add)) } }) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("reminder_list"), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item { NotificationControls(notifications, vm) }
-            item { FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf(R.string.reminder_active, R.string.reminder_paused, R.string.reminder_history).forEachIndexed { index, label ->
-                FilterChip(tab == index, { vm.tab(index) }, label = { Text(stringResource(label)) })
-            } } }
-            if (state.loading) item { CircularProgressIndicator() }
-            else if (state.failed) item { TextButton(onClick = vm::retry) { Text(stringResource(R.string.reminder_retry)) } }
-            else if (vm.rows(state, tab).isEmpty()) item { Text(stringResource(R.string.reminder_empty)) }
-            items(vm.rows(state, tab), key = { it.id }) { r -> Card(Modifier.fillMaxWidth().clickable { vm.show(r.id) }.testTag("reminder_${r.id}")) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("${r.icon} ${r.title}", style = MaterialTheme.typography.titleMedium)
-                    Text(stringResource(scheduleLabel(r.kind)) + " · " + stringResource(statusLabel(r.status(state.now, state.zone))))
-                    Text(dateTime(r.scheduledAt, state.zone), style = MaterialTheme.typography.bodySmall)
-                    Text(stringResource(R.string.reminder_total_checkins, r.totalCheckIns))
-                    r.totalDays(state.zone)?.let { total -> LinearProgressIndicator(progress = { (r.totalCheckIns.toFloat() / total).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth()) }
-                    if (r.canCheckIn(state.now, state.zone)) FilledTonalButton(onClick = { vm.act(r, ReminderAction.CHECK_IN) }, enabled = !state.busy) { Text(stringResource(R.string.reminder_check_in)) }
+    Scaffold(Modifier.testTag("tool_reminders"), containerColor = MaterialTheme.colorScheme.background,
+        topBar = { RecoowCompactTopBar(stringResource(R.string.reminder_reminders), navigationIcon = { BackButton(onBack) },
+            action = { if (!state.failed) RecoowAddAction(stringResource(R.string.reminder_add), onClick = { vm.edit() }, tag = "reminder_add") }) }) { padding ->
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding).testTag("reminder_list"),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(RecoowLayout.sectionGap),
+        ) {
+            item(key = "notifications") { NotificationControls(notifications, vm) }
+            item(key = "tabs") {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf(R.string.reminder_active, R.string.reminder_paused, R.string.reminder_history).forEachIndexed { index, label ->
+                    FilterChip(tab == index, { vm.tab(index) }, label = { Text(stringResource(label)) })
+                } }
+            }
+            if (state.loading) item(key = "loading") {
+                if (vm.rows(state, tab).isEmpty()) RecordSkeleton(rows = 4) else LinearProgressIndicator(Modifier.fillMaxWidth())
+            }
+            else if (state.failed) item(key = "failed") { RecordListFooter(failed = true, onRetry = vm::retry) }
+            else if (vm.rows(state, tab).isEmpty()) item(key = "empty") {
+                RecoowGroup {
+                    RecoowEmptyState(
+                        title = stringResource(when (tab) { 1 -> R.string.reminder_empty_paused; 2 -> R.string.reminder_empty_history; else -> R.string.reminder_empty_active }),
+                    )
                 }
-            } }
+            }
+            else item(key = "rows") {
+                RecoowGroup {
+                    val rows = vm.rows(state, tab)
+                    rows.forEachIndexed { index, r ->
+                        Column(Modifier.testTag("reminder_${r.id}")) {
+                            RecoowRow(
+                                title = "${r.icon} ${r.title}",
+                                subtitle = listOf(
+                                    stringResource(scheduleLabel(r.kind)),
+                                    stringResource(statusLabel(r.status(state.now, state.zone))),
+                                    dateTime(r.scheduledAt, state.zone),
+                                    stringResource(R.string.reminder_total_checkins, r.totalCheckIns),
+                                ).joinToString(" · "),
+                                showChevron = true,
+                                onClick = { vm.show(r.id) },
+                            )
+                            if (r.canCheckIn(state.now, state.zone)) {
+                                RecoowDivider()
+                                FilledTonalButton(
+                                    onClick = { vm.act(r, ReminderAction.CHECK_IN) },
+                                    enabled = !state.busy,
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+                                ) { Text(stringResource(R.string.reminder_check_in)) }
+                            }
+                        }
+                        if (index < rows.lastIndex) RecoowDivider()
+                    }
+                }
+            }
         }
     }
 }
 @Composable internal fun NotificationControls(state: ReminderNotificationState, vm: RemindersViewModel) {
     val context = LocalContext.current
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refreshNotifications() }
-    if (!state.allowed || !state.exact || state.failed) Card { Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(if (!state.allowed) R.string.reminder_notifications_off else if (state.failed) R.string.reminder_notification_failed else R.string.reminder_inexact), style = MaterialTheme.typography.bodyMedium)
-        FlowRow {
-            if (!state.allowed) TextButton(onClick = {
+    if (!state.allowed || !state.exact || state.failed) RecoowNotice(
+        text = stringResource(if (!state.allowed) R.string.reminder_notifications_off else if (state.failed) R.string.reminder_notification_failed else R.string.reminder_inexact),
+        actions = buildList {
+            if (!state.allowed) add(RecoowAction(stringResource(R.string.reminder_enable_notifications)) {
                 if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) permission.launch(Manifest.permission.POST_NOTIFICATIONS)
                 else context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
-            }) { Text(stringResource(R.string.reminder_enable_notifications)) }
-            TextButton(onClick = { context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)) }) { Text(stringResource(R.string.reminder_notification_settings)) }
-            if (Build.VERSION.SDK_INT >= 31 && !state.exact) TextButton(onClick = { context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}"))) }) { Text(stringResource(R.string.reminder_exact_settings)) }
-        }
-    } }
+            })
+            add(RecoowAction(stringResource(R.string.reminder_notification_settings)) {
+                context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
+            })
+            if (Build.VERSION.SDK_INT >= 31 && !state.exact) add(RecoowAction(stringResource(R.string.reminder_exact_settings)) {
+                context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}")))
+            })
+        },
+    )
 }

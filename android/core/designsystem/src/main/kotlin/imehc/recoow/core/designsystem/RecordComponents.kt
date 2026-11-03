@@ -1,5 +1,7 @@
 package imehc.recoow.core.designsystem
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.rememberScrollState
@@ -7,45 +9,103 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import imehc.recoow.core.domain.records.*
 import java.time.*
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable fun RecordPage(title: String, onBack: () -> Unit, tag: String = "", busy: Boolean = false,
     action: String? = null, actionEnabled: Boolean = true, onAction: () -> Unit = {},
-    add: String? = null, onAdd: () -> Unit = {}, content: LazyListScope.() -> Unit) {
-    Scaffold(Modifier.testTag(tag), topBar = { TopAppBar(title = { Text(title) }, navigationIcon = {
-        IconButton(onClick = onBack, enabled = !busy) { Icon(painterResource(R.drawable.ic_record_back), stringResource(R.string.record_back)) }
-    }, actions = { if (action != null) TextButton(onClick = onAction, enabled = actionEnabled && !busy) { Text(action) } }) },
-        floatingActionButton = { if (add != null) ExtendedFloatingActionButton(onClick = { if (!busy) onAdd() }) { Text(add) } }) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = if (add != null) 100.dp else 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)) { if (busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }; content() }
+    add: String? = null, addTag: String? = null, onAdd: () -> Unit = {},
+    more: List<RecoowAction> = emptyList(),
+    searching: Boolean = false, onSearchToggle: (() -> Unit)? = null, searchTag: String? = null,
+    content: LazyListScope.() -> Unit) {
+    Scaffold(Modifier.testTag(tag), containerColor = MaterialTheme.colorScheme.background, topBar = {
+        RecoowCompactTopBar(title = title, navigationIcon = {
+            IconButton(onClick = onBack, enabled = !busy) { Icon(painterResource(R.drawable.ic_record_back), stringResource(R.string.record_back)) }
+        }, action = {
+            if (onSearchToggle != null) RecoowSearchToggle(searching, onSearchToggle, tag = searchTag)
+            RecoowOverflowMenu(more)
+            if (action != null) TextButton(onClick = onAction, enabled = actionEnabled && !busy) { Text(action) }
+            if (add != null) RecoowAddAction(add, onClick = onAdd, enabled = !busy, tag = addTag)
+        })
+    }) { padding ->
+        LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(RecoowLayout.sectionGap)) { if (busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }; content() }
     }
 }
-@Composable fun RecordField(label: String, value: String, onChange: (String) -> Unit, enabled: Boolean = true, multiline: Boolean = false, tag: String = "") {
-    OutlinedTextField(value, onChange, Modifier.fillMaxWidth().testTag(tag), label = { Text(label) }, enabled = enabled,
-        singleLine = !multiline, minLines = if (multiline) 3 else 1)
+
+/** 顶栏搜索展开后的输入行：自动聚焦、单行、与卡片同圆角；收起后不占版面。 */
+@Composable fun RecordSearchField(value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier, tag: String = "") {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    OutlinedTextField(value, onChange, modifier.fillMaxWidth().focusRequester(focus).testTag(tag),
+        placeholder = { Text(stringResource(R.string.record_search)) }, singleLine = true, shape = MaterialTheme.shapes.medium)
 }
-@Composable fun <T> RecordChoice(label: String, selected: T, options: List<Pair<T, String>>, onChange: (T) -> Unit, enabled: Boolean = true) {
+/**
+ * 文本字段。`error` 非空时描边染红并在下方给出一行具体原因，
+ * 用它代替「保存按钮灰着但不解释为什么」。
+ */
+@Composable fun RecordField(label: String, value: String, onChange: (String) -> Unit, enabled: Boolean = true, multiline: Boolean = false, tag: String = "", error: String? = null) {
+    OutlinedTextField(value, onChange, Modifier.fillMaxWidth().testTag(tag), label = { Text(label) }, enabled = enabled,
+        isError = error != null, shape = MaterialTheme.shapes.medium, singleLine = !multiline, minLines = if (multiline) 3 else 1,
+        supportingText = error?.let { { Text(it) } })
+}
+/**
+ * 行式选择器：标签在左、当前值在右、末尾箭头；与设置页的取值行同一套读法。
+ * `bordered = false` 用于嵌进 `RecoowGroup` 的分组内，避免卡片套卡片。
+ */
+@Composable fun <T> RecordChoice(label: String, selected: T, options: List<Pair<T, String>>, onChange: (T) -> Unit, enabled: Boolean = true, bordered: Boolean = true, error: String? = null, modifier: Modifier = Modifier) {
     var open by remember { mutableStateOf(false) }
     val selectedLabel = options.firstOrNull { it.first == selected }?.second ?: stringResource(R.string.record_choose)
-    Column {
-        Text(label, style = MaterialTheme.typography.labelLarge)
-        Box { OutlinedButton(onClick = { open = true }, enabled = enabled, modifier = Modifier.fillMaxWidth().recordControlDescription(label, selectedLabel)) {
-            Text(selectedLabel)
+    val content: @Composable () -> Unit = {
+        Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(horizontal = RecoowLayout.rowHorizontal),
+            verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.weight(1f))
+            Text(selectedLabel, style = MaterialTheme.typography.bodyLarge,
+                color = if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.width(6.dp))
+            Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null,
+                tint = if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp))
         }
-            DropdownMenu(open, { open = false }, modifier = Modifier.heightIn(max = 360.dp)) {
+    }
+    Column(modifier) {
+        Box {
+            if (bordered) {
+                Surface(onClick = { open = true }, enabled = enabled, shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant),
+                    modifier = Modifier.fillMaxWidth().recordControlDescription(label, selectedLabel)) { content() }
+            } else {
+                Box(Modifier.fillMaxWidth()
+                    .clickable(enabled = enabled) { open = true }
+                    .recordControlDescription(label, selectedLabel)) { content() }
+            }
+            DropdownMenu(open, { open = false }, modifier = Modifier.heightIn(max = 360.dp),
+                shape = MaterialTheme.shapes.medium, containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
                 options.forEach { (value, name) -> DropdownMenuItem(text = { Text(name) }, onClick = { open = false; onChange(value) }) }
             }
         }
+        if (error != null) Text(
+            error,
+            modifier = Modifier.padding(start = RecoowLayout.rowHorizontal, end = RecoowLayout.rowHorizontal, top = 4.dp, bottom = 4.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
     }
 }
 @Composable fun recordDateTime(timestamp: Long): String {
@@ -82,7 +142,7 @@ import java.time.format.FormatStyle
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.record_cancel)) } })
 }
 @Composable fun RecordLoadState(loading: Boolean, failed: Boolean, onRetry: () -> Unit) {
-    if (loading) CircularProgressIndicator() else if (failed) Column {
+    if (loading) RecordSkeleton() else if (failed) Column {
         Text(stringResource(R.string.record_failed))
         TextButton(onClick = onRetry) { Text(stringResource(R.string.record_retry)) }
     }
@@ -91,12 +151,19 @@ import java.time.format.FormatStyle
     deletionMessage: String, onBack: () -> Unit, onEdit: (NamedRecordDraft) -> Unit, onUpdate: (NamedRecordDraft) -> Unit,
     onSave: () -> Unit, onDelete: (NamedRecord) -> Unit) {
     var deleting by remember { mutableStateOf<NamedRecord?>(null) }
+    var attempted by remember { mutableStateOf(false) }
+    val nameError = if (attempted && draft != null && draft.name.isBlank()) stringResource(R.string.record_field_required) else null
     RecordPage(title, onBack, busy = busy, action = if (draft != null) stringResource(R.string.record_save) else null,
-        actionEnabled = draft?.name?.isNotBlank() == true, onAction = onSave,
+        onAction = { if (draft?.name?.isNotBlank() == true) onSave() else attempted = true },
         add = if (draft == null) stringResource(R.string.record_add) else null, onAdd = { onEdit(NamedRecordDraft()) }) {
         if (draft != null) {
-            item { RecordField(stringResource(R.string.record_name), draft.name, { onUpdate(draft.copy(name = it)) }, !busy) }
-            item { RecordField(stringResource(R.string.record_note), draft.note, { onUpdate(draft.copy(note = it)) }, !busy, multiline = true) }
+            item {
+                RecordForm {
+                    RecordFormText(stringResource(R.string.record_name), draft.name, { onUpdate(draft.copy(name = it)) }, enabled = !busy, error = nameError)
+                    RecordFormDivider()
+                    RecordFormText(stringResource(R.string.record_note), draft.note, { onUpdate(draft.copy(note = it)) }, enabled = !busy, multiline = true)
+                }
+            }
         } else {
             if (values.isEmpty()) item { Text(stringResource(R.string.record_empty)) }
             items(values, key = { it.id }) { value -> OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp)) {

@@ -3,18 +3,24 @@ package imehc.recoow.feature.decision
 import android.animation.ValueAnimator
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -37,49 +43,75 @@ import kotlin.math.pow
     LaunchedEffect(context) { runCatching { prewarmDecisionScene(context) } }
     val back: () -> Unit = { if (!state.busy) { if (collection != null || collectionDraft != null || optionDraft != null || history || detail != null) vm.back() else onBack() } }
     BackHandler(collection != null || collectionDraft != null || optionDraft != null || history || detail != null || state.busy, back)
+    var focusRequest by rememberSaveable { mutableStateOf<String?>(null) }
     when {
-        optionDraft != null -> OptionEditor(vm, state, requireNotNull(optionDraft), back)
+        optionDraft != null -> OptionEditor(vm, state, requireNotNull(optionDraft), back,
+            onDelete = { option -> vm.deleteOption(option); back() },
+            onFocus = { option -> focusRequest = option.id; back() })
         collectionDraft != null -> {
             val d = requireNotNull(collectionDraft)
-            RecordPage(stringResource(R.string.decision_collection), back, busy = state.busy, action = stringResource(CommonR.string.record_save), actionEnabled = d.title.isNotBlank(), onAction = vm::saveCollection) {
-                item { RecordField(stringResource(CommonR.string.record_name), d.title, { vm.update(d.copy(title = it)) }, !state.busy, tag = "decision_collection_title") }
-                item { RecordField(stringResource(CommonR.string.record_note), d.note, { vm.update(d.copy(note = it)) }, !state.busy, multiline = true) }
+            var attempted by rememberSaveable { mutableStateOf(false) }
+            val titleError = if (attempted && d.title.isBlank()) stringResource(CommonR.string.record_field_required) else null
+            RecordPage(stringResource(R.string.decision_collection), back, busy = state.busy, action = stringResource(CommonR.string.record_save),
+                onAction = { if (d.title.isNotBlank()) vm.saveCollection() else attempted = true }) {
+                item {
+                    RecordForm {
+                        RecordFormText(stringResource(CommonR.string.record_name), d.title, { vm.update(d.copy(title = it)) },
+                            enabled = !state.busy, error = titleError, tag = "decision_collection_title")
+                        RecordFormDivider()
+                        RecordFormText(stringResource(CommonR.string.record_note), d.note, { vm.update(d.copy(note = it)) },
+                            enabled = !state.busy, multiline = true)
+                    }
+                }
             }
         }
         detail != null -> ChoiceDetail(vm, state, state.data.history.firstOrNull { it.id == detail }, back)
         history -> ChoiceHistory(vm, state, collection, back)
-        collection != null -> DecisionStage(vm, state, state.data.collections.firstOrNull { it.id == collection }, back)
+        collection != null -> DecisionStage(vm, state, state.data.collections.firstOrNull { it.id == collection }, back,
+            focusRequest = focusRequest, onFocusConsumed = { focusRequest = null })
         else -> Collections(vm, state, back)
     }
     RecordProblem(state.error, vm::clearError)
 }
 @Composable private fun Collections(vm: DecisionViewModel, state: DecisionState, back: () -> Unit) {
-    var deleting by remember { mutableStateOf<DecisionCollection?>(null) }
     RecordPage(stringResource(R.string.decision_title), back, tag = "tool_decisionMaker", busy = state.busy,
-        action = stringResource(R.string.decision_history), onAction = vm::showHistory,
+        more = listOf(RecoowAction(stringResource(R.string.decision_history), onClick = vm::showHistory)),
         add = if (!state.loading && !state.failed) stringResource(R.string.decision_add_collection) else null, onAdd = { vm.editCollection() }) {
         item { RecordLoadState(state.loading, state.failed, vm::retry) }
         if (!state.loading && !state.failed) {
-            if (state.data.collections.isEmpty()) item { Text(stringResource(R.string.decision_empty)) }
-            items(state.data.collections, key = { it.id }) { collection -> Card(Modifier.fillMaxWidth().clickable { vm.open(collection.id) }) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(collection.title, style = MaterialTheme.typography.titleMedium); collection.note?.let { Text(it) }
-                Text(stringResource(R.string.decision_option_count, state.data.options.count { it.collectionId == collection.id && it.enabled }))
-                FlowRow { TextButton(onClick = { vm.editCollection(collection) }, enabled = !state.busy) { Text(stringResource(CommonR.string.record_edit)) }
-                    TextButton(onClick = { deleting = collection }, enabled = !state.busy) { Text(stringResource(CommonR.string.record_delete)) } }
-            } } }
+            if (state.data.collections.isEmpty()) item {
+                RecoowGroup {
+                    RecoowEmptyState(
+                        title = stringResource(R.string.decision_empty_title),
+                    )
+                }
+            } else item(key = "collections") {
+                RecoowGroup {
+                    state.data.collections.forEachIndexed { index, collection ->
+                        RecoowRow(
+                            title = collection.title,
+                            subtitle = collection.note,
+                            trailingText = stringResource(R.string.decision_option_count, state.data.options.count { it.collectionId == collection.id && it.enabled }),
+                            showChevron = true,
+                            onClick = { vm.open(collection.id) },
+                            modifier = Modifier.testTag("decision_${collection.id}"),
+                        )
+                        if (index < state.data.collections.lastIndex) RecoowDivider(RecoowLayout.dividerInset)
+                    }
+                }
+            }
         }
     }
-    deleting?.let { value -> RecordDeleteConfirmation(value.title, stringResource(R.string.decision_delete_collection), { deleting = null }) { deleting = null; vm.deleteCollection(value) } }
 }
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun DecisionStage(vm: DecisionViewModel, state: DecisionState, collection: DecisionCollection?, back: () -> Unit) {
+@Composable private fun DecisionStage(vm: DecisionViewModel, state: DecisionState, collection: DecisionCollection?, back: () -> Unit,
+    focusRequest: String? = null, onFocusConsumed: () -> Unit = {}) {
     val resultId by vm.result.collectAsStateWithLifecycle(); val result = state.data.history.firstOrNull { it.id == resultId }
     val options = state.data.options.filter { it.collectionId == collection?.id }; val enabled = options.filter { it.enabled }
     val cursor = remember(collection?.id) { Animatable(0f) }; val scope = rememberCoroutineScope()
     var spinning by remember { mutableStateOf(false) }; val drawn by vm.shownResult.collectAsStateWithLifecycle()
     var animate by rememberSaveable { mutableStateOf(true) }; var drawer by rememberSaveable { mutableIntStateOf(0) }
     var unavailable by remember { mutableStateOf(false) }; var loaded by remember { mutableStateOf(false) }
-    var deleting by remember { mutableStateOf<DecisionOption?>(null) }
     var spinPool by remember { mutableStateOf<List<DecisionOption>?>(null) }
     val pool = spinPool ?: enabled
     val focused = Turntable.focused(cursor.value.toDouble(), pool.size)?.let { pool[it] }
@@ -99,96 +131,246 @@ import kotlin.math.pow
     }
     LaunchedEffect(enabled.map { it.id }, spinning) { if (!spinning && enabled.isNotEmpty()) cursor.snapTo(Turntable.wrap(cursor.value.toInt(), enabled.size).toFloat()) }
     val busy = state.busy || spinning || result != null && drawn != result.id
+    LaunchedEffect(focusRequest, pool.size) {
+        val id = focusRequest ?: return@LaunchedEffect
+        val at = pool.indexOfFirst { it.id == id }
+        if (at >= 0) cursor.snapTo(at.toFloat())
+        onFocusConsumed()
+    }
     fun browse(delta: Int) { if (!busy && pool.isNotEmpty()) scope.launch { cursor.snapTo((cursor.value + delta).mod(pool.size.toFloat())) } }
-    Scaffold(Modifier.testTag("decision_stage"), topBar = { TopAppBar(title = { Text(collection?.title ?: stringResource(R.string.decision_title)) }, navigationIcon = {
-        TextButton(onClick = back, enabled = !state.busy) { Text(stringResource(CommonR.string.record_back)) }
-    }, actions = { TextButton(onClick = { drawer = if (drawer == 2) 0 else 2 }, enabled = !busy) { Text(stringResource(R.string.decision_history)) } }) }) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (collection == null) item { if (state.loading || state.failed) RecordLoadState(state.loading, state.failed, vm::retry) else Text(stringResource(CommonR.string.record_missing)) }
-            else {
-                item { Box(Modifier.fillMaxWidth().height(if (drawer != 0) 220.dp else 330.dp).testTag(if (loaded) "decision_scene_ready" else "decision_scene_loading")) {
-                    if (!unavailable) DecisionScene(pool.map { it.title }, cursor.value.toDouble(), dark, Modifier.fillMaxSize(), onLoaded = { loaded = true }, onFailure = { unavailable = true })
-                    Box(Modifier.matchParentSize().pointerInput(busy, pool.size) {
-                        var drag = 0f
-                        detectHorizontalDragGestures(onDragStart = { drag = 0f }, onDragEnd = { if (kotlin.math.abs(drag) > 36f) browse(if (drag < 0) 1 else -1) }) { change, amount ->
-                            if (!busy) { change.consume(); drag += amount }
+    var deletingCollection by remember { mutableStateOf(false) }
+    val active = collection
+    Scaffold(Modifier.testTag("decision_stage"), containerColor = MaterialTheme.colorScheme.background, topBar = {
+        RecoowCompactTopBar(
+            title = active?.title ?: stringResource(R.string.decision_title),
+            navigationIcon = {
+                IconButton(onClick = back, enabled = !state.busy) {
+                    Icon(painterResource(CommonR.drawable.ic_record_back), stringResource(CommonR.string.record_back))
+                }
+            },
+            action = {
+                RecoowOverflowMenu(
+                    listOfNotNull(
+                        RecoowAction(stringResource(R.string.decision_history), enabled = !busy) { drawer = if (drawer == 2) 0 else 2 },
+                        active?.let { value -> RecoowAction(stringResource(CommonR.string.record_edit), enabled = !state.busy) { vm.editCollection(value) } },
+                        active?.let { RecoowAction(stringResource(CommonR.string.record_delete), enabled = !state.busy) { deletingCollection = true } },
+                    ),
+                    tag = "decision_more",
+                )
+            },
+        )
+    }) { padding ->
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(RecoowLayout.sectionGap),
+        ) {
+            if (active == null) item(key = "missing") {
+                if (state.loading || state.failed) RecordLoadState(state.loading, state.failed, vm::retry)
+                else RecoowGroup { RecoowEmptyState(stringResource(CommonR.string.record_missing)) }
+            } else {
+                item(key = "scene") {
+                    Column {
+                        val sceneShape = RoundedCornerShape(RecoowLayout.cardRadius)
+                        Box(Modifier.fillMaxWidth().height(if (drawer != 0) 220.dp else 320.dp)
+                            .clip(sceneShape)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, sceneShape)
+                            .testTag(if (loaded) "decision_scene_ready" else "decision_scene_loading")) {
+                            if (!unavailable) DecisionScene(pool.map { it.title }, cursor.value.toDouble(), dark, Modifier.fillMaxSize(), onLoaded = { loaded = true }, onFailure = { unavailable = true })
+                            Box(Modifier.matchParentSize().pointerInput(busy, pool.size) {
+                                var drag = 0f
+                                detectHorizontalDragGestures(onDragStart = { drag = 0f }, onDragEnd = { if (kotlin.math.abs(drag) > 36f) browse(if (drag < 0) 1 else -1) }) { change, amount ->
+                                    if (!busy) { change.consume(); drag += amount }
+                                }
+                            })
+                            FilledTonalButton(onClick = vm::choose, enabled = !busy && enabled.isNotEmpty(), modifier = Modifier.align(Alignment.Center)) {
+                                Text(stringResource(if (state.busy) R.string.decision_preparing else if (spinning) R.string.decision_spinning else R.string.decision_draw))
+                            }
+                            if (!loaded && !unavailable) CircularProgressIndicator(Modifier.align(Alignment.TopEnd).size(24.dp))
                         }
-                    })
-                    FilledTonalButton(onClick = vm::choose, enabled = !busy && enabled.isNotEmpty(), modifier = Modifier.align(Alignment.Center)) {
-                        Text(stringResource(if (state.busy) R.string.decision_preparing else if (spinning) R.string.decision_spinning else R.string.decision_draw))
                     }
-                    if (!loaded && !unavailable) CircularProgressIndicator(Modifier.align(Alignment.TopEnd).size(24.dp))
-                } }
-                if (unavailable) item { Text(stringResource(R.string.decision_scene_failed)); TextButton(onClick = { unavailable = false; loaded = false }) { Text(stringResource(CommonR.string.record_retry)) } }
-                item { Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = { browse(-1) }, enabled = !busy && enabled.size > 1) { Text(stringResource(R.string.decision_previous)) }
-                    Text(focused?.title ?: stringResource(R.string.decision_no_options), Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-                    TextButton(onClick = { browse(1) }, enabled = !busy && enabled.size > 1) { Text(stringResource(R.string.decision_next)) }
-                } }
-                if (result != null && !spinning) item { Card(Modifier.fillMaxWidth().clickable { vm.show(result.id) }) { Column(Modifier.padding(16.dp)) {
-                    Text(stringResource(R.string.decision_result), style = MaterialTheme.typography.labelLarge); Text(result.title, style = MaterialTheme.typography.titleLarge)
-                    Text(stringResource(R.string.decision_view_result))
-                } } }
-                item { RecordSwitch(stringResource(R.string.decision_animation), animate, { animate = it }, enabled = !busy)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { drawer = if (drawer == 1) 0 else 1 }, enabled = !busy) { Text(stringResource(if (drawer == 1) R.string.decision_hide_options else R.string.decision_options)) }
-                        FilledTonalButton(onClick = { vm.editOption() }, enabled = !busy) { Text(stringResource(R.string.decision_add_option)) }
+                }
+                if (unavailable) item(key = "scene_failed") {
+                    RecoowNotice(
+                        stringResource(R.string.decision_scene_failed),
+                        actions = listOf(RecoowAction(stringResource(CommonR.string.record_retry)) { unavailable = false; loaded = false }),
+                    )
+                }
+                item(key = "focus") {
+                    RecoowGroup {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(onClick = { browse(-1) }, enabled = !busy && enabled.size > 1) { Text(stringResource(R.string.decision_previous)) }
+                            Text(
+                                focused?.title ?: stringResource(R.string.decision_no_options),
+                                Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            TextButton(onClick = { browse(1) }, enabled = !busy && enabled.size > 1) { Text(stringResource(R.string.decision_next)) }
+                        }
+                    }
+                }
+                if (result != null && !spinning) item(key = "result") {
+                    RecoowGroup {
+                        RecoowRow(
+                            title = stringResource(R.string.decision_result),
+                            subtitle = result.title,
+                            trailingText = stringResource(R.string.decision_view_result),
+                            showChevron = true,
+                            onClick = { vm.show(result.id) },
+                        )
+                    }
+                }
+                item(key = "controls") {
+                    RecoowGroup {
+                        RecoowSwitchRow(stringResource(R.string.decision_animation), animate, onChange = { animate = it }, enabled = !busy)
+                        RecoowDivider(RecoowLayout.dividerInset)
+                        RecoowRow(
+                            title = stringResource(if (drawer == 1) R.string.decision_hide_options else R.string.decision_options),
+                            showChevron = true,
+                            onClick = { drawer = if (drawer == 1) 0 else 1 },
+                            modifier = Modifier.testTag("decision_options_toggle"),
+                        )
+                        RecoowDivider(RecoowLayout.dividerInset)
+                        RecoowRow(title = stringResource(R.string.decision_add_option), showChevron = true, onClick = { vm.editOption() })
                     }
                 }
                 if (drawer == 2) {
-                    val history = state.data.history.filter { it.collectionId == collection.id }
-                    if (history.isEmpty()) item { Text(stringResource(CommonR.string.record_empty)) }
-                    items(history, key = { "history:${it.id}" }) { choice -> OutlinedCard(Modifier.fillMaxWidth().clickable { vm.show(choice.id) }) { Column(Modifier.padding(16.dp)) {
-                        Text(choice.title, style = MaterialTheme.typography.titleMedium); Text(recordDateTime(choice.selectedAt))
-                    } } }
+                    val rows = state.data.history.filter { it.collectionId == active.id }
+                    if (rows.isEmpty()) item(key = "history_empty") {
+                        RecoowGroup { RecoowEmptyState(stringResource(CommonR.string.record_empty)) }
+                    } else item(key = "history") {
+                        RecoowGroup {
+                            rows.forEachIndexed { index, choice ->
+                                RecoowRow(
+                                    title = choice.title,
+                                    subtitle = recordDateTime(choice.selectedAt),
+                                    showChevron = true,
+                                    onClick = { vm.show(choice.id) },
+                                )
+                                if (index < rows.lastIndex) RecoowDivider(RecoowLayout.dividerInset)
+                            }
+                        }
+                    }
                 }
                 if (drawer == 1) {
-                    if (options.isEmpty()) item { Text(stringResource(R.string.decision_no_options)) }
-                    items(options, key = { it.id }) { option -> OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (option.hasImage) MediaImage(option.image, vm.media, Modifier.size(100.dp))
-                        Text(option.title, style = MaterialTheme.typography.titleMedium); option.detail?.let { Text(it) }; option.customInfo?.let { Text(it) }
-                        Text(stringResource(R.string.decision_weight_value, option.weight)); if (!option.enabled) Text(stringResource(R.string.decision_disabled))
-                        FlowRow { TextButton(onClick = { vm.editOption(option) }, enabled = !busy) { Text(stringResource(CommonR.string.record_edit)) }
-                            TextButton(onClick = { deleting = option }, enabled = !busy) { Text(stringResource(CommonR.string.record_delete)) }
-                            if (option.enabled) TextButton(onClick = { scope.launch { cursor.snapTo(enabled.indexOfFirst { it.id == option.id }.toFloat()) } }, enabled = !busy) { Text(stringResource(R.string.decision_focus)) } }
-                    } } }
+                    if (options.isEmpty()) item(key = "options_empty") {
+                        RecoowGroup { RecoowEmptyState(stringResource(R.string.decision_no_options)) }
+                    } else item(key = "options") {
+                        RecoowGroup {
+                            options.forEachIndexed { index, option ->
+                                RecoowRow(
+                                    title = option.title,
+                                    subtitle = option.detail ?: option.customInfo ?: if (!option.enabled) stringResource(R.string.decision_disabled) else null,
+                                    trailingText = stringResource(R.string.decision_weight_value, option.weight),
+                                    showChevron = true,
+                                    onClick = { vm.editOption(option) },
+                                    modifier = Modifier.testTag("option_${option.id}"),
+                                )
+                                if (index < options.lastIndex) RecoowDivider(RecoowLayout.dividerInset)
+                            }
+                        }
+                    }
                 }
             }
         }
     }
-    deleting?.let { value -> RecordDeleteConfirmation(value.title, stringResource(R.string.decision_delete_option), { deleting = null }) { deleting = null; vm.deleteOption(value) } }
+    if (deletingCollection && active != null) {
+        RecordDeleteConfirmation(active.title, stringResource(R.string.decision_delete_collection), { deletingCollection = false }) {
+            deletingCollection = false; vm.deleteCollection(active); back()
+        }
+    }
 }
-@Composable private fun OptionEditor(vm: DecisionViewModel, state: DecisionState, d: OptionDraft, back: () -> Unit) {
+@Composable private fun OptionEditor(vm: DecisionViewModel, state: DecisionState, d: OptionDraft, back: () -> Unit,
+    onDelete: (DecisionOption) -> Unit = {}, onFocus: (DecisionOption) -> Unit = {}) {
     val weight = d.weight.toLongOrNull(); val original = state.data.options.firstOrNull { it.id == d.id }
     val valid = d.valid && (weight in 1L..100L || weight == original?.weight)
-    RecordPage(stringResource(R.string.decision_option), back, busy = state.busy, action = stringResource(CommonR.string.record_save), actionEnabled = valid && !state.failed && !state.loading, onAction = vm::saveOption) {
-        item { RecordField(stringResource(CommonR.string.record_name), d.title, { vm.update(d.copy(title = it)) }, !state.busy, tag = "decision_option_title") }
-        item { RecordField(stringResource(R.string.decision_description), d.detail, { vm.update(d.copy(detail = it)) }, !state.busy, multiline = true) }
-        item { RecordField(stringResource(R.string.decision_custom), d.customInfo, { vm.update(d.copy(customInfo = it)) }, !state.busy, multiline = true) }
-        item { RecordField(stringResource(R.string.decision_weight), d.weight, { vm.update(d.copy(weight = it)) }, !state.busy, tag = "decision_weight") }
-        item { RecordSwitch(stringResource(R.string.decision_enabled), d.enabled, { vm.update(d.copy(enabled = it)) }, enabled = !state.busy) }
+    var attempted by rememberSaveable { mutableStateOf(false) }
+    val titleError = if (attempted && d.title.isBlank()) stringResource(CommonR.string.record_field_required) else null
+    val weightError = if (attempted && !(weight in 1L..100L || weight == original?.weight)) stringResource(R.string.decision_weight_invalid) else null
+    RecordPage(stringResource(R.string.decision_option), back, busy = state.busy, action = stringResource(CommonR.string.record_save),
+        more = if (original != null) listOf(RecoowAction(stringResource(CommonR.string.record_delete), enabled = !state.busy, onClick = { onDelete(original) })) else emptyList(),
+        onAction = { if (valid && !state.failed && !state.loading) vm.saveOption() else attempted = true }) {
+        item {
+            RecordForm {
+                RecordFormText(stringResource(CommonR.string.record_name), d.title, { vm.update(d.copy(title = it)) },
+                    enabled = !state.busy, error = titleError, tag = "decision_option_title")
+                RecordFormDivider()
+                RecordFormText(stringResource(R.string.decision_description), d.detail, { vm.update(d.copy(detail = it)) },
+                    enabled = !state.busy, multiline = true)
+                RecordFormDivider()
+                RecordFormText(stringResource(R.string.decision_custom), d.customInfo, { vm.update(d.copy(customInfo = it)) },
+                    enabled = !state.busy, multiline = true)
+                RecordFormDivider()
+                RecordFormText(stringResource(R.string.decision_weight), d.weight, { vm.update(d.copy(weight = it)) },
+                    enabled = !state.busy, keyboard = androidx.compose.ui.text.input.KeyboardType.Number, error = weightError, tag = "decision_weight")
+                RecordFormDivider()
+                RecordSwitch(stringResource(R.string.decision_enabled), d.enabled, { vm.update(d.copy(enabled = it)) },
+                    enabled = !state.busy, modifier = Modifier.padding(horizontal = 14.dp))
+            }
+        }
         item { PhotoInput(d.image, { photo -> vm.update(d.copy(imageChanged = true, imageAssetId = photo?.assetId, imageContent = photo?.content, hasImage = photo != null)) }, vm.media, vm.processor, state.preferences) }
+        if (original != null) {
+            if (original.enabled) item(key = "focus") {
+                RecoowGroup {
+                    RecoowRow(title = stringResource(R.string.decision_focus), showChevron = true, onClick = { onFocus(original) })
+                }
+            }
+        }
     }
 }
 @Composable private fun ChoiceHistory(vm: DecisionViewModel, state: DecisionState, collection: String?, back: () -> Unit) {
     val records = state.data.history.filter { collection == null || it.collectionId == collection }
     RecordPage(stringResource(R.string.decision_history), back, tag = "decision_history") {
         item { RecordLoadState(state.loading, state.failed, vm::retry) }
-        if (!state.loading && !state.failed && records.isEmpty()) item { Text(stringResource(CommonR.string.record_empty)) }
-        items(records, key = { it.id }) { record -> Card(Modifier.fillMaxWidth().clickable { vm.show(record.id) }) { Column(Modifier.padding(16.dp)) {
-            Text(record.title, style = MaterialTheme.typography.titleMedium); Text(record.collectionTitle); Text(recordDateTime(record.selectedAt), style = MaterialTheme.typography.bodySmall)
-        } } }
+        if (!state.loading && !state.failed && records.isEmpty()) item {
+            RecoowGroup { RecoowEmptyState(stringResource(CommonR.string.record_empty)) }
+        } else if (records.isNotEmpty()) item(key = "rows") {
+            RecoowGroup {
+                records.forEachIndexed { index, record ->
+                    RecoowRow(
+                        title = record.title,
+                        subtitle = listOfNotNull(record.collectionTitle, recordDateTime(record.selectedAt)).joinToString(" · "),
+                        showChevron = true,
+                        onClick = { vm.show(record.id) },
+                    )
+                    if (index < records.lastIndex) RecoowDivider(RecoowLayout.dividerInset)
+                }
+            }
+        }
     }
 }
 @Composable private fun ChoiceDetail(vm: DecisionViewModel, state: DecisionState, record: DecisionChoice?, back: () -> Unit) {
     var deleting by remember { mutableStateOf(false) }; var preview by rememberSaveable { mutableStateOf(false) }
-    RecordPage(record?.title ?: stringResource(R.string.decision_result), back, tag = "decision_detail", busy = state.busy) {
-        if (record == null) item { if (state.loading || state.failed) RecordLoadState(state.loading, state.failed, vm::retry) else Text(stringResource(CommonR.string.record_missing)) }
-        else {
-            item { Text(record.collectionTitle); Text(recordDateTime(record.selectedAt)) }
-            if (record.hasImage) item { MediaImage(record.image, vm.media, Modifier.fillMaxWidth().height(240.dp).clickable { preview = true }) }
-            record.detail?.let { item { Text(it) } }; record.customInfo?.let { item { Text(it) } }
-            item { TextButton(onClick = { deleting = true }, enabled = !state.busy) { Text(stringResource(CommonR.string.record_delete)) } }
+    RecordPage(record?.title ?: stringResource(R.string.decision_result), back, tag = "decision_detail", busy = state.busy,
+        more = if (record != null) listOf(RecoowAction(stringResource(CommonR.string.record_delete), enabled = !state.busy, onClick = { deleting = true })) else emptyList()) {
+        if (record == null) item(key = "missing") {
+            if (state.loading || state.failed) RecordLoadState(state.loading, state.failed, vm::retry)
+            else RecoowGroup { RecoowEmptyState(stringResource(CommonR.string.record_missing)) }
+        } else {
+            item(key = "facts") {
+                RecoowGroup {
+                    RecoowRow(title = stringResource(R.string.decision_collection), trailingText = record.collectionTitle)
+                    RecoowDivider()
+                    RecoowRow(title = stringResource(R.string.decision_selected_at), trailingText = recordDateTime(record.selectedAt))
+                }
+            }
+            if (record.hasImage) item(key = "image") { MediaImage(record.image, vm.media, Modifier.fillMaxWidth().height(240.dp).clickable { preview = true }) }
+            record.detail?.takeIf { it.isNotBlank() }?.let { text -> item(key = "detail") {
+                Column {
+                    RecoowSectionHeader(stringResource(R.string.decision_description))
+                    RecoowGroup { RecoowRow(title = text) }
+                }
+            } }
+            record.customInfo?.takeIf { it.isNotBlank() }?.let { text -> item(key = "custom") {
+                Column {
+                    RecoowSectionHeader(stringResource(R.string.decision_custom))
+                    RecoowGroup { RecoowRow(title = text) }
+                }
+            } }
         }
     }
     if (preview && record != null) ImagePreview(listOf(record.image), 0, vm.media) { preview = false }

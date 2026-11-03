@@ -4,6 +4,9 @@
   <string name="add_bill">Add bill</string>
   <string name="edit_bill">Edit bill</string>
   <string name="bill_details">Bill details</string>
+  <string name="bills_summary">Summary</string>
+  <string name="bills_detail_section">Details</string>
+  <string name="bills_actions">Actions</string>
   <string name="back">Back</string>
   <string name="cancel">Cancel</string>
   <string name="save">Save</string>
@@ -120,4 +123,5 @@
   <string name="gift_card">Gift card</string>
   <string name="phone_balance">Phone balance</string>
   <string name="other_account">Other stored value</string>
+  <string name="amount_original_required">Enter the original amount first</string>
 </resources>

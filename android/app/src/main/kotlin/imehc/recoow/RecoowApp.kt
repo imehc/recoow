@@ -4,10 +4,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
@@ -22,6 +19,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import imehc.recoow.core.designsystem.RecoowTabBar
+import imehc.recoow.core.designsystem.RecoowTabItem
 import imehc.recoow.core.domain.preferences.AppLanguage
 import imehc.recoow.core.domain.preferences.Appearance
 import imehc.recoow.feature.home.HomeScreen
@@ -71,10 +70,10 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (entry?.destination?.route?.startsWith("tool/") != true && entry?.destination?.route !in setOf("sync", "media", "history", "data", "update")) {
-                NavigationBar {
+                RecoowTabBar {
                     AppTab.entries.forEach { tab ->
-                        NavigationBarItem(
-                            modifier = Modifier.testTag("tab_${tab.route}"),
+                        RecoowTabItem(
+                            label = stringResource(tab.label),
                             selected = entry?.destination?.route == tab.route,
                             onClick = {
                                 controller.navigate(tab.route) {
@@ -83,8 +82,8 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
                                     restoreState = true
                                 }
                             },
+                            modifier = Modifier.testTag("tab_${tab.route}"),
                             icon = { Icon(painterResource(tab.icon), contentDescription = null) },
-                            label = { Text(stringResource(tab.label)) },
                         )
                     }
                 }
