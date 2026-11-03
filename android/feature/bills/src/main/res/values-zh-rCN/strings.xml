@@ -47,7 +47,7 @@
   <string name="salary">工资</string>
   <string name="bonus">奖金</string>
   <string name="investment_dividend">理财分红</string>
-  <string name="app_payout">App活动</string>
+  <string name="app_payout">App 活动</string>
   <string name="part_time">兼职副业</string>
   <string name="reimbursement">报销</string>
   <string name="refund">退款</string>
@@ -84,7 +84,7 @@
   <string name="copy_number">复制号码</string>
   <string name="copied">已复制</string>
   <string name="receipt">凭证图片</string>
-  <string name="recharge">这是储值充值</string>
+  <string name="recharge">储值充值</string>
   <string name="select_account">选择储值账户</string>
   <string name="add_account">添加储值账户</string>
   <string name="edit_account">编辑储值账户</string>

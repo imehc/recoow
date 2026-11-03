@@ -5,14 +5,14 @@
     <string name="food_name">食物名称</string>
     <string name="food_meal">餐别</string>
     <string name="food_portion">份量</string>
-    <string name="food_day_title">日标题</string>
+    <string name="food_day_title">日期标题</string>
     <string name="food_suggestions">常用推荐</string>
     <string name="food_linked_bills">已关联账单</string>
     <string name="food_select_bills">选择账单</string>
     <string name="food_missing_bill">关联账单已不可用</string>
     <string name="food_media">照片与录音</string>
     <string name="food_entry_count">%1$d 条记录</string>
-    <string name="food_metric_total">累计餐点</string>
+    <string name="food_metric_total">累计饮食</string>
     <string name="food_metric_today">今天</string>
     <string name="food_metric_days">记录天数</string>
     <string name="food_metric_meals">今日餐数</string>

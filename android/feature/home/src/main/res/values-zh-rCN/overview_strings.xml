@@ -4,7 +4,7 @@
     <string name="home_track_metrics">%1$d 秒 · %2$d 个采样点</string>
     <string name="home_summary_retry">摘要刷新失败，点击重试</string>
     <string name="home_hidden_title">未显示功能入口</string>
-    <string name="home_hidden_description">可在设置中恢复入口，已有记录仍可从统计和历史查看。</string>
+    <string name="home_hidden_description">可在设置中恢复入口，已有记录仍可从统计和历史记录查看。</string>
     <string name="home_settings">打开设置</string>
     <string name="home_anniversary_today">今日 %1$d 个纪念日</string>
     <string name="home_anniversary_days">%1$d 天后</string>

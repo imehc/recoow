@@ -15,5 +15,5 @@
     <string name="record_field_required">请填写</string>
     <string name="record_field_choose">请选择</string>
     <string name="record_load_more">加载更多</string>
-    <string name="record_end">已经到底了</string>
+    <string name="record_end">没有更多了</string>
 </resources>

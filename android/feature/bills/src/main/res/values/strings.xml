@@ -84,7 +84,7 @@
   <string name="copy_number">Copy number</string>
   <string name="copied">Copied</string>
   <string name="receipt">Receipt image</string>
-  <string name="recharge">This is a stored value recharge</string>
+  <string name="recharge">Stored value recharge</string>
   <string name="select_account">Select account</string>
   <string name="add_account">Add account</string>
   <string name="edit_account">Edit account</string>
