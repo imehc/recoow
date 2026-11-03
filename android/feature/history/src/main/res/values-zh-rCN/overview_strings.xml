@@ -1,5 +1,5 @@
 <resources>
-    <string name="history_title">统一历史</string>
+    <string name="history_title">历史记录</string>
     <string name="history_select">选择</string>
     <string name="history_done">完成</string>
     <string name="history_tool">工具</string>

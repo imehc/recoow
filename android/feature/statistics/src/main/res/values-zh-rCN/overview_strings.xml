@@ -6,7 +6,7 @@
     <string name="statistics_latest_label">最近记录</string>
     <string name="statistics_recent_total">共 %1$d 条</string>
     <string name="statistics_no_records">近七日暂无记录</string>
-    <string name="statistics_history">统一历史</string>
+    <string name="statistics_history">历史记录</string>
     <string name="statistics_partial">部分数据刷新失败：%1$s。保留上次可用结果。</string>
     <string name="statistics_overview">记录总览</string>
     <string name="statistics_total">总记录 %1$d 条</string>
