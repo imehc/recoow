@@ -22,6 +22,16 @@ python3 scripts/version.py bump backend patch
 
 Android 将结果作为 `versionCode`，通过 `RECOOW_ANDROID_VERSION_CODE` 注入 Gradle，最大值为 2100000000。本地构建使用配置中的基线。
 
+## Android 发布
+
+正式发布前提交版本配置、生成文件及 `android/releases/<version>.md`，再推送对应的 `android/v<version>` 标签。发布流水线完成检查和签名 APK 校验后上传安装包及应用内更新信息。
+
+手动触发时必须指定发布标签，例如 `gh workflow run android-release.yml --ref android/v0.7.0`。从默认 `main` 分支触发只执行检查，跳过发布。
+
+未发布成功的任务可以在 Actions 中选择 `Re-run failed jobs`，或用 `gh run rerun <run-id> --failed` 重跑。重跑保持原构建编号；已公开的版本及标签不能覆盖，后续更新应使用新版本。
+
+## iOS 发布
+
 iOS 将序号转换为满足 `CFBundleVersion` 位数限制的三段数字：序号 1 为 `1.0.0`，100 为 `1.0.99`，101 为 `1.1.0`，10001 为 `2.0.0`；与应用的语义版本无关。未来 iOS 发布 CI 可直接使用：
 
 ```sh
