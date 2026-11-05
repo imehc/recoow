@@ -1,4 +1,16 @@
-# 版本管理
+# recoow
+
+iOS、Android 与共享后端组成的个人记录应用。后端使用 PostgreSQL，通过统一 OpenAPI 契约提供同步和资源管理接口。
+
+## 项目文档
+
+- [后端配置与接口](backend/README.md)
+- [后端架构](docs/backend-architecture.md)
+- [部署、迁移与备份恢复](deploy/README.md)
+- [Android 开发](android/README.md)
+- [版本管理](VERSIONING.md)
+
+## 版本管理
 
 三个端独立升版，统一使用 `python3 scripts/version.py show/check/bump`。配置、构建编号及发布规则见 [VERSIONING.md](VERSIONING.md)。
 

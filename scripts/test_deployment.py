@@ -1,9 +1,7 @@
 import hashlib
-from contextlib import closing
 import os
 from pathlib import Path
 import shutil
-import sqlite3
 import subprocess
 import tarfile
 import tempfile
@@ -23,13 +21,13 @@ class DeploymentTests(unittest.TestCase):
         for source in (ROOT / "deploy").iterdir():
             if source.is_file():
                 shutil.copy2(source, self.bundle / source.name)
-        self.schema = self.bundle / "schema"
-        self.schema.mkdir()
+        self.openapi = self.bundle / "openapi"
+        self.openapi.mkdir()
         (self.bundle / "build-info.json").write_text('{"version":"0.0.1","commit":"fixture","dirty":false}')
-        (self.schema / "bills.json").write_text('{"table":"bills"}')
+        (self.openapi / "openapi.yaml").write_text("openapi: 3.0.3\n")
         for architecture in ("amd64", "arm64"):
             binary = self.bundle / f"recoow-api-linux-{architecture}"
-            binary.write_text('#!/usr/bin/env bash\nprintf "%s|%s|%s" "$RECOOW_DATA" "$RECOOW_SCHEMA" "$RECOOW_LISTEN"\n')
+            binary.write_text('#!/usr/bin/env bash\nprintf "%s|%s|%s" "$RECOOW_DATA" "$RECOOW_OPENAPI" "$RECOOW_LISTEN"\n')
             binary.chmod(0o755)
         self.commands = self.directory / "commands"
         self.commands.mkdir()
@@ -42,13 +40,12 @@ class DeploymentTests(unittest.TestCase):
         self.command("uname", 'case "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac')
         self.data = self.directory / "data"
         self.data.mkdir()
-        with closing(sqlite3.connect(self.data / "recoow.db")) as database, database:
-            database.execute("CREATE TABLE account (id TEXT PRIMARY KEY)")
-            database.execute("INSERT INTO account VALUES ('original-account')")
+        self.environment["RECOOW_BACKUP_DATABASE_URL"] = "postgres://backup:backup-only-password@localhost/recoow"
+        self.command("pg_dump", 'database=\nfor argument in "$@"; do case "$argument" in --dbname=*) database=${argument#--dbname=} ;; --file=*) output=${argument#--file=} ;; esac; done\n[ "$database" = "$RECOOW_BACKUP_DATABASE_URL" ] || exit 71\nprintf "postgres-dump-fixture" > "$output"')
         (self.data / "media" / "account").mkdir(parents=True)
         (self.data / "media" / "account" / "checksum").write_bytes(b"original-media")
         (self.bundle / "recoow.env").write_text(
-            f"RECOOW_DATA={self.data}\nRECOOW_SCHEMA={self.schema}\n"
+            f"RECOOW_DATA={self.data}\nRECOOW_OPENAPI={self.openapi / 'openapi.yaml'}\nRECOOW_DATABASE_URL=postgres://runtime:runtime-password@localhost/recoow\n"
             "RECOOW_LISTEN=127.0.0.1:8091\nRECOOW_MAX_ACCOUNTS=3\n"
             "RECOOW_TLS_CERT=/old/cert.pem\nRECOOW_TLS_KEY=/old/private.pem\n"
         )
@@ -85,7 +82,7 @@ class DeploymentTests(unittest.TestCase):
     def test_run_selects_linux_binary_and_environment_overrides(self):
         environment = dict(self.environment, RECOOW_LISTEN="127.0.0.1:8999")
         result = self.run_script("run.sh", environment=environment)
-        self.assertEqual(result.stdout.decode(), f"{self.data}|{self.schema}|127.0.0.1:8999")
+        self.assertEqual(result.stdout.decode(), f"{self.data}|{self.openapi / 'openapi.yaml'}|127.0.0.1:8999")
 
     def test_run_rejects_unsupported_os(self):
         self.command("uname", "echo Darwin")
@@ -103,7 +100,7 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual(output.stat().st_mode & 0o777, 0o600)
         with tarfile.open(output) as archive:
             names = archive.getnames()
-            for required in ("data/recoow.db", "data/media/account/checksum", "schema/bills.json",
+            for required in ("database.dump", "data/media/account/checksum", "openapi/openapi.yaml",
                              "recoow-api-linux-amd64", "recoow-api-linux-arm64", "install.sh", "SHA256SUMS"):
                 self.assertIn(f"./{required}", names)
             configuration = archive.extractfile("./recoow.env").read().decode()
@@ -111,18 +108,21 @@ class DeploymentTests(unittest.TestCase):
             self.assertIn("RECOOW_MAX_ACCOUNTS=3\n", configuration)
             self.assertIn("RECOOW_TLS_KEY=\n", configuration)
             self.assertNotIn("/old/private.pem", configuration)
+            self.assertNotIn("backup-only-password", configuration)
+            self.assertNotIn("runtime-password", configuration)
             self.assertEqual(archive.extractfile("./build-info.json").read(), (self.bundle / "build-info.json").read_bytes())
 
-    def test_export_excludes_metadata_and_preserves_wal_bytes(self):
+    def test_export_excludes_metadata_and_obsolete_sqlite_files(self):
         (self.data / "._recoow.db").write_bytes(b"AppleDouble")
-        (self.schema / "._bills.json").write_bytes(b"\x00\x05\x16\x07")
+        (self.openapi / "._openapi.yaml").write_bytes(b"\x00\x05\x16\x07")
         (self.data / "recoow.db-wal").write_bytes(b"wal-fixture")
         self.manifest()
         output = self.directory / "migration.tar.gz"
         self.export(output)
         with tarfile.open(output) as archive:
             self.assertFalse(any(Path(name).name.startswith("._") for name in archive.getnames()))
-            self.assertEqual(archive.extractfile("./data/recoow.db-wal").read(), b"wal-fixture")
+            self.assertNotIn("./data/recoow.db-wal", archive.getnames())
+            self.assertEqual((self.data / "recoow.db-wal").read_bytes(), b"wal-fixture")
 
     def test_export_refuses_existing_output(self):
         output = self.directory / "migration.tar.gz"
@@ -149,8 +149,7 @@ class DeploymentTests(unittest.TestCase):
         original_bundle = self.bundle
         self.bundle = restored
         self.run_script("run.sh", "--verify")
-        with closing(sqlite3.connect(restored / "data/recoow.db")) as database, database:
-            database.execute("INSERT INTO account VALUES ('second-account')")
+        (restored / "data/media/account/checksum").write_bytes(b"new-media")
         self.run_script("export.sh", "--mode", "stopped", "--data", restored / "data",
                         "--output", self.directory / "second.tar.gz")
         self.bundle = original_bundle
@@ -166,7 +165,7 @@ class DeploymentTests(unittest.TestCase):
         output = self.directory / "stream.tar.gz"
         output.write_bytes(result.stdout)
         with tarfile.open(output) as archive:
-            self.assertIn("./data/recoow.db", archive.getnames())
+            self.assertIn("./database.dump", archive.getnames())
 
     @unittest.skipUnless(os.name == "posix" and os.geteuid() == 0 and Path("/run/lock").exists(), "requires isolated Linux root environment")
     def test_systemd_copy_failure_restores_original_service(self):
@@ -181,30 +180,12 @@ class DeploymentTests(unittest.TestCase):
         self.assertIn("start recoow.service", events.read_text())
         self.assertFalse(output.exists())
 
-    @unittest.skipUnless(os.environ.get("RECOOW_DEPLOYMENT_SANDBOX") == "1", "only runs in disposable deployment container")
-    def test_installer_preserves_existing_data_and_restores_only_empty_target(self):
-        Path("/run/systemd/system").mkdir(parents=True, exist_ok=True)
-        self.command("systemctl", "exit 0")
-        self.command("curl", "printf 401")
-        self.run_script("install.sh")
-        target = Path("/var/lib/recoow")
-        shutil.copy2(self.data / "recoow.db", target / "recoow.db")
-        original_bytes = (target / "recoow.db").read_bytes()
-        configuration = Path("/etc/recoow/recoow.env").read_bytes()
-        self.run_script("install.sh")
-        self.assertEqual((target / "recoow.db").read_bytes(), original_bytes)
-        self.assertEqual(Path("/etc/recoow/recoow.env").read_bytes(), configuration)
-        read_result = subprocess.run(["su", "-s", "/bin/sh", "recoow", "-c", "test -r /etc/recoow/recoow.env"], capture_output=True)
-        self.assertEqual(read_result.returncode, 0, read_result.stderr)
-        shutil.copytree(self.data, self.bundle / "data")
-        self.manifest()
-        self.run_script("install.sh", success=False)
-        self.assertEqual((target / "recoow.db").read_bytes(), original_bytes)
-        shutil.rmtree(target)
-        self.run_script("install.sh")
-        with closing(sqlite3.connect(target / "recoow.db")) as database, database:
-            self.assertEqual(database.execute("SELECT id FROM account").fetchall(), [("original-account",)])
-        self.assertEqual((target / "media/account/checksum").read_bytes(), b"original-media")
+    def test_pg_dump_failure_does_not_publish_archive(self):
+        self.command("pg_dump", "exit 71")
+        output = self.directory / "failed-backup.tar.gz"
+        self.export(output, success=False)
+        self.assertFalse(output.exists())
+        self.assertEqual((self.data / "media/account/checksum").read_bytes(), b"original-media")
 
 
 if __name__ == "__main__":

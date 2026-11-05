@@ -10,7 +10,7 @@ import unittest
 
 import check_schema_gate as gate
 import generate_sync_registry as registry
-import generate_sync_schema as generator
+import openapi_contract as generator
 
 
 def sql_blocks(path):
@@ -38,14 +38,7 @@ class GeneratedSyncTests(unittest.TestCase):
             Path(line.replace("$(SRCROOT)", str(gate.ROOT / "ios"))).resolve()
             for line in generator.input_file_list().splitlines()
         }
-        self.assertTrue(set(gate.discover_models().values()).issubset(paths))
-
-    def test_generation_from_a_clean_output_directory(self):
-        with tempfile.TemporaryDirectory() as directory:
-            command = [sys.executable, str(gate.ROOT / "scripts/generate_sync_schema.py"), "--output", directory]
-            subprocess.run(command, check=True, capture_output=True)
-            subprocess.run(command + ["--check"], check=True, capture_output=True)
-            self.assertEqual(len(list(Path(directory).glob("*.json"))), len(gate.discover_models()))
+        self.assertIn((gate.ROOT / "openapi/openapi.yaml").resolve(), paths)
 
     @unittest.skipUnless(sys.platform == "darwin" and shutil.which("xcrun"), "requires the macOS Swift compiler")
     def test_swift_balance_effects(self):
@@ -54,6 +47,9 @@ class GeneratedSyncTests(unittest.TestCase):
             result = subprocess.run([
                 "xcrun", "swiftc", "-module-cache-path", str(Path(directory) / "modules"),
                 "-o", str(binary), str(gate.IOS / "Core/Sync/StoredValueBalanceEffects.swift"),
+                str(gate.IOS / "App/Settings/AppLocalization.swift"),
+                str(gate.IOS / "App/Settings/AppLanguagePreference.swift"),
+                str(gate.IOS / "App/Settings/AppPreferenceStorageKeys.swift"),
                 str(gate.ROOT / "scripts/SyncValueChecks.swift"),
             ], capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)

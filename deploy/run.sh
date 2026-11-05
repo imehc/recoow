@@ -18,7 +18,7 @@ if [ ! -f "$config_file" ] && [ -z "${RECOOW_ENV_FILE:-}" ]; then
 fi
 load_config "$config_file"
 export RECOOW_DATA=${RECOOW_DATA:-$bundle_directory/data}
-export RECOOW_SCHEMA=${RECOOW_SCHEMA:-$bundle_directory/schema}
+export RECOOW_OPENAPI=${RECOOW_OPENAPI:-$bundle_directory/openapi/openapi.yaml}
 binary_path="$bundle_directory/recoow-api-linux-$architecture"
 [ -x "$binary_path" ] || die "缺少可执行文件：$binary_path"
 mkdir -p "$RECOOW_DATA"

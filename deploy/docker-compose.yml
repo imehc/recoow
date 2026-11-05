@@ -14,7 +14,10 @@ services:
     environment:
       RECOOW_LISTEN: 0.0.0.0:8080
       RECOOW_DATA: /data
-      RECOOW_SCHEMA: /app/schema
+      RECOOW_OPENAPI: /app/openapi/openapi.yaml
+      RECOOW_DATABASE_URL: ${RECOOW_DATABASE_URL:?请配置 PostgreSQL 非超级用户运行账号}
+      RECOOW_SESSION_TTL: ${RECOOW_SESSION_TTL:-86400}
+      RECOOW_ALLOW_INSECURE_COOKIES: ${RECOOW_ALLOW_INSECURE_COOKIES:-0}
       # 注意：当前 iOS 客户端初始化时不发送该字段，设置后 App 内将无法注册。
       # 仅自己使用时保持为空。
       RECOOW_BOOTSTRAP_TOKEN: ${RECOOW_BOOTSTRAP_TOKEN:-}
@@ -29,7 +32,7 @@ services:
       - recoow-data:/data
       # - ./data:/data
     healthcheck:
-      test: ["CMD-SHELL", "wget -S -O /dev/null http://127.0.0.1:8080/api/schema 2>&1 | grep -Eq '^[[:space:]]*HTTP/[0-9.]+ 401([[:space:]]|$)'"]
+      test: ["CMD-SHELL", "wget -S -O /dev/null http://127.0.0.1:8080/api/sync/capabilities 2>&1 | grep -Eq '^[[:space:]]*HTTP/[0-9.]+ 401([[:space:]]|$)'"]
       interval: 30s
       timeout: 5s
       retries: 3

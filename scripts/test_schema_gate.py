@@ -3,16 +3,14 @@ import json
 import unittest
 
 import check_schema_gate as gate
+from openapi_contract import manifests
 
 
 class SchemaGateTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.models = gate.discover_models()
-        cls.manifests = {
-            path.stem: json.loads(path.read_text(encoding="utf-8"))
-            for path in gate.SCHEMA_DIR.glob("*.json")
-        }
+        cls.manifests = {row["table"]: row for row in manifests()}
 
     def check_changes(self, table, change):
         manifest = copy.deepcopy(self.manifests[table])

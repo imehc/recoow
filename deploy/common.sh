@@ -23,7 +23,7 @@ load_config() {
         config_key=${config_line%%=*}
         config_value=${config_line#*=}
         case "$config_key" in
-            RECOOW_LISTEN|RECOOW_DATA|RECOOW_SCHEMA|RECOOW_BOOTSTRAP_TOKEN|RECOOW_MAX_ACCOUNTS|RECOOW_PAIRING_TTL|RECOOW_CORS_ORIGINS|RECOOW_TLS_CERT|RECOOW_TLS_KEY) ;;
+            RECOOW_LISTEN|RECOOW_DATA|RECOOW_OPENAPI|RECOOW_DATABASE_URL|RECOOW_MIGRATION_DATABASE_URL|RECOOW_SESSION_TTL|RECOOW_ALLOW_INSECURE_COOKIES|RECOOW_BOOTSTRAP_TOKEN|RECOOW_MAX_ACCOUNTS|RECOOW_PAIRING_TTL|RECOOW_CORS_ORIGINS|RECOOW_TLS_CERT|RECOOW_TLS_KEY) ;;
             *) die "不支持的配置项：$config_key" ;;
         esac
         if [ -z "${!config_key+x}" ]; then
@@ -72,7 +72,7 @@ ready_url() {
         '[::]:'*) listen_address="[::1]:${listen_address##*:}" ;;
     esac
     if [ -n "${RECOOW_TLS_CERT:-}" ] && [ -n "${RECOOW_TLS_KEY:-}" ]; then url_scheme=https; fi
-    printf '%s\n' "${RECOOW_HEALTH_URL:-$url_scheme://$listen_address/api/schema}"
+    printf '%s\n' "${RECOOW_HEALTH_URL:-$url_scheme://$listen_address/api/sync/capabilities}"
 }
 
 wait_ready() {

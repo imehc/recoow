@@ -8,7 +8,6 @@ import re
 import sys
 
 ROOT = Path(__file__).resolve().parent.parent
-SCHEMA_DIR = ROOT / "schema"
 IOS = ROOT / "ios" / "recoow"
 
 LOCAL_ONLY = {"sync_status"}
@@ -152,17 +151,18 @@ def main():
     parser.add_argument("--require-full-coverage", action="store_true")
     arguments = parser.parse_args()
     models = discover_models()
-    declared_tables = {path.stem for path in SCHEMA_DIR.glob("*.json")}
+    from openapi_contract import manifests
+    contracts = {row["table"]: row for row in manifests()}
+    declared_tables = set(contracts)
     tables = arguments.tables or sorted(declared_tables)
     failed = False
     for table in sorted(tables):
-        path = SCHEMA_DIR / (table + ".json")
-        if not path.exists():
-            print("[缺失] 清单不存在：%s" % path)
+        if table not in contracts:
+            print("[缺失] OpenAPI 缺少实体：%s" % table)
             failed = True
             continue
         try:
-            manifest = json.loads(path.read_text(encoding="utf-8"))
+            manifest = contracts[table]
             problems = check(table, manifest, models)
         except (OSError, ValueError) as error:
             problems = [str(error)]

@@ -1,199 +1,102 @@
-# recoow 云同步后端（backend）
+# recoow 后端
 
-Go 后端，提供账号配对、全量快照、增量同步、修订冲突回执和媒体传输。
-账号、设备、行快照、变更日志、回执和媒体索引使用 **SQLite**（纯 Go 驱动，无 CGO）；
-媒体字节单独按内容寻址存储。
+Go 服务供 iOS、Android 和 Web 共用。业务数据存储于 PostgreSQL，驱动为 pgx v5，固定查询由 sqlc 生成。媒体按内容寻址存放在 `RECOOW_DATA/media/<账号>/<checksum>`。
 
-**单实例支持多账号**：所有数据集按 `account_id` 分区，账号之间的行、变更日志、
-版本号空间、媒体索引与导出完全隔离；每个账号下仍可绑定多台设备。
+## 数据与分层
 
-## 生成、测试与构建
+- 21 个同步实体各自对应业务表，字段由 OpenAPI 契约定义；金额使用整数分，业务时间使用毫秒整数，ID 使用字符串。
+- 业务表的 `tenant_id` 表示数据归属；储值调整中的 `account_id` 仍表示业务上的储值账户。
+- `extras JSONB` 只保存未知字段及扩展内容，`present_fields` 区分字段缺省与显式空值；`row_state` 是同步兼容视图，当前业务状态不再保存到通用 JSON 快照表。
+- `change_log` 保存版本化历史快照，`mutation_receipts` 保存幂等回执，`sync_metadata` 保存世代与游标水位。管理端写入与同步共用同一修订事务和业务规则。
+- 业务表、历史、回执、媒体索引及同步元数据开启强制 RLS；账号上下文只在事务内有效。运行角色不能是超级用户、BYPASSRLS、表所有者或表所有者角色成员。
 
-需要 Python 3 和 `go.mod` 指定的 Go 版本；iOS 构建还需要 macOS 与 Xcode。
-以下命令在仓库根目录执行：
-
-```bash
-make generate         # 从 iOS 模型生成 JSON 契约、Swift 注册表和 Xcode 输入清单
-make check-generated  # 校验生成物和全部实体覆盖
-make test             # 脚本回归、后端测试与 go vet
-make backend          # 输出 dist/recoow-api 和 dist/schema/
-make ios-build        # 只构建 iOS 模拟器版本，不安装或运行 App
-```
-
-JSON 契约和 Swift 注册表是生成产物，不纳入 Git；首次克隆后先执行 `make generate`。
-Xcode 编译时也会生成 Swift 注册表，新增模型后需重新运行 `make generate` 更新构建输入清单。
-
-## 目录结构（分层）
-
-```
+```text
 backend/
-  cmd/api/              入口（读配置、加载 schema、起 HTTP、优雅退出）
-  internal/
-    api/                HTTP handler、路由、中间件、DTO
-    auth/               设备配对码 + 载体令牌（无密码）
-    schema/             读取并校验 recoow/schema 字段清单
-    store/              仓储接口、修订检查、持久化回执、聚合投影、SQL 导出
-    config/             环境变量配置
+  cmd/api/           HTTP 服务入口
+  cmd/worker/        后台维护入口
+  internal/app/      依赖装配
+  internal/config/   环境变量
+  internal/domain/   实体与仓储接口
+  internal/handler/  HTTP 路由、鉴权与 DTO
+  internal/service/  身份、修订校验、冲突与业务投影
+  internal/repository/  PostgreSQL、固定 SQL 与 sqlc 生成代码
+  internal/schema/   从 OpenAPI 派生同步校验元数据
+  migrations/        带校验和的 PostgreSQL 迁移
 ```
 
-## 存储与备份
+普通运行进程只检查迁移版本。使用独立迁移角色执行 `-migrate`；数据库版本缺失或校验和改变时拒绝启动。API 进程定时清理过期 Web 会话；独立 worker 可用于后续维护任务。
 
-- 数据库文件：`<RECOOW_DATA>/recoow.db`（SQLite，WAL 模式，随启动自动建表）。
-- 媒体字节：`<RECOOW_DATA>/media/<account>/<checksum>`，按内容寻址、可被多个 key 共享。
-- 升级存储结构前自动备份已有数据库到 `<RECOOW_DATA>/backups/`；备份失败则停止升级。
-- 旧单账号库（`user_version=3`）首次启动会自动升级为多账号结构：三张数据集表重建、
-  现有数据回填到原账号，升级前自动落一份备份。
-- SQL 导出**只导出当前设备所属账号**，包含修订日志与回执，**不包含媒体文件**；
-  完整备份还须保存 `media/` 目录。
-- 不要直接删除墓碑、变更历史或仍被引用的媒体；它们用于离线设备恢复和冲突处理。
-- 恢复时停止服务，使用新目录，保留原数据目录以便回滚。SQL 回放目标为 SQLite：
+## 统一契约与生成
+
+唯一契约为 [`openapi/openapi.yaml`](../openapi/openapi.yaml)，遵循资源式路径。`x-recoow-sync` 定义同步版本、依赖和兼容规则。存储与修订设计见 [后端架构](../docs/backend-architecture.md)。
+
+根 Makefile 固定 OpenAPI Generator 7.22.0 和 sqlc v1.30.0，提供：
 
 ```bash
-# 导出（设备 token 鉴权，只含该账号）
-curl -s -o recoow-backup.sql "localhost:8080/api/export/sql" -H "authorization: Bearer $TOKEN"
-
-# 导入到全新目录，并另外恢复 media/ 到该目录
-mkdir -p restored-data
-sqlite3 restored-data/recoow.db < recoow-backup.sql
-
-# 回退旧快照或替换数据集时更换世代，避免复用设备已经见过的版本号
-sqlite3 restored-data/recoow.db \
-  "UPDATE sync_metadata SET generation = lower(hex(randomblob(16))), min_cursor = 0 WHERE account_id = '<账号 id>';"
+python3 -m venv .venv
+.venv/bin/python -m pip install -r scripts/requirements.txt
+make generate-go-api generate-sql
+make generate-ios-api generate-android-api generate-web-api
+make generate                  # 全部接口类型、sqlc 与 iOS 同步注册表
 ```
 
-## 运行
+生成的 HTTP 类型位于各端构建目录，不手动修改。sqlc 查询源文件在 `internal/repository/queries/`，生成的查询代码纳入版本管理；动态同步 SQL 的标识符来自契约，数据值始终通过参数传入。
 
-生产打包、普通 Linux/systemd 部署、Docker 部署和完整实例导出迁移见 `deploy/README.md`。
-开发电脑执行 `bash scripts/package-backend.sh` 生成双架构运行包；运行包内的 `run.sh` 无需 Docker。
-`export.sh` 导出 SQLite/WAL、全部媒体及运行程序，适合整实例搬迁；下文 `/api/export/sql` 仅导出当前账号 SQL，不能代替整实例备份。
+修改公共字段先修改 OpenAPI，随后更新 PostgreSQL 迁移和移动端迁移。未知字段必须保留；破坏性升级需要显式版本转换，不能仅依赖类型生成。
+
+## 登录与 API
+
+设备初始化、恢复密钥、配对码和长期设备 token 保留。密码身份绑定到同一个数据账号；已有账号由主设备绑定用户名密码，新用户可单独注册。用户名归一化为小写；密码采用带随机盐的 Argon2id（64 MiB、3 次、并行度 2），长度为 12–256 字节。
+
+Web 登录使用独立的可过期会话，保存 token 哈希；默认 Cookie 为 HttpOnly、Secure、SameSite=Strict。Cookie 写请求检查 Origin。登录响应也返回 Bearer 会话凭据，退出和修改密码会吊销会话；长期设备凭据继续由设备管理单独吊销。账号禁用对会话与设备登录均生效。登录失败按直连来源地址限流。
+
+| API | 用途 |
+| --- | --- |
+| `GET /api/openapi.yaml` | 读取完整公共契约 |
+| `POST /api/accounts`、`POST /api/account-recoveries` | 设备初始化、恢复账号 |
+| `POST /api/device-pairing-codes`、`POST /api/device-pairings` | 创建、原子消费配对码 |
+| `GET /api/devices`、`DELETE /api/devices/{id}` | 管理本账号设备 |
+| `POST /api/users`、`POST /api/users/me/credentials` | 密码账号注册、原账号绑定 |
+| `POST /api/sessions`、`DELETE /api/sessions/current` | 登录、退出 |
+| `GET /api/users/me`、`PUT /api/users/me/password` | 当前身份、修改密码 |
+| `GET/POST /api/{实体}`、`GET/PUT/DELETE /api/{实体}/{id}` | 本账号分页列表、详情与修订写入 |
+| `GET /api/statistics` | 本账号基础统计 |
+| `GET /api/sync/capabilities`、`GET /api/sync/snapshots` | 同步能力、固定水位快照 |
+| `POST /api/sync/mutations`、`GET /api/sync/changes` | 修订写入、增量变化 |
+| `GET /api/exports`、`GET /api/exports/sql` | 本账号数据、PostgreSQL SQL 导出 |
+| `PUT/GET/HEAD/DELETE /api/media/objects/{key}` | 媒体传输 |
+
+实体资源名采用连字符，例如 `diary-tags`、`stored-value-accounts`。鉴权后的账号由服务端解析，请求不能指定数据归属。
+
+列表使用 `limit=1..200`、`cursor`、`q`、`fromMs`、`toMs`，按 ID 升序分页。日期筛选优先使用实体发生时间，缺少该字段时使用服务器更新时间。统计中的记录数量按更新时间统计；账单金额按 `occurred_at` 的左闭右开区间统计，退款和墓碑排除，分别返回支出、收入和储值消费。当前提供基础统计，复杂趋势和维度聚合可在后续增加。
+
+写入提供 `mutationId`、`baseVersion`、`dataVersion`、`updatedAtMs` 与 `snapshot`；删除无需快照。更新使用详情接口读取到的完整快照，并携带最近确认的版本；过期版本且内容不同返回 409，内容一致返回 duplicate，缺依赖返回 422。重试保持原 mutationId 和内容，Web 写入也会进入移动端同步日志。
+
+## 配置与运行
+
+要求 Go 满足 `go.mod`，PostgreSQL 15 及以上。配置与迁移步骤见 [部署文档](../deploy/README.md)。
+
+| 配置 | 用途 |
+| --- | --- |
+| `RECOOW_DATABASE_URL` | 必填，普通运行角色 PostgreSQL 连接串 |
+| `RECOOW_MIGRATION_DATABASE_URL` | 独立迁移角色，仅迁移时提供 |
+| `RECOOW_OPENAPI` | 默认 `../openapi/openapi.yaml` |
+| `RECOOW_DATA` | 默认 `./data`，保存媒体字节 |
+| `RECOOW_LISTEN` | 默认 `:8080` |
+| `RECOOW_SESSION_TTL` | 会话秒数，默认 86400 |
+| `RECOOW_ALLOW_INSECURE_COOKIES` | 本地 HTTP 开发设为 1，部署默认 0 |
+| `RECOOW_BOOTSTRAP_TOKEN`、`RECOOW_MAX_ACCOUNTS` | 注册入口限制、账号配额；程序默认不限制，部署模板为 1，0 表示不限制 |
+| `RECOOW_PAIRING_TTL` | 配对码秒数，默认 300 |
+| `RECOOW_CORS_ORIGINS` | 明确的 Web 来源，逗号分隔；Cookie 跨源不使用通配符 |
+| `RECOOW_TLS_CERT`、`RECOOW_TLS_KEY` | 服务自身 TLS，或由可信代理提供 HTTPS |
 
 ```bash
-# 仓库根目录
-make generate
 cd backend
-export RECOOW_BOOTSTRAP_TOKEN='设置一个随机引导密钥'
+go run ./cmd/api -migrate   # 提前设置迁移与运行连接串
+# 正常运行时只保留 RECOOW_DATABASE_URL
 go run ./cmd/api
 ```
 
-运行打包产物时，在仓库根目录显式指定契约路径：
+旧 SQLite 库使用 [`scripts/migrate_backend_sqlite.py`](../scripts/migrate_backend_sqlite.py) 迁入独立空目标库。源库与媒体副本保留，当前运行服务不再依赖 SQLite 驱动。整实例备份使用 `pg_dump` 加媒体目录；账号 SQL 导出只供本账号数据恢复，不代替包含密码身份、会话和全部账号的整实例备份。
 
-```bash
-RECOOW_DATA=./data RECOOW_SCHEMA=./dist/schema \
-RECOOW_BOOTSTRAP_TOKEN='设置一个随机引导密钥' ./dist/recoow-api
-```
-
-生产部署请使用 HTTPS 或配置可信的 TLS 反向代理，不要通过公网明文传输设备 token。
-
-配置（环境变量）：
-
-| 变量 | 默认 | 说明 |
-| --- | --- | --- |
-| `RECOOW_LISTEN` | `:8080` | 监听地址 |
-| `RECOOW_DATA` | `./data` | 数据目录：SQLite 库 `recoow.db` 与媒体 `media/` 落盘于此 |
-| `RECOOW_SCHEMA` | `../schema` | 字段清单目录 |
-| `RECOOW_BOOTSTRAP_TOKEN` | 空 | 若设置，注册新账号必须携带（多账号场景的注册闸门） |
-| `RECOOW_MAX_ACCOUNTS` | `0` | 账号数量上限；`0` 表示不限制，超出时 `/api/account/init` 返回 403 |
-| `RECOOW_PAIRING_TTL` | `300` | 配对码有效期（秒） |
-| `RECOOW_CORS_ORIGINS` | 空 | 允许跨源访问 /api 的来源，逗号分隔；生产环境使用明确的来源地址 |
-| `RECOOW_TLS_CERT` / `RECOOW_TLS_KEY` | 空 | 提供即启用 HTTPS |
-
-对外开放注册时务必设置 `RECOOW_BOOTSTRAP_TOKEN` 或 `RECOOW_MAX_ACCOUNTS`，
-否则任何人都能在你的服务器上创建账号并占用磁盘。
-
-## iOS 使用
-
-在设置的“云同步”中填写服务器地址并初始化或配对账号，然后启用“全量双向同步”并执行“立即同步”。
-初始化后可用恢复密钥走“找回账号”（`POST /api/account/recover`）把账号重新绑到新设备，
-该路径只校验密钥哈希，不受 `RECOOW_MAX_ACCOUNTS` 限制；密钥明文只在初始化响应中出现一次。
-开关按服务器与账号保存，默认关闭；升级不会自动开启同步。首次连接新数据集前自动保存本地完整备份，
-备份失败不会继续同步。仍建议升级前主动导出一份备份到 App 之外。
-
-同步覆盖全部已注册模块及媒体，不按单项功能开关。冲突保留本地内容，进入“处理同步冲突”选择保留本地或使用云端。
-更换服务器或账号时重新初始化进度，不沿用其他数据集的游标。
-
-## 接入管理客户端
-
-Web 等客户端可读取 `/api/schema` 获取契约，通过相同的同步接口写入，并使用配对获得的设备 token。
-跨源访问时设置 `RECOOW_CORS_ORIGINS`，例如 `http://localhost:8000`。不要绕过同步接口直接写 SQLite。
-独立管理界面、分页检索、角色权限等不由通用同步接口自动生成。
-
-## 核心 API
-
-| 方法与路径 | 鉴权 | 说明 |
-| --- | --- | --- |
-| `POST /api/account/init` | 引导 token | 注册一个**新**账号，返回账号 id、恢复密钥（仅一次）与主设备 token |
-| `POST /api/account/recover` | 无 | 用恢复密钥把账号找回（换机/重装），签发新的主设备 token |
-| `POST /api/devices/pairing-code` | 主设备 | 生成一次性配对码 |
-| `POST /api/auth/pair` | 无 | 用配对码注册新设备，换取设备 token |
-| `GET/DELETE /api/devices...` | 设备 token | 设备列表 / 吊销（仅限本账号） |
-| `GET /api/schema` | 设备 token | 下发字段清单（含版本号），前端据此动态渲染 |
-| `GET /api/sync/capabilities` | 设备 token | 协议版本、契约版本、数据集世代和快照水位 |
-| `GET /api/sync/bootstrap?generation=&watermark=&after=&limit=` | 设备 token | 固定水位的全量分页快照，包含墓碑 |
-| `POST /api/sync/push` | 设备 token | 批量修订检查与幂等回执；冲突返回当前快照 |
-| `GET /api/sync/pull?generation=&cursor=&limit=` | 设备 token | 按游标增量拉取 |
-| `GET /api/rows/{table}` | 设备 token | 某张表的存活行（后台浏览） |
-| `GET /api/export` | 设备 token | 本账号全量结构化导出 |
-| `GET /api/export/sql` | 设备 token | 本账号 SQL 导出（DDL+INSERT，可回放重建/迁库） |
-| `PUT/GET/HEAD/DELETE /api/media/objects/{key}` | 设备 token | 媒体上传/下载/删除（按 checksum 去重） |
-
-除 `POST /api/account/init`、`POST /api/account/recover`、`POST /api/auth/pair` 外，
-所有接口都按 token 解析出的账号隔离；请求里没有、也不需要传 `account_id`。
-
-## 一键引导（curl 示例）
-
-```bash
-# 1) 注册账号（主设备）
-curl -s -X POST localhost:8080/api/account/init \
-  -H 'content-type: application/json' \
-  -d '{"bootstrapToken":"<你的引导token>"}'
-# 返回 accountId、recoveryKey（请离线保存）与 deviceToken（记为 $OWNER）
-
-# 2) 主设备生成配对码
-curl -s -X POST localhost:8080/api/devices/pairing-code \
-  -H "authorization: Bearer $OWNER"
-
-# 3) 新设备用配对码加入，得到该设备自己的 token
-curl -s -X POST localhost:8080/api/auth/pair \
-  -H 'content-type: application/json' \
-  -d '{"code":"<配对码>","deviceName":"iPad"}'
-
-# 3') 换机或重装：用恢复密钥直接找回账号，签发新的主设备 token
-curl -s -X POST localhost:8080/api/account/recover \
-  -H 'content-type: application/json' \
-  -d '{"recoveryKey":"<离线保存的恢复密钥>","deviceName":"新手机"}'
-
-# 4) 获取世代和契约，将 dataset.generation 记为 $GENERATION
-curl -s localhost:8080/api/sync/capabilities -H "authorization: Bearer $TOKEN"
-curl -s localhost:8080/api/schema -H "authorization: Bearer $TOKEN"
-
-# 5) 新建日记标签；真实客户端应生成唯一实体 ID 和 mutationId
-curl -s -X POST localhost:8080/api/sync/push -H "authorization: Bearer $TOKEN" \
-  -H 'content-type: application/json' \
-  --data @- <<JSON
-{"protocolVersion":2,"generation":"$GENERATION","items":[{"table":"diary_tags","id":"tag-demo","mutationId":"tag-demo-create","baseVersion":0,"dataVersion":1,"operation":"insert","updatedAtMs":1700000000000,"deviceId":"web-demo","snapshot":{"id":"tag-demo","created_at":1700000000000,"updated_at":1700000000000,"deleted_at":null,"device_id":"web-demo","name":"旅行","note":null}}]}
-JSON
-
-# 6) pull 增量（新设备先完成 bootstrap，再从其 watermark 开始）
-curl -s "localhost:8080/api/sync/pull?generation=$GENERATION&cursor=0" -H "authorization: Bearer $TOKEN"
-```
-
-更新或删除使用上次确认的 `baseVersion`；重试必须保持同一 `mutationId` 和原请求内容。
-`409 reset_required` 表示世代或游标失效，需要重新 bootstrap，不能简单清零后跳过本地存量。
-媒体先上传到 `sync/<sha256>`，再在快照的 `_media` 中引用已确认的 key、checksum、size 和 contentType；单文件上限 200 MiB。
-
-## 字段清单（`../schema/*.json`）
-
-- 每个同步实体生成一份 JSON，后端运行时据此配置开放实体、验证和下发契约。
-- 行快照字段名沿用 iOS `CodingKeys`（= GRDB 列名），全网 **snake_case**。
-- 修改 iOS 模型后运行 `make generate`，并在 `scripts/sync_contract_rules.py` 维护版本、默认值和依赖。
-  普通字段或实体新增不需要修改后端物理表；部署时一并更新生成契约。
-- 未知普通字段保留；必填、类型、枚举和支持的版本范围严格校验。
-  破坏性业务变化仍需明确转换逻辑及客户端升级，不能只提高版本号或自动生成 UI。
-- 系统保留列 `id/created_at/updated_at/deleted_at/device_id/server_version` 恒定，
-  后台界面隐藏；媒体二进制列标注 `"binary": true` 不进快照。
-
-## 规范约定
-
-- **注释一律中文**，标识符 / 字段名保持英文。
-- 开发后端遵循仓库中的 Go 布局、安全、并发和网络规范。
-- 合入门禁：`gofmt`、`go vet ./...`、`go test ./...` 全绿。
+资源 CRUD 接收完整同步快照，账单储值影响沿用同步修订规则。调用方需按契约构造账单字段；简化表单并非单独的后端接口。

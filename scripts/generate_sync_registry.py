@@ -4,7 +4,7 @@ import argparse
 import difflib
 import json
 from pathlib import Path
-from generate_sync_schema import manifests as generate_manifests
+from openapi_contract import manifests as generate_manifests, input_file_list
 
 ROOT = Path(__file__).resolve().parent.parent
 DESTINATION = Path("ios/recoow/Core/Sync/SyncEntityCatalog.generated.swift")
@@ -71,11 +71,15 @@ def main():
     generated = render()
     target = ROOT / DESTINATION
     current = target.read_text() if target.exists() else ""
+    inputs = ROOT / "scripts/sync-models.xcfilelist"
     if arguments.check:
+        if not inputs.exists() or inputs.read_text() != input_file_list():
+            raise SystemExit("构建输入清单过期：运行 make generate")
         if current != generated:
-            raise SystemExit("注册表与 schema 不一致：运行 python3 scripts/generate_sync_registry.py --patch | apply_patch")
+            raise SystemExit("注册表与 OpenAPI 不一致：运行 make generate")
         print("[OK] iOS 注册表与全部共享契约一致")
     elif arguments.write:
+        inputs.write_text(input_file_list())
         if current != generated:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(generated)

@@ -2,27 +2,58 @@
 
 BLENDER ?= $(if $(wildcard /Applications/Blender.app/Contents/MacOS/Blender),/Applications/Blender.app/Contents/MacOS/Blender,blender)
 
-# 从 iOS 模型生成后端 JSON 契约和 iOS 注册表，生成产物不纳入 Git。
-generate:
-	python3 scripts/generate_sync_schema.py
-	python3 scripts/generate_sync_registry.py --write
+PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
+OPENAPI_GENERATOR ?= openapi-generator
+OPENAPI_VERSION := 7.22.0
+OPENAPI_SPEC := openapi/openapi.yaml
+SQLC_VERSION := v1.30.0
+SQLC ?= go run github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
 
-# 检查生成物是否最新，以及字段、类型、枚举和全量覆盖是否一致。
-check-generated:
-	python3 scripts/generate_sync_schema.py --check
-	python3 scripts/generate_sync_registry.py --check
-	python3 scripts/check_schema_gate.py --require-full-coverage
+.PHONY: generate-sql check-sql
+generate-sql:
+	cd backend && $(SQLC) generate
+
+check-sql:
+	cd backend && $(SQLC) diff
+
+.PHONY: check-openapi generate-clients generate-ios-api generate-android-api generate-web-api generate-go-api
+check-openapi:
+	@test "$$($(OPENAPI_GENERATOR) version)" = "$(OPENAPI_VERSION)" || { printf '%s\n' '需要 OpenAPI Generator $(OPENAPI_VERSION)'; exit 1; }
+	$(OPENAPI_GENERATOR) validate -i $(OPENAPI_SPEC)
+
+generate-clients: generate-ios-api generate-android-api generate-web-api generate-go-api
+
+generate-ios-api: check-openapi
+	$(OPENAPI_GENERATOR) generate -i $(OPENAPI_SPEC) -g swift5 -o generated/ios-api --type-mappings DateTime=String,date-time=String --model-name-prefix RWAPI --additional-properties projectName=RecoowAPI,library=urlsession,responseAs=AsyncAwait,useSPMFileStructure=true,useBacktickEscapes=true
+
+generate-android-api: check-openapi
+	$(OPENAPI_GENERATOR) generate -i $(OPENAPI_SPEC) -g kotlin -o android/core/network/build/generated/openapi --type-mappings object=JsonElement,AnyType=JsonElement --import-mappings JsonElement=kotlinx.serialization.json.JsonElement --model-name-prefix RWAPI --additional-properties packageName=imehc.recoow.core.network.generated,serializationLibrary=kotlinx_serialization,library=jvm-retrofit2,dateLibrary=string
+
+generate-web-api: check-openapi
+	$(OPENAPI_GENERATOR) generate -i $(OPENAPI_SPEC) -g typescript-fetch -o generated/web-api --additional-properties supportsES6=true
+
+generate-go-api: check-openapi
+	rm -rf backend/internal/handler/generated
+	$(OPENAPI_GENERATOR) generate -i $(OPENAPI_SPEC) -g go -o backend/internal/handler/generated --additional-properties packageName=generated --global-property models,modelDocs=false,modelTests=false,supportingFiles=utils.go
+
+generate: generate-clients generate-sql
+	$(PYTHON) scripts/generate_sync_registry.py --write
+
+check-generated: check-sql
+	$(PYTHON) scripts/generate_sync_registry.py --check
+	$(PYTHON) scripts/check_schema_gate.py --require-full-coverage
 
 # 重新生成契约后，运行脚本测试、后端测试和静态检查。
 test: generate check-generated
-	PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts -p 'test_*.py'
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest discover -s scripts -p 'test_*.py'
 	cd backend && go test ./... && go vet ./...
 
 # 打包后端可执行文件与运行时契约到 dist/。
-backend: generate
-	mkdir -p dist/schema
-	python3 scripts/generate_sync_schema.py --output dist/schema
+backend: generate-go-api generate-sql
+	mkdir -p dist/openapi
+	cp openapi/openapi.yaml dist/openapi/openapi.yaml
 	cd backend && go build -o ../dist/recoow-api ./cmd/api
+	cd backend && go build -o ../dist/recoow-worker ./cmd/worker
 
 backend-package:
 	bash scripts/package-backend.sh

@@ -18,7 +18,7 @@ while [ "$#" -gt 0 ]; do
                 --container) container=$2 ;; --output) output_path=$2 ;;
             esac
             shift 2 ;;
-        --help) printf '用法：sudo bash export.sh --output PATH|- [--mode systemd|docker|stopped] [--bundle DIR] [--data DIR] [--container NAME]\n导出完整运行包及所有账号、设备、SQLite/WAL、媒体；运行中服务会短暂停止并自动恢复。\n'; exit 0 ;;
+        --help) printf '用法：sudo bash export.sh --output PATH|- [--mode systemd|docker|stopped] [--bundle DIR] [--data DIR] [--container NAME]\n导出完整运行包及所有账号、设备、PostgreSQL 备份、媒体；运行中服务会短暂停止并自动恢复。\n'; exit 0 ;;
         *) die "未知参数：$1" ;;
     esac
 done
@@ -68,21 +68,21 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
-mkdir -p "$work_directory/package/schema"
+mkdir -p "$work_directory/package/openapi"
 for package_file in common.sh run.sh install.sh export.sh recoow.env.example deploy.env.example Dockerfile docker-compose.yml .dockerignore README.md; do
     cp "$bundle_directory/$package_file" "$work_directory/package/$package_file"
 done
 if [ -f "$bundle_directory/build-info.json" ]; then cp "$bundle_directory/build-info.json" "$work_directory/package/build-info.json"; fi
-for binary_path in "$bundle_directory"/recoow-api-linux-*; do cp "$binary_path" "$work_directory/package/"; done
+for binary_path in "$bundle_directory"/recoow-api-linux-* "$bundle_directory"/recoow-worker-linux-*; do [ -f "$binary_path" ] || continue; cp "$binary_path" "$work_directory/package/"; done
 if [ "$mode" = docker ]; then
     require_command docker
     docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$container" |
-        grep -E '^RECOOW_(LISTEN|DATA|SCHEMA|BOOTSTRAP_TOKEN|MAX_ACCOUNTS|PAIRING_TTL|CORS_ORIGINS|TLS_CERT|TLS_KEY)=' > "$work_directory/source.env"
+        grep -E '^RECOOW_(LISTEN|DATA|OPENAPI|DATABASE_URL|MIGRATION_DATABASE_URL|SESSION_TTL|ALLOW_INSECURE_COOKIES|BOOTSTRAP_TOKEN|MAX_ACCOUNTS|PAIRING_TTL|CORS_ORIGINS|TLS_CERT|TLS_KEY)=' > "$work_directory/source.env"
     load_config "$work_directory/source.env"
     [ -z "$data_directory" ] || die "docker 模式从容器复制 /data，不接受 --data"
     [ "${RECOOW_DATA:-/data}" = /data ] || die "仅支持容器数据目录 /data"
-    [ "${RECOOW_SCHEMA:-/app/schema}" = /app/schema ] || die "仅支持容器字段目录 /app/schema"
-    docker cp "$container:/app/schema/." "$work_directory/package/schema"
+    [ "${RECOOW_OPENAPI:-/app/openapi/openapi.yaml}" = /app/openapi/openapi.yaml ] || die "仅支持容器字段目录 /app/openapi/openapi.yaml"
+    docker cp "$container:/app/openapi/openapi.yaml" "$work_directory/package/openapi/openapi.yaml"
     image_id=$(docker inspect --format '{{.Image}}' "$container")
     architecture=$(docker image inspect --format '{{.Architecture}}' "$image_id")
     case "$architecture" in amd64|arm64) ;; *) die "不支持的容器架构：$architecture" ;; esac
@@ -115,18 +115,25 @@ else
             *) die "服务处于过渡状态：$state；请稍后重试" ;;
         esac
     fi
-    copy_tree "${RECOOW_SCHEMA:-$bundle_directory/schema}" "$work_directory/package/schema"
-    [ -f "$data_directory/recoow.db" ] || die "数据库不存在：$data_directory/recoow.db"
+    cp "${RECOOW_OPENAPI:-$bundle_directory/openapi/openapi.yaml}" "$work_directory/package/openapi/openapi.yaml"
     copy_tree "$data_directory" "$work_directory/package/data"
 fi
-[ -s "$work_directory/package/data/recoow.db" ] || die "迁移包缺少数据库"
+require_command pg_dump
+backup_url=${RECOOW_BACKUP_DATABASE_URL:-${RECOOW_MIGRATION_DATABASE_URL:-${RECOOW_DATABASE_URL:-}}}
+[ -n "$backup_url" ] || die "需要 RECOOW_BACKUP_DATABASE_URL，备份角色须能读取全部租户"
+# pg_dump 的 --dbname 会解析连接 URI；PGDATABASE 环境变量只作为库名处理。
+# 连接串来自环境，不写入归档。
+pg_dump --dbname="$backup_url" --format=custom --no-owner --no-privileges --file="$work_directory/package/database.dump"
+[ -s "$work_directory/package/database.dump" ] || die "PostgreSQL 备份为空"
 restore_service || die "原服务恢复失败，导出终止"
-for metadata_path in "$work_directory/package/schema"/._*; do
+for metadata_path in "${work_directory}/package/openapi"/._*; do
     if [ -f "$metadata_path" ]; then rm -f -- "$metadata_path"; fi
 done
-rm -f -- "$work_directory/package/data/.recoow-export.lock"
+rm -f -- "$work_directory/package/data/.recoow-export.lock" "$work_directory/package/data/recoow.db" "$work_directory/package/data/recoow.db-wal" "$work_directory/package/data/recoow.db-shm"
 printf '%s\n' \
-    'RECOOW_LISTEN=0.0.0.0:8080' 'RECOOW_DATA=' 'RECOOW_SCHEMA=' \
+    'RECOOW_LISTEN=0.0.0.0:8080' 'RECOOW_DATA=' 'RECOOW_OPENAPI=' \
+    'RECOOW_DATABASE_URL=' 'RECOOW_MIGRATION_DATABASE_URL=' \
+    "RECOOW_SESSION_TTL=${RECOOW_SESSION_TTL:-86400}" 'RECOOW_ALLOW_INSECURE_COOKIES=0' \
     "RECOOW_BOOTSTRAP_TOKEN=${RECOOW_BOOTSTRAP_TOKEN:-}" \
     "RECOOW_MAX_ACCOUNTS=${RECOOW_MAX_ACCOUNTS:-1}" \
     "RECOOW_PAIRING_TTL=${RECOOW_PAIRING_TTL:-300}" \

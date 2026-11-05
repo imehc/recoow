@@ -6,14 +6,14 @@ import (
 	"testing"
 )
 
-// TestLoadRepoSchema 用仓库真实的 schema/ 目录跑一遍 Load，等价于后端启动时的自检。
+// TestLoadRepoSchema 用仓库真实的 OpenAPI YAML跑一遍 Load，等价于后端启动时的自检。
 // 目录随运行位置解析：本包位于 backend/internal/schema，向上三级即仓库根。
 func TestLoadRepoSchema(t *testing.T) {
-	dir := filepath.Clean(filepath.Join("..", "..", "..", "schema"))
-	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
-		t.Skipf("仓库 schema 目录不可用，跳过：%s", dir)
+	dir := filepath.Clean(filepath.Join("..", "..", "..", "openapi", "openapi.yaml"))
+	if fi, err := os.Stat(dir); err != nil || fi.IsDir() {
+		t.Fatalf("仓库 OpenAPI 不可用：%s", dir)
 	}
-	reg, err := Load(dir)
+	reg, err := LoadOpenAPI(dir)
 	if err != nil {
 		t.Fatalf("真实 schema 加载失败：%v", err)
 	}

@@ -15,7 +15,7 @@ ARG BASE_IMAGE=alpine:3.24
 FROM ${BASE_IMAGE} AS pick
 ARG TARGETARCH
 COPY recoow-api-linux-amd64 recoow-api-linux-arm64 /tmp/
-COPY schema /schema
+COPY openapi /openapi
 RUN set -eux; \
     case "${TARGETARCH:-$(uname -m)}" in \
       amd64|x86_64)  src=/tmp/recoow-api-linux-amd64 ;; \
@@ -24,7 +24,7 @@ RUN set -eux; \
     esac; \
     mv "$src" /recoow-api; \
     chmod 0755 /recoow-api; \
-    find /schema -name '._*' -type f -delete
+    find /openapi -name '._*' -type f -delete
 
 # ---- 阶段二：运行镜像 ----
 FROM ${BASE_IMAGE}
@@ -38,20 +38,20 @@ RUN addgroup -S -g 10001 recoow \
 
 WORKDIR /app
 COPY --from=pick /recoow-api /app/recoow-api
-COPY --from=pick /schema /app/schema
+COPY --from=pick /openapi /app/openapi
 COPY build-info.json /app/build-info.json
 
 ENV RECOOW_LISTEN=0.0.0.0:8080 \
     RECOOW_DATA=/data \
-    RECOOW_SCHEMA=/app/schema \
+    RECOOW_OPENAPI=/app/openapi/openapi.yaml \
     TZ=Asia/Shanghai
 
 USER recoow
 EXPOSE 8080
 VOLUME ["/data"]
 
-# /api/schema 未带设备令牌时返回 401，出现 401 即代表服务已就绪且鉴权生效
+# /api/sync/capabilities 未带设备令牌时返回 401，出现 401 即代表服务已就绪且鉴权生效
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -S -O /dev/null http://127.0.0.1:8080/api/schema 2>&1 | grep -Eq '^[[:space:]]*HTTP/[0-9.]+ 401([[:space:]]|$)' || exit 1
+  CMD wget -S -O /dev/null http://127.0.0.1:8080/api/sync/capabilities 2>&1 | grep -Eq '^[[:space:]]*HTTP/[0-9.]+ 401([[:space:]]|$)' || exit 1
 
 ENTRYPOINT ["/app/recoow-api"]

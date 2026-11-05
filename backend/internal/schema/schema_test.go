@@ -44,32 +44,12 @@ func TestNewFromManifestsValidates(t *testing.T) {
 	}
 }
 
-func TestLoadFromDir(t *testing.T) {
-	dir := t.TempDir()
-	write := func(name, content string) {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	write("a.json", `{"table":"bills","manifestVersion":1,"columns":[{"name":"id","type":"text","format":"text"}]}`)
-	write("b.json", `{"table":"reminders","manifestVersion":1,"columns":[{"name":"id","type":"text","format":"text"}]}`)
-	write("._a.json", "\x00\x05\x16\x07Mac OS X")
-	reg, err := Load(dir)
-	if err != nil {
+func TestLoadRejectsInvalidOpenAPI(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "openapi.yaml")
+	if err := os.WriteFile(path, []byte("openapi: 3.1.0\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	got := reg.Tables()
-	if len(got) != 2 || got[0] != "bills" || got[1] != "reminders" {
-		t.Fatalf("表清单排序错误: %v", got)
-	}
-}
-
-func TestLoadRejectsInvalidManifest(t *testing.T) {
-	directory := t.TempDir()
-	if err := os.WriteFile(filepath.Join(directory, "bills.json"), []byte("invalid JSON"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := Load(directory); err == nil {
-		t.Fatal("invalid manifest must still fail")
+	if _, err := LoadOpenAPI(path); err == nil {
+		t.Fatal("unsupported contract must fail")
 	}
 }

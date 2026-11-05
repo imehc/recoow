@@ -9,28 +9,36 @@ import (
 )
 
 type Config struct {
-	ListenAddr     string
-	DataDir        string
-	SchemaDir      string
-	BootstrapToken string // 若已设置，调用 account/init 前必须携带
-	MaxAccounts    int    // 0 表示不限制；>0 时 account/init 超过该数量直接拒绝
-	PairingTTL     time.Duration
-	TLSCertFile    string // 可空；为空则以明文 HTTP 对外（TLS 由上游终止）
-	TLSKeyFile     string
-	CORSOrigins    []string // 允许跨源访问的后台来源；为空表示不开启 CORS
+	AllowInsecureCookies bool
+	DatabaseURL          string
+	MigrationDatabaseURL string
+	SessionTTL           time.Duration
+	ListenAddr           string
+	DataDir              string
+	OpenAPIFile          string
+	BootstrapToken       string // 若已设置，调用 account/init 前必须携带
+	MaxAccounts          int    // 0 表示不限制；>0 时 account/init 超过该数量直接拒绝
+	PairingTTL           time.Duration
+	TLSCertFile          string // 可空；为空则以明文 HTTP 对外（TLS 由上游终止）
+	TLSKeyFile           string
+	CORSOrigins          []string // 允许跨源访问的后台来源；为空表示不开启 CORS
 }
 
 func Load() Config {
 	return Config{
-		ListenAddr:     envOr("RECOOW_LISTEN", ":8080"),
-		DataDir:        envOr("RECOOW_DATA", "./data"),
-		SchemaDir:      envOr("RECOOW_SCHEMA", "../schema"),
-		BootstrapToken: os.Getenv("RECOOW_BOOTSTRAP_TOKEN"),
-		MaxAccounts:    envIntOr("RECOOW_MAX_ACCOUNTS", 0),
-		PairingTTL:     envDurOr("RECOOW_PAIRING_TTL", 5*time.Minute),
-		TLSCertFile:    os.Getenv("RECOOW_TLS_CERT"),
-		TLSKeyFile:     os.Getenv("RECOOW_TLS_KEY"),
-		CORSOrigins:    splitList(os.Getenv("RECOOW_CORS_ORIGINS")),
+		AllowInsecureCookies: os.Getenv("RECOOW_ALLOW_INSECURE_COOKIES") == "1",
+		DatabaseURL:          os.Getenv("RECOOW_DATABASE_URL"),
+		MigrationDatabaseURL: os.Getenv("RECOOW_MIGRATION_DATABASE_URL"),
+		SessionTTL:           envDurOr("RECOOW_SESSION_TTL", 24*time.Hour),
+		ListenAddr:           envOr("RECOOW_LISTEN", ":8080"),
+		DataDir:              envOr("RECOOW_DATA", "./data"),
+		OpenAPIFile:          envOr("RECOOW_OPENAPI", "../openapi/openapi.yaml"),
+		BootstrapToken:       os.Getenv("RECOOW_BOOTSTRAP_TOKEN"),
+		MaxAccounts:          envIntOr("RECOOW_MAX_ACCOUNTS", 0),
+		PairingTTL:           envDurOr("RECOOW_PAIRING_TTL", 5*time.Minute),
+		TLSCertFile:          os.Getenv("RECOOW_TLS_CERT"),
+		TLSKeyFile:           os.Getenv("RECOOW_TLS_KEY"),
+		CORSOrigins:          splitList(os.Getenv("RECOOW_CORS_ORIGINS")),
 	}
 }
 

@@ -6,9 +6,10 @@ backend/data/
 /recoow-backup.sql
 /backend/recoow-backup.sql
 /docs/**
+!/docs/backend-architecture.md
 # Blender 自动备份保留在本地；正式 .blend、GLB 和脚本纳入版本管理。
 /assets/decision-scene/*.blend[0-9]
-/schema/
+/generated/
 /ios/recoow/Core/Sync/SyncEntityCatalog.generated.swift
 **/__pycache__/
 /dist/
@@ -28,3 +29,5 @@ backend/data/
 /android/core/sync/src/androidTest/kotlin/imehc/recoow/core/sync/localvalidation/
 
 /android/core/data/src/androidTest/kotlin/imehc/recoow/core/data/localvalidation/
+
+/.venv/

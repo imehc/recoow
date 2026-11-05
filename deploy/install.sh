@@ -26,7 +26,7 @@ fi
 if [ -f "$config_directory/recoow.env" ]; then
     load_config "$config_directory/recoow.env"
     [ "${RECOOW_DATA:-$data_directory}" = "$data_directory" ] || die "已有配置使用自定义数据目录；请使用 run.sh 或手动部署，避免覆盖"
-    [ "${RECOOW_SCHEMA:-$prefix/schema}" = "$prefix/schema" ] || die "已有配置使用自定义字段目录；请手动部署"
+    [ "${RECOOW_OPENAPI:-$prefix/openapi/openapi.yaml}" = "$prefix/openapi/openapi.yaml" ] || die "已有配置使用自定义字段目录；请手动部署"
 fi
 if ! id recoow >/dev/null 2>&1; then useradd --system --user-group --no-create-home --shell /usr/sbin/nologin recoow; fi
 getent group recoow >/dev/null || die "缺少 recoow 用户组"
@@ -40,10 +40,10 @@ for package_file in common.sh run.sh install.sh export.sh recoow.env.example dep
     install -m 0644 "$bundle_directory/$package_file" "$staging_directory/$package_file"
 done
 if [ -f "$bundle_directory/build-info.json" ]; then install -m 0644 "$bundle_directory/build-info.json" "$staging_directory/build-info.json"; fi
-for binary_path in "$bundle_directory"/recoow-api-linux-*; do install -m 0755 "$binary_path" "$staging_directory/$(basename -- "$binary_path")"; done
+for binary_path in "$bundle_directory"/recoow-api-linux-* "$bundle_directory"/recoow-worker-linux-*; do [ -f "$binary_path" ] || continue; install -m 0755 "$binary_path" "$staging_directory/$(basename -- "$binary_path")"; done
 chmod 0755 "$staging_directory/"*.sh
-copy_tree "$bundle_directory/schema" "$staging_directory/schema"
-chmod -R a+rX "$staging_directory/schema"
+copy_tree "$bundle_directory/openapi" "$staging_directory/openapi"
+chmod -R a+rX "$staging_directory/openapi"
 write_manifest "$staging_directory"
 systemctl stop recoow.service 2>/dev/null || { [ ! -f /etc/systemd/system/recoow.service ] || die "无法停止旧服务"; }
 for installed_path in "$staging_directory"/* "$staging_directory"/.dockerignore; do
@@ -62,7 +62,7 @@ if [ ! -f "$config_directory/recoow.env" ]; then
     if [ -f "$bundle_directory/recoow.env" ]; then source_config="$bundle_directory/recoow.env"; fi
     awk '
         /^RECOOW_DATA=/ { print "RECOOW_DATA=/var/lib/recoow"; next }
-        /^RECOOW_SCHEMA=/ { print "RECOOW_SCHEMA=/opt/recoow/schema"; next }
+        /^RECOOW_OPENAPI=/ { print "RECOOW_OPENAPI=/opt/recoow/openapi/openapi.yaml"; next }
         { print }
     ' "$source_config" > "$config_directory/recoow.env"
     chmod 0640 "$config_directory/recoow.env"

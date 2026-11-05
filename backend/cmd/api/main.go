@@ -10,18 +10,19 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
-	"github.com/imehc/recoow/backend/internal/api"
+	"github.com/imehc/recoow/backend/internal/app"
 	"github.com/imehc/recoow/backend/internal/buildinfo"
 	"github.com/imehc/recoow/backend/internal/config"
-	"github.com/imehc/recoow/backend/internal/schema"
-	"github.com/imehc/recoow/backend/internal/store"
+	"github.com/imehc/recoow/backend/internal/handler"
+	"github.com/imehc/recoow/backend/internal/repository"
+	"github.com/imehc/recoow/backend/internal/service"
 )
 
 func main() {
+	migrateOnly := flag.Bool("migrate", false, "apply PostgreSQL migrations and exit")
 	versionOnly := flag.Bool("version", false, "print executable version and exit")
 	flag.Parse()
 	if *versionOnly {
@@ -31,32 +32,32 @@ func main() {
 		return
 	}
 	cfg := config.Load()
+	if *migrateOnly {
+		if cfg.MigrationDatabaseURL == "" {
+			slog.Error("需要 RECOOW_MIGRATION_DATABASE_URL")
+			os.Exit(1)
+		}
+		if err := repository.Migrate(cfg.MigrationDatabaseURL, cfg.DatabaseURL); err != nil {
+			slog.Error("迁移失败", "error", err)
+			os.Exit(1)
+		}
+		return
+	}
 
 	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(log)
 	build := buildinfo.Current()
 	log.Info("recoow 后端版本", "version", build.Version, "commit", build.Commit, "dirty", build.Dirty)
 
-	// 读取并自检三端共用的字段清单（唯一权威）。
-	registries, err := schema.Load(cfg.SchemaDir)
+	st, registries, err := app.Storage(cfg)
 	if err != nil {
-		log.Error("字段清单加载失败", "err", err)
-		os.Exit(1)
-	}
-	if err := os.MkdirAll(cfg.DataDir, 0o755); err != nil {
-		log.Error("无法创建数据目录", "err", err)
-		os.Exit(1)
-	}
-
-	st, err := store.NewSQLiteStore(cfg.DataDir)
-	if err != nil {
-		log.Error("无法打开存储", "err", err)
+		log.Error("服务初始化失败", "err", err)
 		os.Exit(1)
 	}
 	defer st.Close()
-	log.Info("SQLite 存储就绪", "db", filepath.Join(cfg.DataDir, "recoow.db"))
+	log.Info("PostgreSQL 存储就绪")
 
-	srv, err := api.New(cfg, st, registries, log)
+	srv, err := handler.New(cfg, st, registries, log)
 	if err != nil {
 		log.Error("无法构建 api", "err", err)
 		os.Exit(1)
@@ -72,7 +73,7 @@ func main() {
 	}
 
 	if count, err := st.CountAccounts(); err == nil && count == 0 {
-		log.Info("尚未注册任何账号，客户端可调用 POST /api/account/init 注册")
+		log.Info("尚未注册任何账号，客户端可调用 POST /api/accounts 注册")
 	} else if err == nil {
 		log.Info("已注册账号数", "accounts", count)
 	}
@@ -91,9 +92,10 @@ func main() {
 		}
 	}()
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-	<-stop
+	maintenanceContext, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	go service.RunMaintenance(maintenanceContext, st, log)
+	<-maintenanceContext.Done()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

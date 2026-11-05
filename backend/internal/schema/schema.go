@@ -1,8 +1,8 @@
 // 包 schema 负责加载并校验三端共用的字段清单（唯一权威）。
 //
-// 每个同步实体的字段清单是一个独立 JSON 文件，位于 recoow/schema/<table>.json。
+// 同步实体、字段和 HTTP 接口统一定义在 openapi/openapi.yaml。
 // 行快照字段名沿用 iOS 的 CodingKeys（= GRDB 列名），全网统一 snake_case。
-// 后端启动时读取这些清单并自检；GET /api/schema 将清单下发给前端。
+// 后端启动时读取 OpenAPI 并自检；GET /api/openapi.yaml 提供同一份契约。
 package schema
 
 import (
@@ -10,10 +10,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
-	"strings"
 )
 
 // 允许的字段 type 取值。
@@ -75,37 +72,9 @@ type Dependency struct {
 
 // Registry 持有一组已加载并校验过的字段清单。
 type Registry struct {
+	openAPI   []byte
 	manifests map[string]Manifest
 	version   string // 全量清单版本号（排序后取哈希），用于缓存 ETag
-}
-
-// Load 读取目录下所有 *.json 清单并校验；任一份不合法即整体失败。
-func Load(dir string) (*Registry, error) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-	var files []string
-	for _, e := range entries {
-		if e.IsDir() || strings.HasPrefix(e.Name(), "._") || !strings.HasSuffix(e.Name(), ".json") {
-			continue
-		}
-		files = append(files, filepath.Join(dir, e.Name()))
-	}
-	sort.Strings(files)
-	list := make([]Manifest, 0, len(files))
-	for _, f := range files {
-		data, err := os.ReadFile(f)
-		if err != nil {
-			return nil, err
-		}
-		var m Manifest
-		if err := json.Unmarshal(data, &m); err != nil {
-			return nil, fmt.Errorf("schema %s: %w", f, err)
-		}
-		list = append(list, m)
-	}
-	return NewFromManifests(list)
 }
 
 // NewFromManifests 从内存中的清单构造并校验注册表（也用于测试）。
@@ -183,6 +152,8 @@ func computeVersion(list []Manifest) string {
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Table < sorted[j].Table })
 	h := sha256.New()
 	for _, m := range sorted {
+		m.Columns = append([]Column(nil), m.Columns...)
+		sort.Slice(m.Columns, func(i, j int) bool { return m.Columns[i].Name < m.Columns[j].Name })
 		data, _ := json.Marshal(m)
 		h.Write(data)
 	}
@@ -214,5 +185,5 @@ func (r *Registry) Tables() []string {
 	return out
 }
 
-// Manifests 返回所有清单，供 GET /api/schema 整体下发。
+// Manifests 返回所有清单，供同步校验与契约版本计算。
 func (r *Registry) Manifests() map[string]Manifest { return r.manifests }
