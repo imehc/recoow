@@ -94,6 +94,18 @@ func (adapter postgresRevision) WriteRow(item domain.PushItem) (domain.Row, erro
 	return row, err
 }
 
+func (adapter postgresRevision) ReadRevision(table, id string, version int64) (domain.Row, bool, error) {
+	row, err := scanSyncRow(adapter.transaction.QueryRow(
+		"SELECT "+syncRowColumns+" FROM change_log WHERE account_id = ? AND table_name = ? AND id = ? AND version = ?",
+		adapter.accountID, table, id, version,
+	))
+	if errors.Is(err, sql.ErrNoRows) {
+		return domain.Row{}, false, nil
+	}
+	row.AccountID = adapter.accountID
+	return row, err == nil, err
+}
+
 func (adapter postgresRevision) ReadReceipt(id string) (domain.MutationReceipt, bool, error) {
 	receipt := domain.MutationReceipt{AccountID: adapter.accountID, MutationID: id}
 	var result string

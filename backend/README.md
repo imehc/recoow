@@ -73,7 +73,7 @@ Web 登录使用独立的可过期会话，保存 token 哈希；默认 Cookie �
 
 列表使用 `limit=1..200`、`cursor`、`q`、`fromMs`、`toMs`，按 ID 升序分页。日期筛选优先使用实体发生时间，缺少该字段时使用服务器更新时间。统计中的记录数量按更新时间统计；账单金额按 `occurred_at` 的左闭右开区间统计，退款和墓碑排除，分别返回支出、收入和储值消费。当前提供基础统计，复杂趋势和维度聚合可在后续增加。
 
-写入提供 `mutationId`、`baseVersion`、`dataVersion`、`updatedAtMs` 与 `snapshot`；删除无需快照。更新使用详情接口读取到的完整快照，并携带最近确认的版本；过期版本且内容不同返回 409，内容一致返回 duplicate，缺依赖返回 422。重试保持原 mutationId 和内容，Web 写入也会进入移动端同步日志。
+写入提供 `mutationId`、`baseVersion`、`dataVersion`、`updatedAtMs` 与 `snapshot`；删除无需快照。更新使用详情接口读取到的完整快照，并携带最近确认的版本；版本过期时，以历史基础快照、本次快照和当前快照进行三方比较：独立字段修改自动合并；相同修改返回 duplicate；争议字段、账单结算组及删除冲突返回 409，缺依赖返回 422。人工确认仍携带原 baseVersion，并同时提供 `resolution=local|remote` 与界面展示的 `expectedVersion`；只选择争议内容，保留兼容修改，版本已变化则重新返回冲突。重试保持原 mutationId 和内容，Web 写入也会进入移动端同步日志。
 
 ## 配置与运行
 

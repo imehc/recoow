@@ -54,6 +54,7 @@ func TestWebSessionWritesShareMobileSync(t *testing.T) {
 	}
 	mutation["mutationId"] = "stale-web-update"
 	mutation["updatedAtMs"] = 2000
+	snapshot["name"] = "Unconfirmed edit"
 	response, body = e.request(t, "PUT", "/api/diary-tags/web-tag", login.AccessToken, mutation)
 	if response.Code != 409 || decode[domain.PushResult](t, body).Status != domain.PushConflict {
 		t.Fatalf("stale write: %d %s", response.Code, body)

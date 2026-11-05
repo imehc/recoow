@@ -8206,6 +8206,15 @@ components:
         baseVersion:
           type: integer
           format: int64
+        resolution:
+          type: string
+          enum: [local, remote]
+          description: 仅用于人工确认冲突；选择争议字段或账单结算组，保留双方独立修改。缺少共同基础或删除冲突时选择整条记录。
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 1
+          description: 人工确认时展示的云端版本，必须与 resolution 一起提供；版本变化则重新返回冲突。
         dataVersion:
           type: integer
         operation:
@@ -8501,6 +8510,15 @@ components:
         snapshot:
           type: object
           additionalProperties: true
+        resolution:
+          type: string
+          enum: [local, remote]
+          description: 人工确认时选择争议内容，需同时提供 expectedVersion。
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 1
+          description: 人工确认时展示的云端版本；版本变化则返回冲突。
         updatedAtMs:
           type: integer
           format: int64
@@ -8517,6 +8535,15 @@ components:
         mutationId: *id022
         baseVersion: *id023
         dataVersion: *id024
+        resolution:
+          type: string
+          enum: [local, remote]
+          description: 人工确认时选择争议内容，需同时提供 expectedVersion。
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 1
+          description: 人工确认时展示的云端版本；版本变化则返回冲突。
         updatedAtMs:
           type: integer
           format: int64

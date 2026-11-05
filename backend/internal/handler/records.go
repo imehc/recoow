@@ -91,11 +91,13 @@ func (s *Server) handleResource(w http.ResponseWriter, r *http.Request, table st
 		return
 	}
 	var input struct {
-		MutationID  string          `json:"mutationId"`
-		BaseVersion *int64          `json:"baseVersion"`
-		DataVersion int             `json:"dataVersion"`
-		UpdatedAtMs int64           `json:"updatedAtMs"`
-		Snapshot    json.RawMessage `json:"snapshot"`
+		MutationID      string          `json:"mutationId"`
+		Resolution      string          `json:"resolution"`
+		ExpectedVersion *int64          `json:"expectedVersion"`
+		BaseVersion     *int64          `json:"baseVersion"`
+		DataVersion     int             `json:"dataVersion"`
+		UpdatedAtMs     int64           `json:"updatedAtMs"`
+		Snapshot        json.RawMessage `json:"snapshot"`
 	}
 	if err := decodeJSON(w, r, &input); err != nil {
 		writeError(w, 400, "invalid request")
@@ -137,7 +139,7 @@ func (s *Server) handleResource(w http.ResponseWriter, r *http.Request, table st
 		}
 		input.Snapshot, _ = json.Marshal(fields)
 	}
-	item := domain.PushItem{Table: table, ID: id, Operation: operation, MutationID: input.MutationID, BaseVersion: input.BaseVersion, DataVersion: input.DataVersion, UpdatedAtMs: input.UpdatedAtMs, DeviceID: device.ID, Snapshot: input.Snapshot}
+	item := domain.PushItem{Table: table, ID: id, Operation: operation, MutationID: input.MutationID, BaseVersion: input.BaseVersion, Resolution: input.Resolution, ExpectedVersion: input.ExpectedVersion, DataVersion: input.DataVersion, UpdatedAtMs: input.UpdatedAtMs, DeviceID: device.ID, Snapshot: input.Snapshot}
 	if err := s.syncValidator.PrepareRevision(device.AccountID, &item); err != nil {
 		writeError(w, 400, err.Error())
 		return

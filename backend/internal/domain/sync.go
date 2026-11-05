@@ -40,6 +40,7 @@ type MutationReceipt struct {
 type RevisionTransaction interface {
 	SupportsTable(table string) bool
 	ReadRow(table, id string) (Row, bool, error)
+	ReadRevision(table, id string, version int64) (Row, bool, error)
 	WriteRow(item PushItem) (Row, error)
 	ReadReceipt(id string) (MutationReceipt, bool, error)
 	WriteReceipt(receipt MutationReceipt) error

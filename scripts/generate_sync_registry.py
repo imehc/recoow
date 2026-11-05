@@ -52,11 +52,16 @@ def render():
                 arguments.append("enumValues: " + string(column["enumValues"]))
             if column.get("format") == "json":
                 arguments.append("jsonText: true")
+            if column.get("labels"):
+                labels = ", ".join(string(key) + ": " + string(value) for key, value in column["labels"].items())
+                arguments.append("labels: [" + labels + "]")
+            arguments.append("format: " + string(column["format"]))
             lines.append("                SyncField(" + ", ".join(arguments) + "),")
         lines += ["            ],", "            dependencies: ["]
         for dependency in manifest.get("dependencies", []):
             lines.append("                SyncDependency(field: " + string(dependency["field"]) + ", table: " + string(dependency["table"]) + "),")
-        lines += ["            ]", "        ),"]
+        labels = ", ".join(string(key) + ": " + string(value) for key, value in manifest.get("summary", {}).items())
+        lines += ["            ],", "            labels: [" + labels + "]", "        ),"]
     lines += ["    ]", "}", ""]
     return "\n".join(lines)
 
@@ -81,7 +86,6 @@ def main():
         if current != generated:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(generated)
-
     else:
         print(generated, end="")
 

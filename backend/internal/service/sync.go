@@ -39,34 +39,74 @@ func ApplyRevision(transaction domain.RevisionTransaction, item domain.PushItem)
 	if item.BaseVersion == nil || *item.BaseVersion < 0 || item.MutationID == "" {
 		return RejectedPushResult(item, domain.PushInvalidRevision), nil
 	}
+	if item.Resolution != "" && item.Resolution != "local" && item.Resolution != "remote" ||
+		(item.Resolution == "") != (item.ExpectedVersion == nil) || item.ExpectedVersion != nil && *item.ExpectedVersion < 1 {
+		return RejectedPushResult(item, domain.PushInvalidRevision), nil
+	}
 	current, exists, err := transaction.ReadRow(item.Table, item.ID)
 	if err != nil {
 		return domain.PushResult{}, err
 	}
 	result := RejectedPushResult(item, domain.PushConflict)
-	if *item.BaseVersion != current.Version {
+	result.Version = current.Version
+	if exists {
+		result.Current = &current
+	}
+	if item.Resolution != "" && (item.ExpectedVersion == nil || *item.ExpectedVersion != current.Version) {
+		return result, transaction.WriteReceipt(domain.MutationReceipt{MutationID: item.MutationID, RequestHash: requestHash, Result: result})
+	}
+	requestSnapshot := bytes.Clone(item.Snapshot)
+	write := *item.BaseVersion == current.Version
+	mergedRevision := false
+	if !write {
 		if !exists {
 			return RejectedPushResult(item, domain.PushInvalidRevision), nil
 		}
-		result.Version = current.Version
-		result.Current = &current
 		if item.Operation == domain.OpDelete && current.DeletedAtMs > 0 {
 			result.Status = domain.PushDuplicate
 		} else if item.Operation != domain.OpDelete && current.DeletedAtMs == 0 {
-			candidate, err := mergeSnapshot(current.Snapshot, item.Snapshot, item.DefaultedFields...)
+			base, found, err := transaction.ReadRevision(item.Table, item.ID, *item.BaseVersion)
 			if err != nil {
 				return domain.PushResult{}, err
 			}
-			candidate, err = projectSnapshot(transaction, item.Table, item.ID, candidate)
-			if err != nil {
-				return domain.PushResult{}, err
+			if found && base.DeletedAtMs == 0 && len(base.Snapshot) > 0 {
+				candidate, conflict, err := threeWaySnapshot(item.Table, base.Snapshot, item.Snapshot, current.Snapshot, item.Resolution, item.DefaultedFields)
+				if err != nil {
+					return domain.PushResult{}, err
+				}
+				if !conflict {
+					item.Snapshot = candidate
+					write = !sameBusinessSnapshot(item.Table, candidate, current.Snapshot)
+					mergedRevision = true
+					if !write {
+						result.Status = domain.PushDuplicate
+					}
+				}
+			} else {
+				candidate, err := mergeSnapshot(current.Snapshot, item.Snapshot, item.DefaultedFields...)
+				if err != nil {
+					return domain.PushResult{}, err
+				}
+				if sameBusinessSnapshot(item.Table, candidate, current.Snapshot) {
+					result.Status = domain.PushDuplicate
+				}
+				// With no common ancestor, an explicit choice can only select a whole record.
+				if item.Resolution == "local" {
+					write = true
+					mergedRevision = true
+				}
+				if item.Resolution == "remote" {
+					result.Status = domain.PushDuplicate
+				}
 			}
-			if EqualSnapshots(candidate, current.Snapshot) {
-				result.Status = domain.PushDuplicate
-			}
+		} else if item.Resolution == "local" {
+			write = true
+			mergedRevision = true
+		} else if item.Resolution == "remote" {
+			result.Status = domain.PushDuplicate
 		}
-	} else {
-		requestSnapshot := bytes.Clone(item.Snapshot)
+	}
+	if write {
 		for _, reference := range item.References {
 			parent, available, err := transaction.ReadRow(reference.Table, reference.ID)
 			if err != nil {
@@ -85,8 +125,18 @@ func ApplyRevision(transaction domain.RevisionTransaction, item domain.PushItem)
 			if err != nil {
 				return domain.PushResult{}, err
 			}
+			if mergedRevision || item.Resolution != "" {
+				item.Snapshot, err = revisionMetadata(item.Snapshot, item.UpdatedAtMs, item.DeviceID)
+				if err != nil {
+					return domain.PushResult{}, err
+				}
+			}
 		} else if exists {
 			item.Snapshot = current.Snapshot
+		}
+		if mergedRevision || item.Resolution != "" {
+			// A stale device's cumulative balance effects cannot describe the merged bill.
+			requestSnapshot = json.RawMessage(`{}`)
 		}
 		item.Snapshot, err = prepareBillBalanceEffects(transaction, current, item, requestSnapshot)
 		if err != nil {

@@ -30,6 +30,10 @@ func (server *SyncValidator) PrepareRevision(accountID string, item *domain.Push
 	if strings.TrimSpace(item.MutationID) == "" || len(item.MutationID) > 200 || item.BaseVersion == nil || *item.BaseVersion < 0 {
 		return fmt.Errorf("mutationId and nonnegative baseVersion are required")
 	}
+	if item.Resolution != "" && item.Resolution != "local" && item.Resolution != "remote" ||
+		(item.Resolution == "") != (item.ExpectedVersion == nil) || item.ExpectedVersion != nil && *item.ExpectedVersion < 1 {
+		return fmt.Errorf("resolution requires local or remote and a positive expectedVersion")
+	}
 	manifest, _ := server.contracts.Get(item.Table)
 	if item.DataVersion < max(1, manifest.MinDataVersion) || item.DataVersion > max(1, manifest.DataVersion) {
 		return fmt.Errorf("unsupported dataVersion for %s", item.Table)

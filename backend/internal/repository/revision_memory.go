@@ -57,6 +57,17 @@ func (adapter memoryRevision) ReadRow(table, id string) (domain.Row, bool, error
 	return row, exists, nil
 }
 
+func (adapter memoryRevision) ReadRevision(table, id string, version int64) (domain.Row, bool, error) {
+	for _, change := range adapter.store.log {
+		if change.AccountID == adapter.accountID && change.Table == table && change.ID == id && change.Version == version {
+			return domain.Row{AccountID: adapter.accountID, Table: table, ID: id, Snapshot: change.Snapshot,
+				Version: change.Version, DataVersion: change.DataVersion, UpdatedAtMs: change.UpdatedAtMs,
+				DeviceID: change.DeviceID, DeletedAtMs: change.DeletedAtMs}, true, nil
+		}
+	}
+	return domain.Row{}, false, nil
+}
+
 func (adapter memoryRevision) WriteRow(item domain.PushItem) (domain.Row, error) {
 	account, err := adapter.account()
 	if err != nil {

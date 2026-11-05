@@ -83,10 +83,12 @@ type Device struct {
 	LastSeenAt time.Time `json:"last_seen_at"`
 }
 
-// PushItem 表示一条由客户端发起、需要按 LWW 合并的变更。
+// PushItem 表示一条基于已确认版本的客户端变更。
 type PushItem struct {
 	MutationID      string          `json:"mutationId,omitempty"`
 	BaseVersion     *int64          `json:"baseVersion,omitempty"`
+	Resolution      string          `json:"resolution,omitempty"`
+	ExpectedVersion *int64          `json:"expectedVersion,omitempty"`
 	DataVersion     int             `json:"dataVersion,omitempty"`
 	References      []RowReference  `json:"-"`
 	RequestHash     string          `json:"-"`
@@ -95,7 +97,7 @@ type PushItem struct {
 	ID              string          `json:"id"`
 	Operation       Operation       `json:"operation"`
 	UpdatedAtMs     int64           `json:"updatedAtMs"`
-	DeviceID        string          `json:"deviceId"` // 仅作平票用
+	DeviceID        string          `json:"deviceId"`
 	Snapshot        json.RawMessage `json:"snapshot,omitempty"`
 }
 
