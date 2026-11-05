@@ -215,6 +215,9 @@ fun SyncScreen(state: SyncState, onBack: () -> Unit,
                                 ConnectionMethod.PAIR -> R.string.sync_pairing_code
                                 ConnectionMethod.RECOVER -> R.string.sync_recovery_key
                             })) },
+                            supportingText = if (method == ConnectionMethod.CREATE) {
+                                { Text(stringResource(R.string.sync_bootstrap_detail)) }
+                            } else null,
                             visualTransformation = PasswordVisualTransformation(),
                             shape = MaterialTheme.shapes.medium,
                             singleLine = true,

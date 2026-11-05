@@ -21,6 +21,7 @@
     <string name="sync_pair">与现有设备配对</string>
     <string name="sync_recover">使用恢复密钥</string>
     <string name="sync_bootstrap_token">注册令牌（按服务端要求填写）</string>
+    <string name="sync_bootstrap_detail">由服务器管理员提供；未设置时留空。连接已有账号请选择配对。</string>
     <string name="sync_pairing_code">配对码</string>
     <string name="sync_recovery_key">恢复密钥</string>
     <string name="sync_device_name">设备名称</string>

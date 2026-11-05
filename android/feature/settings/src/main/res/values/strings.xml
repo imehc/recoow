@@ -21,6 +21,7 @@
     <string name="sync_pair">Pair with an existing device</string>
     <string name="sync_recover">Use a recovery key</string>
     <string name="sync_bootstrap_token">Registration token (if required)</string>
+    <string name="sync_bootstrap_detail">Provided by the server administrator; leave blank if none is configured. To join an existing account, choose pairing.</string>
     <string name="sync_pairing_code">Pairing code</string>
     <string name="sync_recovery_key">Recovery key</string>
     <string name="sync_device_name">Device name</string>
