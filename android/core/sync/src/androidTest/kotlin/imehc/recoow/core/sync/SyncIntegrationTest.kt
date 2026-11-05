@@ -324,7 +324,7 @@ class SyncIntegrationTest {
         assertNull(a.engine.state.value.problem); assertNull(a.records.find("diary_tags", "private-old"))
         assertSynced(a, a.engine.sync())
         val c = a.vault.load()!!
-        val rows = decodeObject(factory.create(c.endpoint, c.token).get("api/rows/diary_tags"))["rows"]?.takeIf { it != JsonNull }?.jsonArray.orEmpty()
+        val rows = decodeObject(factory.create(c.endpoint, c.token).get("api/diary-tags")).getValue("rows").jsonArray
         assertTrue(rows.isEmpty())
     }
 
@@ -339,7 +339,7 @@ class SyncIntegrationTest {
                 val api = factory.create(endpoint, token)
                 return object : SyncApi by api {
                     override suspend fun get(path: String, query: Map<String, String>): ByteArray {
-                        if (path.endsWith("bootstrap") && query["after"] != "0" && !interrupted) {
+                        if (path == "api/sync/snapshots" && query["after"] != "0" && !interrupted) {
                             interrupted = true; throw IOException("Interrupted bootstrap")
                         }
                         return api.get(path, query)
@@ -348,6 +348,7 @@ class SyncIntegrationTest {
             }
         }
         val b = client(provider); recover(b, a); assertFalse(b.engine.sync())
+        assertTrue("The paged snapshot request must trigger the simulated interruption", interrupted)
         val target = b.host.access { it.records().target(it.records().activeScope()!!)!! }
         assertEquals(500L, target.bootstrapAfter); assertEquals(505L, target.bootstrapWatermark); assertFalse(target.bootstrapComplete)
         a.records.save(listOf(RecordChange("diary_tags", "later", """{"name":"after watermark"}""", timestamp + 1, a.vault.localDeviceId)))
