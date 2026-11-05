@@ -22,13 +22,14 @@ kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarg
 room { schemaDirectory(layout.buildDirectory.dir("roomSchemas").get().asFile.path) }
 
 val generatedDatabase = layout.buildDirectory.dir("generated/database")
+val repositoryPython = rootProject.layout.projectDirectory.file("../.venv/bin/python").asFile.takeIf { it.exists() }?.path ?: "python3"
 val generateDatabase by tasks.registering(Exec::class) {
     val repository = rootProject.layout.projectDirectory.dir("..")
     inputs.files(repository.asFileTree.matching {
-        include("ios/recoow/**/*.swift", "scripts/*.py", "android/build-tools/*.py", "android/core/database/schema-version.txt")
+        include("openapi/openapi.yaml", "scripts/openapi_contract.py", "android/build-tools/generate_database.py", "android/core/database/schema-version.txt")
     })
     outputs.dir(generatedDatabase)
-    commandLine("python3", rootProject.file("build-tools/generate_database.py"), "--output", generatedDatabase.get().asFile)
+    commandLine(repositoryPython, rootProject.file("build-tools/generate_database.py"), "--output", generatedDatabase.get().asFile)
     environment("PYTHONDONTWRITEBYTECODE", "1")
 }
 androidComponents.onVariants { variant ->
@@ -42,7 +43,7 @@ tasks.configureEach {
 tasks.register<Exec>("checkSchemaHistory") {
     dependsOn("kspDebugKotlin", "copyRoomSchemas")
     val version = layout.projectDirectory.file("schema-version.txt").asFile.readText().trim()
-    commandLine("python3", rootProject.file("build-tools/generate_database.py"), "--room-schema",
+    commandLine(repositoryPython, rootProject.file("build-tools/generate_database.py"), "--room-schema",
         layout.buildDirectory.file("roomSchemas/imehc.recoow.core.database.generated.RecoowDatabase/$version.json").get().asFile,
         "--output", layout.projectDirectory.dir("migrations").asFile, "--check")
     environment("PYTHONDONTWRITEBYTECODE", "1")

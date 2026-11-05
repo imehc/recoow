@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build Room models and the Android registry from the existing iOS contract pipeline."""
+"""Build Room models and the Android registry from the OpenAPI contract."""
 import argparse
 import json
 from pathlib import Path
@@ -7,7 +7,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
-from generate_sync_schema import manifests
+from openapi_contract import manifests
 
 # Physical query indexes are Android storage policy, separate from the wire contract.
 INDEXES = {
@@ -57,7 +57,7 @@ def generate():
         foreign_keys = ", ".join("ForeignKey(entity = " + "".join(p.title() for p in dep["table"].split("_")) +
                                  "Entity::class, parentColumns = [\"id\"], childColumns = [" + quoted(dep["field"]) +
                                  "], deferred = true)" for dep in contract["dependencies"])
-        lines = ["// Generated from iOS models and sync_contract_rules.py. Do not edit.",
+        lines = ["// Generated from OpenAPI. Do not edit.",
                  "package imehc.recoow.core.database.generated", "", "import androidx.room.*", "",
                  f"@Entity(tableName = {quoted(table)}, indices = [{indexes}], foreignKeys = [{foreign_keys}])", f"data class {name}("]
         for field in contract["columns"]:
@@ -88,7 +88,7 @@ abstract class RecoowDatabase : RoomDatabase() {{
 '''
     compact = [{key: row[key] for key in ("table", "dataVersion", "minDataVersion", "dependencies", "columns")} for row in contracts]
     # Escaped Kotlin strings preserve JSON numbers/booleans without parsing through Double.
-    result["EntityContracts.kt"] = '''// Generated from the existing iOS contract pipeline. Do not edit.
+    result["EntityContracts.kt"] = '''// Generated from the OpenAPI contract. Do not edit.
 package imehc.recoow.core.database.generated
 
 import imehc.recoow.core.database.contract.ContractRegistry

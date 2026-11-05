@@ -1,0 +1,36 @@
+import kotlinx.serialization.Contextual
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.KeepGeneratedSerializer
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+import kotlinx.serialization.json.JsonElement
+import imehc.recoow.core.network.ExtensibleSnapshot
+import imehc.recoow.core.network.SnapshotSerializer
+
+/** Typed fields from OpenAPI; unknown fields remain at the JSON object root. */
+@OptIn(ExperimentalSerializationApi::class)
+@KeepGeneratedSerializer
+@Serializable(with = {{classname}}.Serializer::class)
+data class {{classname}} (
+{{#allVars}}
+{{#required}}{{>data_class_req_var}}{{/required}}{{^required}}{{>data_class_opt_var}}{{/required}},
+{{/allVars}}
+    @Transient override val additionalProperties: Map<String, JsonElement> = emptyMap(),
+    @Transient override val presentFields: Set<String>? = null
+) : ExtensibleSnapshot {
+{{#vars}}{{#isEnum}}
+    @Serializable
+    enum class {{{nameInPascalCase}}}(val value: {{^isContainer}}{{dataType}}{{/isContainer}}{{#isContainer}}{{#mostInnerItems}}{{dataType}}{{/mostInnerItems}}{{/isContainer}}) {
+{{#allowableValues}}{{#enumVars}}
+        @SerialName(value = {{#lambda.doublequote}}{{{value}}}{{/lambda.doublequote}}) {{&name}}({{{value}}}){{^-last}},{{/-last}}{{#-last}};{{/-last}}
+{{/enumVars}}{{/allowableValues}}
+    }
+{{/isEnum}}{{/vars}}
+
+    @OptIn(ExperimentalSerializationApi::class)
+    object Serializer : SnapshotSerializer<{{classname}}>(
+        {{classname}}.generatedSerializer(),
+        { value, extras, fields -> value.copy(additionalProperties = extras, presentFields = fields) }
+    )
+}

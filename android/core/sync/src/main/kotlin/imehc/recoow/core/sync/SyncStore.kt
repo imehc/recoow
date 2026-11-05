@@ -17,20 +17,6 @@ data class PreparedMutation(val row: SyncOutbox, val request: JsonObject)
 
 class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStore, private val credentials: CredentialStore) {
     val contracts = EntityContracts.registry.entities.mapValues { it.value.version }
-    fun validateSchema(schema: JsonObject) {
-        val entities = schema.getValue("entities").jsonObject
-        for ((table, contract) in EntityContracts.registry.entities) {
-            val columns = entities.getValue(table).jsonObject.getValue("columns").jsonArray.map { it.jsonObject }.associateBy { it.text("name") }
-            for (field in contract.fields) {
-                val remote = requireNotNull(columns[field.name]) { "Missing schema field" }
-                require(remote.text("type") == field.type)
-                for ((key, expected) in mapOf("required" to field.required, "nullable" to field.nullable, "binary" to field.binary, "derived" to field.derived)) {
-                    require((remote[key]?.let { remote.flag(key) } ?: false) == expected)
-                }
-                require(remote["enumValues"]?.jsonArray?.map { it.jsonPrimitive.content }?.toSet().orEmpty() == field.enumValues)
-            }
-        }
-    }
     private val orderedTables: List<String> = buildList {
         val remaining = contracts.keys.toMutableSet()
         while (remaining.isNotEmpty()) {

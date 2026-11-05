@@ -10,6 +10,15 @@ class SyncProtocolTest {
     private fun JsonObject.change(key: String, value: JsonElement) = JsonObject(this + (key to value))
     private fun rejected(block: () -> Unit) { try { block(); fail("Expected rejection") } catch (_: IllegalArgumentException) { } }
 
+    @Test fun capabilitiesRejectDifferentAccountsContractsAndMissingFeatures() {
+        val response = objectOf("""{"protocolVersion":2,"accountId":"account","contracts":{"bills":3},"features":["revision","receipts","bootstrap","media","unknown_fields","projections"],"dataset":{"generation":"generation","head":7,"minCursor":0},"limits":{"pushItems":100,"pullEntries":500,"mediaBytes":10485760}}""")
+        assertEquals("generation", Capabilities.decode(response, "account", mapOf("bills" to 3)).generation)
+        rejected { Capabilities.decode(response, "other-account", mapOf("bills" to 3)) }
+        rejected { Capabilities.decode(response, "account", mapOf("bills" to 4)) }
+        rejected { Capabilities.decode(response, "account", mapOf("reminders" to 3)) }
+        rejected { Capabilities.decode(response.change("features", JsonArray(emptyList())), "account", mapOf("bills" to 3)) }
+    }
+
     @Test fun rowKeepsUnknownFieldsAndExactIntegersButRejectsInconsistentMetadata() {
         assertEquals(9007199254740993L, SyncProtocol.row(row)["snapshot"]!!.jsonObject["future"]!!.jsonObject.integer("exact"))
         assertEquals(JsonNull, SyncProtocol.row(row)["deletedAtMs"])

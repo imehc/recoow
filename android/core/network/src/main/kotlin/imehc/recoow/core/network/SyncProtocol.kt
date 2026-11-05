@@ -15,7 +15,7 @@ fun JsonObject.flag(key: String): Boolean = getValue(key).jsonPrimitive.let {
 fun decodeObject(bytes: ByteArray): JsonObject = Json.parseToJsonElement(bytes.decodeToString(throwOnInvalidSequence = true)).jsonObject
 
 data class Capabilities(val account: String, val generation: String, val head: Long, val minCursor: Long,
-    val pushLimit: Int, val pullLimit: Int, val mediaLimit: Long, val schemaVersion: String) {
+    val pushLimit: Int, val pullLimit: Int, val mediaLimit: Long) {
     companion object {
         fun decode(raw: JsonObject, account: String, contracts: Map<String, Int>): Capabilities {
             require(raw.integer("protocolVersion") == 2L && raw.text("accountId") == account)
@@ -29,8 +29,7 @@ data class Capabilities(val account: String, val generation: String, val head: L
             val limits = raw.getValue("limits").jsonObject
             val push = limits.integer("pushItems"); val pull = limits.integer("pullEntries"); val media = limits.integer("mediaBytes")
             require(push in 1..1000 && pull in 1..2000 && media in 1..200L * 1024 * 1024)
-            return Capabilities(account, dataset.text("generation"), head, min, push.toInt(), pull.toInt(), media,
-                raw.text("schemaVersion"))
+            return Capabilities(account, dataset.text("generation"), head, min, push.toInt(), pull.toInt(), media)
         }
     }
 }
@@ -39,17 +38,6 @@ data class SyncPage(val entries: List<JsonObject>, val cursor: Long, val more: B
 data class Receipt(val mutation: String, val status: String, val version: Long, val current: JsonObject?)
 
 object SyncProtocol {
-    fun schema(raw: JsonObject, capabilities: Capabilities, contracts: Map<String, Int>) {
-        require(raw.text("schemaVersion") == capabilities.schemaVersion)
-        val entities = raw.getValue("entities").jsonObject
-        require(entities.keys == contracts.keys)
-        for ((table, version) in contracts) {
-            val entity = entities.getValue(table).jsonObject
-            require(entity.text("table") == table && entity.integer("dataVersion") == version.toLong())
-            require(entity.getValue("columns").jsonArray.isNotEmpty())
-        }
-    }
-
     /** Normalize zero deletion timestamps before the persistence layer sees an envelope. */
     fun row(raw: JsonObject): JsonObject {
         val table = raw.text("table"); val id = raw.text("id"); val device = raw.text("deviceId")

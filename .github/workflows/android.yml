@@ -2,10 +2,10 @@ name: Android
 
 on:
   pull_request:
-    paths: ["android/**", "backend/**", "ios/recoow/**", "ios/Version.xcconfig", "ios/recoow.xcodeproj/project.pbxproj", "versions.json", "scripts/*.py", ".github/workflows/android.yml"]
+    paths: ["android/**", "backend/**", "openapi/**", "ios/recoow/**", "ios/Version.xcconfig", "ios/recoow.xcodeproj/project.pbxproj", "versions.json", "scripts/**", "tests/**", ".github/workflows/android.yml"]
   push:
     branches: ["**"]
-    paths: ["android/**", "backend/**", "ios/recoow/**", "ios/Version.xcconfig", "ios/recoow.xcodeproj/project.pbxproj", "versions.json", "scripts/*.py", ".github/workflows/android.yml"]
+    paths: ["android/**", "backend/**", "openapi/**", "ios/recoow/**", "ios/Version.xcconfig", "ios/recoow.xcodeproj/project.pbxproj", "versions.json", "scripts/**", "tests/**", ".github/workflows/android.yml"]
   workflow_dispatch:
   workflow_call:
 
@@ -21,10 +21,14 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Check independent application versions
         run: |
           python3 scripts/version.py check
-          python3 -m unittest discover -s scripts -p 'test_version.py'
+          python3 -m pip install -r scripts/requirements.txt
+          python3 -m unittest discover -s tests -t . -p 'test_version.py'
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -59,6 +63,18 @@ jobs:
 
   device:
     runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: recoow_migrator
+          POSTGRES_PASSWORD: recoow-ci-migration-only
+          POSTGRES_DB: recoow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U recoow_migrator -d recoow"
+          --health-interval 5s --health-timeout 5s --health-retries 12
     strategy:
       fail-fast: false
       matrix:
@@ -77,6 +93,11 @@ jobs:
         with:
           packages: platform-tools
       - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install contract tooling
+        run: python3 -m pip install -r scripts/requirements.txt
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -95,12 +116,24 @@ jobs:
           :core:scene:assembleDebugAndroidTest :core:update:assembleDebugAndroidTest --stacktrace
       - name: Start isolated integration backend
         run: |
-          python3 scripts/generate_sync_schema.py --output "$RUNNER_TEMP/recoow-schema"
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          curl --fail --location --retry 3 https://repo.maven.apache.org/maven2/org/openapitools/openapi-generator-cli/7.22.0/openapi-generator-cli-7.22.0.jar --output "$RUNNER_TEMP/openapi-generator.jar"
+          cat > "$RUNNER_TEMP/openapi-generator" <<'EOF'
+          #!/usr/bin/env bash
+          exec java -jar "$RUNNER_TEMP/openapi-generator.jar" "$@"
+          EOF
+          chmod +x "$RUNNER_TEMP/openapi-generator"
+          make OPENAPI_GENERATOR="$RUNNER_TEMP/openapi-generator" generate-go-api
+          export PGPASSWORD=recoow-ci-migration-only
+          psql -h 127.0.0.1 -U recoow_migrator -d recoow -v ON_ERROR_STOP=1 -c "CREATE ROLE recoow_app LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD 'recoow-ci-runtime-only';"
           (cd backend && go build -o "$RUNNER_TEMP/recoow-api" ./cmd/api)
-          RECOOW_SCHEMA="$RUNNER_TEMP/recoow-schema" RECOOW_DATA="$RUNNER_TEMP/recoow-data" RECOOW_LISTEN=127.0.0.1:8080 "$RUNNER_TEMP/recoow-api" > "$RUNNER_TEMP/recoow-api.log" 2>&1 &
+          export RECOOW_DATABASE_URL='postgres://recoow_app:recoow-ci-runtime-only@127.0.0.1:5432/recoow?sslmode=disable'
+          export RECOOW_OPENAPI="$GITHUB_WORKSPACE/openapi/openapi.yaml"
+          RECOOW_MIGRATION_DATABASE_URL='postgres://recoow_migrator:recoow-ci-migration-only@127.0.0.1:5432/recoow?sslmode=disable' "$RUNNER_TEMP/recoow-api" -migrate
+          RECOOW_DATA="$RUNNER_TEMP/recoow-data" RECOOW_LISTEN=127.0.0.1:8080 "$RUNNER_TEMP/recoow-api" > "$RUNNER_TEMP/recoow-api.log" 2>&1 &
           for attempt in {1..30}; do
-            # Schema requires authentication; an anonymous 401 confirms the API is listening.
-            if [ "$(curl -sS --max-time 2 -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/schema)" = 401 ]; then exit 0; fi
+            if [ "$(curl -sS --max-time 2 -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/sync/capabilities)" = 401 ]; then exit 0; fi
             sleep 1
           done
           exit 1

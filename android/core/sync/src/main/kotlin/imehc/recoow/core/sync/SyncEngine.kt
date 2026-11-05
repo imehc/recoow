@@ -115,7 +115,7 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
                 // A completed registration is journaled before any dataset/backup operation.
                 val staged = pendingCredentials.load()?.takeIf { it.endpoint == normalized && (method == ConnectionMethod.CREATE || replaceLocal) }
                 val candidate = staged ?: run {
-                    val path = when (method) { ConnectionMethod.CREATE -> "api/account/init"; ConnectionMethod.PAIR -> "api/auth/pair"; ConnectionMethod.RECOVER -> "api/account/recover" }
+                    val path = when (method) { ConnectionMethod.CREATE -> "api/accounts"; ConnectionMethod.PAIR -> "api/device-pairings"; ConnectionMethod.RECOVER -> "api/account-recoveries" }
                     val body = buildJsonObject {
                         when (method) { ConnectionMethod.CREATE -> put("bootstrapToken", secret)
                             ConnectionMethod.PAIR -> put("code", secret)
@@ -155,7 +155,7 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
         try {
             val connection = requireNotNull(credentials.load())
             require(connection.canPair)
-            val response = decodeObject(apiProvider.create(connection.endpoint, connection.token).post("api/devices/pairing-code", buildJsonObject { }))
+            val response = decodeObject(apiProvider.create(connection.endpoint, connection.token).post("api/device-pairing-codes", buildJsonObject { }))
             val code = response.text("code")
             require(code.matches(Regex("[0-9]{10}")))
             mutableState.update { it.copy(pairingCode = code) }
@@ -193,7 +193,7 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
                     media.transfer(session, api, "upload", caps.mediaLimit)
                     val ready = mutations.filter { media.ready(session, it) }
                     if (ready.isEmpty()) break
-                    val response = api.post("api/sync/push", buildJsonObject {
+                    val response = api.post("api/sync/mutations", buildJsonObject {
                         put("protocolVersion", 2); put("generation", caps.generation); put("items", JsonArray(ready.map { it.request }))
                     })
                     val receipts = SyncProtocol.receipts(decodeObject(response), ready.map { it.request })
@@ -240,11 +240,7 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
     }
 
     private suspend fun capabilities(api: SyncApi, connection: Credentials): Capabilities {
-        val caps = Capabilities.decode(decodeObject(api.get("api/sync/capabilities")), connection.account, store.contracts)
-        val schema = decodeObject(api.get("api/schema"))
-        SyncProtocol.schema(schema, caps, store.contracts)
-        store.validateSchema(schema)
-        return caps
+        return Capabilities.decode(decodeObject(api.get("api/sync/capabilities")), connection.account, store.contracts)
     }
 
     private suspend fun receivePages(session: SyncSession, api: SyncApi, caps: Capabilities, bootstrapOnly: Boolean) {
@@ -254,7 +250,7 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
             val prefix = if (target.bootstrapComplete) "pull:${target.receivedCursor}:" else "bootstrap:${target.bootstrapAfter}:"
             val previous = store.access(session) { db -> db.records().unreceivedPages(session.scope).firstOrNull { it.pageKey.startsWith(prefix) } }
             val key = previous?.pageKey ?: prefix + UUID.randomUUID()
-            val bytes = previous?.body ?: api.get(if (target.bootstrapComplete) "api/sync/pull" else "api/sync/bootstrap", query(target, caps.pullLimit))
+            val bytes = previous?.body ?: api.get(if (target.bootstrapComplete) "api/sync/changes" else "api/sync/snapshots", query(target, caps.pullLimit))
             // Store bytes before decoding JSON, row contracts, or cursors.
             store.access(session) { }
             received.persistRaw(session.scope, session.databaseToken, key, bytes)

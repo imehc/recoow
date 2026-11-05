@@ -253,7 +253,7 @@ class SyncIntegrationTest {
                 return object : SyncApi by api {
                     override suspend fun post(path: String, body: JsonObject): ByteArray {
                         val response = api.post(path, body)
-                        if (path == "api/sync/push" && lose) {
+                        if (path == "api/sync/mutations" && lose) {
                             lose = false
                             edit(a, "diary_tags", "name", "newer local edit", timestamp + 2)
                             throw IOException("Simulated lost receipt")
@@ -374,7 +374,7 @@ class SyncIntegrationTest {
             put("snapshot", buildJsonObject { put("id", "future"); put("name", "future"); put("created_at", timestamp); put("updated_at", timestamp)
                 put("device_id", "future-client"); put("future_field", buildJsonObject { put("value", 9007199254740993L) }) })
         }
-        SyncProtocol.receipts(decodeObject(api.post("api/sync/push", buildJsonObject { put("protocolVersion", 2); put("generation", caps.generation); put("items", JsonArray(listOf(item))) })), listOf(item))
+        SyncProtocol.receipts(decodeObject(api.post("api/sync/mutations", buildJsonObject { put("protocolVersion", 2); put("generation", caps.generation); put("items", JsonArray(listOf(item))) })), listOf(item))
         assertSynced(b, b.engine.sync()); assertEquals(45, b.engine.state.value.conflicts.size)
         b.records.save(listOf(RecordChange("diary_tags", "future", """{"name":"edited on Android"}""", timestamp + 10, b.vault.localDeviceId)))
         assertSynced(b, b.engine.sync()); assertSynced(a, a.engine.sync())

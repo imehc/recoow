@@ -27,7 +27,8 @@ generate-ios-api: check-openapi
 	$(OPENAPI_GENERATOR) generate -i $(OPENAPI_SPEC) -g swift5 -o generated/ios-api --type-mappings DateTime=String,date-time=String --model-name-prefix RWAPI --additional-properties projectName=RecoowAPI,library=urlsession,responseAs=AsyncAwait,useSPMFileStructure=true,useBacktickEscapes=true
 
 generate-android-api: check-openapi
-	$(OPENAPI_GENERATOR) generate -i $(OPENAPI_SPEC) -g kotlin -o android/core/network/build/generated/openapi --type-mappings object=JsonElement,AnyType=JsonElement --import-mappings JsonElement=kotlinx.serialization.json.JsonElement --model-name-prefix RWAPI --additional-properties packageName=imehc.recoow.core.network.generated,serializationLibrary=kotlinx_serialization,library=jvm-retrofit2,dateLibrary=string
+	rm -rf android/core/network/build/generated/openapi
+	$(OPENAPI_GENERATOR) generate -i $(OPENAPI_SPEC) -g kotlin -t android/build-tools/openapi-templates -o android/core/network/build/generated/openapi --type-mappings object=JsonElement,AnyType=JsonElement,ByteArray=kotlin.String --import-mappings JsonElement=kotlinx.serialization.json.JsonElement --model-name-prefix RWAPI --additional-properties packageName=imehc.recoow.core.network.generated,serializationLibrary=kotlinx_serialization,library=jvm-retrofit2,dateLibrary=string,useCoroutines=true --global-property apis,models,apiDocs=false,apiTests=false,modelDocs=false,modelTests=false,supportingFiles=CollectionFormats.kt
 
 generate-web-api: check-openapi
 	$(OPENAPI_GENERATOR) generate -i $(OPENAPI_SPEC) -g typescript-fetch -o generated/web-api --additional-properties supportsES6=true

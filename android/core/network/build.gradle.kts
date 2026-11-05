@@ -1,4 +1,4 @@
-plugins { alias(libs.plugins.android.library) }
+plugins { alias(libs.plugins.android.library); alias(libs.plugins.serialization) }
 android {
     namespace = "imehc.recoow.core.network"
     compileSdk = libs.versions.compileSdk.get().toInt()
@@ -17,3 +17,17 @@ dependencies {
     implementation(libs.coroutines.android)
     testImplementation(libs.junit)
 }
+
+val generateOpenAPI by tasks.registering(Exec::class) {
+    val repository = rootProject.layout.projectDirectory.dir("..")
+    workingDir(repository.asFile)
+    inputs.file(repository.file("openapi/openapi.yaml"))
+    inputs.file(repository.file("Makefile"))
+    inputs.dir(repository.dir("android/build-tools/openapi-templates"))
+    outputs.dir(layout.buildDirectory.dir("generated/openapi"))
+    commandLine("make", "generate-android-api")
+}
+androidComponents.onVariants { variant ->
+    variant.sources.java?.addStaticSourceDirectory(layout.buildDirectory.dir("generated/openapi/src/main/kotlin").get().asFile.path)
+}
+tasks.named("preBuild").configure { dependsOn(generateOpenAPI) }
