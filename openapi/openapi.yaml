@@ -6,6 +6,26 @@ info:
 servers:
 - url: /
 paths:
+  /api/version:
+    get:
+      operationId: getBackendVersion
+      summary: 查询运行中的后端版本
+      tags:
+      - Management
+      security: []
+      responses:
+        '200':
+          description: 当前后端的发布版本与构建提交
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                - no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackendVersion'
   /api/devices:
     get:
       operationId: listDevices
@@ -4516,6 +4536,19 @@ components:
       in: cookie
       name: recoow_session
   schemas:
+    BackendVersion:
+      type: object
+      required:
+      - version
+      - commit
+      properties:
+        version:
+          type: string
+          description: 后端发布版本，与同步协议和数据表版本独立。
+          example: 0.0.2
+        commit:
+          type: string
+          description: 构建对应的 Git 提交；未提供构建信息时为 unknown。
     AnniversariesSnapshot:
       type: object
       additionalProperties: true

@@ -13,8 +13,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/imehc/recoow/backend/internal/buildinfo"
 	"github.com/imehc/recoow/backend/internal/config"
 	"github.com/imehc/recoow/backend/internal/domain"
+	"github.com/imehc/recoow/backend/internal/handler/generated"
 	"github.com/imehc/recoow/backend/internal/schema"
 	"github.com/imehc/recoow/backend/internal/service"
 )
@@ -56,6 +58,11 @@ const deviceKey ctxKey = 0
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/version", func(w http.ResponseWriter, r *http.Request) {
+		info := buildinfo.Current()
+		w.Header().Set("Cache-Control", "no-store")
+		writeJSON(w, http.StatusOK, generated.BackendVersion{Version: info.Version, Commit: info.Commit})
+	})
 	s.resourceRoutes(mux)
 	mux.HandleFunc("POST /api/users", s.handleRegister)
 	mux.HandleFunc("POST /api/sessions", s.handleLogin)

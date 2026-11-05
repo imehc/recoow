@@ -52,6 +52,7 @@ Web 登录使用独立的可过期会话，保存 token 哈希；默认 Cookie �
 
 | API | 用途 |
 | --- | --- |
+| `GET /api/version` | 无需登录，查询运行中的后端版本和构建提交 |
 | `GET /api/openapi.yaml` | 读取完整公共契约 |
 | `POST /api/accounts`、`POST /api/account-recoveries` | 设备初始化、恢复账号 |
 | `POST /api/device-pairing-codes`、`POST /api/device-pairings` | 创建、原子消费配对码 |
@@ -67,6 +68,8 @@ Web 登录使用独立的可过期会话，保存 token 哈希；默认 Cookie �
 | `PUT/GET/HEAD/DELETE /api/media/objects/{key}` | 媒体传输 |
 
 实体资源名采用连字符，例如 `diary-tags`、`stored-value-accounts`。鉴权后的账号由服务端解析，请求不能指定数据归属。
+
+版本接口返回 `version` 和 `commit`，使用 `Cache-Control: no-store` 避免部署后读到旧版本。发布版本与同步协议、数据表版本分别维护；客户端判断同步兼容性仍使用已鉴权的 `/api/sync/capabilities`。
 
 列表使用 `limit=1..200`、`cursor`、`q`、`fromMs`、`toMs`，按 ID 升序分页。日期筛选优先使用实体发生时间，缺少该字段时使用服务器更新时间。统计中的记录数量按更新时间统计；账单金额按 `occurred_at` 的左闭右开区间统计，退款和墓碑排除，分别返回支出、收入和储值消费。当前提供基础统计，复杂趋势和维度聚合可在后续增加。
 
