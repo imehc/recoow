@@ -43,8 +43,8 @@
     <string name="sync_conflict">选择要保留的版本</string>
     <string name="sync_local">此设备</string>
     <string name="sync_remote">服务端</string>
-    <string name="sync_keep_local">保留此设备版本</string>
-    <string name="sync_use_remote">使用服务端版本</string>
+    <string name="sync_keep_local">争议内容使用此设备</string>
+    <string name="sync_use_remote">争议内容使用云端</string>
     <string name="sync_recovery_detail">请妥善保存这份密钥。如果所有配对设备丢失，需要使用它恢复账号。</string>
     <string name="sync_recovery_saved">我已保存密钥</string>
     <string name="sync_conflict_status">此设备：%1$s · 服务端：%2$s</string>
@@ -126,4 +126,5 @@
     <string name="update_section_current">当前版本</string>
     <string name="update_section_available">可用更新</string>
     <string name="update_notes">更新说明</string>
+    <string name="sync_conflict_merge_detail">可兼容的修改会保留。账单金额、支付方式与结算状态整组选择；删除冲突选择整条记录。确认后同步生效。</string>
 </resources>

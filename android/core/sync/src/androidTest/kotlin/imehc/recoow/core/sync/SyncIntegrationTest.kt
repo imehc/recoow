@@ -275,6 +275,7 @@ class SyncIntegrationTest {
         assertEquals(1, b.engine.state.value.conflicts.size)
         var conflict = b.engine.state.value.conflicts.single()
         b.engine.resolve(conflict.table, conflict.id, conflict.remoteVersion, false)
+        assertSynced(b, b.engine.sync())
         assertTrue(b.records.find("diary_tags", "diary_tags")!!.snapshotJson.contains("\"A\""))
         edit(a, "diary_tags", "name", "A2", timestamp + 3); edit(b, "diary_tags", "name", "B2", timestamp + 3)
         assertSynced(a, a.engine.sync()); assertSynced(b, b.engine.sync())

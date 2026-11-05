@@ -28,6 +28,7 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.work.runtime)
     implementation(libs.lifecycle.process)
+    testImplementation(libs.junit)
     androidTestImplementation(project(":core:backup"))
     androidTestImplementation(libs.datastore)
     androidTestImplementation(libs.androidx.test)

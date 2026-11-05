@@ -11,6 +11,16 @@ import kotlinx.serialization.json.*
 
 /** Durable receive/apply primitives. HTTP, bootstrap paging and conflict resolution live in sync. */
 class ReceivedRecordStore(private val host: DatabaseHost, private val zone: () -> ZoneId = ZoneId::systemDefault) {
+    suspend fun rebaseLocal(db: RecoowDatabase, table: String, id: String, fields: JsonObject, version: Long) {
+        check(db.inTransaction())
+        val contract = EntityContracts.registry.entity(table)
+        val snapshot = contract.normalize(fields, contract.version)
+        PhysicalRecords.write(db.openHelper.writableDatabase, contract, snapshot, version, local = true)
+        db.records().put(EntitySnapshot(table, id, contract.version, snapshot.toString()))
+        AggregateProjection.refresh(db, setOf(table), zone())
+        RoomRecordRepository.queueNotification(db, table, id, version)
+    }
+
     suspend fun attach(target: SyncTarget) = host.guarded("attach-dataset") { db, _ ->
         db.withTransaction {
             require(target.scope.isNotBlank() && target.accountId.isNotBlank() && target.generation.isNotBlank())

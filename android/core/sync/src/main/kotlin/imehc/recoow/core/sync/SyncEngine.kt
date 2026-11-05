@@ -280,9 +280,13 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
     override suspend fun resolve(table: String, id: String, remoteVersion: Long, keepLocal: Boolean) = withContext(Dispatchers.IO) { mutex.withLock {
         try {
             val connection = requireNotNull(credentials.load())
+            val capabilities = decodeObject(apiProvider.create(connection.endpoint, connection.token).get("api/sync/capabilities"))
+            Capabilities.decode(capabilities, connection.account, store.contracts)
+            require(capabilities.getValue("features").jsonArray.any { it.jsonPrimitive.content == "conflict_resolution" }) { "Unsupported conflict resolution protocol; update backend" }
             val scope = store.host.access { requireNotNull(it.records().activeScope()) }
             val session = SyncSession(connection, scope, store.host.sessionToken())
-            store.resolve(session, table, id, remoteVersion, keepLocal)
+            store.resolve(session, table, id, remoteVersion, keepLocal,
+                requireNotNull(state.value.conflicts.find { it.table == table && it.id == id && it.remoteVersion == remoteVersion }).localSnapshot)
             refreshState(session)
             mutableState.update { it.copy(problem = null) }
         } catch (cancelled: CancellationException) { throw cancelled

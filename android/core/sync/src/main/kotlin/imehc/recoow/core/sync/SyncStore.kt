@@ -103,13 +103,15 @@ class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStor
         }
     }
 
-    private suspend fun enqueue(db: RecoowDatabase, scope: String, table: String, id: String, payload: JsonObject, base: Long) {
+    private suspend fun enqueue(db: RecoowDatabase, scope: String, table: String, id: String, payload: JsonObject, base: Long): SyncOutbox {
         val mutation = UUID.randomUUID().toString()
         val operation = if (payload["deleted_at"] != null && payload["deleted_at"] != JsonNull) "delete" else "update"
         val version = contracts.getValue(table)
         val local = db.records().log(LocalChange(mutationId = mutation, tableName = table, entityId = id, operation = operation,
             dataVersion = version, payloadJson = payload.toString(), changedAt = payload.integer("updated_at")))
-        db.records().enqueue(SyncOutbox(scope, mutation, table, id, operation, version, payload.toString(), base, local))
+        val row = SyncOutbox(scope, mutation, table, id, operation, version, payload.toString(), base, local)
+        db.records().enqueue(row)
+        return row
     }
 
     suspend fun <T> access(session: SyncSession, action: suspend (RecoowDatabase) -> T): T = host.access(session.databaseToken) { db ->
@@ -177,6 +179,7 @@ class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStor
             db.records().put(row.copy(status = receipt.status, serverVersion = receipt.version, lastError = null))
             if (receipt.status == "conflict") db.records().put(SyncConflict(session.scope, row.mutationId, row.tableName, row.entityId,
                 row.payloadJson, canonical.toString(), receipt.version, System.currentTimeMillis()))
+            if (receipt.status in setOf("applied", "duplicate")) rebasePending(db, session.scope, row, canonical)
             val newer = db.records().shadow(session.scope, row.tableName, row.entityId)?.takeIf { it.version > receipt.version }
             val inbox = SyncInbox(session.scope, newer?.version ?: receipt.version, row.tableName, row.entityId, newer?.envelopeJson ?: canonical.toString())
             if (!received.apply(db, inbox, force = true)) {
@@ -186,18 +189,50 @@ class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStor
         }
     } }
 
-    suspend fun resolve(session: SyncSession, table: String, id: String, remoteVersion: Long, keepLocal: Boolean) = access(session) { db -> db.withTransaction {
+    private suspend fun rebasePending(db: RecoowDatabase, scope: String, acknowledged: SyncOutbox, canonical: JsonObject) {
+        var rebased = canonical["snapshot"]?.takeIf { it != JsonNull }?.jsonObject ?: return
+        rebased = JsonObject(rebased + ("deleted_at" to (canonical["deletedAtMs"] ?: JsonNull)))
+        var base = Json.parseToJsonElement(acknowledged.payloadJson).jsonObject
+        var predecessorId = acknowledged.mutationId
+        val queued = db.records().outbox(scope).filter { it.tableName == acknowledged.tableName && it.entityId == acknowledged.entityId &&
+            it.status == "pending" && it.localChangeId > acknowledged.localChangeId }
+        for (row in queued) {
+            if (row.predecessorId != predecessorId) return
+            check(row.preparedJson == null) { "Cannot change a prepared mutation" }
+            val next = Json.parseToJsonElement(row.payloadJson).jsonObject
+            if (SyncSnapshotRebase.conflicts(row.tableName, base, next, rebased)) {
+                db.records().put(row.copy(predecessorId = null, baseVersion = acknowledged.baseVersion))
+                return
+            }
+            rebased = SyncSnapshotRebase.snapshot(row.tableName, base, next, rebased)
+            db.records().put(row.copy(payloadJson = rebased.toString()))
+            base = next
+            predecessorId = row.mutationId
+        }
+        if (queued.isNotEmpty()) received.rebaseLocal(db, acknowledged.tableName, acknowledged.entityId, rebased, canonical.integer("version"))
+    }
+
+    suspend fun resolve(session: SyncSession, table: String, id: String, remoteVersion: Long, keepLocal: Boolean,
+        expectedLocal: String? = null) = access(session) { db -> db.withTransaction {
         val dao = db.records()
         require(dao.conflicts(session.scope).any { it.tableName == table && it.entityId == id })
         val shadow = requireNotNull(dao.shadow(session.scope, table, id))
         check(shadow.version == remoteVersion) { "Conflict changed; refresh before choosing" }
-        for (row in dao.outbox(session.scope).filter { it.tableName == table && it.entityId == id && it.status in setOf("pending", "conflict") }) {
-            dao.put(row.copy(status = if (keepLocal) "resolved_local" else "resolved_remote"))
+        val local = requireNotNull(dao.snapshot(table, id)).json
+        check(expectedLocal == null || Json.parseToJsonElement(expectedLocal) == Json.parseToJsonElement(local)) { "Local record changed; refresh before choosing" }
+        val rows = dao.outbox(session.scope).filter { it.tableName == table && it.entityId == id && it.status in setOf("pending", "conflict") }
+        val base = requireNotNull(rows.lastOrNull { it.status == "conflict" }).baseVersion
+        for (row in rows) dao.put(row.copy(status = if (keepLocal) "resolved_local" else "resolved_remote"))
+        val snapshot = Json.parseToJsonElement(local).jsonObject
+        val row = enqueue(db, session.scope, table, id, snapshot, base)
+        val normalized = EntityContracts.registry.entity(table).normalize(snapshot, row.dataVersion)
+        val request = buildJsonObject {
+            put("table", table); put("id", id); put("operation", row.operation)
+            put("mutationId", row.mutationId); put("baseVersion", base); put("dataVersion", row.dataVersion)
+            put("updatedAtMs", snapshot.integer("updated_at")); put("deviceId", snapshot.text("device_id"))
+            put("snapshot", normalized); put("resolution", if (keepLocal) "local" else "remote"); put("expectedVersion", remoteVersion)
         }
-        if (keepLocal) {
-            val snapshot = Json.parseToJsonElement(requireNotNull(dao.snapshot(table, id)).json).jsonObject
-            enqueue(db, session.scope, table, id, snapshot, shadow.version)
-        } else check(received.apply(db, SyncInbox(session.scope, shadow.version, table, id, shadow.envelopeJson), force = true)) { "Waiting for dependency" }
+        dao.put(row.copy(preparedJson = request.toString()))
         dao.clearConflicts(session.scope, table, id)
     } }
 
@@ -208,13 +243,18 @@ class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStor
             val local = Json.parseToJsonElement(localJson).jsonObject
             val envelope = Json.parseToJsonElement(remote.envelopeJson).jsonObject
             val snapshot = envelope["snapshot"]?.takeIf { it != JsonNull }?.jsonObject.orEmpty()
-            fun display(value: JsonElement?) = when (value) { null, JsonNull -> "—"; is JsonPrimitive -> value.content; else -> value.toString() }
+            fun display(value: JsonElement?, name: String): String {
+                if (value == null || value == JsonNull) return "—"
+                if (name.endsWith("amount_cents") && value is JsonPrimitive && value.longOrNull != null)
+                    return "¥" + java.math.BigDecimal.valueOf(value.long).movePointLeft(2).setScale(2).toPlainString()
+                return if (value is JsonPrimitive) value.content else value.toString()
+            }
             val fields = EntityContracts.registry.entity(row.tableName).fields.filter {
                 !it.binary && !it.derived && it.name !in setOf("id", "created_at", "updated_at", "device_id", "server_version", "deleted_at", "storage_key", "checksum", "stored_value_effects") && local[it.name] != snapshot[it.name]
             }.map { field -> ConflictValue(field.labels["zh"] ?: field.name, field.labels["en"] ?: field.name,
-                display(local[field.name]), display(snapshot[field.name])) }
+                display(local[field.name], field.name), display(snapshot[field.name], field.name)) }
             RecordConflict(row.tableName, row.entityId, localJson, remote.envelopeJson, remote.version, fields,
-                local["deleted_at"] != null && local["deleted_at"] != JsonNull, envelope["deletedAtMs"] != JsonNull)
+                local["deleted_at"] != null && local["deleted_at"] != JsonNull, envelope["deletedAtMs"]?.takeIf { it != JsonNull }?.jsonPrimitive?.long?.let { it > 0 } == true)
         }
     }
 

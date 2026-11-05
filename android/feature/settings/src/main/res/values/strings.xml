@@ -43,8 +43,8 @@
     <string name="sync_conflict">Choose the version to keep</string>
     <string name="sync_local">On this device</string>
     <string name="sync_remote">On the server</string>
-    <string name="sync_keep_local">Keep device version</string>
-    <string name="sync_use_remote">Use server version</string>
+    <string name="sync_keep_local">Use device values for conflicts</string>
+    <string name="sync_use_remote">Use cloud values for conflicts</string>
     <string name="sync_recovery_detail">Save this key somewhere secure. You need it to recover the account if all paired devices are lost.</string>
     <string name="sync_recovery_saved">I have saved the key</string>
     <string name="sync_conflict_status">Device: %1$s · Server: %2$s</string>
@@ -126,4 +126,5 @@
     <string name="update_section_current">Installed</string>
     <string name="update_section_available">Available update</string>
     <string name="update_notes">What\'s new</string>
+    <string name="sync_conflict_merge_detail">Compatible edits are kept. Bill amounts, payment, and settlement are selected together; deletion conflicts select the entire record. Your choice takes effect after syncing.</string>
 </resources>

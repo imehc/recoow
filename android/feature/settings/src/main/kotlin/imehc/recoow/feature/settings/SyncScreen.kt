@@ -312,12 +312,13 @@ private fun ConflictCard(conflict: RecordConflict, chinese: Boolean, enabled: Bo
                 }
             }
             if (conflict.values.isEmpty()) Text(stringResource(R.string.sync_conflict_metadata), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(stringResource(R.string.sync_conflict_merge_detail), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column {
                 listOf(R.string.sync_keep_local to true, R.string.sync_use_remote to false).forEach { (label, keepLocal) ->
                     Text(
                         stringResource(label),
                         modifier = Modifier
-                            .heightIn(min = 44.dp)
+                            .heightIn(min = 48.dp)
                             .clickable(enabled = enabled) { onResolve(conflict, keepLocal) }
                             .padding(vertical = 10.dp),
                         style = MaterialTheme.typography.titleSmall,
