@@ -1121,3 +1121,33 @@
 "保留本地并重新提交" = "Keep Local and Resubmit";
 "使用云端状态" = "Use Cloud State";
 "确认冲突" = "Resolve Conflict";
+
+"独立修改自动合并；争议字段、账单结算信息及删除冲突需要确认。" = "Independent edits merge automatically. Conflicting fields, bill settlement details, and deletions need confirmation.";
+
+"本地：已删除" = "Device: deleted";
+
+"本地：保留记录" = "Device: record kept";
+
+"云端：已删除" = "Cloud: deleted";
+
+"云端：保留记录" = "Cloud: record kept";
+
+"差异涉及附件或记录状态。" = "The difference involves attachments or record status.";
+
+"争议内容使用本地" = "Use device values for conflicts";
+
+"争议内容使用云端" = "Use cloud values for conflicts";
+
+"可兼容的修改会保留。账单金额、支付方式与结算状态整组选择；删除冲突选择整条记录。确认后同步生效。" = "Compatible edits are kept. Bill amounts, payment, and settlement are selected together; deletion conflicts select the entire record. Your choice takes effect after syncing.";
+
+"本地记录已改变，请刷新列表" = "The local record changed. Refresh before choosing.";
+
+"待同步请求状态已改变" = "The pending request changed.";
+
+"记录" = "Record";
+
+"是" = "Yes";
+
+"否" = "No";
+
+"服务端暂不支持此冲突处理方式，请先升级后端" = "Update the backend to use this conflict resolution method.";

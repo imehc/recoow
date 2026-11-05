@@ -78,6 +78,8 @@ nonisolated struct CloudPushItem: @unchecked Sendable {
     var mutationID: String = ""
     var baseVersion: Int64 = 0
     var dataVersion: Int = 1
+    var resolution: String?
+    var expectedVersion: Int64?
 }
 
 nonisolated enum CloudAPIError: LocalizedError {
@@ -163,7 +165,7 @@ final class RecoowAPIClient: @unchecked Sendable {
 
     // MARK: - 同步
 
-    /// 上传一批变更（服务端按 LWW 合并并返回每条是否采纳）。
+    /// 上传一批变更，服务端按基础版本进行三方合并并返回每条权威回执。
     func push(items: [CloudPushItem], generation: String = "") async throws -> CloudPushResponse {
         guard config.isConfigured else { throw CloudAPIError.unconfigured }
         let payload: [String: Any] = ["items": items.map { Self.object(for: $0) }, "protocolVersion": 2, "generation": generation]
@@ -285,7 +287,7 @@ final class RecoowAPIClient: @unchecked Sendable {
     }
 
     nonisolated static func object(for item: CloudPushItem) -> [String: Any] {
-        [
+        var object: [String: Any] = [
             "table": item.table,
             "id": item.id,
             "operation": item.operation,
@@ -296,6 +298,9 @@ final class RecoowAPIClient: @unchecked Sendable {
             "baseVersion": item.baseVersion,
             "dataVersion": item.dataVersion,
         ]
+        object["resolution"] = item.resolution
+        object["expectedVersion"] = item.expectedVersion
+        return object
     }
 
     private static func errorMessage(from data: Data) -> String {

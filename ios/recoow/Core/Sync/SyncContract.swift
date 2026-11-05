@@ -16,10 +16,12 @@ nonisolated struct SyncField {
     var defaultJSON: String?
     var enumValues: [String] = []
     var jsonText = false
+    var labels: [String: String] = [:]
+    var format: String = ""
 
     init(_ name: String, _ type: SyncFieldType, required: Bool = false, nullable: Bool = false,
          binary: Bool = false, derived: Bool = false, defaultJSON: String? = nil,
-         enumValues: [String] = [], jsonText: Bool = false) {
+         enumValues: [String] = [], jsonText: Bool = false, labels: [String: String] = [:], format: String = "") {
         self.name = name
         self.type = type
         self.required = required
@@ -29,6 +31,8 @@ nonisolated struct SyncField {
         self.defaultJSON = defaultJSON
         self.enumValues = enumValues
         self.jsonText = jsonText
+        self.labels = labels
+        self.format = format
     }
 }
 
@@ -42,6 +46,7 @@ nonisolated struct SyncEntityDefinition {
     let version: Int
     let fields: [SyncField]
     let dependencies: [SyncDependency]
+    var labels: [String: String] = [:]
 
     func upgrade(_ snapshot: [String: Any], from version: Int) throws -> [String: Any] {
         guard version > 0, version <= self.version else {

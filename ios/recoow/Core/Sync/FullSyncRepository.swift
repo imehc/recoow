@@ -205,6 +205,9 @@ nonisolated final class FullSyncRepository: @unchecked Sendable {
                     WHERE id = (SELECT local_change_id FROM sync_outbox WHERE id = ?)
                     """, arguments: [SyncableTimestamp.nowMilliseconds(), result.status == .conflict ? "修订冲突" : nil, mutation.outboxID])
                 if let canonical = result.current {
+                    if result.status == .applied || result.status == .duplicate {
+                        try SyncSnapshotRebase.pending(db: db, scope: scope, acknowledgedID: mutation.outboxID, update: canonical)
+                    }
                     if !(try SyncRowApplier.apply(db: db, scope: scope, update: canonical)) {
                         try db.execute(sql: "INSERT OR IGNORE INTO sync_inbox (scope, version, table_name, entity_id, envelope_json) VALUES (?, ?, ?, ?, ?)",
                                        arguments: [scope, canonical.version, canonical.table, canonical.id, try Self.json(canonical.envelope)])
@@ -274,7 +277,8 @@ nonisolated final class FullSyncRepository: @unchecked Sendable {
             throw CloudAPIError.syncRejected(AppLocalization.string("持久化的上传请求损坏"))
         }
         return CloudPushItem(table: table, id: id, operation: operation, updatedAtMs: timestamp, deviceID: deviceID,
-                             snapshot: snapshot, mutationID: mutationID, baseVersion: base, dataVersion: version)
+                             snapshot: snapshot, mutationID: mutationID, baseVersion: base, dataVersion: version,
+                             resolution: object["resolution"] as? String, expectedVersion: object["expectedVersion"] as? Int64)
     }
 
     private func createSafetyBackup() throws {
