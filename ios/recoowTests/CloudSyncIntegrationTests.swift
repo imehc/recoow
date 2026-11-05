@@ -14,7 +14,7 @@ final class CloudSyncIntegrationTests: XCTestCase {
     private func liveBaseURL() async throws -> String {
         let raw = ProcessInfo.processInfo.environment["RECOOW_TEST_BASE_URL"] ?? "http://127.0.0.1:8080"
         let candidate = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let probe = URL(string: candidate + "/api/schema") else {
+        guard let probe = URL(string: candidate + "/api/version") else {
             throw XCTSkip("无效的后端地址：\(candidate)")
         }
         do {
@@ -84,7 +84,10 @@ final class CloudSyncIntegrationTests: XCTestCase {
                         "updated_at": nowMs,
                         "device_id": created.deviceId,
                         "name": "联调标签",
-                    ]
+                    ],
+                    mutationID: UUID().uuidString,
+                    baseVersion: 0,
+                    dataVersion: 1
                 )
             ],
             generation: generation
@@ -114,7 +117,7 @@ final class CloudSyncIntegrationTests: XCTestCase {
             "deviceName": "联调恢复设备",
         ])
         let recoveredData = try await client.send(
-            path: "/api/account/recover", method: "POST", body: body, auth: false
+            path: "/api/account-recoveries", method: "POST", body: body, auth: false
         )
         let recovered = try JSONDecoder().decode(CloudPairResponse.self, from: recoveredData)
         XCTAssertEqual(recovered.accountId, created.accountId, "恢复密钥找回的账号不一致")

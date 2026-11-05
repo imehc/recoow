@@ -1,4 +1,5 @@
 import SwiftUI
+import RecoowAPI
 
 /// “设备管理”：查看已绑定设备、生成一次性配对码（仅主设备）、吊销设备。
 struct CloudDeviceManagementView: View {

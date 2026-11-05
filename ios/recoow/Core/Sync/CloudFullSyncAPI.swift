@@ -44,7 +44,7 @@ extension RecoowAPIClient {
             query.append(URLQueryItem(name: "watermark", value: "\(target.bootstrapWatermark)"))
             query.append(URLQueryItem(name: "after", value: "\(target.bootstrapAfter)"))
         }
-        return try await send(path: target.bootstrapComplete ? "/api/sync/pull" : "/api/sync/bootstrap",
+        return try await send(path: target.bootstrapComplete ? "/api/sync/changes" : "/api/sync/snapshots",
                               method: "GET", body: nil, auth: true, query: query)
     }
 

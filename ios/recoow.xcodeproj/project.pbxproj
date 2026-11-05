@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+ A85000000000000000000001 /* RecoowAPI in Frameworks */ = {isa = PBXBuildFile; productRef = A85000000000000000000002 /* RecoowAPI */; };
 		3ABF80402FE16600003C5066 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 3ABF80412FE16600003C5066 /* GRDB */; };
 		3ABF805A2FE90000003C5066 /* recoowWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3ABF80502FE90000003C5066 /* recoowWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		3ABF80602FEA0000003C5066 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3ABF805F2FEA0000003C5066 /* AppIntents.framework */; };
@@ -103,6 +104,7 @@
 			files = (
 				3ABF80602FEA0000003C5066 /* AppIntents.framework in Frameworks */,
 				3ABF80612FEF0000003C5066 /* Lightbox in Frameworks */,
+ A85000000000000000000001 /* RecoowAPI in Frameworks */,
 				3ABF80402FE16600003C5066 /* GRDB in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -180,6 +182,7 @@
 			packageProductDependencies = (
 				3ABF80412FE16600003C5066 /* GRDB */,
 				3ABF80622FEF0000003C5066 /* Lightbox */,
+ A85000000000000000000002 /* RecoowAPI */,
 			);
 			productName = recoow;
 			productReference = 3ABF802C2FE1551D003C5066 /* recoow.app */;
@@ -258,6 +261,7 @@
 			packageReferences = (
 				3ABF80422FE16600003C5066 /* XCRemoteSwiftPackageReference "GRDB" */,
 				3ABF80632FEF0000003C5066 /* XCRemoteSwiftPackageReference "Lightbox" */,
+ A85000000000000000000003 /* XCLocalSwiftPackageReference "RecoowAPI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3ABF802D2FE1551D003C5066 /* Products */;
@@ -307,7 +311,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -eu\nPYTHONDONTWRITEBYTECODE=1 RECOOW_SYNC_MODEL_INPUTS=\"$SRCROOT/../scripts/sync-models.xcfilelist\" /usr/bin/python3 \"$SRCROOT/../scripts/generate_sync_registry.py\" --write\n";
+			shellScript = "set -eu\nPYTHONDONTWRITEBYTECODE=1 RECOOW_SYNC_MODEL_INPUTS=\"$SRCROOT/../scripts/sync-models.xcfilelist\" \"$SRCROOT/../.venv/bin/python\" \"$SRCROOT/../scripts/generate_sync_registry.py\" --write\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -709,7 +713,12 @@
 		};
 /* End XCRemoteSwiftPackageReference section */
 
+/* Begin XCLocalSwiftPackageReference section */
+ A85000000000000000000003 /* RecoowAPI */ = {isa = XCLocalSwiftPackageReference; relativePath = "../generated/ios-api"; };
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
+ A85000000000000000000002 /* RecoowAPI */ = {isa = XCSwiftPackageProductDependency; package = A85000000000000000000003; productName = RecoowAPI; };
 		3ABF80412FE16600003C5066 /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 3ABF80422FE16600003C5066 /* XCRemoteSwiftPackageReference "GRDB" */;

@@ -1,4 +1,5 @@
 import Foundation
+import RecoowAPI
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -7,19 +8,10 @@ import UIKit
 /// 所有方法均不持有 UI；并发由 URLSession 处理。
 
 /// 账号初始化（首台设备/主设备）返回体。
-struct CloudInitResponse: Decodable, Sendable {
-    let recoveryKey: String
-    let deviceToken: String
-    let deviceId: String
-    let accountId: String
-}
+typealias CloudInitResponse = RWAPIAccountInitResponse
 
 /// 新设备用配对码加入已有账号的返回体。
-struct CloudPairResponse: Decodable, Sendable {
-    let deviceToken: String
-    let deviceId: String
-    let accountId: String
-}
+typealias CloudPairResponse = RWAPIPairResponse
 
 /// push 中每条变更的结果（服务端是否采纳 + 落库版本号）。
 nonisolated enum CloudPushStatus: String, Sendable {
@@ -49,20 +41,11 @@ nonisolated struct CloudPushResponse: Sendable {
 }
 
 /// 已绑定到账号的设备视图。
-struct CloudDevice: Decodable, Sendable {
-    let id: String
-    let name: String
-    let isOwner: Bool
-    let lastSeenAt: String
-}
+typealias CloudDevice = RWAPIDevice
 
-struct CloudDevicesResponse: Decodable, Sendable {
-    let devices: [CloudDevice]
-}
+typealias CloudDevicesResponse = RWAPIDevicesResponse
 
-struct CloudPairingCodeResponse: Decodable, Sendable {
-    let code: String
-}
+typealias CloudPairingCodeResponse = RWAPIPairingCodeResponse
 
 /// 服务端 changelog 里的一条变更（pull 增量拉取的数据来源）。
 nonisolated struct CloudChange: @unchecked Sendable {
@@ -150,7 +133,7 @@ final class RecoowAPIClient: @unchecked Sendable {
     /// 主设备初始化账号（无账号时可调用）。
     func initializeAccount() async throws -> CloudInitResponse {
         let body = try JSONSerialization.data(withJSONObject: [String: Any]())
-        let data = try await send(path: "/api/account/init", method: "POST", body: body, auth: false)
+        let data = try await send(path: "/api/accounts", method: "POST", body: body, auth: false)
         return try decode(data)
     }
 
@@ -163,7 +146,7 @@ final class RecoowAPIClient: @unchecked Sendable {
             "deviceName": deviceName ?? self.deviceName,
         ]
         let body = try JSONSerialization.data(withJSONObject: payload)
-        let data = try await send(path: "/api/account/recover", method: "POST", body: body, auth: false)
+        let data = try await send(path: "/api/account-recoveries", method: "POST", body: body, auth: false)
         return try decode(data)
     }
 
@@ -174,7 +157,7 @@ final class RecoowAPIClient: @unchecked Sendable {
             "deviceName": deviceName ?? self.deviceName,
         ]
         let body = try JSONSerialization.data(withJSONObject: payload)
-        let data = try await send(path: "/api/auth/pair", method: "POST", body: body, auth: false)
+        let data = try await send(path: "/api/device-pairings", method: "POST", body: body, auth: false)
         return try decode(data)
     }
 
@@ -185,7 +168,7 @@ final class RecoowAPIClient: @unchecked Sendable {
         guard config.isConfigured else { throw CloudAPIError.unconfigured }
         let payload: [String: Any] = ["items": items.map { Self.object(for: $0) }, "protocolVersion": 2, "generation": generation]
         let body = try JSONSerialization.data(withJSONObject: payload)
-        let data = try await send(path: "/api/sync/push", method: "POST", body: body, auth: true)
+        let data = try await send(path: "/api/sync/mutations", method: "POST", body: body, auth: true)
         return try CloudSyncResponseDecoder.push(data, items: items)
     }
 
@@ -195,7 +178,7 @@ final class RecoowAPIClient: @unchecked Sendable {
     func pull(cursor: Int64, limit: Int = 500) async throws -> CloudPullResult {
         guard config.isConfigured else { throw CloudAPIError.unconfigured }
         guard var components = URLComponents(string: baseURL()) else { throw CloudAPIError.invalidURL }
-        components.path = (components.path.isEmpty ? "" : components.path) + "/api/sync/pull"
+        components.path = (components.path.isEmpty ? "" : components.path) + "/api/sync/changes"
         components.queryItems = [
             URLQueryItem(name: "cursor", value: "\(cursor)"),
             URLQueryItem(name: "limit", value: "\(limit)"),
@@ -236,7 +219,7 @@ final class RecoowAPIClient: @unchecked Sendable {
     /// 主设备生成一次性配对码（供新设备加入）。
     func createPairingCode() async throws -> String {
         guard config.isConfigured else { throw CloudAPIError.unconfigured }
-        let data = try await send(path: "/api/devices/pairing-code", method: "POST", body: nil, auth: true)
+        let data = try await send(path: "/api/device-pairing-codes", method: "POST", body: nil, auth: true)
         return try decode(data, as: CloudPairingCodeResponse.self).code
     }
 
