@@ -50,10 +50,22 @@ class SyncProtocolTest {
     @Test fun transportRejectsCredentialUrlsPublicHttpAndFragments() {
         val factory = SyncApiFactory()
         assertEquals("https://example.com/recoow/", factory.endpoint("https://example.com/recoow"))
+        assertEquals("https://203.0.113.10/", factory.endpoint(" https://203.0.113.10 "))
         rejected { factory.endpoint("http://example.com") }
+        rejected { factory.endpoint("http://203.0.113.10") }
+        rejected { factory.endpoint("http://203.0.113.10:8080") }
         rejected { factory.endpoint("https://user:secret@example.com") }
+        rejected { factory.endpoint("https://203.0.113.10?token=secret") }
         rejected { factory.endpoint("https://example.com#fragment") }
         rejected { factory.endpoint("http://127.0.0.1") }
         assertEquals("http://10.0.2.2:8080/", SyncApiFactory(true).endpoint("http://10.0.2.2:8080"))
+    }
+    @Test fun invalidAddressesHaveTheirOwnErrorWithoutLeakingCredentials() {
+        val factory = SyncApiFactory()
+        for (value in listOf("http://example.com", "https://user:secret@example.com", "invalid-secret-address")) {
+            val error = assertThrows(SyncEndpointException::class.java) { factory.endpoint(value) }
+            assertEquals("Invalid server address", error.message)
+            assertNull(error.cause)
+        }
     }
 }

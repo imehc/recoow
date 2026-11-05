@@ -31,6 +31,7 @@
     <string name="sync_counts">Pending records: %1$d · Conflicts: %2$d · Attachments: %3$d</string>
     <string name="sync_error_auth">Credentials were rejected. Check the pairing code, recovery key or server permissions.</string>
     <string name="sync_error_contract">This server or response is incompatible. Update the client and server before retrying.</string>
+    <string name="sync_error_endpoint">Enter a full HTTPS server address without login details, query parameters or fragments.</string>
     <string name="sync_error_storage">Local data could not be read or safely backed up. Free some storage and retry.</string>
     <string name="sync_error_reset">The server dataset changed. Local edits are retained; synchronization will restart.</string>
     <string name="sync_error_account">Local records belong to another account or server. Choose whether to replace them.</string>

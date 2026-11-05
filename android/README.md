@@ -97,7 +97,7 @@ Room 2.8.5 管理数据库，kotlinx.serialization 1.10.0 保留 JSON 值的类�
 
 ## 同步
 
-Retrofit 3 与 OkHttp 5 对接仓库后端的协议 v2。正式连接要求 HTTPS；Debug 仅额外允许 `localhost`、`127.0.0.1` 和模拟器宿主地址 `10.0.2.2` 的 HTTP。禁止带凭据、查询串或片段的服务器地址，认证请求不跟随重定向。
+Retrofit 3 与 OkHttp 5 对接仓库后端的协议 v2。正式连接要求 HTTPS；Debug 仅额外允许 `localhost`、`127.0.0.1` 和模拟器宿主地址 `10.0.2.2` 的 HTTP。禁止带凭据、查询串或片段的服务器地址，认证请求不跟随重定向。地址无效单独提示，不再误报为协议不兼容。
 
 设备令牌和待确认的恢复密钥以 Android Keystore AES-GCM 加密，放在回滚目录之外。业务记录使用 `DeviceIdentity` 的本地 UUID，服务端签发的设备 ID 仅用于连接身份。
 

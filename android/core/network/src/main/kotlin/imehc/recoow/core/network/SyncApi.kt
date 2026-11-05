@@ -20,6 +20,7 @@ import retrofit2.Retrofit
 import retrofit2.http.*
 
 class SyncHttpException(val status: Int, val resetRequired: Boolean = false) : IOException("HTTP $status")
+class SyncEndpointException : IllegalArgumentException("Invalid server address")
 
 /** No ambient credentials or mutable interceptor: one API instance belongs to one connection. */
 interface SyncApi {
@@ -48,11 +49,16 @@ class SyncApiFactory(private val allowLocalHttp: Boolean = false) : SyncApiProvi
         .callTimeout(120, TimeUnit.SECONDS).build()
 
     override fun endpoint(value: String): String {
-        val url = value.trim().toHttpUrl()
-        require(url.username.isEmpty() && url.password.isEmpty() && url.query == null && url.fragment == null)
-        val local = url.host in setOf("localhost", "127.0.0.1", "10.0.2.2", "::1")
-        require(url.isHttps || allowLocalHttp && local) { "HTTPS required" }
-        return url.newBuilder().encodedPath(url.encodedPath.trimEnd('/') + "/").build().toString()
+        try {
+            val url = value.trim().toHttpUrl()
+            require(url.username.isEmpty() && url.password.isEmpty() && url.query == null && url.fragment == null)
+            val local = url.host in setOf("localhost", "127.0.0.1", "10.0.2.2", "::1")
+            require(url.isHttps || allowLocalHttp && local)
+            return url.newBuilder().encodedPath(url.encodedPath.trimEnd('/') + "/").build().toString()
+        } catch (_: IllegalArgumentException) {
+            // URL parser errors can contain credentials from the supplied address.
+            throw SyncEndpointException()
+        }
     }
 
     override fun create(endpoint: String, token: String?): SyncApi {

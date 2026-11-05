@@ -94,6 +94,7 @@ fun SyncScreen(state: SyncState, onBack: () -> Unit,
                 item("problem") {
                     SettingsBanner(
                         stringResource(when (problem) {
+                            SyncProblem.SERVER_ADDRESS -> R.string.sync_error_endpoint
                             SyncProblem.AUTHENTICATION -> R.string.sync_error_auth
                             SyncProblem.INCOMPATIBLE -> R.string.sync_error_contract
                             SyncProblem.STORAGE -> R.string.sync_error_storage
@@ -240,6 +241,7 @@ fun SyncScreen(state: SyncState, onBack: () -> Unit,
             state.problem?.let { problem ->
                 item("problem") {
                     SettingsBanner(stringResource(when (problem) {
+                        SyncProblem.SERVER_ADDRESS -> R.string.sync_error_endpoint
                         SyncProblem.AUTHENTICATION -> R.string.sync_error_auth
                         SyncProblem.INCOMPATIBLE -> R.string.sync_error_contract
                         SyncProblem.STORAGE -> R.string.sync_error_storage

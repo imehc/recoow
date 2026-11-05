@@ -295,6 +295,7 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
 
     private fun problem(error: Exception): SyncProblem = when (error) {
         is AccountReplacementRequired -> SyncProblem.ACCOUNT_REPLACEMENT
+        is SyncEndpointException -> SyncProblem.SERVER_ADDRESS
         is SyncHttpException -> when { error.resetRequired -> SyncProblem.RESET; error.status in setOf(401, 403) -> SyncProblem.AUTHENTICATION; else -> SyncProblem.CONNECTION }
         is IOException -> SyncProblem.CONNECTION
         is IllegalArgumentException -> SyncProblem.INCOMPATIBLE

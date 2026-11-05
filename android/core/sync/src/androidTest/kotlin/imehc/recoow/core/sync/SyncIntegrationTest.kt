@@ -61,6 +61,16 @@ class SyncIntegrationTest {
             SyncEngine(vault, provider, store, received, MediaTransfer(store, File(root, "transfer")), MemoryVault(), TestSyncPreferences()), store, received)
     }
     @After fun cleanup() = runBlocking { hosts.forEach { it.close() }; roots.forEach { it.deleteRecursively() }; Unit }
+    @Test fun invalidServerAddressIsReportedBeforePairingMakesAnyRequest() = runBlocking {
+        val provider = object : SyncApiProvider by SyncApiFactory() {
+            override fun create(endpoint: String, token: String?): SyncApi = error("Invalid address must not reach pairing")
+        }
+        val client = client(provider)
+        client.engine.connect("http://example.com", ConnectionMethod.PAIR, "1234567890", "Android")
+        assertEquals(SyncProblem.SERVER_ADDRESS, client.engine.state.value.problem)
+        assertNull(client.vault.load())
+        assertFalse(client.engine.state.value.running)
+    }
     private fun requireBackend() = assumeTrue("Set syncBaseUrl for the local backend", InstrumentationRegistry.getArguments().containsKey("syncBaseUrl"))
     private suspend fun create(client: Client) {
         client.engine.connect(base, ConnectionMethod.CREATE, "", "Android test")

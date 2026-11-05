@@ -49,7 +49,7 @@ class SyncWorker(context: Context, parameters: WorkerParameters) : CoroutineWork
         return try {
             if (repository.sync(manual = false)) Result.success() else {
                 when (repository.state.value.problem) {
-                    SyncProblem.AUTHENTICATION, SyncProblem.INCOMPATIBLE, SyncProblem.ACCOUNT_REPLACEMENT -> Result.failure()
+                    SyncProblem.SERVER_ADDRESS, SyncProblem.AUTHENTICATION, SyncProblem.INCOMPATIBLE, SyncProblem.ACCOUNT_REPLACEMENT -> Result.failure()
                     else -> Result.retry()
                 }
             }

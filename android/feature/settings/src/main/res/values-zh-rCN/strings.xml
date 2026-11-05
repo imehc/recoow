@@ -31,6 +31,7 @@
     <string name="sync_counts">待同步记录：%1$d · 冲突：%2$d · 附件：%3$d</string>
     <string name="sync_error_auth">凭据未通过验证，请检查配对码、恢复密钥或服务端权限。</string>
     <string name="sync_error_contract">服务端或响应不兼容，请更新客户端与服务端后重试。</string>
+    <string name="sync_error_endpoint">请填写完整的 HTTPS 服务器地址，不能包含登录信息、查询参数或片段。</string>
     <string name="sync_error_storage">无法读取本地数据或完成安全备份，请检查可用空间后重试。</string>
     <string name="sync_error_reset">服务端数据集已变化，本地修改已保留，将重新同步。</string>
     <string name="sync_error_account">本地记录属于其他账号或服务器，请选择是否替换。</string>

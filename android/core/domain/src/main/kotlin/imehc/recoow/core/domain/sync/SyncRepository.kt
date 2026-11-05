@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 enum class ConnectionMethod { CREATE, PAIR, RECOVER }
 interface DeviceIdentity { val id: String }
-enum class SyncProblem { CONNECTION, AUTHENTICATION, INCOMPATIBLE, STORAGE, RESET, ACCOUNT_REPLACEMENT, MEDIA, PENDING }
+enum class SyncProblem { SERVER_ADDRESS, CONNECTION, AUTHENTICATION, INCOMPATIBLE, STORAGE, RESET, ACCOUNT_REPLACEMENT, MEDIA, PENDING }
 data class SyncConnection(val endpoint: String, val accountId: String, val serverDeviceId: String, val canPair: Boolean = false)
 data class ConflictValue(val chineseLabel: String, val englishLabel: String, val local: String, val remote: String)
 data class RecordConflict(val table: String, val id: String, val localSnapshot: String, val remoteSnapshot: String, val remoteVersion: Long,
