@@ -59,7 +59,7 @@ struct CloudSyncSettingsView: View {
 
     private var serverSection: some View {
         Section {
-            TextField(AppLocalization.string("https:// 或 http://地址", language: language), text: $serverInput)
+            TextField(AppLocalization.string("HTTPS 服务器地址", language: language), text: $serverInput)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .keyboardType(.URL)
@@ -75,7 +75,7 @@ struct CloudSyncSettingsView: View {
         } header: {
             Text(AppLocalization.string("服务器", language: language))
         } footer: {
-            Text(AppLocalization.string("自托管后端地址，例如 http://192.168.1.10:8080", language: language))
+            Text(AppLocalization.string("请输入自托管后端的 HTTPS 地址，例如 https://example.com。", language: language))
         }
     }
 
