@@ -31,3 +31,5 @@ backend/data/
 /android/core/data/src/androidTest/kotlin/imehc/recoow/core/data/localvalidation/
 
 /.venv/
+# Private updater for the user's Huawei server.
+/scripts/update-huawei-backend.py

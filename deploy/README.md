@@ -66,29 +66,6 @@ docker compose up -d
 
 容器数据卷保存媒体。健康检查调用不带凭据的 `/api/sync/capabilities`，预期 401。运行服务与数据库应位于适当的受控网络。
 
-## SQLite → PostgreSQL
-
-该步骤只迁移后端库，移动端仍使用自身本地数据库。当前工具支持已经升级完成的多账号全量同步 SQLite 库；更旧的库先用最后一个 SQLite 后端版本完成升级。
-
-1. 使用旧版本的导出脚本或停服复制，取得包含 `recoow.db` 和 `media/` 的完整副本；保留原服务与原目录用于回滚。
-2. 创建独立目标 PostgreSQL 库，执行当前 `-migrate`。迁移工具拒绝任何非空目标数据表。
-3. 在开发或受控迁移机器安装 Python 依赖，设置指向目标库的 `RECOOW_MIGRATION_DATABASE_URL`，执行：
-
-```bash
-.venv/bin/python -m pip install -r scripts/requirements.txt
-.venv/bin/python scripts/migrate_backend_sqlite.py \
-  --source /path/to/source-copy/recoow.db \
-  --media-source /path/to/source-copy/media \
-  --media-target /path/to/new-data/media
-```
-
-媒体目标目录必须不存在。工具以只读方式打开源库，在事务中迁移账号、设备、业务状态、变更历史、幂等回执、世代及媒体索引，并核对行数、快照、版本和媒体 SHA-256。未知实体、缺失依赖或损坏媒体导致迁移失败，校验阶段写入会回滚。
-
-数据库与文件系统没有共同事务。工具在提交前安置已校验媒体；若提交时连接异常，会保留目标媒体，须检查目标数据库是否已提交后再决定重试。源文件始终保留。
-
-4. 在目标服务验证原恢复密钥、设备 token、全量快照、增量同步、媒体、余额与统计，再切换客户端地址。
-5. 真正切换并确认恢复路径后再按数据保留策略退役旧实例。工具不自动替换运行服务或删除源库。
-
 ## 整实例备份与恢复
 
 导出脚本使用 `pg_dump --format=custom`，同时复制媒体、程序与 OpenAPI；运行中的 API 会短暂停止并恢复。备份账号必须能读取全部账号数据，普通 RLS 运行账号不能代替它。执行机器需要与数据库版本兼容的 PostgreSQL 客户端工具。
@@ -100,7 +77,7 @@ bash export.sh --mode stopped --data /path/to/data --output /path/to/backup.tar.
 # Docker：sudo -E bash export.sh --mode docker --container recoow --output /path/to/backup.tar.gz
 ```
 
-导出包含 `database.dump`、`data/media/`、二进制、配置模板及校验清单。配置中的数据库连接串和 TLS 路径被清空，恢复后重新配置。归档不包含旧 SQLite 数据文件；源目录不被修改。
+导出包含 `database.dump`、`data/media/`、二进制、配置模板及校验清单。配置中的数据库连接串和 TLS 路径被清空，恢复后重新配置；源目录不被修改。
 
 恢复到新的空 PostgreSQL 库和新的媒体目录，先校验并恢复数据库：
 

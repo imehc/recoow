@@ -45,7 +45,7 @@ check-generated: check-sql
 
 # 重新生成契约后，运行脚本测试、后端测试和静态检查。
 test: generate check-generated
-	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest discover -s scripts -p 'test_*.py'
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest discover -s tests -t . -p 'test_*.py'
 	cd backend && go test ./... && go vet ./...
 
 # 打包后端可执行文件与运行时契约到 dist/。

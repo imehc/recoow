@@ -14,6 +14,8 @@ iOS、Android 与共享后端组成的个人记录应用。后端使用 PostgreS
 
 三个端独立升版，统一使用 `python3 scripts/version.py show/check/bump`。配置、构建编号及发布规则见 [VERSIONING.md](VERSIONING.md)。
 
+`scripts/` 保存构建、契约生成和版本管理工具；回归测试统一位于 `tests/`。安装 `scripts/requirements.txt` 后，可运行 `python3 -m unittest discover -s tests -t .`；Docker 整实例测试按环境变量显式启用。
+
 # 生成 iOS 模型资源
 
 ```sh

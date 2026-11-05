@@ -1,4 +1,4 @@
-"""从唯一 OpenAPI 契约读取同步实体；不依赖 iOS 模型或旧 schema 目录。"""
+"""从唯一 OpenAPI 契约读取同步实体及构建输入。"""
 import yaml
 from pathlib import Path
 

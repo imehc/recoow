@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""从共享 schema 生成 iOS 同步注册表；--patch 输出 apply_patch 输入。"""
+"""从 OpenAPI 契约生成或检查 iOS 同步注册表。"""
 import argparse
-import difflib
 import json
 from pathlib import Path
 from openapi_contract import manifests as generate_manifests, input_file_list
@@ -64,7 +63,6 @@ def render():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--patch", action="store_true")
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--write", action="store_true")
     arguments = parser.parse_args()
@@ -83,17 +81,7 @@ def main():
         if current != generated:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(generated)
-    elif arguments.patch:
-        print("*** Begin Patch")
-        if current != generated:
-            print("*** " + ("Update" if current else "Add") + " File: " + str(DESTINATION))
-            if current:
-                for line in list(difflib.unified_diff(current.splitlines(True), generated.splitlines(True)))[2:]:
-                    print("@@\n" if line.startswith("@@") else line, end="")
-            else:
-                for line in generated.splitlines():
-                    print("+" + line)
-        print("*** End Patch")
+
     else:
         print(generated, end="")
 

@@ -129,7 +129,7 @@ restore_service || die "原服务恢复失败，导出终止"
 for metadata_path in "${work_directory}/package/openapi"/._*; do
     if [ -f "$metadata_path" ]; then rm -f -- "$metadata_path"; fi
 done
-rm -f -- "$work_directory/package/data/.recoow-export.lock" "$work_directory/package/data/recoow.db" "$work_directory/package/data/recoow.db-wal" "$work_directory/package/data/recoow.db-shm"
+rm -f -- "$work_directory/package/data/.recoow-export.lock"
 printf '%s\n' \
     'RECOOW_LISTEN=0.0.0.0:8080' 'RECOOW_DATA=' 'RECOOW_OPENAPI=' \
     'RECOOW_DATABASE_URL=' 'RECOOW_MIGRATION_DATABASE_URL=' \

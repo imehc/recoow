@@ -112,17 +112,14 @@ class DeploymentTests(unittest.TestCase):
             self.assertNotIn("runtime-password", configuration)
             self.assertEqual(archive.extractfile("./build-info.json").read(), (self.bundle / "build-info.json").read_bytes())
 
-    def test_export_excludes_metadata_and_obsolete_sqlite_files(self):
-        (self.data / "._recoow.db").write_bytes(b"AppleDouble")
+    def test_export_excludes_apple_metadata(self):
+        (self.data / "media/account/._checksum").write_bytes(b"AppleDouble")
         (self.openapi / "._openapi.yaml").write_bytes(b"\x00\x05\x16\x07")
-        (self.data / "recoow.db-wal").write_bytes(b"wal-fixture")
         self.manifest()
         output = self.directory / "migration.tar.gz"
         self.export(output)
         with tarfile.open(output) as archive:
             self.assertFalse(any(Path(name).name.startswith("._") for name in archive.getnames()))
-            self.assertNotIn("./data/recoow.db-wal", archive.getnames())
-            self.assertEqual((self.data / "recoow.db-wal").read_bytes(), b"wal-fixture")
 
     def test_export_refuses_existing_output(self):
         output = self.directory / "migration.tar.gz"

@@ -45,7 +45,7 @@ func LoadOpenAPI(path string) (*Registry, error) {
 		for _, field := range model.Required {
 			required[field] = true
 		}
-		// 原清单以列声明顺序为准；契约哈希在两种入口统一排序。
+		// 契约哈希按字段名排序，避免解析映射的顺序影响兼容性。
 		for field, definition := range model.Properties {
 			column := definition.Metadata
 			column.Name = field

@@ -50,7 +50,7 @@ class GeneratedSyncTests(unittest.TestCase):
                 str(gate.IOS / "App/Settings/AppLocalization.swift"),
                 str(gate.IOS / "App/Settings/AppLanguagePreference.swift"),
                 str(gate.IOS / "App/Settings/AppPreferenceStorageKeys.swift"),
-                str(gate.ROOT / "scripts/SyncValueChecks.swift"),
+                str(gate.ROOT / "tests/fixtures/SyncValueChecks.swift"),
             ], capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
             subprocess.run([str(binary)], check=True, capture_output=True)

@@ -6,18 +6,18 @@ import (
 	"testing"
 )
 
-// TestLoadRepoSchema 用仓库真实的 OpenAPI YAML跑一遍 Load，等价于后端启动时的自检。
+// TestLoadRepoOpenAPI 用仓库真实的 OpenAPI YAML 执行启动契约检查。
 // 目录随运行位置解析：本包位于 backend/internal/schema，向上三级即仓库根。
-func TestLoadRepoSchema(t *testing.T) {
+func TestLoadRepoOpenAPI(t *testing.T) {
 	dir := filepath.Clean(filepath.Join("..", "..", "..", "openapi", "openapi.yaml"))
 	if fi, err := os.Stat(dir); err != nil || fi.IsDir() {
 		t.Fatalf("仓库 OpenAPI 不可用：%s", dir)
 	}
 	reg, err := LoadOpenAPI(dir)
 	if err != nil {
-		t.Fatalf("真实 schema 加载失败：%v", err)
+		t.Fatalf("真实 OpenAPI 加载失败：%v", err)
 	}
 	if len(reg.Tables()) == 0 {
-		t.Fatal("真实 schema 未加载到任何实体")
+		t.Fatal("真实 OpenAPI 未加载到任何实体")
 	}
 }

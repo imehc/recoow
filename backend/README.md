@@ -100,6 +100,6 @@ go run ./cmd/api -migrate   # 提前设置迁移与运行连接串
 go run ./cmd/api
 ```
 
-旧 SQLite 库使用 [`scripts/migrate_backend_sqlite.py`](../scripts/migrate_backend_sqlite.py) 迁入独立空目标库。源库与媒体副本保留，当前运行服务不再依赖 SQLite 驱动。整实例备份使用 `pg_dump` 加媒体目录；账号 SQL 导出只供本账号数据恢复，不代替包含密码身份、会话和全部账号的整实例备份。
+整实例备份使用 `pg_dump` 加媒体目录；账号 SQL 导出只供本账号数据恢复，不代替包含密码身份、会话和全部账号的整实例备份。
 
 资源 CRUD 接收完整同步快照，账单储值影响沿用同步修订规则。调用方需按契约构造账单字段；简化表单并非单独的后端接口。

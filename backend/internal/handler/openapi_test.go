@@ -7,14 +7,11 @@ import (
 	"github.com/imehc/recoow/backend/internal/domain"
 )
 
-// TestSchemaEndpointAndUnknownPush 校验字段清单下发与未知实体的宽容跳过。
-func TestSchemaEndpointAndUnknownPush(t *testing.T) {
+// TestOpenAPIEndpointAndUnknownPush 校验公共契约下发与未知实体的宽容跳过。
+func TestOpenAPIEndpointAndUnknownPush(t *testing.T) {
 	e := newEnv(t)
 	ownerToken, _ := e.initAccount(t)
 
-	if response, _ := e.request(t, http.MethodGet, "/api/schema", ownerToken, nil); response.Code != http.StatusNotFound {
-		t.Fatal("旧 schema 接口必须移除")
-	}
 	resp, data := e.request(t, http.MethodGet, "/api/openapi.yaml", "", nil)
 	if resp.Code != http.StatusOK {
 		t.Fatal("OpenAPI 文档应公开可读")

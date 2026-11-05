@@ -1,2 +1,1 @@
 PyYAML==6.0.3
-psycopg[binary]==3.2.10
