@@ -1,0 +1,27 @@
+name: Set up contract tooling
+description: Install Python contract dependencies and the pinned OpenAPI generator
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Install contract dependencies
+      shell: bash
+      run: python3 -m pip install -r scripts/requirements.txt
+    - name: Install OpenAPI generator
+      shell: bash
+      run: |
+        openapi_version=$(awk '/^OPENAPI_VERSION := / { print $3 }' Makefile)
+        test -n "$openapi_version"
+        tools_directory="$RUNNER_TEMP/recoow-contract-tools"
+        mkdir -p "$tools_directory"
+        curl --fail --location --retry 3 "https://repo.maven.apache.org/maven2/org/openapitools/openapi-generator-cli/$openapi_version/openapi-generator-cli-$openapi_version.jar" --output "$tools_directory/openapi-generator.jar"
+        cat > "$tools_directory/openapi-generator" <<'EOF'
+        #!/usr/bin/env bash
+        exec java -jar "$(dirname -- "$0")/openapi-generator.jar" "$@"
+        EOF
+        chmod +x "$tools_directory/openapi-generator"
+        test "$("$tools_directory/openapi-generator" version)" = "$openapi_version"
+        echo "$tools_directory" >> "$GITHUB_PATH"
