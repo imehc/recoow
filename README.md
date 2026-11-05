@@ -26,6 +26,27 @@ make decision-models-ios
 
 工程通过 SwiftPM 引用远程包（`GRDB.swift`、`Lightbox` 等），网络不佳或本地缓存损坏时，`xcodebuild` 解析依赖会长时间卡住甚至失败。
 
+## 已有完整缓存时跳过远程更新
+
+依赖已下载且本地版本引用完整时，GitHub 连接超时或出现 HTTP/2 错误，可以使用已有缓存解析依赖：
+
+```sh
+xcodebuild -resolvePackageDependencies \
+  -disablePackageRepositoryCache -skipPackageUpdates \
+  -project ios/recoow.xcodeproj -scheme recoow
+```
+
+`-skipPackageUpdates` 跳过已有依赖仓库的远程更新；缺失的依赖仍需下载，因此这不是离线安装参数，也不能修复损坏的缓存。若报 `no versions ... match the requirement`，先确认本地仓库是否缺少版本标签，再修复缓存。
+
+解析成功后，可使用已解析的依赖构建模拟器版本：
+
+```sh
+xcodebuild -project ios/recoow.xcodeproj -scheme recoow \
+  -destination 'generic/platform=iOS Simulator' \
+  -skipPackageUpdates -disableAutomaticPackageResolution \
+  CODE_SIGNING_ALLOWED=NO build
+```
+
 ## 强制重新解析（跳过本地缓存）
 
 ```sh
