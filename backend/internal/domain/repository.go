@@ -37,6 +37,7 @@ type Store interface {
 	Rows(accountID, table string) ([]Row, error) // 某张表的存活行（后台浏览/导出用）
 	SyncState(accountID string) (DatasetState, error)
 	Bootstrap(accountID string, request BootstrapRequest) (BootstrapPage, error)
+	ClearDataset(accountID, expectedGeneration string) (DatasetState, error)
 
 	// ---- 媒体 ----
 	PutMedia(accountID string, key, checksum, contentType string, size int64) error

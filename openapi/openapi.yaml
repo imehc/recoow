@@ -114,6 +114,32 @@ paths:
         required: true
         schema:
           type: string
+  /api/sync/dataset:
+    delete:
+      operationId: clearSyncDataset
+      summary: 主设备清空当前账号的云端备份，保留账号和设备绑定
+      description: 删除全部业务记录、媒体和同步历史，并更换数据集世代。客户端应暂停同步，避免立即重新上传本机数据。
+      tags:
+      - Sync
+      parameters:
+      - name: generation
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: 清空后的数据集状态
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dataset'
+        '401':
+          description: 凭据无效
+        '403':
+          description: 仅主设备可执行
+        '409':
+          description: 数据集世代已改变，必须刷新后重新确认
   /api/sync/capabilities:
     get:
       operationId: getSyncCapabilities

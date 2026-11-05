@@ -121,6 +121,13 @@ func TestEqualSnapshotsPreservesIntegerPrecision(test *testing.T) {
 		current   string
 		equal     bool
 	}{
+		{name: "real zero notation", candidate: `{"distance":0}`, current: `{"distance":0.0}`, equal: true},
+		{name: "real exponent notation", candidate: `{"speed":0.000001}`, current: `{"speed":1e-6}`, equal: true},
+		{name: "nested numeric values", candidate: `{"values":[1,2.50]}`, current: `{"values":[1.0,2.5e0]}`, equal: true},
+		{name: "signed zero", candidate: `{"value":-0e99999999999999999999}`, current: `{"value":0.0}`, equal: true},
+		{name: "huge equivalent exponents", candidate: `{"value":10e99999999999999999999}`, current: `{"value":1e100000000000000000000}`, equal: true},
+		{name: "huge distinct exponents", candidate: `{"value":1e99999999999999999999}`, current: `{"value":1e100000000000000000000}`, equal: false},
+		{name: "different real values", candidate: `{"distance":1.01}`, current: `{"distance":1.02}`, equal: false},
 		{
 			name: "reordered object", candidate: `{"title":"bill","amount":9007199254740993}`,
 			current: `{"amount":9007199254740993,"title":"bill"}`, equal: true,

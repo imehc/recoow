@@ -4,6 +4,9 @@ import GRDB
 /// Carry only subsequent local edits onto an acknowledged server snapshot.
 /// Prepared requests remain immutable; original edits remain in change_log.
 nonisolated enum SyncSnapshotRebase {
+    private static func localStorageFields(_ table: String) -> Set<String> {
+        table == "media_assets" ? ["storage_key", "storage_backend"] : []
+    }
     static let settlementFields: Set<String> = [
         "original_amount_cents", "discount_amount_cents", "final_amount_cents",
         "transaction_type", "category", "payment_method", "stored_value_account_id",
@@ -21,7 +24,7 @@ nonisolated enum SyncSnapshotRebase {
         let entity = try SyncEntityCatalog.entity(table)
         let ignored = Set(entity.fields.filter { $0.binary || $0.derived }.map(\.name)).union(["id", "created_at", "updated_at", "device_id", "deleted_at", "server_version", "sync_status", "stored_value_effects"])
         var fields = Set<String>()
-        for (key, value) in local where !ignored.contains(key) {
+        for (key, value) in local where !ignored.union(localStorageFields(table)).contains(key) {
             if try !equal(value, base[key]) { fields.insert(key) }
         }
         if !equalDeletion(base, local) || !equalDeletion(base, remote) { return true }
@@ -44,7 +47,7 @@ nonisolated enum SyncSnapshotRebase {
         var result = remote
         let ignored = Set(entity.fields.filter { $0.derived || $0.binary }.map(\.name)).union(["id", "created_at", "server_version", "sync_status", "stored_value_effects"])
         var changed = Set<String>()
-        for (key, value) in local where !ignored.contains(key) {
+        for (key, value) in local where !ignored.union(localStorageFields(table)).contains(key) {
             if try !equal(value, base[key]) { changed.insert(key) }
         }
         if table == "bills", !changed.isDisjoint(with: settlementFields) { changed.formUnion(settlementFields) }

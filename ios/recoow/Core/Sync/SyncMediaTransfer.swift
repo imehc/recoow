@@ -75,6 +75,7 @@ nonisolated final class SyncMediaTransfer: @unchecked Sendable {
             try MediaAssetObjectStore.shared.write(bytes, storageKey: reference.key)
             references["object"] = reference.object
             references.removeValue(forKey: "inline_data")
+            object["storage_key"] = reference.key
         }
         for field in entity.fields where field.nullable && !field.binary && object[field.name] == nil {
             // 升级前排队的素材快照没有 title，不能将缺失补为主动清空。

@@ -18,6 +18,7 @@ func mergeIgnored(table, field string) bool {
 		return true
 	}
 	return table == "bills" && field == "stored_value_effects" ||
+		table == "media_assets" && (field == "storage_key" || field == "storage_backend") ||
 		table == "stored_value_accounts" && field == "balance_cents" ||
 		table == "reminders" && slices.Contains([]string{"completion_records", "completed_date_keys"}, field)
 }

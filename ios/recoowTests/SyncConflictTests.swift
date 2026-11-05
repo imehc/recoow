@@ -6,6 +6,19 @@ import XCTest
 final class SyncConflictTests: XCTestCase {
     private func object(_ json: String) throws -> [String: Any] { try FullSyncRepository.object(json) }
 
+    func testStorageRelocationDoesNotConflictButChangedContentDoes() throws {
+        let base = try object(#"{"storage_key":"images/a.jpg","checksum":"same","title":"old"}"#)
+        let local = try object(#"{"storage_key":"sync/same","checksum":"same","title":"new"}"#)
+        let remote = try object(#"{"storage_key":"sync/path","checksum":"same","title":"old"}"#)
+        XCTAssertFalse(try SyncSnapshotRebase.conflicts(table: "media_assets", base: base, local: local, remote: remote))
+        let rebased = try SyncSnapshotRebase.snapshot(table: "media_assets", base: base, local: local, remote: remote)
+        XCTAssertEqual(rebased["storage_key"] as? String, "sync/path")
+        XCTAssertEqual(rebased["title"] as? String, "new")
+        var changed = local; changed["checksum"] = "local"
+        var cloud = remote; cloud["checksum"] = "remote"
+        XCTAssertTrue(try SyncSnapshotRebase.conflicts(table: "media_assets", base: base, local: changed, remote: cloud))
+    }
+
     func testRebaseKeepsCloudEditsAndSubsequentLocalEdits() throws {
         let first = try object(#"{"title":"device","note":"old","updated_at":10,"device_id":"ios"}"#)
         let second = try object(#"{"title":"device","note":"later","updated_at":11,"device_id":"ios"}"#)
@@ -127,5 +140,34 @@ final class SyncConflictTests: XCTestCase {
         try database.writer.write { try $0.execute(sql: "UPDATE diary_tags SET note = 'edited again'") }
         XCTAssertThrowsError(try repository.resolveConflict(scope: "scope", conflict: refreshed, keepLocal: false))
         XCTAssertEqual(try database.reader.read { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM sync_outbox WHERE status = 'conflict'") }, 1)
+    }
+
+    func testBatchResolutionRollsBackIfAnySelectedRecordChanged() throws {
+        let database = try fixture()
+        defer { try? database.close() }
+        try database.writer.write { db in
+            try db.execute(sql: "INSERT INTO diary_tags (id, created_at, updated_at, device_id, name, note, sync_status) VALUES ('tag2',1,10,'ios','second','local',0)")
+            let cloud = RemoteRowUpdate(table: "diary_tags", id: "tag2", version: 2, updatedAtMs: 1, deviceID: "android", snapshot: ["id":"tag2", "name":"old", "note":"old", "created_at":Int64(1), "updated_at":Int64(1), "device_id":"android"])
+            try db.execute(sql: "INSERT INTO sync_rows VALUES ('scope','diary_tags','tag2',2,?)", arguments: [try FullSyncRepository.json(cloud.envelope)])
+            for id in ["tag", "tag2"] {
+                let row = try XCTUnwrap(Row.fetchOne(db, sql: "SELECT * FROM diary_tags WHERE id = ?", arguments: [id]))
+                let snapshot = SyncEntityCatalog.snapshot(row: row, entity: try SyncEntityCatalog.entity("diary_tags"))
+                try FullSyncRepository.enqueue(db: db, scope: "scope", table: "diary_tags", entityID: id, operation: .update, payloadJSON: FullSyncRepository.json(snapshot), localChangeID: nil)
+            }
+            try db.execute(sql: "UPDATE sync_outbox SET status = 'conflict'")
+        }
+        let repository = FullSyncRepository(database: database)
+        let chosen = try repository.conflicts(scope: "scope")
+        XCTAssertEqual(chosen.count, 2)
+        try database.writer.write { try $0.execute(sql: "UPDATE diary_tags SET note = 'new local edit' WHERE id = 'tag2'") }
+        XCTAssertThrowsError(try repository.resolveConflicts(scope: "scope", conflicts: chosen, keepLocal: true))
+        XCTAssertEqual(try repository.conflicts(scope: "scope").count, 2)
+        XCTAssertEqual(try repository.pendingCount(scope: "scope"), 0)
+        let refreshed = try repository.conflicts(scope: "scope")
+        try repository.resolveConflicts(scope: "scope", conflicts: refreshed, keepLocal: false)
+        XCTAssertTrue(try repository.conflicts(scope: "scope").isEmpty)
+        let pending = try repository.pending(scope: "scope")
+        XCTAssertEqual(pending.count, 2)
+        XCTAssertTrue(pending.allSatisfy { $0.item.resolution == "remote" && $0.item.expectedVersion != nil })
     }
 }

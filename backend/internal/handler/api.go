@@ -27,6 +27,7 @@ type Server struct {
 	syncValidator *service.SyncValidator
 	loginAttempts loginLimiter
 	registration  sync.Mutex
+	datasetAccess sync.RWMutex
 	cfg           config.Config
 	st            domain.Store
 	auth          *service.Manager
@@ -86,6 +87,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/sync/changes", s.authRequired(http.HandlerFunc(s.handlePull)))
 	mux.Handle("GET /api/sync/capabilities", s.authRequired(http.HandlerFunc(s.handleCapabilities)))
 	mux.Handle("GET /api/sync/snapshots", s.authRequired(http.HandlerFunc(s.handleBootstrap)))
+	mux.Handle("DELETE /api/sync/dataset", s.authRequired(s.ownerOnly(http.HandlerFunc(s.handleClearDataset))))
 	mux.Handle("GET /api/exports", s.authRequired(http.HandlerFunc(s.handleExport)))
 	mux.Handle("GET /api/exports/sql", s.authRequired(http.HandlerFunc(s.handleExportSQL)))
 
@@ -106,6 +108,15 @@ func (s *Server) deviceFrom(ctx context.Context) (domain.Device, bool) {
 
 func (s *Server) authRequired(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Keep generation checks, business writes and media transfers on one side
+		// of a dataset reset, including in-flight uploads from other devices.
+		if r.Method == http.MethodDelete && r.URL.Path == "/api/sync/dataset" {
+			s.datasetAccess.Lock()
+			defer s.datasetAccess.Unlock()
+		} else {
+			s.datasetAccess.RLock()
+			defer s.datasetAccess.RUnlock()
+		}
 		token := requestToken(r)
 		if token == "" {
 			writeError(w, http.StatusUnauthorized, "missing bearer token")

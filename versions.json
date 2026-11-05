@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
   "android": {
-    "version": "0.7.0",
+    "version": "0.7.1",
     "buildBase": 6
   },
   "ios": {
-    "version": "0.2.0",
+    "version": "0.2.1",
     "buildBase": 1
   },
   "backend": {
-    "version": "0.1.0"
+    "version": "0.1.1"
   }
 }

@@ -31,6 +31,12 @@ nonisolated struct CloudCapabilities: Decodable, Sendable {
 }
 
 extension RecoowAPIClient {
+    func clearDataset(generation: String) async throws -> CloudDataset {
+        let data = try await send(path: "/api/sync/dataset", method: "DELETE", body: nil, auth: true,
+                                  query: [URLQueryItem(name: "generation", value: generation)])
+        return try JSONDecoder().decode(CloudDataset.self, from: data)
+    }
+
     func capabilities() async throws -> CloudCapabilities {
         let data = try await send(path: "/api/sync/capabilities", method: "GET", body: nil, auth: true)
         return try JSONDecoder().decode(CloudCapabilities.self, from: data)

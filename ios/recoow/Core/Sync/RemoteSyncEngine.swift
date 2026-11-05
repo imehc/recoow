@@ -94,6 +94,13 @@ final class RemoteSyncEngine: SyncEngine, @unchecked Sendable {
             let capabilities = try await client.capabilities()
             try capabilities.validate(accountID: accountID)
             guard isCurrent() else { throw CloudAPIError.syncRejected(AppLocalization.string("连接或本地数据库已改变")) }
+            if let oldScope = config.activeScope, oldScope.hasPrefix(connectionID + ":"),
+               oldScope != connectionID + ":" + capabilities.dataset.generation {
+                config.isSyncEnabled = false
+                config.lastSyncMessage = AppLocalization.string("云端备份已清空或重建，已暂停同步。重新启用会将本机数据上传至云端。")
+                progress.finish(success: false)
+                return nil
+            }
             var target = try repository.prepareTarget(connectionID: connectionID, capabilities: capabilities)
             scope = target.scope
             config.activeScope = target.scope

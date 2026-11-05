@@ -64,12 +64,17 @@ Web 登录使用独立的可过期会话，保存 token 哈希；默认 Cookie �
 | `GET /api/statistics` | 本账号基础统计 |
 | `GET /api/sync/capabilities`、`GET /api/sync/snapshots` | 同步能力、固定水位快照 |
 | `POST /api/sync/mutations`、`GET /api/sync/changes` | 修订写入、增量变化 |
+| `DELETE /api/sync/dataset?generation=<当前世代>` | 仅主设备清空本账号云端备份，返回新的世代 |
 | `GET /api/exports`、`GET /api/exports/sql` | 本账号数据、PostgreSQL SQL 导出 |
 | `PUT/GET/HEAD/DELETE /api/media/objects/{key}` | 媒体传输 |
 
 实体资源名采用连字符，例如 `diary-tags`、`stored-value-accounts`。鉴权后的账号由服务端解析，请求不能指定数据归属。
 
 版本接口返回 `version` 和 `commit`，使用 `Cache-Control: no-store` 避免部署后读到旧版本。发布版本与同步协议、数据表版本分别维护；客户端判断同步兼容性仍使用已鉴权的 `/api/sync/capabilities`。
+
+`clear_dataset` 能力表示支持清空云端备份：删除当前账号的业务记录、媒体文件、变更历史和幂等回执，保留账号、恢复密钥与设备绑定；其他账号不受影响。操作必须携带界面确认时的 `generation`，世代已变化则返回 409。清空前关闭其他设备同步，避免旧客户端重新上传；iOS 执行后暂停同步，再次启用会重新上传本机数据。此操作不清理服务器管理员保存的离线备份。
+
+素材冲突比较使用内容校验和与媒体引用，存储路径不作为业务差异；JSON 数字按精确十进制值比较，`0`、`0.0` 与等值科学计数法不会产生假冲突，大整数保留精度。
 
 列表使用 `limit=1..200`、`cursor`、`q`、`fromMs`、`toMs`，按 ID 升序分页。日期筛选优先使用实体发生时间，缺少该字段时使用服务器更新时间。统计中的记录数量按更新时间统计；账单金额按 `occurred_at` 的左闭右开区间统计，退款和墓碑排除，分别返回支出、收入和储值消费。当前提供基础统计，复杂趋势和维度聚合可在后续增加。
 

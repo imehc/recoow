@@ -6,6 +6,32 @@ import XCTest
 
 @MainActor
 final class MediaAssetTitleTests: XCTestCase {
+    func testReferencesFollowActualKeyAfterBackupImportAndReplacement() throws {
+        let fixture = try Fixture()
+        defer { fixture.cleanUp() }
+        let bytes = fixture.imageData()
+        let asset = try fixture.create(bytes)
+        let reference = ImageReference(data: nil, assetID: asset.id)
+        let key = "sync/" + asset.checksum
+        try MediaAssetObjectStore.shared.write(bytes, storageKey: key)
+        try fixture.database.writer.write { db in
+            try db.execute(sql: "UPDATE media_assets SET storage_key = ? WHERE id = ?", arguments: [key, asset.id])
+        }
+        // Remove the old ID-derived path, as on a new device importing a backup.
+        try MediaAssetObjectStore.shared.remove(storageKey: asset.storageKey)
+        XCTAssertEqual(reference.resolvedData, bytes)
+        let backupURL = try AppDataTransferService(database: fixture.database).exportBackup(sourceDeviceID: "test", preferences: AppDataTransferPreferences(languageRawValue: nil, appearanceRawValue: nil, addsPickedPhotosToMediaLibrary: false, savesCameraPhotosToLibrary: false, hiddenToolRouteIDs: []))
+        defer { try? FileManager.default.removeItem(at: backupURL) }
+        try MediaAssetObjectStore.shared.remove(storageKey: key)
+        _ = try AppDataTransferService(database: fixture.database).importBackup(from: backupURL, mode: .replaceAll, scopes: Set(AppDataImportScope.allCases))
+        XCTAssertEqual(reference.resolvedData, bytes)
+        let attachment = MediaAttachment.makeNew(ownerType: .diary, ownerID: "diary", kind: .photo, title: nil, mimeType: asset.mimeType, assetID: asset.id, deviceID: "test")
+        XCTAssertEqual(attachment.resolvedData, bytes)
+        let replacement = fixture.imageData()
+        fixture.track(replacement)
+        _ = try fixture.repository.replaceImageAsset(id: asset.id, data: replacement)
+        XCTAssertEqual(reference.resolvedData, replacement)
+    }
     func testLegacyMigrationPreservesImageAndOrdering() throws {
         let queue = try DatabaseQueue()
         try AppMigrator.makeMigrator().migrate(queue, upTo: "v35_bill_utility_account_number")

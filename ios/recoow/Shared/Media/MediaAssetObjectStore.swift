@@ -1,9 +1,16 @@
 import Foundation
+import GRDB
 
 nonisolated final class MediaAssetObjectStore: @unchecked Sendable {
     static let shared = MediaAssetObjectStore()
 
     private let fileManager: FileManager
+    private let databaseLock = NSLock()
+    private weak var database: AppDatabase?
+
+    func use(database: AppDatabase) {
+        databaseLock.withLock { self.database = database }
+    }
 
     init(fileManager: FileManager = .default) {
         self.fileManager = fileManager
@@ -21,6 +28,14 @@ nonisolated final class MediaAssetObjectStore: @unchecked Sendable {
     }
 
     func data(forAssetID assetID: String, mimeType: String = "image/jpeg") -> Data? {
+        // 文件名不由素材 ID 决定：同步、替换图片和备份恢复都可能使用内容寻址 key。
+        // 每次从当前库读取，覆盖导入后也不会继续使用旧路径或已删除素材的文件。
+        if let database = databaseLock.withLock({ database }) {
+            return try? database.reader.read { db in
+                guard let row = try Row.fetchOne(db, sql: "SELECT storage_key, inline_data FROM media_assets WHERE id = ? AND deleted_at IS NULL", arguments: [assetID]) else { return nil }
+                return data(for: row["storage_key"]) ?? (row["inline_data"] as Data?)
+            }
+        }
         if let data = data(for: Self.storageKey(for: assetID, mimeType: mimeType)) {
             return data
         }

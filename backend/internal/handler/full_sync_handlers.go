@@ -17,9 +17,28 @@ func (server *Server) handleCapabilities(writer http.ResponseWriter, request *ht
 	writeJSON(writer, http.StatusOK, map[string]any{
 		"protocolVersion": 2, "accountId": device.AccountID, "dataset": state,
 		"contracts": server.schemas.Contracts(), "schemaVersion": server.schemas.Version(),
-		"features": []string{"revision", "receipts", "bootstrap", "media", "unknown_fields", "projections", "three_way_merge", "conflict_resolution"},
+		"features": []string{"revision", "receipts", "bootstrap", "media", "unknown_fields", "projections", "three_way_merge", "conflict_resolution", "clear_dataset"},
 		"limits":   map[string]int64{"pushItems": maxPushItems, "pullEntries": maxPullEntries, "mediaBytes": maxMediaBytes},
 	})
+}
+
+func (server *Server) handleClearDataset(writer http.ResponseWriter, request *http.Request) {
+	device, _ := server.deviceFrom(request.Context())
+	generation := request.URL.Query().Get("generation")
+	if generation == "" {
+		writeError(writer, http.StatusBadRequest, "generation required")
+		return
+	}
+	state, err := server.st.ClearDataset(device.AccountID, generation)
+	if err != nil {
+		if err == domain.ErrResetRequired {
+			writeError(writer, http.StatusConflict, "reset_required")
+		} else {
+			writeError(writer, http.StatusInternalServerError, err.Error())
+		}
+		return
+	}
+	writeJSON(writer, http.StatusOK, state)
 }
 
 func (server *Server) requireDataset(writer http.ResponseWriter, accountID, generation string) (domain.DatasetState, bool) {

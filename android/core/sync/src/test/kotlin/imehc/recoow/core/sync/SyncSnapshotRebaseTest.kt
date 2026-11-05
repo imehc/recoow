@@ -7,6 +7,21 @@ import org.junit.Test
 class SyncSnapshotRebaseTest {
     private fun fields(json: String) = Json.parseToJsonElement(json).jsonObject
 
+    @Test fun numericNotationAndLocalStorageDoNotCauseConflicts() {
+        assertTrue(SyncSnapshotRebase.equal(fields("""{"value":0,"nested":[1e-6]}"""), fields("""{"value":0.0,"nested":[0.000001]}""")))
+        assertFalse(SyncSnapshotRebase.equal(JsonPrimitive(9007199254740993L), JsonPrimitive(9007199254740992L)))
+        assertFalse(SyncSnapshotRebase.equal(JsonNull, null))
+        val base = fields("""{"storage_key":"images/a.jpg","checksum":"same","title":"old"}""")
+        val local = fields("""{"storage_key":"sync/same","checksum":"same","title":"new"}""")
+        val remote = fields("""{"storage_key":"sync/other-path","checksum":"same","title":"old"}""")
+        assertFalse(SyncSnapshotRebase.conflicts("media_assets", base, local, remote))
+        val rebased = SyncSnapshotRebase.snapshot("media_assets", base, local, remote)
+        assertEquals(remote["storage_key"], rebased["storage_key"])
+        assertEquals(local["title"], rebased["title"])
+        val changed = fields("""{"storage_key":"sync/changed","checksum":"changed","title":"old"}""")
+        assertTrue(SyncSnapshotRebase.conflicts("media_assets", base, changed, fields("""{"checksum":"another"}""")))
+    }
+
     @Test fun independentQueuedEditKeepsCloudValues() {
         val base = fields("""{"title":"device","note":"old","updated_at":10,"device_id":"ios"}""")
         val next = fields("""{"title":"device","note":"later","updated_at":11,"device_id":"ios"}""")

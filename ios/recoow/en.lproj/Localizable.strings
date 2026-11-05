@@ -1151,3 +1151,42 @@
 "否" = "No";
 
 "服务端暂不支持此冲突处理方式，请先升级后端" = "Update the backend to use this conflict resolution method.";
+
+// Sync conflict details, batch resolution and server backup management
+"取消选择" = "Deselect";
+"选中记录以本地为准" = "Use Local for Selected Records";
+"选中记录以云端为准" = "Use Cloud for Selected Records";
+"已选择 %d 条" = "%d records selected";
+"批量处理同步冲突" = "Resolve Selected Conflicts";
+"确认以本地为准" = "Confirm Use Local";
+"确认以云端为准" = "Confirm Use Cloud";
+"将处理所有选中记录的争议内容。可兼容修改会保留，删除冲突按整条记录选择；确认后同步生效。" = "Resolve disputed content for all selected records. Compatible edits are kept. Deletion conflicts select the entire record; changes take effect after syncing.";
+"记录 ID" = "Record ID";
+"云端修订版本" = "Cloud Revision";
+"双方内容相同，冲突可能来自旧修订或同步元数据。" = "Both versions have the same content. The conflict may involve an old revision or sync metadata.";
+"原始快照比较" = "Compare Raw Snapshots";
+"本地快照" = "Local Snapshot";
+"云端快照" = "Cloud Snapshot";
+"媒体内容（校验和、大小与类型）" = "Media Content (Checksum, Size and Type)";
+"云端备份已清空或重建，已暂停同步。重新启用会将本机数据上传至云端。" = "Cloud data was cleared or rebuilt, so sync is paused. Enabling sync again uploads this device's data.";
+"清空服务器备份？" = "Clear Server Backup?";
+"清空服务器备份" = "Clear Server Backup";
+"将删除当前账号的全部云端记录、媒体文件和同步历史，保留本机数据与账号绑定。本机同步会暂停；请先关闭其他设备的同步，避免旧客户端重新上传。重新启用同步会重新备份本机数据。" = "Delete this account's cloud records, media files and sync history. Local data and account bindings are kept, and sync is paused on this device. Turn off sync on other devices first to prevent older clients from uploading again. Enabling sync again backs up local data.";
+"仅主设备可清空当前账号的云端数据。清空后暂停同步，重新启用会重新上传本机数据。" = "Only the primary device can clear this account's cloud data. Sync will pause; enabling it again uploads local data.";
+"清空确认无效，请刷新服务器状态" = "Invalid clear confirmation. Refresh the server state.";
+"服务器备份已清空，本机数据保留，同步已暂停。" = "Server backup cleared. Local data is kept and sync is paused.";
+
+// Sync conflict details, batch resolution and server backup management
+"修改时间" = "Modified Time";
+"删除时间" = "Deletion Time";
+"修改设备" = "Modified By Device";
+"素材存储位置" = "Media Storage Key";
+"素材存储方式" = "Media Storage Backend";
+"内容校验和" = "Content Checksum";
+"文件字节数" = "File Size in Bytes";
+"媒体格式" = "Media Format";
+"定位精度（米）" = "Accuracy (m)";
+"距离（米）" = "Distance (m)";
+"时长（秒）" = "Duration (s)";
+"平均速度（米/秒）" = "Average Speed (m/s)";
+"最高速度（米/秒）" = "Maximum Speed (m/s)";

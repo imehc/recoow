@@ -17,6 +17,9 @@ struct CloudSyncSettingsView: View {
     @State private var recoveryKeyToShow: String?
     @State private var didCopyRecoveryKey = false
     @State private var syncEnabled = false
+    @State private var isOwner = false
+    @State private var clearGeneration: String?
+    @State private var showingClearConfirmation = false
 
     private enum BusyKind: Equatable {
         case none
@@ -24,6 +27,7 @@ struct CloudSyncSettingsView: View {
         case pair
         case recover
         case sync
+        case clear
     }
 
     private var config: RecoowSyncConfig { container.cloudSyncConfig }
@@ -40,6 +44,7 @@ struct CloudSyncSettingsView: View {
             }
             syncSection
             if config.isConfigured {
+                if isOwner { clearBackupSection }
                 unbindSection
             }
         }
@@ -48,6 +53,13 @@ struct CloudSyncSettingsView: View {
         .appNavigationStyle()
         .toolbar(.hidden, for: .tabBar)
         .onAppear(perform: reload)
+        .task(id: config.connectionID) { await loadCloudManagement() }
+        .alert(AppLocalization.string("清空服务器备份？", language: language), isPresented: $showingClearConfirmation) {
+            Button(AppLocalization.string("清空服务器备份", language: language), role: .destructive) { beginClearBackup() }
+            Button(AppLocalization.string("取消", language: language), role: .cancel) {}
+        } message: {
+            Text(AppLocalization.string("将删除当前账号的全部云端记录、媒体文件和同步历史，保留本机数据与账号绑定。本机同步会暂停；请先关闭其他设备的同步，避免旧客户端重新上传。重新启用同步会重新备份本机数据。", language: language))
+        }
         .appSheet(isPresented: .isPresent($recoveryKeyToShow)) {
             if let key = recoveryKeyToShow {
                 recoveryKeySheet(key)
@@ -222,6 +234,7 @@ struct CloudSyncSettingsView: View {
             Toggle(AppLocalization.string("启用全量双向同步", language: language), isOn: $syncEnabled)
                 .disabled(!config.isConfigured || busyKind != .none)
                 .onChange(of: syncEnabled) { _, enabled in
+                    if enabled && !config.isSyncEnabled { config.activeScope = nil }
                     config.isSyncEnabled = enabled
                 }
             Button(action: beginManualSync) {
@@ -288,6 +301,22 @@ struct CloudSyncSettingsView: View {
     }
 
     @ViewBuilder
+    private var clearBackupSection: some View {
+        Section {
+            Button(role: .destructive) { showingClearConfirmation = true } label: {
+                HStack {
+                    Text(AppLocalization.string("清空服务器备份", language: language))
+                    Spacer()
+                    if busyKind == .clear { ProgressView() }
+                }
+            }
+            .disabled(clearGeneration == nil || busyKind != .none || progress.isRunning)
+        } footer: {
+            Text(AppLocalization.string("仅主设备可清空当前账号的云端数据。清空后暂停同步，重新启用会重新上传本机数据。", language: language))
+        }
+    }
+
+    @ViewBuilder
     private var unbindSection: some View {
         Section {
             Button(role: .destructive) {
@@ -307,6 +336,56 @@ struct CloudSyncSettingsView: View {
     }
 
     // MARK: - 动作
+
+    private func loadCloudManagement() async {
+        isOwner = false
+        clearGeneration = nil
+        guard config.isConfigured else { return }
+        let connection = config.connectionID
+        let client = RecoowAPIClient(config: config).frozenSession()
+        do {
+            let devices = try await client.listDevices()
+            let capabilities = try await client.capabilities()
+            try capabilities.validate(accountID: config.accountID ?? "")
+            guard config.connectionID == connection else { return }
+            isOwner = devices.first(where: { $0.id == config.deviceID })?.isOwner == true
+            if capabilities.features.contains("clear_dataset") { clearGeneration = capabilities.dataset.generation }
+        } catch { /* 连接失败不显示可执行的危险入口。 */ }
+    }
+
+    private func beginClearBackup() {
+        guard isOwner, busyKind == .none, !progress.isRunning, let generation = clearGeneration else { return }
+        busyKind = .clear
+        banner = nil
+        let connection = config.connectionID
+        let client = RecoowAPIClient(config: config).frozenSession()
+        config.isSyncEnabled = false
+        syncEnabled = false
+        container.database.beginDataImport()
+        Task {
+            defer {
+                container.database.endDataImport()
+                busyKind = .none
+            }
+            do {
+                let dataset = try await client.clearDataset(generation: generation)
+                guard config.connectionID == connection else { return }
+                guard dataset.generation != generation, dataset.head == 0 else {
+                    throw CloudAPIError.invalidResponse(AppLocalization.string("清空确认无效，请刷新服务器状态"))
+                }
+                config.activeScope = nil
+                config.syncCursor = 0
+                config.lastSyncedAt = nil
+                clearGeneration = dataset.generation
+                config.lastSyncMessage = AppLocalization.string("服务器备份已清空，本机数据保留，同步已暂停。")
+                banner = config.lastSyncMessage
+                reload()
+            } catch {
+                banner = error.localizedDescription
+                await loadCloudManagement()
+            }
+        }
+    }
 
     private func beginInitializeAccount() {
         guard busyKind == .none else { return }

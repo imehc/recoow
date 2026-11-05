@@ -40,6 +40,7 @@ final class MediaAssetRepository: @unchecked Sendable {
         self.changeLogRepository = changeLogRepository
         self.deviceIdentifier = deviceIdentifier
         self.objectStore = objectStore
+        objectStore.use(database: database)
     }
 
     // 手动序号相同时使用稳定次序，标题更新不会把素材挪到前面。

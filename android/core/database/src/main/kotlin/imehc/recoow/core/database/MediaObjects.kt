@@ -86,7 +86,12 @@ class MediaObjects(private val directory: File) {
             val ref = MediaReference.parse(it)
             require(snapshot["checksum"]?.jsonPrimitive?.content == ref.checksum && snapshot["byte_count"]?.jsonPrimitive?.long == ref.size)
         }
-        return JsonObject(snapshot.toMutableMap().apply { if (references.isNotEmpty()) put("_media", JsonObject(references)) })
+        return JsonObject(snapshot.toMutableMap().apply {
+            if (references.isNotEmpty()) put("_media", JsonObject(references))
+            if (contract.table == "media_assets") references["object"]?.takeIf { it != JsonNull }?.let {
+                put("storage_key", JsonPrimitive(MediaReference.parse(it).key))
+            }
+        })
     }
     companion object {
         fun checksum(file: File): String {

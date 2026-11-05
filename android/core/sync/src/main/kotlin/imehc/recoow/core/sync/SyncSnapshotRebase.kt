@@ -5,6 +5,18 @@ import kotlinx.serialization.json.*
 
 /** Applies only later local edits to the acknowledged snapshot; int64 values stay JSON numbers. */
 internal object SyncSnapshotRebase {
+    internal fun equal(first: JsonElement?, second: JsonElement?): Boolean = when {
+        first == null || second == null -> first == null && second == null
+        first is JsonObject && second is JsonObject -> first.keys == second.keys && first.keys.all { equal(first[it], second[it]) }
+        first is JsonArray && second is JsonArray -> first.size == second.size && first.indices.all { equal(first[it], second[it]) }
+        first is JsonPrimitive && second is JsonPrimitive && !first.isString && !second.isString -> {
+            val a = first.content.toBigDecimalOrNull()
+            val b = second.content.toBigDecimalOrNull()
+            if (a != null && b != null) a.compareTo(b) == 0 else first == second
+        }
+        else -> first == second
+    }
+    private fun storageFields(table: String) = if (table == "media_assets") setOf("storage_key", "storage_backend") else emptySet()
     private val settlement = setOf("original_amount_cents", "discount_amount_cents", "final_amount_cents",
         "transaction_type", "category", "payment_method", "stored_value_account_id", "settlement_status",
         "group_buy_valid_until", "redeemed_at", "refund_reason")
@@ -14,18 +26,18 @@ internal object SyncSnapshotRebase {
         if (deleted(base) != deleted(local) || deleted(base) != deleted(remote)) return true
         val ignored = EntityContracts.registry.entity(table).fields.filter { it.binary || it.derived }.map { it.name }.toSet() +
             setOf("id", "created_at", "updated_at", "device_id", "deleted_at", "server_version", "sync_status", "stored_value_effects")
-        val changed = local.keys.filter { it !in ignored && local[it] != base[it] }.toMutableSet()
+        val changed = local.keys.filter { it !in ignored + storageFields(table) && !equal(local[it], base[it]) }.toMutableSet()
         if (table == "bills" && changed.any { it in settlement }) {
-            if (settlement.any { remote[it] != base[it] } && settlement.any { remote[it] != local[it] }) return true
+            if (settlement.any { !equal(remote[it], base[it]) } && settlement.any { !equal(remote[it], local[it]) }) return true
             changed.removeAll(settlement)
         }
-        return changed.any { remote[it] != base[it] && local[it] != remote[it] }
+        return changed.any { !equal(remote[it], base[it]) && !equal(local[it], remote[it]) }
     }
 
     fun snapshot(table: String, base: JsonObject, local: JsonObject, remote: JsonObject): JsonObject {
         val ignored = EntityContracts.registry.entity(table).fields.filter { it.binary || it.derived }.map { it.name }.toSet() +
             setOf("id", "created_at", "server_version", "sync_status", "stored_value_effects")
-        val changed = local.keys.filter { it !in ignored && local[it] != base[it] }.toMutableSet()
+        val changed = local.keys.filter { it !in ignored + storageFields(table) && !equal(local[it], base[it]) }.toMutableSet()
         if (table == "bills" && changed.any { it in settlement }) changed.addAll(settlement)
         val result = remote.toMutableMap()
         for (field in changed) local[field]?.let { result[field] = it } ?: result.remove(field)
