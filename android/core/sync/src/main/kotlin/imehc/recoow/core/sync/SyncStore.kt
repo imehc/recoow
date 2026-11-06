@@ -99,15 +99,16 @@ class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStor
                 binary[field.name] = PhysicalRecords.binary(db.openHelper.writableDatabase, table, record.entityId, field.name)
             }
             val payload = MediaObjects(host.mediaDirectory).captureSnapshot(contract, snapshot, binary)
-            enqueue(db, scope, table, record.entityId, payload, base = 0)
+            enqueue(db, scope, table, record.entityId, payload, base = 0, seed = true)
         }
     }
 
-    private suspend fun enqueue(db: RecoowDatabase, scope: String, table: String, id: String, payload: JsonObject, base: Long): SyncOutbox {
+    private suspend fun enqueue(db: RecoowDatabase, scope: String, table: String, id: String, payload: JsonObject, base: Long, seed: Boolean = false): SyncOutbox {
         val mutation = UUID.randomUUID().toString()
         val operation = if (payload["deleted_at"] != null && payload["deleted_at"] != JsonNull) "delete" else "update"
         val version = contracts.getValue(table)
-        val local = db.records().log(LocalChange(mutationId = mutation, tableName = table, entityId = id, operation = operation,
+        // Initial inventory is not a new local edit. Zero identifies an unsent seed.
+        val local = if (seed) 0L else db.records().log(LocalChange(mutationId = mutation, tableName = table, entityId = id, operation = operation,
             dataVersion = version, payloadJson = payload.toString(), changedAt = payload.integer("updated_at")))
         val row = SyncOutbox(scope, mutation, table, id, operation, version, payload.toString(), base, local)
         db.records().enqueue(row)
@@ -119,6 +120,47 @@ class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStor
         action(db)
     }
     suspend fun target(session: SyncSession) = access(session) { requireNotNull(it.records().target(session.scope)) }
+
+    suspend fun manifestSeeds(session: SyncSession, entries: List<JsonObject>): Map<Long, Pair<SyncOutbox, JsonObject>> = access(session) { db ->
+        buildMap {
+            for (entry in entries) {
+                if (entry.flag("deleted")) continue
+                val table = entry.text("table"); val id = entry.text("id")
+                val contract = EntityContracts.registry.entity(table)
+                if (entry.integer("dataVersion") != contract.version.toLong()) continue
+                val row = db.records().manifestSeed(session.scope, table, id) ?: continue
+                val snapshot = runCatching { manifestSnapshot(row) }.getOrNull() ?: continue
+                val digest = runCatching { SyncSnapshotDigest.digest(snapshot) }.getOrNull() ?: continue
+                if (digest == entry.getValue("digest").jsonPrimitive.content) put(entry.integer("version"), row to snapshot)
+            }
+        }
+    }
+
+    // Runs in the same transaction as inbox insertion and bootstrap progress.
+    suspend fun matchManifestSeeds(db: RecoowDatabase, scope: String, page: JsonObject) {
+        check(db.inTransaction())
+        val entries = page.getValue("entries").jsonArray.map { it.jsonObject }.associateBy { it.integer("version") }
+        for ((versionText, rawMutation) in page["matchedSeeds"]?.jsonObject.orEmpty()) {
+            val entry = requireNotNull(entries[versionText.toLong()])
+            val canonical = SyncProtocol.row(entry)
+            require(canonical["deletedAtMs"] == JsonNull)
+            val row = db.records().mutation(scope, rawMutation.jsonPrimitive.content) ?: continue
+            if (row.status != "pending" || row.preparedJson != null || row.baseVersion != 0L || row.localChangeId != 0L) continue
+            require(row.tableName == canonical.text("table") && row.entityId == canonical.text("id"))
+            val local = manifestSnapshot(row)
+            if (SyncSnapshotDigest.digest(local) != SyncSnapshotDigest.digest(canonical.getValue("snapshot").jsonObject)) continue
+            db.records().put(row.copy(status = "matched", serverVersion = canonical.integer("version"), lastError = null))
+            rebasePending(db, scope, row, canonical)
+        }
+    }
+
+    private fun manifestSnapshot(row: SyncOutbox): JsonObject {
+        val contract = EntityContracts.registry.entity(row.tableName)
+        val raw = Json.parseToJsonElement(row.payloadJson).jsonObject
+        val normalized = contract.normalize(raw,row.dataVersion)
+        val derived = contract.fields.filter { it.derived }.map { it.name }.toSet()
+        return JsonObject(normalized + raw.filterKeys { it in derived })
+    }
 
     suspend fun pending(session: SyncSession, limit: Int): List<PreparedMutation> = access(session) { db -> db.withTransaction {
         val dao = db.records(); val rows = dao.outbox(session.scope)
@@ -135,7 +177,7 @@ class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStor
                     if (key !in known && key !in payload) payload[key] = value
                 }
                 val prior = row.predecessorId?.let { dao.mutation(session.scope, it) }
-                val base = if (prior?.status in setOf("applied", "duplicate")) requireNotNull(prior?.serverVersion) else row.baseVersion
+                val base = if (prior?.status in setOf("applied", "duplicate", "matched")) requireNotNull(prior?.serverVersion) else row.baseVersion
                 val normalized = EntityContracts.registry.entity(row.tableName).normalize(JsonObject(payload), row.dataVersion)
                 buildJsonObject {
                     put("table", row.tableName); put("id", row.entityId); put("operation", row.operation)

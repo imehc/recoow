@@ -24,8 +24,10 @@ class MediaTransfer(private val store: SyncStore, private val temporaryDirectory
                         if (objects.available(ref)) { objects.file(ref).copyTo(temporary, overwrite = true); true } else false
                     }
                     if (local) {
-                        val response = decodeObject(api.upload(ref.key, ref.checksum, ref.contentType, temporary))
-                        require(MediaReference.parse(response) == ref) { "Invalid media receipt" }
+                        if (!api.mediaExists(ref.key, ref.checksum, ref.size)) {
+                            val response = decodeObject(api.upload(ref.key, ref.checksum, ref.contentType, temporary))
+                            require(MediaReference.parse(response) == ref) { "Invalid media receipt" }
+                        }
                     } else {
                         // An untouched remote reference may be queued before its download finishes.
                         api.download(ref.key, temporary, ref.size)

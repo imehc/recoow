@@ -72,6 +72,44 @@ class SyncIntegrationTest {
         assertFalse(client.engine.state.value.running)
     }
     private fun requireBackend() = assumeTrue("Set syncBaseUrl for the local backend", InstrumentationRegistry.getArguments().containsKey("syncBaseUrl"))
+    @Test fun manifestMatchAtomicallyEstablishesBaselineAndRetainsNewEdits() = runBlocking {
+        val client = client()
+        client.records.save(listOf(RecordChange("diary_tags","same","""{"name":"one","note":null}""",timestamp,client.vault.localDeviceId)))
+        val credentials = Credentials("test-connection","http://127.0.0.1/","account","server-device","token",null,true)
+        client.vault.save(credentials)
+        val caps = Capabilities("account","generation",1,0,1000,500,200L*1024*1024,true)
+        val session = client.store.prepare(credentials,caps)
+        val seed = client.store.access(session) { requireNotNull(it.records().manifestSeed(session.scope,"diary_tags","same")) }
+        val local = EntityContracts.registry.entity("diary_tags").normalize(Json.parseToJsonElement(seed.payloadJson).jsonObject,seed.dataVersion)
+        val entry = buildJsonObject {
+            put("table","diary_tags");put("id","same");put("version",1);put("updatedAtMs",timestamp+1);put("deviceId","remote")
+            put("operation","update");put("deleted",false);put("dataVersion",1);put("digest",SyncSnapshotDigest.digest(local))
+            put("metadata",buildJsonObject {put("updated_at",timestamp+1);put("device_id","remote")})
+        }
+        val manifest = buildJsonObject {
+            put("generation","generation");put("watermark",1);put("cursor",1);put("more",false);put("digestVersion",1)
+            put("entries",JsonArray(listOf(entry)))
+        }
+        val seeds = client.store.manifestSeeds(session,listOf(entry))
+        assertEquals(1,seeds.size)
+        // A subsequent edit occurs after the original inventory snapshot was compared.
+        client.records.save(listOf(RecordChange("diary_tags","same","""{"name":"later","note":null}""",timestamp+2,client.vault.localDeviceId)))
+        val hydrated = SyncManifest.hydrate(manifest,listOf(entry),seeds.mapValues {it.value.second},seeds.mapValues {it.value.first.mutationId},null)
+        val bytes = hydrated.toString().encodeToByteArray()
+        val page = SyncProtocol.page(hydrated,"generation",0,1)
+        client.received.receivePage(session.scope,session.databaseToken,"manifest-test",bytes,page.entries.map {it.toString()},1,1,true,
+            beforeReceive={db->client.store.matchManifestSeeds(db,session.scope,hydrated)})
+        client.received.applyPending(session.scope,session.databaseToken)
+        val pending = client.store.pending(session,40)
+        assertEquals(1,pending.size)
+        assertEquals("later",pending.single().request.getValue("snapshot").jsonObject.text("name"))
+        assertEquals(1L,pending.single().request.integer("baseVersion"))
+        assertEquals(1L,client.store.target(session).appliedCursor)
+        // Replaying a committed page does not run matching twice or alter the queued edit.
+        client.received.receivePage(session.scope,session.databaseToken,"manifest-test",bytes,page.entries.map {it.toString()},1,1,true,
+            beforeReceive={error("Committed page must not run its transaction again")})
+        assertEquals(1,client.store.pending(session,40).size)
+    }
     private suspend fun create(client: Client) {
         client.engine.connect(base, ConnectionMethod.CREATE, "", "Android test")
         assertNull(client.engine.state.value.problem); assertNotNull(client.vault.load())

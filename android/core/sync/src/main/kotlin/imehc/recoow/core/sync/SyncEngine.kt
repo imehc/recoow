@@ -250,7 +250,20 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
             val prefix = if (target.bootstrapComplete) "pull:${target.receivedCursor}:" else "bootstrap:${target.bootstrapAfter}:"
             val previous = store.access(session) { db -> db.records().unreceivedPages(session.scope).firstOrNull { it.pageKey.startsWith(prefix) } }
             val key = previous?.pageKey ?: prefix + UUID.randomUUID()
-            val bytes = previous?.body ?: api.get(if (target.bootstrapComplete) "api/sync/changes" else "api/sync/snapshots", query(target, caps.pullLimit))
+            val bytes = previous?.body ?: if (!target.bootstrapComplete && caps.manifestBootstrap) {
+                val manifestBytes = api.get("api/sync/manifests", query(target, caps.pullLimit))
+                received.persistRaw(session.scope, session.databaseToken, "manifest:${target.bootstrapAfter}:$key", manifestBytes)
+                val manifest = decodeObject(manifestBytes)
+                val entries = SyncManifest.entries(manifest, target.generation, target.bootstrapWatermark, target.bootstrapAfter)
+                val seeds = store.manifestSeeds(session, entries)
+                val versions = entries.map { it.integer("version") }.filter { it !in seeds }
+                val snapshots = if (versions.isEmpty()) null else decodeObject(api.post("api/sync/snapshot-queries", buildJsonObject {
+                    put("generation", target.generation); put("watermark", target.bootstrapWatermark)
+                    put("versions", JsonArray(versions.map(::JsonPrimitive)))
+                }))
+                SyncManifest.hydrate(manifest, entries, seeds.mapValues { it.value.second },
+                    seeds.mapValues { it.value.first.mutationId }, snapshots).toString().encodeToByteArray()
+            } else api.get(if (target.bootstrapComplete) "api/sync/changes" else "api/sync/snapshots", query(target, caps.pullLimit))
             // Store bytes before decoding JSON, row contracts, or cursors.
             store.access(session) { }
             received.persistRaw(session.scope, session.databaseToken, key, bytes)
@@ -260,11 +273,15 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
             val cursor = if (target.bootstrapComplete || !page.more) page.cursor else target.receivedCursor
             received.receivePage(session.scope, session.databaseToken, key, bytes, page.entries.map { it.toString() },
                 if (!target.bootstrapComplete && !page.more) target.bootstrapWatermark else maxOf(cursor, page.entries.lastOrNull()?.integer("version") ?: cursor),
-                if (target.bootstrapComplete) null else page.cursor, !target.bootstrapComplete && !page.more)
+                if (target.bootstrapComplete) null else page.cursor, !target.bootstrapComplete && !page.more,
+                beforeReceive = { db -> if (!target.bootstrapComplete) store.matchManifestSeeds(db, session.scope, decodeObject(bytes)) })
             mutableState.update { it.copy(stage = SyncStage.APPLYING) }
             received.applyPending(session.scope, session.databaseToken)
             mutableState.update { it.copy(stage = SyncStage.DOWNLOADING) }
-            store.access(session) { it.records().removeReceivedPage(session.scope, key) }
+            store.access(session) { db ->
+                db.records().removeReceivedPage(session.scope, key)
+                db.openHelper.writableDatabase.execSQL("DELETE FROM sync_received_pages WHERE scope = ? AND pageKey LIKE ?", arrayOf(session.scope, "manifest:${target.bootstrapAfter}:%"))
+            }
             if (!page.more) return
         }
         throw IOException("Sync page budget reached; resume in next job")

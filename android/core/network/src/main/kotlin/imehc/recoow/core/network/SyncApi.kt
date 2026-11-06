@@ -28,10 +28,12 @@ interface SyncApi {
     suspend fun delete(path: String): ByteArray
     suspend fun post(path: String, body: JsonObject): ByteArray
     suspend fun upload(key: String, checksum: String, type: String, file: File): ByteArray
+    suspend fun mediaExists(key: String, checksum: String, size: Long): Boolean = false
     suspend fun download(key: String, file: File, limit: Long)
 }
 
 internal interface RetrofitEndpoints {
+    @HEAD suspend fun head(@Url path: String): Response<Unit>
     @GET @Streaming suspend fun get(@Url path: String, @QueryMap query: Map<String, String>): Response<ResponseBody>
     @DELETE @Streaming suspend fun delete(@Url path: String): Response<ResponseBody>
     @POST @Streaming suspend fun post(@Url path: String, @Body body: RequestBody): Response<ResponseBody>
@@ -77,6 +79,13 @@ class SyncApiFactory(private val allowLocalHttp: Boolean = false) : SyncApiProvi
             override suspend fun post(path: String, body: JsonObject) = read(retrofit.post(path, body.toString().toRequestBody("application/json".toMediaType())))
             override suspend fun upload(key: String, checksum: String, type: String, file: File) =
                 read(retrofit.put("api/media/objects/$key", mapOf("checksum" to checksum, "contentType" to type), file.asRequestBody(type.toMediaType())))
+            override suspend fun mediaExists(key: String, checksum: String, size: Long): Boolean {
+                val response = retrofit.head("api/media/objects/$key")
+                if (response.code() == 404) { response.errorBody()?.close(); return false }
+                if (!response.isSuccessful) failure(response)
+                require(response.headers()["ETag"] == "\"$checksum\"" && response.headers()["Content-Length"]?.toLongOrNull() == size) { "Invalid media identity" }
+                return true
+            }
             override suspend fun download(key: String, file: File, limit: Long) {
                 val body = checked(retrofit.get("api/media/objects/$key", emptyMap()))
                 withContext(Dispatchers.IO) {
@@ -121,6 +130,10 @@ class SyncApiFactory(private val allowLocalHttp: Boolean = false) : SyncApiProvi
 
     private fun checked(response: Response<ResponseBody>): ResponseBody {
         if (response.isSuccessful) return requireNotNull(response.body())
+        failure(response)
+    }
+
+    private fun failure(response: Response<*>): Nothing {
         // Never surface response bodies (which may contain credentials or user records) to logs/UI.
         val error = response.errorBody()?.use { it.byteStream().readBytesLimited(4096).decodeToString() }
         throw SyncHttpException(response.code(), response.code() == 409 && error?.contains("reset_required") == true)

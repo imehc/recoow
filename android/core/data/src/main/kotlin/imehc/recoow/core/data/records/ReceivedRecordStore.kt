@@ -42,7 +42,8 @@ class ReceivedRecordStore(private val host: DatabaseHost, private val zone: () -
     }
 
     suspend fun receivePage(scope: String, session: Long, key: String, body: ByteArray, envelopes: List<String>, nextCursor: Long,
-        bootstrapAfter: Long? = null, bootstrapComplete: Boolean = false) =
+        bootstrapAfter: Long? = null, bootstrapComplete: Boolean = false,
+        beforeReceive: suspend (RecoowDatabase) -> Unit = {}) =
         host.access(session) { db ->
             val target = activeTarget(db, scope)
             val hash = MessageDigest.getInstance("SHA-256").digest(body).joinToString("") { "%02x".format(it) }
@@ -53,6 +54,7 @@ class ReceivedRecordStore(private val host: DatabaseHost, private val zone: () -
             } else db.records().receive(SyncReceivedPage(scope, key, body, hash))
             // Raw bytes survive even if envelope parsing/validation fails below.
             db.withTransaction {
+            beforeReceive(db)
             require(nextCursor >= target.receivedCursor)
             for (raw in envelopes) {
                 val envelope = Json.parseToJsonElement(raw).jsonObject

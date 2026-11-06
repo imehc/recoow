@@ -15,7 +15,7 @@ fun JsonObject.flag(key: String): Boolean = getValue(key).jsonPrimitive.let {
 fun decodeObject(bytes: ByteArray): JsonObject = Json.parseToJsonElement(bytes.decodeToString(throwOnInvalidSequence = true)).jsonObject
 
 data class Capabilities(val account: String, val generation: String, val head: Long, val minCursor: Long,
-    val pushLimit: Int, val pullLimit: Int, val mediaLimit: Long) {
+    val pushLimit: Int, val pullLimit: Int, val mediaLimit: Long, val manifestBootstrap: Boolean = false) {
     companion object {
         fun decode(raw: JsonObject, account: String, contracts: Map<String, Int>): Capabilities {
             require(raw.integer("protocolVersion") == 2L && raw.text("accountId") == account)
@@ -29,7 +29,8 @@ data class Capabilities(val account: String, val generation: String, val head: L
             val limits = raw.getValue("limits").jsonObject
             val push = limits.integer("pushItems"); val pull = limits.integer("pullEntries"); val media = limits.integer("mediaBytes")
             require(push in 1..1000 && pull in 1..2000 && media in 1..200L * 1024 * 1024)
-            return Capabilities(account, dataset.text("generation"), head, min, push.toInt(), pull.toInt(), media)
+            return Capabilities(account, dataset.text("generation"), head, min, push.toInt(), pull.toInt(), media,
+                "manifest_bootstrap_v1" in features)
         }
     }
 }
