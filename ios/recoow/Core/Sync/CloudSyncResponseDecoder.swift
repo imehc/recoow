@@ -91,6 +91,7 @@ nonisolated enum CloudSyncResponseDecoder {
     }
 
     static func row(from object: [String: Any]) throws -> RemoteRowUpdate {
+        let object = try APIFields.object(object)
         let table = try string("table", in: object)
         let id = try string("id", in: object)
         let version = try integer("version", in: object)
@@ -135,7 +136,7 @@ nonisolated enum CloudSyncResponseDecoder {
         guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw CloudAPIError.invalidResponse(AppLocalization.string("响应不是 JSON 对象"))
         }
-        return object
+        return try APIFields.object(object)
     }
 
     private static func string(_ field: String, in object: [String: Any]) throws -> String {

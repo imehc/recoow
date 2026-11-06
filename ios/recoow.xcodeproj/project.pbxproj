@@ -308,6 +308,7 @@
 			name = "Generate Sync Contracts";
 			outputPaths = (
 				"$(SRCROOT)/recoow/Core/Sync/SyncEntityCatalog.generated.swift",
+				"$(SRCROOT)/recoow/Core/Sync/APIFieldNames.generated.swift",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;

@@ -244,7 +244,7 @@ final class RecoowAPIClient: @unchecked Sendable {
             throw CloudAPIError.invalidURL
         }
         components.path = (components.path.isEmpty ? "" : components.path) + path
-        components.queryItems = query.isEmpty ? nil : query
+        components.queryItems = query.isEmpty ? nil : query.map { URLQueryItem(name: APIFields.name($0.name), value: $0.value) }
         guard let url = components.url else { throw CloudAPIError.invalidURL }
 
         var request = URLRequest(url: url)
@@ -256,7 +256,7 @@ final class RecoowAPIClient: @unchecked Sendable {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         if let body {
-            request.httpBody = body
+            request.httpBody = contentType == "application/json" && !path.hasPrefix("/api/media/objects/") ? try APIFields.data(body, legacy: false) : body
         }
 
         do {
@@ -269,6 +269,10 @@ final class RecoowAPIClient: @unchecked Sendable {
                 throw CloudAPIError.badStatus(http.statusCode, message)
             }
             try validateResponse?(http)
+            if !data.isEmpty, !(method == "GET" && path.hasPrefix("/api/media/objects/")),
+               http.value(forHTTPHeaderField: "Content-Type")?.hasPrefix("application/json") == true {
+                return try APIFields.data(data, legacy: true)
+            }
             return data
         } catch let error as CloudAPIError {
             throw error
@@ -291,6 +295,7 @@ final class RecoowAPIClient: @unchecked Sendable {
             request.setValue(environment[key], forHTTPHeaderField: header)
         }
         request.setValue(localDeviceID, forHTTPHeaderField: "X-Recoow-Device-Id")
+        request.setValue("snake_case", forHTTPHeaderField: "X-Recoow-Field-Case")
     }
 
     private func baseURL() -> String {
@@ -302,11 +307,11 @@ final class RecoowAPIClient: @unchecked Sendable {
     }
 
     private func decode<T: Decodable>(_ data: Data) throws -> T {
-        try JSONDecoder().decode(T.self, from: data)
+        try JSONDecoder().decode(T.self, from: APIFields.data(data, legacy: false))
     }
 
     private func decode<T: Decodable>(_ data: Data, as type: T.Type) throws -> T {
-        try JSONDecoder().decode(type, from: data)
+        try JSONDecoder().decode(type, from: APIFields.data(data, legacy: false))
     }
 
     nonisolated static func object(for item: CloudPushItem) -> [String: Any] {
