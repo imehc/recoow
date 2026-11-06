@@ -7,12 +7,18 @@
 需要 Node.js 22.12 或更新版本、pnpm，以及仓库公共契约工具：Java 17、Make、OpenAPI Generator（版本见根 Makefile）和安装了 `scripts/requirements.txt` 的 Python。生成脚本优先使用根 `.venv`，也可通过 `PYTHON` 指定解释器。
 
 ```sh
+cd web
 pnpm install
 pnpm generate
-RECOOW_API_URL=http://127.0.0.1:8080 pnpm dev
+cp .env.example .env.local
+pnpm dev
 ```
 
-`RECOOW_API_URL` 只用于开发与预览代理。浏览器始终访问同源 `/api`。本机 HTTP 联调时，后端需要 `RECOOW_ALLOW_INSECURE_COOKIES=1`；生产使用 HTTPS 和默认安全 Cookie。
+前端不会自动启动 Go API。另开终端，在仓库根目录运行 `bash backend/dev.sh`，需要 Go 和 Docker，具体数据保存位置见 [后端开发说明](../backend/README.md#配置与运行)。开发库需要单独注册或绑定密码账号；线上账号不会自动出现在本机。
+
+`RECOOW_API_URL` 只用于开发与预览代理，支持 `.env.local`，终端环境变量优先；修改后重启 `pnpm dev`。浏览器始终访问同源 `/api`。本机 HTTP 联调时，后端需要 `RECOOW_ALLOW_INSECURE_COOKIES=1`，开发脚本已设置；生产使用 HTTPS 和默认安全 Cookie。
+
+若 `/api/users/me` 返回 **502**，先检查后端是否运行、代理目标是否正确；默认目标为 `http://127.0.0.1:8080`。正常未登录返回 **401**，随后显示登录页。
 
 ## 维护命令
 
