@@ -149,6 +149,10 @@ func TestConflictResolutionPreservesCompatibleEdits(t *testing.T) {
 				pushRevision(t, store, account, item, domain.PushConflict)
 				item.MutationID, item.Resolution, item.ExpectedVersion = "resolve", choice, &remote.Version
 				resolved := pushRevision(t, store, account, item, domain.PushApplied)
+				detail, err := store.ChangeEvent(account, resolved.Events[0].EventID)
+				if err != nil || detail.Event.Method != "manual_resolution" || detail.Before.Version != remote.Version {
+					t.Fatal("history lost actual pre-resolution cloud state")
+				}
 				want := "device"
 				if choice == "remote" {
 					want = "cloud"

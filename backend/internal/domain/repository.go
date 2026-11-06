@@ -33,6 +33,9 @@ type Store interface {
 
 	// ---- 同步 ----
 	Push(accountID string, items []PushItem) ([]PushResult, error)
+	PushWithContext(accountID string, items []PushItem, context PushContext) ([]PushResult, error)
+	ChangeEvents(accountID string, query ChangeEventQuery) (ChangeEventPage, error)
+	ChangeEvent(accountID, eventID string) (ChangeEventDetail, error)
 	Pull(accountID string, cursor int64, limit int) ([]Change, int64, error)
 	Rows(accountID, table string) ([]Row, error) // 某张表的存活行（后台浏览/导出用）
 	SyncState(accountID string) (DatasetState, error)

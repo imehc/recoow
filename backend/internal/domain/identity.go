@@ -17,7 +17,15 @@ type Session struct {
 	// 会话创建时再次核对已验证的密码版本，防止密码变更后旧登录仍签发会话。
 	PasswordHash string
 	ExpiresAt    time.Time
+	Access       SessionAccess
 }
+
+type SessionAccess string
+
+const (
+	SessionReadOnly  SessionAccess = "read_only"
+	SessionReadWrite SessionAccess = "read_write"
+)
 
 type IdentityStore interface {
 	BindUser(accountID, username, passwordHash string) (User, error)

@@ -93,6 +93,7 @@ type PushItem struct {
 	References      []RowReference  `json:"-"`
 	RequestHash     string          `json:"-"`
 	DefaultedFields []string        `json:"-"`
+	Origin          *ChangeOrigin   `json:"origin,omitempty"`
 	Table           string          `json:"table"`
 	ID              string          `json:"id"`
 	Operation       Operation       `json:"operation"`
@@ -116,15 +117,16 @@ const (
 
 // PushResult 描述一条 push 条目的处理结果。
 type PushResult struct {
-	MutationID string     `json:"mutationId,omitempty"`
-	Replayed   bool       `json:"replayed,omitempty"`
-	Table      string     `json:"table"`
-	ID         string     `json:"id"`
-	Applied    bool       `json:"applied"`
-	Operation  Operation  `json:"operation"`
-	Version    int64      `json:"version"` // 该行最新的 changelog 版本号
-	Status     PushStatus `json:"status"`
-	Current    *Row       `json:"current,omitempty"`
+	MutationID string           `json:"mutationId,omitempty"`
+	Replayed   bool             `json:"replayed,omitempty"`
+	Table      string           `json:"table"`
+	ID         string           `json:"id"`
+	Applied    bool             `json:"applied"`
+	Operation  Operation        `json:"operation"`
+	Version    int64            `json:"version"` // 该行最新的 changelog 版本号
+	Status     PushStatus       `json:"status"`
+	Current    *Row             `json:"current,omitempty"`
+	Events     []ChangeEventRef `json:"events,omitempty"`
 }
 
 // Change 是账号级 changelog 中的一条记录（也是 pull 的数据来源）。

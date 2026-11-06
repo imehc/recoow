@@ -31,9 +31,9 @@ func (q *Queries) CleanupExpiredSessions(ctx context.Context, arg CleanupExpired
 }
 
 const createSession = `-- name: CreateSession :execrows
-INSERT INTO sessions (id, user_id, device_id, token_hash, expires_at)
-SELECT $1::text, users.id, $2::text, $3::text, $4::timestamptz
-FROM users WHERE users.id = $5 AND users.password_hash = $6 AND NOT users.disabled
+INSERT INTO sessions (id, user_id, device_id, token_hash, expires_at, access)
+SELECT $1::text, users.id, $2::text, $3::text, $4::timestamptz, $5::text
+FROM users WHERE users.id = $6 AND users.password_hash = $7 AND NOT users.disabled
 FOR SHARE
 `
 
@@ -42,6 +42,7 @@ type CreateSessionParams struct {
 	DeviceID     string
 	TokenHash    string
 	ExpiresAt    time.Time
+	Access       string
 	UserID       string
 	PasswordHash string
 }
@@ -53,6 +54,7 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (i
 		arg.DeviceID,
 		arg.TokenHash,
 		arg.ExpiresAt,
+		arg.Access,
 		arg.UserID,
 		arg.PasswordHash,
 	)
@@ -113,7 +115,7 @@ func (q *Queries) RevokeUserSessions(ctx context.Context, userID string) error {
 }
 
 const sessionByToken = `-- name: SessionByToken :one
-SELECT sessions.id, sessions.user_id, sessions.device_id, sessions.token_hash, sessions.expires_at
+SELECT sessions.id, sessions.user_id, sessions.device_id, sessions.token_hash, sessions.expires_at, sessions.access
 FROM sessions JOIN users ON users.id = sessions.user_id
 WHERE sessions.token_hash = $1 AND sessions.expires_at > now() AND NOT users.disabled
 `
@@ -127,6 +129,7 @@ func (q *Queries) SessionByToken(ctx context.Context, tokenHash string) (Session
 		&i.DeviceID,
 		&i.TokenHash,
 		&i.ExpiresAt,
+		&i.Access,
 	)
 	return i, err
 }

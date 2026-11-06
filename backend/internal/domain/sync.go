@@ -67,6 +67,7 @@ type RevisionTransaction interface {
 	ReadRow(table, id string) (Row, bool, error)
 	ReadRevision(table, id string, version int64) (Row, bool, error)
 	WriteRow(item PushItem) (Row, error)
+	WriteChangeEvent(event ChangeEvent) (ChangeEvent, error)
 	ReadReceipt(id string) (MutationReceipt, bool, error)
 	WriteReceipt(receipt MutationReceipt) error
 	AllRows(table string, includeDeleted bool) ([]Row, error)

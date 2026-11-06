@@ -26,6 +26,88 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BackendVersion'
+  /api/change-events:
+    get:
+      operationId: listChangeEvents
+      summary: 查看已提交到云端的业务变更
+      tags: [History]
+      security:
+      - deviceToken: []
+      - sessionToken: []
+      - sessionCookie: []
+      parameters:
+      - name: cursor
+        in: query
+        schema: {type: string}
+        description: 账号、数据集世代、查询版本与筛选条件绑定的分页游标，后续页保留原筛选条件。
+      - name: generation
+        in: query
+        schema: {type: string}
+      - name: limit
+        in: query
+        schema: {type: integer, minimum: 1, maximum: 200, default: 50}
+      - name: table
+        in: query
+        schema: {type: string}
+      - name: id
+        in: query
+        schema: {type: string, maxLength: 200}
+        description: 记录 ID，必须与 table 一起提供。
+      - name: operation
+        in: query
+        schema: {$ref: '#/components/schemas/HistoryOperation'}
+      - name: client
+        in: query
+        schema: {$ref: '#/components/schemas/ClientType'}
+        description: 原始修改平台，不是本次提交平台。
+      - name: deviceId
+        in: query
+        schema: {type: string, maxLength: 200}
+        description: 本次鉴权提交设备的服务端 ID。
+      - name: fromMs
+        in: query
+        schema: {type: integer, format: int64, minimum: 0}
+        description: 服务端接受时间的包含下界；缺少该时间的旧历史不匹配时间筛选。
+      - name: toMs
+        in: query
+        schema: {type: integer, format: int64, minimum: 0}
+        description: 服务端接受时间的不包含上界。
+      responses:
+        '200':
+          description: 按云端修订顺序倒序分页，列表只包含事件摘要。
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ChangeEventPage'}
+        '400':
+          description: 无效筛选或游标
+        '401':
+          description: 凭据无效
+        '409':
+          description: reset_required，数据集世代已变化，需要重新查询。
+  /api/change-events/{eventId}:
+    get:
+      operationId: getChangeEvent
+      summary: 查看一次云端变更的来源、时间与字段差异
+      tags: [History]
+      security:
+      - deviceToken: []
+      - sessionToken: []
+      - sessionCookie: []
+      parameters:
+      - name: eventId
+        in: path
+        required: true
+        schema: {type: string}
+      responses:
+        '200':
+          description: 对比提交前的云端版本与最终提交版本，不使用当前记录替代历史快照。
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ChangeEventDetail'}
+        '401':
+          description: 凭据无效
+        '404':
+          description: 事件不存在或不属于当前账号
   /api/devices:
     get:
       operationId: listDevices
@@ -549,6 +631,11 @@ paths:
       summary: 提交修订；重试保留 mutationId 和原请求，冲突返回 current
       tags:
       - Sync
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '200':
           description: 成功
@@ -1272,6 +1359,11 @@ paths:
       tags:
       - anniversaries
       security: *id001
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -1347,6 +1439,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -1379,6 +1475,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -1434,6 +1534,11 @@ paths:
       tags:
       - bills
       security: *id002
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -1509,6 +1614,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -1541,6 +1650,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -1596,6 +1709,11 @@ paths:
       tags:
       - decision_choice_records
       security: *id003
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -1671,6 +1789,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -1703,6 +1825,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -1758,6 +1884,11 @@ paths:
       tags:
       - decision_collections
       security: *id004
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -1833,6 +1964,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -1865,6 +2000,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -1920,6 +2059,11 @@ paths:
       tags:
       - decision_options
       security: *id005
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -1995,6 +2139,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -2027,6 +2175,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -2082,6 +2234,11 @@ paths:
       tags:
       - diary_entries
       security: *id006
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -2157,6 +2314,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -2189,6 +2350,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -2244,6 +2409,11 @@ paths:
       tags:
       - diary_links
       security: *id007
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -2319,6 +2489,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -2351,6 +2525,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -2406,6 +2584,11 @@ paths:
       tags:
       - diary_tags
       security: *id008
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -2481,6 +2664,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -2513,6 +2700,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -2568,6 +2759,11 @@ paths:
       tags:
       - food_day_records
       security: *id009
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -2643,6 +2839,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -2675,6 +2875,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -2730,6 +2934,11 @@ paths:
       tags:
       - food_entries
       security: *id010
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -2805,6 +3014,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -2837,6 +3050,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -2892,6 +3109,11 @@ paths:
       tags:
       - item_categories
       security: *id011
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -2967,6 +3189,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -2999,6 +3225,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -3054,6 +3284,11 @@ paths:
       tags:
       - media_assets
       security: *id012
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -3129,6 +3364,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -3161,6 +3400,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -3216,6 +3459,11 @@ paths:
       tags:
       - media_attachments
       security: *id013
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -3291,6 +3539,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -3323,6 +3575,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -3378,6 +3634,11 @@ paths:
       tags:
       - reminder_completions
       security: *id014
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -3453,6 +3714,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -3485,6 +3750,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -3540,6 +3809,11 @@ paths:
       tags:
       - reminders
       security: *id015
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -3615,6 +3889,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -3647,6 +3925,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -3702,6 +3984,11 @@ paths:
       tags:
       - stored_items
       security: *id016
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -3777,6 +4064,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -3809,6 +4100,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -3864,6 +4159,11 @@ paths:
       tags:
       - stored_value_accounts
       security: *id017
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -3939,6 +4239,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -3971,6 +4275,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -4026,6 +4334,11 @@ paths:
       tags:
       - stored_value_adjustments
       security: *id018
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -4101,6 +4414,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -4133,6 +4450,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -4188,6 +4509,11 @@ paths:
       tags:
       - track_points
       security: *id019
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -4263,6 +4589,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -4295,6 +4625,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -4350,6 +4684,11 @@ paths:
       tags:
       - track_segments
       security: *id020
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -4425,6 +4764,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -4457,6 +4800,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -4512,6 +4859,11 @@ paths:
       tags:
       - tracks
       security: *id021
+      parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -4587,6 +4939,10 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
@@ -4619,12 +4975,34 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
+      - $ref: '#/components/parameters/ClientHeader'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/OSHeader'
+      - $ref: '#/components/parameters/OSVersionHeader'
       - name: id
         in: path
         required: true
         schema:
           type: string
 components:
+  parameters:
+    ClientHeader:
+      name: X-Recoow-Client
+      in: header
+      schema: {$ref: '#/components/schemas/ClientType'}
+      description: 此次请求的提交平台，缺省为 unknown；鉴权 Web 会话始终记为 web。
+    AppVersionHeader:
+      name: X-Recoow-App-Version
+      in: header
+      schema: {type: string, maxLength: 80}
+    OSHeader:
+      name: X-Recoow-OS
+      in: header
+      schema: {$ref: '#/components/schemas/OperatingSystem'}
+    OSVersionHeader:
+      name: X-Recoow-OS-Version
+      in: header
+      schema: {type: string, maxLength: 80}
   securitySchemes:
     deviceToken:
       type: http
@@ -8209,6 +8587,124 @@ components:
       - generation
       - head
       - minCursor
+    ClientType:
+      type: string
+      enum: [ios, android, web, unknown]
+    OperatingSystem:
+      type: string
+      enum: [ios, android, macos, windows, linux, unknown]
+    ClientEnvironment:
+      type: object
+      description: 客户端声明的运行环境，仅用于来源展示，不参与鉴权。
+      properties:
+        client: {$ref: '#/components/schemas/ClientType'}
+        os: {$ref: '#/components/schemas/OperatingSystem'}
+        appVersion: {type: string, maxLength: 80}
+        osVersion: {type: string, maxLength: 80}
+      required: [client, os]
+    ChangeOrigin:
+      allOf:
+      - $ref: '#/components/schemas/ClientEnvironment'
+      - type: object
+        properties:
+          deviceId: {type: string, maxLength: 200}
+          deviceName: {type: string, maxLength: 200}
+        required: [deviceId]
+      description: 随 mutation 冻结的原始修改来源；deviceId 必须与变更信封一致，不等同于鉴权设备 ID。
+    SubmissionSource:
+      allOf:
+      - $ref: '#/components/schemas/ClientEnvironment'
+      - type: object
+        properties:
+          deviceId: {type: string}
+          deviceName: {type: string}
+          sessionId: {type: string}
+        required: [deviceId, deviceName]
+      description: 服务端从鉴权上下文获取的提交身份及此次请求的环境资料，按事件保存快照。
+    HistoryOperation:
+      type: string
+      enum: [insert, update, delete, restore]
+    HistoryMethod:
+      type: string
+      enum: [normal, automatic_merge, manual_resolution, system, unknown]
+    ChangeEvent:
+      type: object
+      properties:
+        eventId: {type: string}
+        generation: {type: string}
+        version: {type: integer, format: int64}
+        previousVersion: {type: integer, format: int64}
+        table: {type: string}
+        id: {type: string}
+        title: {type: string}
+        operation: {$ref: '#/components/schemas/HistoryOperation'}
+        method: {$ref: '#/components/schemas/HistoryMethod'}
+        operationId: {type: string}
+        triggerEventId: {type: string, nullable: true}
+        mutationId: {type: string}
+        modifiedAtMs:
+          type: integer
+          format: int64
+          nullable: true
+          description: 原始客户端修改时间；系统派生修订为空。
+        acceptedAtMs:
+          type: integer
+          format: int64
+          nullable: true
+          description: 服务端接受此修订的时间，事务成功后可见；旧历史缺少此值时为空。
+        originalSource:
+          allOf: [{$ref: '#/components/schemas/ChangeOrigin'}]
+          nullable: true
+        submission:
+          allOf: [{$ref: '#/components/schemas/SubmissionSource'}]
+          nullable: true
+      required: [eventId, generation, version, previousVersion, table, id, title, operation, method, operationId, triggerEventId, modifiedAtMs, acceptedAtMs, originalSource, submission]
+    ChangeEventRef:
+      type: object
+      properties:
+        eventId: {type: string}
+        version: {type: integer, format: int64}
+        acceptedAtMs: {type: integer, format: int64}
+      required: [eventId, version, acceptedAtMs]
+    ChangeEventPage:
+      type: object
+      properties:
+        events:
+          type: array
+          items: {$ref: '#/components/schemas/ChangeEvent'}
+        generation: {type: string}
+        watermark: {type: integer, format: int64}
+        more: {type: boolean}
+        nextCursor: {type: string, nullable: true}
+      required: [events, generation, watermark, more, nextCursor]
+    FieldChange:
+      type: object
+      properties:
+        field: {type: string}
+        beforePresent: {type: boolean}
+        afterPresent: {type: boolean}
+        beforeValue: {nullable: true}
+        afterValue: {nullable: true}
+      required: [field, beforePresent, afterPresent, beforeValue, afterValue]
+    ChangeEventDetail:
+      type: object
+      properties:
+        event: {$ref: '#/components/schemas/ChangeEvent'}
+        before:
+          allOf: [{$ref: '#/components/schemas/Row'}]
+          nullable: true
+        after: {$ref: '#/components/schemas/Row'}
+        related:
+          type: array
+          items: {$ref: '#/components/schemas/ChangeEvent'}
+        changes:
+          type: array
+          items: {$ref: '#/components/schemas/FieldChange'}
+      required: [event, before, after, related, changes]
+    SessionAccess:
+      type: string
+      enum: [read_only, read_write]
+      description: 由服务端授权的会话访问范围。登录默认只读，客户端和 Header 不能开启写权限。
     SyncCapabilities:
       type: object
       properties:
@@ -8222,6 +8718,10 @@ components:
           type: object
           additionalProperties:
             type: integer
+        features:
+          type: array
+          items: {type: string}
+          description: change_history_v1 提供变更查询及回执事件关联；mutation_origin_v1 接受冻结的原始来源资料，新客户端发送 origin 前须检查能力。
       required:
       - protocolVersion
       - accountId
@@ -8396,6 +8896,8 @@ components:
     PushItem:
       type: object
       properties:
+        origin:
+          $ref: '#/components/schemas/ChangeOrigin'
         table:
           type: string
         id:
@@ -8460,6 +8962,10 @@ components:
     PushResult:
       type: object
       properties:
+        events:
+          type: array
+          items: {$ref: '#/components/schemas/ChangeEventRef'}
+          description: 实际提交的主修订及派生修订关联；幂等重试返回原事件和时间，无变化或失败时省略。
         table:
           type: string
         id:
@@ -8594,6 +9100,7 @@ components:
     LoginResponse:
       type: object
       properties:
+        access: {$ref: '#/components/schemas/SessionAccess'}
         userId:
           type: string
         username:

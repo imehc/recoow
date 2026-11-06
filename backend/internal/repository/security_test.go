@@ -27,7 +27,7 @@ func TestRuntimeRLSWithoutAccountContext(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer database.Close()
-	for _, table := range []string{"diary_tags", "row_state", "change_log", "mutation_receipts", "sync_metadata"} {
+	for _, table := range []string{"diary_tags", "row_state", "change_log", "change_events", "mutation_receipts", "sync_metadata"} {
 		var count int
 		if err := database.QueryRow("SELECT COUNT(*) FROM " + table).Scan(&count); err != nil || count != 0 {
 			t.Fatalf("%s visible without account context: %d %v", table, count, err)

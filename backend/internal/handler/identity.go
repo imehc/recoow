@@ -71,7 +71,8 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	// 浏览器会话使用 HttpOnly Cookie；生产环境默认要求 HTTPS。
 	http.SetCookie(w, &http.Cookie{Name: "recoow_session", Value: login.Token, Path: "/api", HttpOnly: true, Secure: !s.cfg.AllowInsecureCookies, SameSite: http.SameSiteStrictMode, Expires: login.ExpiresAt})
-	writeJSON(w, 200, loginResponse{UserId: login.User.ID, Username: login.User.Username, AccountId: login.User.AccountID, DeviceId: login.DeviceID, AccessToken: login.Token, ExpiresAt: login.ExpiresAt})
+	access := generated.SessionAccess("read_only")
+	writeJSON(w, 200, loginResponse{UserId: login.User.ID, Username: login.User.Username, AccountId: login.User.AccountID, DeviceId: login.DeviceID, AccessToken: login.Token, ExpiresAt: login.ExpiresAt, Access: &access})
 }
 func (s *Server) handleBindCredentials(w http.ResponseWriter, r *http.Request) {
 	device, _ := s.deviceFrom(r.Context())

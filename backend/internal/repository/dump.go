@@ -31,6 +31,7 @@ type dumpData struct {
 	Media    []domain.MediaObject
 	Dataset  *domain.DatasetState
 	Receipts []domain.MutationReceipt
+	Events   []domain.ChangeEvent
 }
 
 // writeSQLDump 按稳定顺序（主键/版本）把状态渲染为 SQL：
@@ -104,9 +105,9 @@ func writeSQLDump(w io.Writer, d dumpData) error {
 	}
 
 	for _, ch := range log {
-		if _, err := fmt.Fprintf(w, "INSERT INTO change_log (account_id, version, table_name, id, operation, updated_at_ms, device_id, deleted, deleted_at_ms, snapshot) VALUES (%s, %d, %s, %s, %s, %d, %s, %d, %d, %s);\n",
+		if _, err := fmt.Fprintf(w, "INSERT INTO change_log (account_id, version, table_name, id, operation, updated_at_ms, device_id, deleted, deleted_at_ms, snapshot, data_version) VALUES (%s, %d, %s, %s, %s, %d, %s, %d, %d, %s, %d);\n",
 			sqlStr(ch.AccountID), ch.Version, sqlStr(ch.Table), sqlStr(ch.ID), sqlStr(string(ch.Operation)), ch.UpdatedAtMs,
-			sqlStr(ch.DeviceID), boolInt(ch.Deleted), ch.DeletedAtMs, sqlSnap(ch.Snapshot)); err != nil {
+			sqlStr(ch.DeviceID), boolInt(ch.Deleted), ch.DeletedAtMs, sqlSnap(ch.Snapshot), max(1, ch.DataVersion)); err != nil {
 			return err
 		}
 	}
@@ -126,6 +127,24 @@ func writeSQLDump(w io.Writer, d dumpData) error {
 	if d.Dataset != nil && d.Account != nil {
 		if _, err := fmt.Fprintf(w, "INSERT INTO sync_metadata (account_id, generation, min_cursor) VALUES (%s, %s, %d) ON CONFLICT (account_id) DO UPDATE SET generation = excluded.generation, min_cursor = excluded.min_cursor;\n",
 			sqlStr(d.Account.ID), sqlStr(d.Dataset.Generation), d.Dataset.MinCursor); err != nil {
+			return err
+		}
+	}
+	sort.Slice(d.Events, func(i, j int) bool { return d.Events[i].Version < d.Events[j].Version })
+	for _, event := range d.Events {
+		values, err := eventValues(event)
+		if err != nil {
+			return err
+		}
+		literals := make([]string, len(values))
+		for index, value := range values {
+			literal, err := sqlValue(value)
+			if err != nil {
+				return err
+			}
+			literals[index] = literal
+		}
+		if _, err := fmt.Fprintf(w, "INSERT INTO change_events (%s) VALUES (%s);\n", eventColumns, strings.Join(literals, ",")); err != nil {
 			return err
 		}
 	}
@@ -170,6 +189,16 @@ func sqlValue(value any) (string, error) {
 		return sqlValue(converted)
 	}
 	switch typed := value.(type) {
+	case *string:
+		if typed == nil {
+			return "NULL", nil
+		}
+		return sqlStr(*typed), nil
+	case *int64:
+		if typed == nil {
+			return "NULL", nil
+		}
+		return strconv.FormatInt(*typed, 10), nil
 	case nil:
 		return "NULL", nil
 	case []string:

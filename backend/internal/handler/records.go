@@ -144,7 +144,11 @@ func (s *Server) handleResource(w http.ResponseWriter, r *http.Request, table st
 		writeError(w, 400, err.Error())
 		return
 	}
-	results, err := s.st.Push(device.AccountID, []domain.PushItem{item})
+	context, valid := s.pushContext(w, r, "", true)
+	if !valid {
+		return
+	}
+	results, err := s.st.PushWithContext(device.AccountID, []domain.PushItem{item}, context)
 	if err != nil {
 		writeError(w, 500, "mutation failed")
 		return

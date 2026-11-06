@@ -8,8 +8,10 @@ import (
 )
 
 type memoryRevision struct {
-	store     *memoryStore
-	accountID string
+	store      *memoryStore
+	accountID  string
+	submission *domain.SubmissionSource
+	directEdit bool
 }
 
 type memoryRevisionBackup struct {
@@ -17,6 +19,7 @@ type memoryRevisionBackup struct {
 	media        map[string]domain.MediaObject
 	receipts     map[string]domain.MutationReceipt
 	logCount     int
+	eventCount   int
 	nextVersions map[string]int64
 }
 
@@ -27,7 +30,7 @@ func (storage *memoryStore) revisionBackup() memoryRevisionBackup {
 	}
 	return memoryRevisionBackup{
 		rows: maps.Clone(storage.rows), media: maps.Clone(storage.media),
-		receipts: maps.Clone(storage.receipts), logCount: len(storage.log),
+		receipts: maps.Clone(storage.receipts), logCount: len(storage.log), eventCount: len(storage.events),
 		nextVersions: versions,
 	}
 }
@@ -37,6 +40,7 @@ func (storage *memoryStore) restoreRevisionBackup(backup memoryRevisionBackup) {
 	storage.media = backup.media
 	storage.receipts = backup.receipts
 	storage.log = storage.log[:backup.logCount]
+	storage.events = storage.events[:backup.eventCount]
 	for id, version := range backup.nextVersions {
 		if account, ok := storage.accounts[id]; ok {
 			account.NextVersion = version

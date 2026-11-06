@@ -207,6 +207,10 @@ func (s *postgresStore) TouchDeviceLastSeen(id string) error {
 // ---- 同步 ----
 
 func (s *postgresStore) Push(accountID string, items []domain.PushItem) ([]domain.PushResult, error) {
+	return s.PushWithContext(accountID, items, domain.PushContext{})
+}
+
+func (s *postgresStore) PushWithContext(accountID string, items []domain.PushItem, context domain.PushContext) ([]domain.PushResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -219,17 +223,46 @@ func (s *postgresStore) Push(accountID string, items []domain.PushItem) ([]domai
 	if err := requireAccountLocked(tx, s.ctx, accountID); err != nil {
 		return nil, err
 	}
+	var generation string
+	if err := tx.QueryRow("SELECT generation FROM sync_metadata WHERE account_id = ? FOR SHARE", accountID).Scan(&generation); err != nil {
+		return nil, err
+	}
+	if context.Generation != "" && context.Generation != generation {
+		return nil, domain.ErrResetRequired
+	}
+	if context.Submission != nil {
+		var deviceAccount string
+		if err := tx.QueryRow("SELECT account_id FROM devices WHERE id = ?", context.Submission.DeviceID).Scan(&deviceAccount); err != nil || deviceAccount != accountID {
+			return nil, domain.ErrNotFound
+		}
+	}
 	if _, err := sqlgen.New(tx.Tx).LockAccount(s.ctx, accountID); err != nil {
 		return nil, err
 	}
 	results := make([]domain.PushResult, 0, len(items))
 	for _, it := range items {
+		adapter := postgresRevision{store: s, transaction: tx, accountID: accountID, generation: generation, submission: context.Submission, directEdit: context.DirectEdit}
 		var res domain.PushResult
 		var err error
 		if it.MutationID != "" {
-			res, err = service.ApplyRevision(postgresRevision{store: s, transaction: tx, accountID: accountID}, it)
+			res, err = service.ApplyRevision(adapter, it)
 		} else {
+			previous, _, readErr := adapter.ReadRow(it.Table, it.ID)
+			if readErr != nil {
+				return nil, readErr
+			}
 			res, err = s.pushOneTx(tx, accountID, it)
+			if err == nil && res.Applied {
+				written, _, readErr := adapter.ReadRow(it.Table, it.ID)
+				if readErr != nil {
+					return nil, readErr
+				}
+				var event domain.ChangeEvent
+				event, err = adapter.WriteChangeEvent(service.BuildChangeEvent(it, previous, written, "normal"))
+				if err == nil {
+					res.Events = []domain.ChangeEventRef{service.EventRef(event)}
+				}
+			}
 		}
 		if err != nil {
 			return nil, err
@@ -568,6 +601,9 @@ func (s *postgresStore) ExportSQL(w io.Writer, accountID string) error {
 		return err
 	}
 	if err := s.scanReceipts(&d, tx, accountID); err != nil {
+		return err
+	}
+	if err := s.scanChangeEvents(&d, tx, accountID); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {

@@ -200,6 +200,7 @@ func TestFullSyncDependencyRetryAndRollback(test *testing.T) {
 		pushRevision(test, storage, accountID, revisionItem("stored_value_accounts", "account", "account", 0, map[string]any{"name": "card"}), domain.PushApplied)
 		pushRevision(test, storage, accountID, revisionItem("stored_value_adjustments", "opening", "opening", 0, map[string]any{"account_id": "account", "amount_cents": int64(math.MaxInt64)}), domain.PushApplied)
 		state, _ := storage.SyncState(accountID)
+		historyBefore, _ := storage.ChangeEvents(accountID, domain.ChangeEventQuery{Limit: 200})
 		results, err := storage.Push(accountID, []domain.PushItem{
 			revisionItem("diary_entries", "rollback", "rollback", 0, map[string]any{"title": "must roll back"}),
 			revisionItem("stored_value_adjustments", "overflow", "overflow", 0, map[string]any{"account_id": "account", "amount_cents": 1}),
@@ -210,6 +211,10 @@ func TestFullSyncDependencyRetryAndRollback(test *testing.T) {
 		after, _ := storage.SyncState(accountID)
 		if after != state {
 			test.Fatal("failed transaction advanced the head")
+		}
+		historyAfter, _ := storage.ChangeEvents(accountID, domain.ChangeEventQuery{Limit: 200})
+		if !reflect.DeepEqual(historyBefore.Events, historyAfter.Events) {
+			test.Fatal("failed transaction retained events")
 		}
 		result := pushRevision(test, storage, accountID, revisionItem("diary_entries", "rollback", "rollback", 0, map[string]any{"title": "must roll back"}), domain.PushApplied)
 		if result.Replayed {

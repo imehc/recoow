@@ -11,6 +11,9 @@ import (
 )
 
 func ApplyRevision(transaction domain.RevisionTransaction, item domain.PushItem) (domain.PushResult, error) {
+	if err := ValidateOrigin(item); err != nil {
+		return domain.PushResult{}, err
+	}
 	if !transaction.SupportsTable(item.Table) {
 		return RejectedPushResult(item, domain.PushUnsupportedTable), nil
 	}
@@ -150,9 +153,21 @@ func ApplyRevision(transaction domain.RevisionTransaction, item domain.PushItem)
 		result.Applied = true
 		result.Version = written.Version
 		result.Current = &written
-		if err := refreshProjections(transaction, item.Table); err != nil {
+		method := "normal"
+		if item.Resolution != "" {
+			method = "manual_resolution"
+		} else if mergedRevision {
+			method = "automatic_merge"
+		}
+		event, err := transaction.WriteChangeEvent(BuildChangeEvent(item, current, written, method))
+		if err != nil {
 			return domain.PushResult{}, err
 		}
+		derived, err := refreshProjections(transaction, item.Table, event)
+		if err != nil {
+			return domain.PushResult{}, err
+		}
+		result.Events = append([]domain.ChangeEventRef{EventRef(event)}, derived...)
 	}
 	return result, transaction.WriteReceipt(domain.MutationReceipt{
 		MutationID: item.MutationID, RequestHash: requestHash, Result: result,

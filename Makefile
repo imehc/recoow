@@ -35,7 +35,7 @@ generate-web-api: check-openapi
 
 generate-go-api: check-openapi
 	rm -rf backend/internal/handler/generated
-	$(OPENAPI_GENERATOR) generate -i $(OPENAPI_SPEC) -g go -o backend/internal/handler/generated --additional-properties packageName=generated --global-property models,modelDocs=false,modelTests=false,supportingFiles=utils.go
+	$(OPENAPI_GENERATOR) generate -i $(OPENAPI_SPEC) -g go -o backend/internal/handler/generated --additional-properties packageName=generated,enumClassPrefix=true --global-property models,modelDocs=false,modelTests=false,supportingFiles=utils.go
 
 generate: generate-clients generate-sql
 	$(PYTHON) scripts/generate_sync_registry.py --write

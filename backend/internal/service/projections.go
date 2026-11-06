@@ -153,7 +153,7 @@ func projectedBalance(transaction domain.RevisionTransaction, accountID string) 
 	return balance, nil
 }
 
-func refreshProjections(transaction domain.RevisionTransaction, changedTable string) error {
+func refreshProjections(transaction domain.RevisionTransaction, changedTable string, trigger domain.ChangeEvent) ([]domain.ChangeEventRef, error) {
 	var table string
 	switch changedTable {
 	case "bills", "stored_value_adjustments":
@@ -161,26 +161,38 @@ func refreshProjections(transaction domain.RevisionTransaction, changedTable str
 	case "reminder_completions":
 		table = "reminders"
 	default:
-		return nil
+		return nil, nil
 	}
 	rows, err := transaction.AllRows(table, false)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	events := []domain.ChangeEventRef{}
 	for _, row := range rows {
 		snapshot, err := projectSnapshot(transaction, table, row.ID, row.Snapshot)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if EqualSnapshots(snapshot, row.Snapshot) {
 			continue
 		}
-		if _, err := transaction.WriteRow(domain.PushItem{
+		item := domain.PushItem{
 			Table: table, ID: row.ID, Snapshot: snapshot, UpdatedAtMs: row.UpdatedAtMs,
 			DeviceID: row.DeviceID, Operation: domain.OpUpdate, DataVersion: 2,
-		}); err != nil {
-			return err
 		}
+		written, err := transaction.WriteRow(item)
+		if err != nil {
+			return nil, err
+		}
+		event := BuildChangeEvent(item, row, written, "system")
+		event.OperationID, event.MutationID = trigger.OperationID, trigger.MutationID
+		event.TriggerEventID = &trigger.EventID
+		event.ModifiedAtMs, event.OriginalSource = nil, nil
+		event, err = transaction.WriteChangeEvent(event)
+		if err != nil {
+			return nil, err
+		}
+		events = append(events, EventRef(event))
 	}
-	return nil
+	return events, nil
 }

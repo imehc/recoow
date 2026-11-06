@@ -56,6 +56,7 @@ func New(cfg config.Config, st domain.Store, schemas *schema.Registry, log *slog
 type ctxKey int
 
 const deviceKey ctxKey = 0
+const sessionKey ctxKey = 1
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
@@ -88,6 +89,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/sync/capabilities", s.authRequired(http.HandlerFunc(s.handleCapabilities)))
 	mux.Handle("GET /api/sync/snapshots", s.authRequired(http.HandlerFunc(s.handleBootstrap)))
 	mux.Handle("GET /api/sync/manifests", s.authRequired(http.HandlerFunc(s.handleManifest)))
+	mux.Handle("GET /api/change-events", s.authRequired(http.HandlerFunc(s.handleChangeEvents)))
+	mux.Handle("GET /api/change-events/{eventId}", s.authRequired(http.HandlerFunc(s.handleChangeEvent)))
 	mux.Handle("POST /api/sync/snapshot-queries", s.authRequired(http.HandlerFunc(s.handleSnapshotQuery)))
 	mux.Handle("DELETE /api/sync/dataset", s.authRequired(s.ownerOnly(http.HandlerFunc(s.handleClearDataset))))
 	mux.Handle("GET /api/exports", s.authRequired(http.HandlerFunc(s.handleExport)))
@@ -129,8 +132,9 @@ func (s *Server) authRequired(next http.Handler) http.Handler {
 			return
 		}
 		d, err := s.auth.Authorize(token)
+		var session domain.Session
 		if err != nil {
-			d, err = s.identity.Authorize(token)
+			d, session, err = s.identity.AuthorizeSession(token)
 		}
 		if err != nil {
 			writeError(w, http.StatusUnauthorized, "invalid or revoked token")
@@ -138,6 +142,13 @@ func (s *Server) authRequired(next http.Handler) http.Handler {
 		}
 		_ = s.st.TouchDeviceLastSeen(d.ID)
 		ctx := context.WithValue(r.Context(), deviceKey, d)
+		if session.ID != "" {
+			if session.Access != domain.SessionReadWrite && !s.readOnlySessionRequest(r) {
+				writeError(w, http.StatusForbidden, "read-only session")
+				return
+			}
+			ctx = context.WithValue(ctx, sessionKey, session)
+		}
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -200,7 +211,7 @@ func (s *Server) cors(next http.Handler) http.Handler {
 			w.Header().Add("Vary", "Origin")
 		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, HEAD, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Recoow-Client, X-Recoow-App-Version, X-Recoow-OS, X-Recoow-OS-Version")
 		w.Header().Set("Access-Control-Expose-Headers", "Content-Length, ETag")
 
 		if r.Method == http.MethodOptions {

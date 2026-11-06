@@ -13,6 +13,9 @@ type postgresRevision struct {
 	store       *postgresStore
 	transaction *storeTx
 	accountID   string
+	generation  string
+	submission  *domain.SubmissionSource
+	directEdit  bool
 }
 
 const syncRowColumns = "table_name, id, snapshot, updated_at_ms, device_id, deleted_at_ms, version, data_version"

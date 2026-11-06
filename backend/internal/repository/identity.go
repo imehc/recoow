@@ -73,7 +73,10 @@ func (storage *postgresStore) SetPassword(userID, passwordHash string) error {
 	return tx.Commit()
 }
 func (storage *postgresStore) CreateSession(session domain.Session) error {
-	affected, err := sqlgen.New(storage.db.DB).CreateSession(storage.ctx, sqlgen.CreateSessionParams{ID: session.ID, UserID: session.UserID, DeviceID: session.DeviceID, TokenHash: session.TokenHash, ExpiresAt: session.ExpiresAt, PasswordHash: session.PasswordHash})
+	if session.Access == "" {
+		session.Access = domain.SessionReadOnly
+	}
+	affected, err := sqlgen.New(storage.db.DB).CreateSession(storage.ctx, sqlgen.CreateSessionParams{ID: session.ID, UserID: session.UserID, DeviceID: session.DeviceID, TokenHash: session.TokenHash, ExpiresAt: session.ExpiresAt, PasswordHash: session.PasswordHash, Access: string(session.Access)})
 	if err == nil && affected != 1 {
 		return domain.ErrNotFound
 	}
@@ -84,7 +87,7 @@ func (storage *postgresStore) SessionByToken(tokenHash string) (domain.Session, 
 	if errors.Is(err, sql.ErrNoRows) {
 		err = domain.ErrNotFound
 	}
-	return domain.Session{ID: session.ID, UserID: session.UserID, DeviceID: session.DeviceID, TokenHash: session.TokenHash, ExpiresAt: session.ExpiresAt}, err
+	return domain.Session{ID: session.ID, UserID: session.UserID, DeviceID: session.DeviceID, TokenHash: session.TokenHash, ExpiresAt: session.ExpiresAt, Access: domain.SessionAccess(session.Access)}, err
 }
 func (storage *postgresStore) DeleteSession(tokenHash string) error {
 	return sqlgen.New(storage.db.DB).DeleteSession(storage.ctx, tokenHash)

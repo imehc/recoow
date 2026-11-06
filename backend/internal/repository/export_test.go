@@ -59,4 +59,13 @@ func TestPostgresSQLExportRestoresAndCanRestart(t *testing.T) {
 	if err := target.QueryRow("SELECT COUNT(*) FROM mutation_receipts").Scan(&receipts); err != nil || receipts != 1 {
 		t.Fatalf("receipt restore: %d %v", receipts, err)
 	}
+	var eventID, generation string
+	var accepted int64
+	if err := target.QueryRow("SELECT event_id, generation, accepted_at_ms FROM change_events").Scan(&eventID, &generation, &accepted); err != nil {
+		t.Fatal(err)
+	}
+	page, err := storage.ChangeEvents(account, domain.ChangeEventQuery{Limit: 1})
+	if err != nil || page.Events[0].EventID != eventID || page.Generation != generation || *page.Events[0].AcceptedAtMs != accepted {
+		t.Fatal("export changed event identity or time")
+	}
 }

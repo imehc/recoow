@@ -18,13 +18,13 @@ DELETE FROM devices WHERE id IN (SELECT device_id FROM sessions WHERE user_id = 
 
 -- name: CreateSession :execrows
 -- 和密码变更使用相同的用户行锁，防止旧密码验证后在吊销之后创建新会话。
-INSERT INTO sessions (id, user_id, device_id, token_hash, expires_at)
-SELECT sqlc.arg(id)::text, users.id, sqlc.arg(device_id)::text, sqlc.arg(token_hash)::text, sqlc.arg(expires_at)::timestamptz
+INSERT INTO sessions (id, user_id, device_id, token_hash, expires_at, access)
+SELECT sqlc.arg(id)::text, users.id, sqlc.arg(device_id)::text, sqlc.arg(token_hash)::text, sqlc.arg(expires_at)::timestamptz, sqlc.arg(access)::text
 FROM users WHERE users.id = sqlc.arg(user_id) AND users.password_hash = sqlc.arg(password_hash) AND NOT users.disabled
 FOR SHARE;
 
 -- name: SessionByToken :one
-SELECT sessions.id, sessions.user_id, sessions.device_id, sessions.token_hash, sessions.expires_at
+SELECT sessions.id, sessions.user_id, sessions.device_id, sessions.token_hash, sessions.expires_at, sessions.access
 FROM sessions JOIN users ON users.id = sessions.user_id
 WHERE sessions.token_hash = sqlc.arg(token_hash) AND sessions.expires_at > now() AND NOT users.disabled;
 

@@ -85,7 +85,7 @@ func (identity *Identity) Login(username, password string) (Login, error) {
 		_ = identity.store.DeleteDevice(device.ID)
 		return Login{}, err
 	}
-	session := domain.Session{ID: id, UserID: user.ID, DeviceID: device.ID, TokenHash: hex.EncodeToString(HashToken(token)), PasswordHash: user.PasswordHash, ExpiresAt: time.Now().UTC().Add(identity.ttl)}
+	session := domain.Session{ID: id, UserID: user.ID, DeviceID: device.ID, TokenHash: hex.EncodeToString(HashToken(token)), PasswordHash: user.PasswordHash, ExpiresAt: time.Now().UTC().Add(identity.ttl), Access: domain.SessionReadOnly}
 	if err := identity.store.CreateSession(session); err != nil {
 		_ = identity.store.DeleteDevice(device.ID)
 		return Login{}, err
@@ -93,15 +93,20 @@ func (identity *Identity) Login(username, password string) (Login, error) {
 	return Login{User: user, DeviceID: device.ID, Token: token, ExpiresAt: session.ExpiresAt}, nil
 }
 func (identity *Identity) Authorize(token string) (domain.Device, error) {
+	device, _, err := identity.AuthorizeSession(token)
+	return device, err
+}
+
+func (identity *Identity) AuthorizeSession(token string) (domain.Device, domain.Session, error) {
 	session, err := identity.store.SessionByToken(hex.EncodeToString(HashToken(token)))
 	if err != nil {
-		return domain.Device{}, ErrUnauthorized
+		return domain.Device{}, domain.Session{}, ErrUnauthorized
 	}
 	device, err := identity.store.GetDevice(session.DeviceID)
 	if err != nil {
-		return domain.Device{}, ErrUnauthorized
+		return domain.Device{}, domain.Session{}, ErrUnauthorized
 	}
-	return device, nil
+	return device, session, nil
 }
 func (identity *Identity) Logout(token string) error {
 	return identity.store.DeleteSession(hex.EncodeToString(HashToken(token)))

@@ -10,7 +10,7 @@ import (
 	"github.com/imehc/recoow/backend/internal/schema"
 )
 
-func TestWebSessionWritesShareMobileSync(t *testing.T) {
+func TestDeviceWritesRemainVisibleToReadOnlyWeb(t *testing.T) {
 	registry, err := schema.LoadOpenAPI("../../../openapi/openapi.yaml")
 	if err != nil {
 		t.Fatal(err)
@@ -29,6 +29,9 @@ func TestWebSessionWritesShareMobileSync(t *testing.T) {
 	if login.AccountId != e.accountID || login.Username != "web.owner" {
 		t.Fatal("login must retain account identity")
 	}
+	if login.GetAccess() != "read_only" {
+		t.Fatal("new Web session must be read-only")
+	}
 	cookies := response.Result().Cookies()
 	if len(cookies) != 1 || !cookies[0].HttpOnly || !cookies[0].Secure || cookies[0].SameSite != http.SameSiteStrictMode {
 		t.Fatal("session cookie must be secure")
@@ -38,16 +41,16 @@ func TestWebSessionWritesShareMobileSync(t *testing.T) {
 	snapshot["name"] = "Web tag"
 	snapshot["future_field"] = map[string]any{"retained": true}
 	mutation := map[string]any{"mutationId": "web-create", "baseVersion": 0, "dataVersion": 1, "updatedAtMs": 1000, "snapshot": snapshot}
-	response, body = e.request(t, "POST", "/api/diary-tags", login.AccessToken, mutation)
+	response, body = e.request(t, "POST", "/api/diary-tags", owner, mutation)
 	if response.Code != 201 {
 		t.Fatalf("create: %d %s", response.Code, body)
 	}
 	created := decode[domain.PushResult](t, body)
-	response, body = e.request(t, "POST", "/api/diary-tags", login.AccessToken, mutation)
+	response, body = e.request(t, "POST", "/api/diary-tags", owner, mutation)
 	if response.Code != 201 || decode[domain.PushResult](t, body).Version != created.Version {
 		t.Fatalf("retry changed revision: %s", body)
 	}
-	response, body = e.request(t, "GET", "/api/diary-tags?limit=1&q=Web", owner, nil)
+	response, body = e.request(t, "GET", "/api/diary-tags?limit=1&q=Web", login.AccessToken, nil)
 	page := decode[domain.RecordPage](t, body)
 	if response.Code != 200 || len(page.Rows) != 1 || !bytes.Contains(page.Rows[0].Snapshot, []byte("future_field")) {
 		t.Fatalf("mobile read: %d %s", response.Code, body)
@@ -55,7 +58,7 @@ func TestWebSessionWritesShareMobileSync(t *testing.T) {
 	mutation["mutationId"] = "stale-web-update"
 	mutation["updatedAtMs"] = 2000
 	snapshot["name"] = "Unconfirmed edit"
-	response, body = e.request(t, "PUT", "/api/diary-tags/web-tag", login.AccessToken, mutation)
+	response, body = e.request(t, "PUT", "/api/diary-tags/web-tag", owner, mutation)
 	if response.Code != 409 || decode[domain.PushResult](t, body).Status != domain.PushConflict {
 		t.Fatalf("stale write: %d %s", response.Code, body)
 	}
@@ -105,7 +108,7 @@ func TestPasswordChangeRevokesAllWebSessions(t *testing.T) {
 		t.Fatalf("login: %s", body)
 	}
 	login := decode[loginResponse](t, body)
-	response, body = e.request(t, "PUT", "/api/users/me/password", login.AccessToken, map[string]any{"currentPassword": credentials["password"], "newPassword": "replacement-long-password"})
+	response, body = e.request(t, "PUT", "/api/users/me/password", owner, map[string]any{"currentPassword": credentials["password"], "newPassword": "replacement-long-password"})
 	if response.Code != 200 {
 		t.Fatalf("password: %s", body)
 	}
@@ -134,5 +137,12 @@ func TestBrowserLoginRejectsUntrustedOrigin(t *testing.T) {
 		if response.Code != 403 || len(response.Result().Cookies()) != 0 {
 			t.Fatalf("untrusted browser origin accepted: %d", response.Code)
 		}
+	}
+}
+
+func TestLoginResponseRemainsCompatibleWithoutAccess(t *testing.T) {
+	login := decode[loginResponse](t, []byte(`{"userId":"user","username":"owner","accountId":"account","deviceId":"device","accessToken":"fixture-token","expiresAt":"2026-11-06T00:00:00Z"}`))
+	if login.AccountId != "account" || login.Access != nil {
+		t.Fatal("older server login response no longer decodes")
 	}
 }

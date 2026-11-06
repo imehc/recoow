@@ -22,6 +22,7 @@ type memoryStore struct {
 	rows         map[string]domain.Row
 	media        map[string]domain.MediaObject
 	log          []domain.Change
+	events       []domain.ChangeEvent
 	generations  map[string]string
 	receipts     map[string]domain.MutationReceipt
 	tables       map[string]bool
@@ -183,11 +184,24 @@ func (s *memoryStore) TouchDeviceLastSeen(id string) error {
 // ---- 同步 ----
 
 func (s *memoryStore) Push(accountID string, items []domain.PushItem) ([]domain.PushResult, error) {
+	return s.PushWithContext(accountID, items, domain.PushContext{})
+}
+
+func (s *memoryStore) PushWithContext(accountID string, items []domain.PushItem, context domain.PushContext) ([]domain.PushResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	account, ok := s.accounts[accountID]
 	if !ok {
 		return nil, domain.ErrNoAccount
+	}
+	if context.Generation != "" && context.Generation != s.generations[accountID] {
+		return nil, domain.ErrResetRequired
+	}
+	if context.Submission != nil {
+		device, exists := s.devices[context.Submission.DeviceID]
+		if !exists || device.AccountID != accountID {
+			return nil, domain.ErrNotFound
+		}
 	}
 	results := make([]domain.PushResult, 0, len(items))
 	backup := s.revisionBackup()
@@ -195,13 +209,23 @@ func (s *memoryStore) Push(accountID string, items []domain.PushItem) ([]domain.
 		var res domain.PushResult
 		if it.MutationID != "" {
 			var err error
-			res, err = service.ApplyRevision(memoryRevision{store: s, accountID: accountID}, it)
+			res, err = service.ApplyRevision(memoryRevision{store: s, accountID: accountID, submission: context.Submission, directEdit: context.DirectEdit}, it)
 			if err != nil {
 				s.restoreRevisionBackup(backup)
 				return nil, err
 			}
 		} else {
+			previous := s.rows[rowKey(accountID, it.Table, it.ID)]
 			res = s.pushOneLocked(account, it)
+			if res.Applied {
+				written := s.rows[rowKey(accountID, it.Table, it.ID)]
+				event, err := (memoryRevision{store: s, accountID: accountID, submission: context.Submission, directEdit: context.DirectEdit}).WriteChangeEvent(service.BuildChangeEvent(it, previous, written, "normal"))
+				if err != nil {
+					s.restoreRevisionBackup(backup)
+					return nil, err
+				}
+				res.Events = []domain.ChangeEventRef{service.EventRef(event)}
+			}
 		}
 		results = append(results, res)
 	}

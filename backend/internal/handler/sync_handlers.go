@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/imehc/recoow/backend/internal/domain"
+	"github.com/imehc/recoow/backend/internal/service"
 )
 
 const maxPushItems = 1000
@@ -43,10 +44,18 @@ func (s *Server) handlePush(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusRequestEntityTooLarge, "too many items in one push")
 		return
 	}
+	context, valid := s.pushContext(w, r, req.Generation, false)
+	if !valid {
+		return
+	}
 	accepted := make([]domain.PushItem, 0, len(req.Items))
 	acceptedIndices := make([]int, 0, len(req.Items))
 	results := make([]domain.PushResult, len(req.Items))
 	for index, it := range req.Items {
+		if err := service.ValidateOrigin(it); err != nil {
+			writeError(w, 400, err.Error())
+			return
+		}
 		if strings.TrimSpace(it.ID) == "" {
 			writeError(w, http.StatusBadRequest, "变更缺少 id")
 			return
@@ -84,8 +93,12 @@ func (s *Server) handlePush(w http.ResponseWriter, r *http.Request) {
 		acceptedIndices = append(acceptedIndices, index)
 	}
 	if len(accepted) > 0 {
-		storeResults, err := s.st.Push(d.AccountID, accepted)
+		storeResults, err := s.st.PushWithContext(d.AccountID, accepted, context)
 		if err != nil {
+			if err == domain.ErrResetRequired {
+				writeError(w, http.StatusConflict, "reset_required")
+				return
+			}
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}

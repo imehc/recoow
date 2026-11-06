@@ -80,6 +80,26 @@ type Bill struct {
 	ReferenceImageAssetID         sql.NullString
 }
 
+type ChangeEvent struct {
+	EventID         string
+	AccountID       string
+	Generation      string
+	Version         int64
+	PreviousVersion int64
+	TableName       string
+	ID              string
+	Title           string
+	Operation       string
+	Method          string
+	OperationID     string
+	TriggerEventID  sql.NullString
+	MutationID      sql.NullString
+	ModifiedAtMs    sql.NullInt64
+	AcceptedAtMs    sql.NullInt64
+	OriginalSource  json.RawMessage
+	Submission      json.RawMessage
+}
+
 type ChangeLog struct {
 	AccountID   string
 	Version     int64
@@ -452,6 +472,7 @@ type Session struct {
 	DeviceID  string
 	TokenHash string
 	ExpiresAt time.Time
+	Access    string
 }
 
 type StoredItem struct {

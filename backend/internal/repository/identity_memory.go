@@ -94,6 +94,12 @@ func (storage *memoryStore) CreateSession(session domain.Session) error {
 	if !exists || user.Disabled || user.PasswordHash != session.PasswordHash {
 		return domain.ErrNotFound
 	}
+	if session.Access == "" {
+		session.Access = domain.SessionReadOnly
+	}
+	if session.Access != domain.SessionReadOnly && session.Access != domain.SessionReadWrite {
+		return domain.ErrNotFound
+	}
 	storage.sessions[session.TokenHash] = session
 	return nil
 }

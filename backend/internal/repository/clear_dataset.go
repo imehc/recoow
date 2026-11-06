@@ -40,6 +40,13 @@ func (storage *memoryStore) ClearDataset(accountID, expectedGeneration string) (
 		}
 	}
 	storage.log = changes
+	events := storage.events[:0]
+	for _, event := range storage.events {
+		if event.AccountID != accountID {
+			events = append(events, event)
+		}
+	}
+	storage.events = events
 	storage.generations[accountID] = newID()
 	account.NextVersion = 1
 	return domain.DatasetState{Generation: storage.generations[accountID]}, nil
@@ -66,7 +73,7 @@ func (storage *postgresStore) ClearDataset(accountID, expectedGeneration string)
 			return domain.DatasetState{}, err
 		}
 	}
-	for _, table := range []string{"change_log", "mutation_receipts", "media_objects"} {
+	for _, table := range []string{"change_events", "change_log", "mutation_receipts", "media_objects"} {
 		if _, err := tx.Exec("DELETE FROM "+table+" WHERE account_id = ?", accountID); err != nil {
 			return domain.DatasetState{}, err
 		}

@@ -50,6 +50,8 @@ make generate                  # 全部接口类型、sqlc 与 iOS 同步注册�
 
 Web 登录使用独立的可过期会话，保存 token 哈希；默认 Cookie 为 HttpOnly、Secure、SameSite=Strict。Cookie 写请求检查 Origin。登录响应也返回 Bearer 会话凭据，退出和修改密码会吊销会话；长期设备凭据继续由设备管理单独吊销。账号禁用对会话与设备登录均生效。登录失败按直连来源地址限流。
 
+登录响应的 `access` 表示服务端授权的会话范围。首版 Web 登录及升级前已有会话均为 `read_only`，允许查询、统计、历史、媒体读取和退出；业务写入、同步上传、媒体修改、设备管理、改密及账号导出被拒绝，Cookie 和 Bearer 采用相同限制。长期设备凭据保留原有权限，客户端类型 Header 不能改变授权范围。
+
 | API | 用途 |
 | --- | --- |
 | `GET /api/version` | 无需登录，查询运行中的后端版本和构建提交 |
@@ -62,6 +64,7 @@ Web 登录使用独立的可过期会话，保存 token 哈希；默认 Cookie �
 | `GET /api/users/me`、`PUT /api/users/me/password` | 当前身份、修改密码 |
 | `GET/POST /api/{实体}`、`GET/PUT/DELETE /api/{实体}/{id}` | 本账号分页列表、详情与修订写入 |
 | `GET /api/statistics` | 本账号基础统计 |
+| `GET /api/change-events`、`GET /api/change-events/{eventId}` | 云端变更摘要、时间来源、历史快照与字段差异 |
 | `GET /api/sync/capabilities`、`GET /api/sync/snapshots` | 同步能力、固定水位快照 |
 | `GET /api/sync/manifests`、`POST /api/sync/snapshot-queries` | 首次绑定或备份恢复时比较数据目录，只读取缺失或不同的快照 |
 | `POST /api/sync/mutations`、`GET /api/sync/changes` | 修订写入、增量变化 |
@@ -82,6 +85,10 @@ Web 登录使用独立的可过期会话，保存 token 哈希；默认 Cookie �
 列表使用 `limit=1..200`、`cursor`、`q`、`fromMs`、`toMs`，按 ID 升序分页。日期筛选优先使用实体发生时间，缺少该字段时使用服务器更新时间。统计中的记录数量按更新时间统计；账单金额按 `occurred_at` 的左闭右开区间统计，退款和墓碑排除，分别返回支出、收入和储值消费。当前提供基础统计，复杂趋势和维度聚合可在后续增加。
 
 写入提供 `mutationId`、`baseVersion`、`dataVersion`、`updatedAtMs` 与 `snapshot`；删除无需快照。更新使用详情接口读取到的完整快照，并携带最近确认的版本；版本过期时，以历史基础快照、本次快照和当前快照进行三方比较：独立字段修改自动合并；相同修改返回 duplicate；争议字段、账单结算组及删除冲突返回 409，缺依赖返回 422。人工确认仍携带原 baseVersion，并同时提供 `resolution=local|remote` 与界面展示的 `expectedVersion`；只选择争议内容，保留兼容修改，版本已变化则重新返回冲突。重试保持原 mutationId 和内容，Web 写入也会进入移动端同步日志。
+
+`change_history_v1` 表示支持独立云端历史查询及回执 `events` 关联。事件保存客户端修改时间和服务端接受时间，按修订顺序排列；失败、无变化的 duplicate 和相同 mutation 重试不创建新事件。新增、修改、删除、墓碑恢复、自动合并和人工确认分别标识，派生修订标为系统计算并关联触发操作。列表支持实体、记录、原始平台、鉴权提交设备及服务端时间筛选，分页游标绑定账号、世代、查询版本与筛选条件；详情读取当时的前后快照，字段差异保留未知字段、null 与整数精度。
+
+`mutation_origin_v1` 允许同步 mutation 附带冻结的 `origin`。`X-Recoow-Client`、`X-Recoow-App-Version`、`X-Recoow-OS`、`X-Recoow-OS-Version` 只描述此次提交环境，不能反推离线编辑的原始来源；新客户端发送 `origin` 前先核对能力。鉴权提交设备与会话由服务端解析，来源资料按事件保存。旧历史没有服务端时间和鉴权来源时为空，旧客户端没有上报平台时保留 unknown。
 
 ## 配置与运行
 
