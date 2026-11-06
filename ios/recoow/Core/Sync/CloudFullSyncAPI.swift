@@ -64,6 +64,21 @@ extension RecoowAPIClient {
         }
     }
 
+    func mediaExists(reference: SyncMediaReference) async throws -> Bool {
+        do {
+            _ = try await send(path: "/api/media/objects/\(reference.key)", method: "HEAD", body: nil, auth: true,
+                               validateResponse: { response in
+                guard response.value(forHTTPHeaderField: "ETag") == "\"\(reference.checksum)\"",
+                      response.value(forHTTPHeaderField: "Content-Length").flatMap(Int64.init) == reference.size else {
+                    throw CloudAPIError.invalidResponse(AppLocalization.string("云端媒体身份不一致"))
+                }
+            })
+            return true
+        } catch CloudAPIError.badStatus(404, _) {
+            return false
+        }
+    }
+
     func downloadMedia(reference: SyncMediaReference) async throws -> Data {
         try await send(path: "/api/media/objects/\(reference.key)", method: "GET", body: nil, auth: true)
     }

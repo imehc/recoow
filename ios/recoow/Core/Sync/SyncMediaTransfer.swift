@@ -158,7 +158,9 @@ nonisolated final class SyncMediaTransfer: @unchecked Sendable {
                         throw CloudAPIError.syncRejected(AppLocalization.format("待上传媒体文件缺失：%@", reference.key))
                     }
                     try reference.verify(data)
-                    try await api.uploadMedia(data, reference: reference)
+                    if !(try await api.mediaExists(reference: reference)) {
+                        try await api.uploadMedia(data, reference: reference)
+                    }
                     bytes = data
                 } else if let data = MediaAssetObjectStore.shared.data(for: reference.key), (try? reference.verify(data)) != nil {
                     bytes = data

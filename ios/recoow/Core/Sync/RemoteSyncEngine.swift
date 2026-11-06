@@ -112,7 +112,8 @@ final class RemoteSyncEngine: SyncEngine, @unchecked Sendable {
             var received = 0
             if !target.bootstrapComplete {
                 progress.beginReceiving()
-                received += try await receivePages(target: target, repository: repository, api: client, isCurrent: isCurrent)
+                received += try await receivePages(target: target, repository: repository, api: client, isCurrent: isCurrent,
+                                                   useManifest: capabilities.features.contains("manifest_bootstrap_v1"))
             }
             var confirmed = 0
             var conflicts = 0
@@ -152,7 +153,8 @@ final class RemoteSyncEngine: SyncEngine, @unchecked Sendable {
             guard isCurrent() else { throw CloudAPIError.syncRejected(AppLocalization.string("连接或本地数据库已改变")) }
             target = try repository.target(scope: target.scope)
             progress.beginReceiving(received: received)
-            received += try await receivePages(target: target, repository: repository, api: client, isCurrent: isCurrent)
+            received += try await receivePages(target: target, repository: repository, api: client, isCurrent: isCurrent,
+                                               useManifest: capabilities.features.contains("manifest_bootstrap_v1"))
             progress.beginMedia(direction: "download")
             let downloaded = try await media.transfer(scope: target.scope, direction: "download", api: client, isCurrent: isCurrent) { [progress] done, total in
                 await progress.setMedia(done: done, total: total)
@@ -200,14 +202,25 @@ final class RemoteSyncEngine: SyncEngine, @unchecked Sendable {
         }
     }
 
-    private func receivePages(target: SyncTarget, repository: FullSyncRepository, api: RecoowAPIClient, isCurrent: @Sendable () -> Bool) async throws -> Int {
+    private func receivePages(target: SyncTarget, repository: FullSyncRepository, api: RecoowAPIClient, isCurrent: @Sendable () -> Bool,
+                              useManifest: Bool) async throws -> Int {
         var target = target
         var received = 0
         while true {
             guard isCurrent() else { throw CloudAPIError.syncRejected(AppLocalization.string("连接已改变")) }
-            let data = try await api.fetchSyncPage(target: target)
+            let data: Data
+            var candidates: [Int64: SyncManifestCandidate] = [:]
+            if useManifest && !target.bootstrapComplete {
+                let manifest = try await api.fetchManifest(target: target)
+                try repository.persistManifest(manifest, target: target)
+                let entries = try RecoowAPIClient.manifestEntries(manifest, target: target)
+                candidates = try repository.manifestCandidates(entries, scope: target.scope)
+                data = try await api.hydrateManifest(manifest, target: target, candidates: candidates)
+            } else {
+                data = try await api.fetchSyncPage(target: target)
+            }
             guard isCurrent() else { throw CloudAPIError.syncRejected(AppLocalization.string("连接已改变，未应用旧响应")) }
-            let more = try repository.receive(data, target: target)
+            let more = try repository.receive(data, target: target, matchedOutbox: candidates)
             let applied = try repository.applyInbox(scope: target.scope)
             received += applied
             progress.addReceived(applied)

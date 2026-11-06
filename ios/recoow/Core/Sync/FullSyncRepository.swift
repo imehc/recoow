@@ -169,7 +169,7 @@ nonisolated final class FullSyncRepository: @unchecked Sendable {
                 var baseVersion: Int64 = row["base_version"]
                 if let predecessor: Int64 = row["predecessor_id"],
                    let previous = try Row.fetchOne(db, sql: "SELECT status, server_version FROM sync_outbox WHERE id = ?", arguments: [predecessor]),
-                   ["applied", "duplicate"].contains(previous["status"] as String) {
+                   ["applied", "duplicate", "matched"].contains(previous["status"] as String) {
                     baseVersion = previous["server_version"]
                 }
                 guard let updatedAt = object["updated_at"] as? Int64, let deviceID = object["device_id"] as? String else {

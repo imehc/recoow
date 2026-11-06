@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 extension FullSyncRepository {
-    nonisolated func receive(_ data: Data, target: SyncTarget) throws -> Bool {
+    nonisolated func receive(_ data: Data, target: SyncTarget, matchedOutbox: [Int64: SyncManifestCandidate] = [:]) throws -> Bool {
         let pageKey = target.bootstrapComplete ? "pull:\(target.receivedCursor)" : "bootstrap:\(target.bootstrapAfter)"
         try database.writer.write { db in
             try requireCurrent()
@@ -27,6 +27,16 @@ extension FullSyncRepository {
                 let update = RemoteRowUpdate(table: entry.table, id: entry.id, version: entry.version, updatedAtMs: entry.updatedAtMs,
                                              deviceID: entry.deviceID, deletedAtMs: entry.deletedAtMs, snapshot: entry.snapshot,
                                              dataVersion: entry.dataVersion)
+                if let candidate = matchedOutbox[entry.version] {
+                    try db.execute(sql: """
+                        UPDATE sync_outbox SET status = 'matched', server_version = ?
+                        WHERE id = ? AND scope = ? AND status = 'pending' AND prepared_json IS NULL
+                        AND local_change_id IS NULL AND base_version = 0
+                        """, arguments: [entry.version, candidate.outboxID, target.scope])
+                    if db.changesCount == 1 {
+                        try SyncSnapshotRebase.pending(db: db, scope: target.scope, acknowledgedID: candidate.outboxID, update: update)
+                    }
+                }
                 let json = try Self.json(update.envelope)
                 if let existing = try String.fetchOne(db, sql: "SELECT envelope_json FROM sync_inbox WHERE scope = ? AND version = ?",
                                                      arguments: [target.scope, entry.version]), existing != json {
@@ -47,6 +57,10 @@ extension FullSyncRepository {
                 }
             }
             try db.execute(sql: "DELETE FROM sync_received_pages WHERE scope = ? AND page_key = ?", arguments: [target.scope, pageKey])
+            if !target.bootstrapComplete {
+                try db.execute(sql:"DELETE FROM sync_received_pages WHERE scope = ? AND page_key = ?",
+                               arguments:[target.scope,"manifest:\(target.bootstrapAfter)"])
+            }
         }
         return page.more
     }

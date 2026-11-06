@@ -234,7 +234,8 @@ final class RecoowAPIClient: @unchecked Sendable {
     // MARK: - 底层
 
     func send(path: String, method: String, body: Data?, auth: Bool,
-              query: [URLQueryItem] = [], contentType: String = "application/json") async throws -> Data {
+              query: [URLQueryItem] = [], contentType: String = "application/json",
+              validateResponse: (@Sendable (HTTPURLResponse) throws -> Void)? = nil) async throws -> Data {
         guard var components = URLComponents(string: baseURL()) else {
             throw CloudAPIError.invalidURL
         }
@@ -262,6 +263,7 @@ final class RecoowAPIClient: @unchecked Sendable {
                 let message = Self.errorMessage(from: data)
                 throw CloudAPIError.badStatus(http.statusCode, message)
             }
+            try validateResponse?(http)
             return data
         } catch let error as CloudAPIError {
             throw error
