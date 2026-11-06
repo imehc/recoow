@@ -70,6 +70,7 @@ class SyncApiFactory(private val allowLocalHttp: Boolean = false, private val pr
             val original = chain.request()
             check(original.url.scheme == base.scheme && original.url.host == base.host && original.url.port == base.port)
             val request = original.newBuilder().header("Accept", "application/json")
+                .header("X-Recoow-Field-Case", "snake_case")
             if (profile != null) {
                 for ((key, header) in mapOf("client" to "X-Recoow-Client", "os" to "X-Recoow-OS", "appVersion" to "X-Recoow-App-Version", "osVersion" to "X-Recoow-OS-Version", "localDeviceId" to "X-Recoow-Device-Id")) {
                     profile[key]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }?.let { request.header(header, it) }
@@ -80,13 +81,13 @@ class SyncApiFactory(private val allowLocalHttp: Boolean = false, private val pr
         }.build()
         val retrofit = Retrofit.Builder().baseUrl(base).client(scoped).build().create(RetrofitEndpoints::class.java)
         return object : SyncApi {
-            override suspend fun get(path: String, query: Map<String, String>) = read(retrofit.get(path, query))
+            override suspend fun get(path: String, query: Map<String, String>) = read(retrofit.get(path, query.mapKeys { APIFields.name(it.key) }))
             override suspend fun delete(path: String) = read(retrofit.delete(path))
-            override suspend fun post(path: String, body: JsonObject) = read(retrofit.post(path, body.toString().toRequestBody("application/json".toMediaType())))
+            override suspend fun post(path: String, body: JsonObject) = read(retrofit.post(path, APIFields.rename(body, false).toString().toRequestBody("application/json".toMediaType())))
             override suspend fun put(path: String, body: JsonObject) =
-                read(retrofit.put(path, emptyMap(), body.toString().toRequestBody("application/json".toMediaType())))
+                read(retrofit.put(path, emptyMap(), APIFields.rename(body, false).toString().toRequestBody("application/json".toMediaType())))
             override suspend fun upload(key: String, checksum: String, type: String, file: File) =
-                read(retrofit.put("api/media/objects/$key", mapOf("checksum" to checksum, "contentType" to type), file.asRequestBody(type.toMediaType())))
+                read(retrofit.put("api/media/objects/$key", mapOf("checksum" to checksum, "content_type" to type), file.asRequestBody(type.toMediaType())))
             override suspend fun mediaExists(key: String, checksum: String, size: Long): Boolean {
                 val response = retrofit.head("api/media/objects/$key")
                 if (response.code() == 404) { response.errorBody()?.close(); return false }

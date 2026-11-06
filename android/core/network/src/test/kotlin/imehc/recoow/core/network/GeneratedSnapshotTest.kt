@@ -43,7 +43,7 @@ class GeneratedSnapshotTest {
     @Test fun resourceResponseUsesTheSnapshotSerializer() {
         val record = buildJsonObject {
             put("table", "bills"); put("id", "bill"); put("version", 7)
-            put("updatedAtMs", 1000); put("deviceId", "device"); put("snapshot", source)
+            put("updated_at_ms", 1000); put("device_id", "device"); put("snapshot", source)
         }
         val decoded = json.decodeFromJsonElement<RWAPIBillsRecord>(record)
         assertEquals(source, json.encodeToJsonElement(decoded).jsonObject["snapshot"])

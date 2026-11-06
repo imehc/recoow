@@ -25,6 +25,7 @@ val generateOpenAPI by tasks.registering(Exec::class) {
     inputs.file(repository.file("Makefile"))
     inputs.dir(repository.dir("android/build-tools/openapi-templates"))
     outputs.dir(layout.buildDirectory.dir("generated/openapi"))
+    outputs.file(repository.file("android/core/network/src/main/kotlin/imehc/recoow/core/network/APIFieldNames.generated.kt"))
     commandLine("make", "generate-android-api")
 }
 androidComponents.onVariants { variant ->

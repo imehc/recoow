@@ -12,7 +12,8 @@ fun JsonObject.integer(key: String): Long = getValue(key).jsonPrimitive.let {
 fun JsonObject.flag(key: String): Boolean = getValue(key).jsonPrimitive.let {
     require(!it.isString) { "Invalid $key" }; requireNotNull(it.booleanOrNull) { "Invalid $key" }
 }
-fun decodeObject(bytes: ByteArray): JsonObject = Json.parseToJsonElement(bytes.decodeToString(throwOnInvalidSequence = true)).jsonObject
+fun decodeObject(bytes: ByteArray): JsonObject = APIFields.rename(
+    Json.parseToJsonElement(bytes.decodeToString(throwOnInvalidSequence = true)), true).jsonObject
 
 data class Capabilities(val account: String, val generation: String, val head: Long, val minCursor: Long,
     val pushLimit: Int, val pullLimit: Int, val mediaLimit: Long, val manifestBootstrap: Boolean = false, val mutationOrigin: Boolean = false, val deviceProfiles: Boolean = false) {
