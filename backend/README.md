@@ -94,6 +94,20 @@ Web 登录使用独立的可过期会话，保存 token 哈希；默认 Cookie �
 
 要求 Go 满足 `go.mod`，PostgreSQL 15 及以上。配置与迁移步骤见 [部署文档](../deploy/README.md)。
 
+本机开发还需要 Docker，在仓库根目录执行：
+
+```bash
+bash backend/dev.sh
+```
+
+脚本启动独立 PostgreSQL 开发库，创建迁移与普通运行角色，执行迁移，然后在 `127.0.0.1:8080` 运行 Go API。数据库端口为 `127.0.0.1:55432`，数据保存在 `recoow-dev` 的 `postgres-data` 卷，媒体保存在忽略的 `backend/data/dev/`；重复启动保留数据。脚本覆盖数据库、注册及 TLS 等部署配置，示例密码和 HTTP Cookie 仅用于本机开发。
+
+按 Ctrl+C 停止 API。暂停开发数据库并保留数据：
+
+```bash
+docker compose -f backend/dev/compose.yaml stop
+```
+
 | 配置 | 用途 |
 | --- | --- |
 | `RECOOW_DATABASE_URL` | 必填，普通运行角色 PostgreSQL 连接串 |
