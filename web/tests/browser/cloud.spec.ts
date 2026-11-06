@@ -206,27 +206,74 @@ async function signIn(page: Page, username = 'alice', password = 'correct') {
   await page.getByRole('button', { name: '登录', exact: true }).click();
 }
 
+async function choosePreference(page: Page, preference: string, option: string) {
+  await page.getByRole('button', { name: preference, exact: true }).click();
+  await page.getByRole('menuitemradio', { name: option, exact: true }).click();
+  await expect(page.getByRole('menu')).toHaveCount(0);
+}
+
 test('theme and language follow system, persist, and remain usable with keyboard', async ({
   page,
-}) => {
+}, testInfo) => {
   await cloud(page);
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/');
   await expect(page.getByRole('heading', { name: '查看你的云端记录' })).toBeVisible();
   await expect(page.locator('html')).toHaveClass('dark');
-  await page.getByLabel('主题', { exact: true }).selectOption('light');
+  await choosePreference(page, '主题', '浅色');
   await expect(page.locator('html')).not.toHaveClass('dark');
-  await page.getByLabel('语言', { exact: true }).selectOption('en');
+  await choosePreference(page, '语言', 'English');
   await expect(page.getByRole('heading', { name: 'Your records, in the cloud' })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await page.reload();
-  await expect(page.getByLabel('Language')).toHaveValue('en');
-  await expect(page.getByLabel('Theme')).toHaveValue('light');
-  await page.keyboard.press('Tab');
-  await expect(page.locator(':focus')).toBeVisible();
+  const language = page.getByRole('button', { name: 'Language', exact: true });
+  await language.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menuitemradio', { name: 'English', exact: true })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await expect(page.getByRole('menuitemradio', { name: 'Browser', exact: true })).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('menuitemradio', { name: '简体中文', exact: true })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  await expect(language).toBeFocused();
+  const theme = page.getByRole('button', { name: 'Theme', exact: true });
+  await theme.click();
+  await expect(page.getByRole('menuitemradio', { name: 'Light', exact: true })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await page.screenshot({
+    path: `test-results/login-light-en-${testInfo.project.name}.png`,
+    fullPage: true,
+  });
+  // The menu captures outside pointer events before they reach page elements.
+  await page.mouse.click(8, 8);
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  await choosePreference(page, 'Theme', 'System');
+  await expect(page.locator('html')).toHaveClass('dark');
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(page.locator('html')).not.toHaveClass('dark');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
+  await page.evaluate(() => {
+    localStorage.setItem('recoow:preferences', JSON.stringify({ theme: 'dark', language: 'zh' }));
+  });
+  await page.reload();
+  await expect(page.locator('html')).toHaveClass('dark');
+  await expect(page.getByRole('heading', { name: '查看你的云端记录' })).toBeVisible();
+  expect(
+    await page.evaluate(() => JSON.parse(localStorage.getItem('recoow:preferences') ?? '{}')),
+  ).toEqual({ language: 'zh' });
+  await page.getByRole('button', { name: '语言', exact: true }).click();
+  await page.screenshot({
+    path: `test-results/login-dark-zh-${testInfo.project.name}.png`,
+    fullPage: true,
+  });
+  await page.keyboard.press('Escape');
 });
 
 test('reads precise amounts, historical times and source snapshots', async ({ page }, testInfo) => {
@@ -321,11 +368,17 @@ test('media preview supports keyboard closing and dark English layout', async ({
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('button', { name: '放大图片' })).toBeFocused();
-  await page.getByLabel('主题', { exact: true }).selectOption('dark');
-  await page.getByLabel('语言', { exact: true }).selectOption('en');
+  await choosePreference(page, '主题', '深色');
+  await choosePreference(page, '语言', 'English');
   await expect(page.getByRole('heading', { name: 'Record content' })).toBeVisible();
   await expect(page.locator('html')).toHaveClass('dark');
-  expect(await page.evaluate(() => Object.keys(localStorage))).toEqual(['recoow:preferences']);
+  const storageKeys = await page.evaluate(() => Object.keys(localStorage));
+  expect(storageKeys).toContain('recoow:preferences');
+  expect(
+    storageKeys.every((key) =>
+      ['recoow:preferences', 'recoow:theme', 'recoow:palette'].includes(key),
+    ),
+  ).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );

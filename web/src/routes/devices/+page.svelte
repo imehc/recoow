@@ -13,13 +13,10 @@
 
 <div class="page-heading">
   <div>
-    <p class="eyebrow">{t('来源与设备', 'SOURCES AND DEVICES')}</p>
-    <h1>{t('设备', 'Devices')}</h1>
+    <p class="eyebrow">{t('sources_and_devices')}</p>
+    <h1>{t('devices')}</h1>
     <p>
-      {t(
-        '查看账号当前登记的设备；历史保留事件当时的来源资料。',
-        'View devices currently registered to your account. History retains source information from the time of each change.',
-      )}
+      {t('view_devices_currently_registered_to_your_account_history_retains_source')}
     </p>
   </div>
 </div>
@@ -31,10 +28,10 @@
 />
 {#if query.data}<div class="device-grid">
     {#each query.data.devices as device (device.id)}<section class="panel">
-        <div class="panel-heading"><h2>{device.name || t('未命名设备', 'Unnamed device')}</h2></div>
+        <div class="panel-heading"><h2>{device.name || t('unnamed_device')}</h2></div>
         <div class="panel-body">
           <dl class="field-list">
-            {#each [[t('来源', 'Source'), source(device.profile)], [t('App 版本', 'App version'), device.profile?.appVersion ?? t('未记录', 'Not recorded')], [t('系统版本', 'OS version'), device.profile?.osVersion ?? t('未记录', 'Not recorded')], [t('最近在线', 'Last seen'), time(new Date(device.lastSeenAt).getTime())], [t('主设备', 'Owner device'), device.isOwner ? t('是', 'Yes') : t('否', 'No')], [t('设备编号', 'Device ID'), device.id]] as [label, value] (label)}<div
+            {#each [[t('source'), source(device.profile)], [t('app_version'), device.profile?.appVersion ?? t('not_recorded')], [t('os_version'), device.profile?.osVersion ?? t('not_recorded')], [t('last_seen'), time(new Date(device.lastSeenAt).getTime())], [t('owner_device'), device.isOwner ? t('yes') : t('no')], [t('device_id'), device.id]] as [label, value] (label)}<div
                 class="field"
               >
                 <dt>{label}</dt>

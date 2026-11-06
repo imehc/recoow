@@ -64,13 +64,10 @@
   class="chart"
   bind:this={element}
   role="img"
-  aria-label={t(
-    '云端记录数量，按实体类型排列。下方提供完整数据列表。',
-    'Cloud record counts by entity. A complete data list is provided below.',
-  )}
+  aria-label={t('cloud_record_counts_by_entity_a_complete_data_list_is_provided_below')}
 ></div>
 <details class="panel-body">
-  <summary>{t('查看完整数量', 'View all counts')}</summary>
+  <summary>{t('view_all_counts')}</summary>
   <dl class="field-list">
     {#each Object.entries(counts) as [table, count] (table)}<div class="field">
         <dt>{entityTitle(table)}</dt>

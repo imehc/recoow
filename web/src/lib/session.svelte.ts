@@ -87,8 +87,7 @@ export class Session {
     this.error = '';
     await api.login(username, password);
     await this.revalidate();
-    if (!this.user)
-      throw new Error(t('会话暂时无法验证，请重试', 'Unable to verify the session. Try again.'));
+    if (!this.user) throw new Error(t('unable_to_verify_the_session_try_again'));
   }
 
   async logout() {

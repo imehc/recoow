@@ -96,18 +96,17 @@ export function integer(value: unknown): bigint | null {
 }
 export function money(value: unknown): string {
   const amount = integer(value);
-  if (amount === null) return t('未记录', 'Not recorded');
+  if (amount === null) return t('not_recorded');
   const absolute = amount < 0n ? -amount : amount;
   const whole = String(absolute / 100n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   return `${amount < 0n ? '-' : ''}¥${whole}.${String(absolute % 100n).padStart(2, '0')}`;
 }
 export function time(value: unknown): string {
   const timestamp = Number(isLosslessNumber(value) ? value.value : value);
-  if (value == null || !Number.isFinite(timestamp) || timestamp <= 0)
-    return t('未记录', 'Not recorded');
+  if (value == null || !Number.isFinite(timestamp) || timestamp <= 0) return t('not_recorded');
   const date = new Date(timestamp);
   return Number.isNaN(date.getTime())
-    ? t('未记录', 'Not recorded')
+    ? t('not_recorded')
     : new Intl.DateTimeFormat(preferences.locale === 'zh' ? 'zh-CN' : 'en-GB', {
         year: 'numeric',
         month: '2-digit',
@@ -120,16 +119,15 @@ export function time(value: unknown): string {
 }
 export const timezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 export function valueText(table: string, key: string, value: unknown, present = true): string {
-  if (!present) return t('未设置', 'Missing');
-  if (value === null) return t('空值', 'Null');
-  if (value === undefined) return t('未记录', 'Not recorded');
+  if (!present) return t('missing');
+  if (value === null) return t('null');
+  if (value === undefined) return t('not_recorded');
   if (key.endsWith('_cents')) return money(value);
   const field = entity(table)?.fields.find((field) => field.name === key);
   if (field?.format === 'ts_ms') return time(value);
-  if (typeof value === 'boolean') return value ? t('是', 'Yes') : t('否', 'No');
+  if (typeof value === 'boolean') return value ? t('yes') : t('no');
   if (isLosslessNumber(value)) return value.value;
-  if (typeof value === 'object')
-    return stringify(value, undefined, 2) ?? t('未记录', 'Not recorded');
+  if (typeof value === 'object') return stringify(value, undefined, 2) ?? t('not_recorded');
   return String(value);
 }
 export function title(
@@ -142,29 +140,29 @@ export function title(
 }
 export const operationText = (value: string) =>
   ({
-    insert: t('新增', 'Added'),
-    update: t('修改', 'Edited'),
-    delete: t('删除', 'Deleted'),
-    restore: t('恢复', 'Restored'),
+    insert: t('added'),
+    update: t('edited'),
+    delete: t('deleted'),
+    restore: t('restored'),
   })[value] ?? value;
 export const methodText = (value: string) =>
   ({
-    normal: t('普通提交', 'Normal submission'),
-    automatic_merge: t('自动合并', 'Automatic merge'),
-    manual_resolution: t('人工确认', 'Manual resolution'),
-    system: t('系统计算', 'System calculation'),
-    unknown: t('未记录', 'Not recorded'),
+    normal: t('normal_submission'),
+    automatic_merge: t('automatic_merge'),
+    manual_resolution: t('manual_resolution'),
+    system: t('system_calculation'),
+    unknown: t('not_recorded'),
   })[value] ?? value;
 export function source(
   value: { client?: string; os?: string; deviceName?: string } | null | undefined,
 ): string {
-  if (!value) return t('未记录', 'Not recorded');
+  if (!value) return t('not_recorded');
   const client = (
     {
       ios: 'iOS App',
       android: 'Android App',
       web: 'Web',
-      unknown: t('未知来源', 'Unknown source'),
+      unknown: t('unknown_source'),
     } as Record<string, string>
   )[value.client ?? 'unknown'];
   const os =

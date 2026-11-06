@@ -3,6 +3,7 @@
   import { onMount, type Snippet } from 'svelte';
   import { page } from '$app/state';
   import { QueryClientProvider } from '@tanstack/svelte-query';
+  import { ModeWatcher } from 'mode-watcher';
   import {
     LayoutDashboard,
     Files,
@@ -22,10 +23,10 @@
   let logoutError = $state<Error | null>(null);
   let loggingOut = $state(false);
   const nav = $derived([
-    { href: '/', text: t('概览', 'Overview'), icon: LayoutDashboard },
-    { href: '/records/diary_entries', text: t('记录', 'Records'), icon: Files },
-    { href: '/history', text: t('变更历史', 'Change history'), icon: History },
-    { href: '/devices', text: t('设备', 'Devices'), icon: MonitorSmartphone },
+    { href: '/', text: t('overview'), icon: LayoutDashboard },
+    { href: '/records/diary_entries', text: t('records'), icon: Files },
+    { href: '/history', text: t('change_history'), icon: History },
+    { href: '/devices', text: t('devices'), icon: MonitorSmartphone },
   ]);
   onMount(() => {
     const stopPreferences = preferences.start();
@@ -49,24 +50,29 @@
 </script>
 
 <svelte:head
-  ><title>recoow · {t('云端记录', 'Cloud records')}</title><meta
+  ><title>recoow · {t('cloud_records')}</title><meta
     name="robots"
     content="noindex, nofollow"
   /></svelte:head
 >
+<ModeWatcher
+  modeStorageKey="recoow:theme"
+  themeStorageKey="recoow:palette"
+  themeColors={{ light: '#f6f7fb', dark: '#131824' }}
+/>
 <QueryClientProvider client={queryClient}>
   {#if !session.ready}<main class="status" role="status">
-      {t('正在验证会话…', 'Verifying session…')}
+      {t('verifying_session')}
     </main>
   {:else if !session.user}<Login />
   {:else}
-    <a class="skip-link" href="#main">{t('跳到内容', 'Skip to content')}</a>
+    <a class="skip-link" href="#main">{t('skip_to_content')}</a>
     <div class="app-shell">
       <aside class="sidebar">
         <a class="brand" href="/"><span class="brand-mark">r</span>recoow</a>
         <div>
-          <p class="nav-label">{t('你的云端空间', 'Your cloud space')}</p>
-          <nav class="nav-list" aria-label={t('主导航', 'Main navigation')}>
+          <p class="nav-label">{t('your_cloud_space')}</p>
+          <nav class="nav-list" aria-label={t('main_navigation')}>
             {#each nav as item (item.href)}<a
                 href={item.href}
                 class:active={item.href === '/'
@@ -87,28 +93,25 @@
         <div class="sidebar-footer">
           <span
             ><span class="online-dot" style:background={session.online ? undefined : '#c99446'}
-            ></span>{session.online
-              ? t('在线 · 云端只读', 'Online · Read only')
-              : t('离线', 'Offline')}</span
-          ><small
-            >{t('手机负责记录，云端呈现变化', 'Record on your phone, explore in the cloud')}</small
-          >
+            ></span>{session.online ? t('online_read_only') : t('offline')}</span
+          ><small>{t('record_on_your_phone_explore_in_the_cloud')}</small>
         </div>
       </aside>
       <div class="workspace">
         <header class="topbar">
-          <Badge variant="secondary">{t('云端只读', 'Cloud · Read only')}</Badge><Preferences />
+          <Badge variant="secondary">{t('cloud_read_only')}</Badge>
           <div class="topbar-actions">
+            <Preferences /><span class="topbar-divider" aria-hidden="true"></span>
             <span class="username">{session.user.username}</span><Button
               variant="ghost"
               size="icon"
-              aria-label={t('刷新云端数据', 'Refresh cloud data')}
+              aria-label={t('refresh_cloud_data')}
               disabled={session.checking || !session.online}
               onclick={() => session.revalidate()}><RefreshCw size={17} /></Button
             ><Button
               variant="ghost"
               size="icon"
-              aria-label={t('退出登录', 'Sign out')}
+              aria-label={t('sign_out')}
               disabled={loggingOut}
               onclick={logout}><LogOut size={17} /></Button
             >
@@ -116,21 +119,15 @@
         </header>
         <main class="main" id="main" tabindex="-1">
           {#if !session.online}<div class="notice" role="status">
-              {t(
-                '当前离线，已加载的内容可能不是最新数据。联网后会重新检查。',
-                'You are offline. Loaded content may be out of date; it will be checked when you reconnect.',
-              )}
+              {t('you_are_offline_loaded_content_may_be_out_of_date_it_will_be_checked_whe')}
             </div>{/if}
           {#if session.error === 'network'}<div class="notice" role="status">
-              {t(
-                '暂时无法获取云端最新数据，请重试',
-                'Unable to check the latest cloud data. Try again.',
-              )}
+              {t('unable_to_check_the_latest_cloud_data_try_again')}
             </div>{/if}
           {#if logoutError}<div class="notice error" role="alert">
               {logoutError instanceof APIError
                 ? logoutError.message
-                : t('退出失败，请重试', 'Unable to sign out. Try again.')}
+                : t('unable_to_sign_out_try_again')}
             </div>{/if}
           {#key `${session.user.accountId}:${session.epoch}`}{@render children()}{/key}
         </main>

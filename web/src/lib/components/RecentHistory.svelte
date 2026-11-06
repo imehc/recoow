@@ -16,7 +16,7 @@
           event.originalSource,
         )}
       </p>
-      <p>{t('服务端接受于', 'Accepted by server at')} {time(event.acceptedAtMs)}</p>
+      <p>{t('accepted_by_server_at')} {time(event.acceptedAtMs)}</p>
     </div>
   </a>
 {/each}

@@ -20,14 +20,14 @@ export class APIError extends Error {
   }
   get message() {
     return this.status === 401
-      ? t('登录已过期，请重新登录', 'Your session expired. Sign in again.')
+      ? t('your_session_expired_sign_in_again')
       : this.resetRequired
-        ? t('云端数据已重建，请重新加载', 'Cloud data was reset. Reload to continue.')
+        ? t('cloud_data_was_reset_reload_to_continue')
         : this.status === 403
-          ? t('当前会话无权执行此操作', 'This session cannot perform this action.')
+          ? t('this_session_cannot_perform_this_action')
           : this.status === 404
-            ? t('记录不存在或已被删除', 'This record was not found or was deleted.')
-            : t(`请求失败（${this.status}）`, `Request failed (${this.status})`);
+            ? t('this_record_was_not_found_or_was_deleted')
+            : t('request_failed', { status: this.status });
   }
 }
 

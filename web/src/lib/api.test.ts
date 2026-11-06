@@ -75,4 +75,7 @@ describe('authenticated transport', () => {
     });
     expect(listener).not.toHaveBeenCalled();
   });
+  it('formats the HTTP status in translated errors', () => {
+    expect(new APIError(502).message).toBe('请求失败（502）');
+  });
 });

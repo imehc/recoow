@@ -9,10 +9,9 @@
   <table>
     <thead
       ><tr
-        ><th>{t('记录与操作', 'Record / change')}</th><th>{t('原始修改来源', 'Original source')}</th
-        ><th>{t('客户端修改时间', 'Client modified at')}</th><th
-          >{t('服务端接受时间', 'Server accepted at')}</th
-        ><th>{t('详情', 'Details')}</th></tr
+        ><th>{t('record_change')}</th><th>{t('original_source')}</th><th
+          >{t('client_modified_at')}</th
+        ><th>{t('server_accepted_at')}</th><th>{t('details')}</th></tr
       ></thead
     ><tbody
       >{#each events as event (event.eventId)}<tr
@@ -27,7 +26,7 @@
             >{time(event.acceptedAtMs)}</td
           ><td
             ><a class="text-link" href={'/history/' + encodeURIComponent(event.eventId)}
-              >{t('查看变化', 'View change')}</a
+              >{t('view_change')}</a
             ></td
           ></tr
         >{/each}</tbody

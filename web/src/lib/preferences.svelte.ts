@@ -1,3 +1,6 @@
+import { mode, setMode, userPrefersMode } from 'mode-watcher';
+import { translate, type MessageKey, type MessageValues } from './i18n';
+
 export type Theme = 'system' | 'light' | 'dark';
 export type Language = 'system' | 'zh' | 'en';
 
@@ -10,71 +13,57 @@ export function resolveLanguage(choice: Language, languages: readonly string[]):
 }
 
 class Preferences {
-  theme = $state<Theme>('system');
   language = $state<Language>('system');
-  systemDark = $state(false);
   browserLanguages = $state<readonly string[]>(['zh']);
   locale = $derived(resolveLanguage(this.language, this.browserLanguages));
-  dark = $derived(this.theme === 'dark' || (this.theme === 'system' && this.systemDark));
-
-  text(zh: string, en: string) {
-    return this.locale === 'zh' ? zh : en;
+  get theme(): Theme {
+    return userPrefersMode.current;
   }
-
-  private apply() {
-    document.documentElement.classList.toggle('dark', this.dark);
-    document.documentElement.lang = this.locale === 'zh' ? 'zh-CN' : 'en';
+  get dark() {
+    return mode.current === 'dark';
   }
 
   setTheme(theme: Theme) {
-    this.theme = theme;
-    this.persist();
+    setMode(theme);
   }
   setLanguage(language: Language) {
     this.language = language;
     this.persist();
   }
 
+  private applyLanguage() {
+    document.documentElement.lang = this.locale === 'zh' ? 'zh-CN' : 'en';
+  }
+
   private persist() {
     try {
-      localStorage.setItem(
-        'recoow:preferences',
-        JSON.stringify({ theme: this.theme, language: this.language }),
-      );
+      localStorage.setItem('recoow:preferences', JSON.stringify({ language: this.language }));
     } catch {
       /* Storage can be disabled. */
     }
-    this.apply();
+    this.applyLanguage();
   }
 
   start() {
     this.browserLanguages = navigator.languages;
     try {
       const saved = JSON.parse(localStorage.getItem('recoow:preferences') ?? '{}');
-      if (['system', 'light', 'dark'].includes(saved.theme)) this.theme = saved.theme;
       if (['system', 'zh', 'en'].includes(saved.language)) this.language = saved.language;
+      // Preserve preferences saved before adopting mode-watcher.
+      if (['system', 'light', 'dark'].includes(saved.theme)) setMode(saved.theme);
     } catch {
       /* Ignore invalid or unavailable preferences. */
     }
-    const media = matchMedia('(prefers-color-scheme: dark)');
-    this.systemDark = media.matches;
-    const themeChanged = () => {
-      this.systemDark = media.matches;
-      this.apply();
-    };
+    this.persist();
     const languageChanged = () => {
       this.browserLanguages = navigator.languages;
-      this.apply();
+      this.applyLanguage();
     };
-    media.addEventListener('change', themeChanged);
     window.addEventListener('languagechange', languageChanged);
-    this.apply();
-    return () => {
-      media.removeEventListener('change', themeChanged);
-      window.removeEventListener('languagechange', languageChanged);
-    };
+    return () => window.removeEventListener('languagechange', languageChanged);
   }
 }
 
 export const preferences = new Preferences();
-export const t = (zh: string, en: string) => preferences.text(zh, en);
+export const t = (key: MessageKey, values?: MessageValues) =>
+  translate(key, preferences.locale, values);

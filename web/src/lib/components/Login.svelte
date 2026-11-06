@@ -24,33 +24,26 @@
 </script>
 
 <main class="login-shell">
+  <div class="login-preferences"><Preferences /></div>
   <section class="panel login-card">
     <div class="brand"><span class="brand-mark">r</span>recoow</div>
-    <h1>{t('查看你的云端记录', 'Your records, in the cloud')}</h1>
+    <h1>{t('your_records_in_the_cloud')}</h1>
     <p>
-      {t(
-        '查看已同步的记录、统计和变化。请使用手机端已绑定的用户名与密码登录。',
-        'Browse synced records, statistics and changes. Sign in with the username and password linked in your mobile app.',
-      )}
+      {t('browse_synced_records_statistics_and_changes_sign_in_with_the_username_a')}
     </p>
     {#if session.error === 'expired'}<div class="notice" role="status">
-        {t('登录已过期，请重新登录', 'Your session expired. Sign in again.')}
+        {t('your_session_expired_sign_in_again')}
       </div>{/if}
     {#if session.error === 'network'}<div class="notice" role="status">
-        {t(
-          '暂时无法连接云端，请检查网络后重试',
-          'Unable to reach the cloud. Check your connection and try again.',
-        )}
+        {t('unable_to_reach_the_cloud_check_your_connection_and_try_again')}
       </div>{/if}
     {#if session.error === 'reset'}<div class="notice" role="status">
-        {t('云端数据已重建，请重新验证会话', 'Cloud data was reset. Verify your session again.')}
+        {t('cloud_data_was_reset_verify_your_session_again')}
       </div>
-      <Button variant="outline" onclick={() => session.revalidate()}
-        >{t('重新加载', 'Reload')}</Button
-      >{/if}
+      <Button variant="outline" onclick={() => session.revalidate()}>{t('reload')}</Button>{/if}
     <form class="login-form" onsubmit={login}>
       <label
-        >{t('用户名', 'Username')}<input
+        >{t('username')}<input
           autocomplete="username"
           required
           maxlength="120"
@@ -59,7 +52,7 @@
         /></label
       >
       <label
-        >{t('密码', 'Password')}<input
+        >{t('password')}<input
           type="password"
           autocomplete="current-password"
           required
@@ -69,24 +62,17 @@
       >
       {#if error}<div class="notice error" role="alert">
           {error instanceof APIError && error.status === 401
-            ? t('用户名或密码错误', 'Incorrect username or password.')
+            ? t('incorrect_username_or_password')
             : error instanceof APIError
               ? error.message
-              : t(
-                  '登录失败，请检查网络后重试',
-                  'Unable to sign in. Check your connection and try again.',
-                )}
+              : t('unable_to_sign_in_check_your_connection_and_try_again')}
         </div>{/if}
       <Button type="submit" disabled={busy || !session.online || session.checking}
-        >{busy ? t('正在登录…', 'Signing in…') : t('登录', 'Sign in')}</Button
+        >{busy ? t('signing_in') : t('sign_in')}</Button
       >
     </form>
     <p class="login-footnote">
-      {t(
-        '仅展示云端已收到的数据；手机上尚未同步的修改不会出现在这里。',
-        'Only data received by the cloud is shown. Unsynced changes on your phone are not included.',
-      )}
+      {t('only_data_received_by_the_cloud_is_shown_unsynced_changes_on_your_phone')}
     </p>
-    <Preferences />
   </section>
 </main>

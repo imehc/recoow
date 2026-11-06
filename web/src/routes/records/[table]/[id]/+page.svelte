@@ -21,7 +21,7 @@
 <div class="page-heading">
   <div>
     <p class="eyebrow"><a href={'/records/' + table}>{entityTitle(table)}</a></p>
-    <h1>{title(query.data?.snapshot, t('记录详情', 'Record details'))}</h1>
+    <h1>{title(query.data?.snapshot, t('record_details'))}</h1>
     <p class="record-id">{id}</p>
   </div>
 </div>
@@ -30,39 +30,39 @@
   error={query.error}
   retry={() => query.refetch()}
 />
-{#if !entity(table)}<div class="status">{t('未知的记录类型', 'Unknown record type')}</div>{/if}
+{#if !entity(table)}<div class="status">{t('unknown_record_type')}</div>{/if}
 {#if query.data}<div class="detail-grid">
     <div class="stack">
       <section class="panel">
-        <div class="panel-heading"><h2>{t('记录内容', 'Record content')}</h2></div>
+        <div class="panel-heading"><h2>{t('record_content')}</h2></div>
         <div class="panel-body"><Fields {table} snapshot={query.data.snapshot} /></div>
       </section>
       <Media snapshot={query.data.snapshot} />
     </div>
     <aside class="stack">
       <section class="panel">
-        <div class="panel-heading"><h2>{t('云端信息', 'Cloud information')}</h2></div>
+        <div class="panel-heading"><h2>{t('cloud_information')}</h2></div>
         <div class="panel-body">
           <dl class="field-list">
             <div class="field">
-              <dt>{t('云端版本', 'Cloud version')}</dt>
+              <dt>{t('cloud_version')}</dt>
               <dd>{String(query.data.version)}</dd>
             </div>
             <div class="field">
-              <dt>{t('客户端修改时间', 'Client modified at')}</dt>
+              <dt>{t('client_modified_at')}</dt>
               <dd>{time(query.data.updatedAtMs)}</dd>
             </div>
             <div class="field">
-              <dt>{t('状态', 'Status')}</dt>
+              <dt>{t('status')}</dt>
               <dd>
-                {query.data.deletedAtMs ? t('已删除', 'Deleted') : t('当前记录', 'Current record')}
+                {query.data.deletedAtMs ? t('deleted_dbdda0') : t('current_record')}
               </dd>
             </div>
           </dl>
           {#if session.historySupported}<a
               class="text-link"
               href={'/history?table=' + encodeURIComponent(table) + '&id=' + encodeURIComponent(id)}
-              >{t('查看这条记录的所有变化 →', 'View all changes to this record →')}</a
+              >{t('view_all_changes_to_this_record')}</a
             >{/if}
         </div>
       </section>

@@ -40,13 +40,10 @@
 
 <div class="page-heading">
   <div>
-    <p class="eyebrow">{t('云端记录', 'CLOUD RECORDS')}</p>
+    <p class="eyebrow">{t('cloud_records_e4ffca')}</p>
     <h1>{entityTitle(table)}</h1>
     <p>
-      {t(
-        '查看已同步记录；按实体类型、文字或日期筛选。',
-        'Browse synced records by type, text or date.',
-      )}
+      {t('browse_synced_records_by_type_text_or_date')}
     </p>
   </div>
 </div>
@@ -59,8 +56,8 @@
     }}
   >
     <label
-      >{t('记录类型', 'Record type')}<select
-        aria-label={t('记录类型', 'Record type')}
+      >{t('record_type')}<select
+        aria-label={t('record_type')}
         value={table}
         onchange={(event) => {
           filters = {};
@@ -74,23 +71,20 @@
           >{/each}</select
       ></label
     ><label class="search"
-      >{t('搜索', 'Search')}<input
+      >{t('search_b97cb8')}<input
         type="search"
         bind:value={search}
-        placeholder={t('搜索记录内容', 'Search record content')}
+        placeholder={t('search_record_content')}
       /></label
-    ><DateRange bind:from bind:to /><Button variant="outline" type="submit"
-      >{t('查询', 'Search')}</Button
-    >
+    ><DateRange bind:from bind:to /><Button variant="outline" type="submit">{t('search')}</Button>
   </form>
   <div class="panel-body freshness">
-    {t('日期依据', 'Date field')}: {fieldLabel(table, dateField)} · {t(
-      '显示当前云端记录，翻页期间有新同步时可刷新获取最新结果。',
-      'Shows current cloud records. Refresh to include changes synced while paging.',
+    {t('date_field')}: {fieldLabel(table, dateField)} · {t(
+      'shows_current_cloud_records_refresh_to_include_changes_synced_while_pagi',
     )}
   </div>
   {#if !entity(table)}<div class="status">
-      {t('未知的记录类型', 'Unknown record type')}
+      {t('unknown_record_type')}
     </div>{:else}<QueryStatus
       pending={query.isPending}
       error={query.error}
@@ -101,9 +95,8 @@
         <table>
           <thead
             ><tr
-              ><th>{t('记录', 'Record')}</th><th>{t('客户端修改时间', 'Client modified at')}</th><th
-                >{t('云端版本', 'Cloud version')}</th
-              ><th>{t('详情', 'Details')}</th></tr
+              ><th>{t('record')}</th><th>{t('client_modified_at')}</th><th>{t('cloud_version')}</th
+              ><th>{t('details')}</th></tr
             ></thead
           ><tbody
             >{#each rows as row (row.id)}<tr
@@ -118,7 +111,7 @@
                   ><a
                     class="text-link"
                     href={'/records/' + table + '/' + encodeURIComponent(row.id)}
-                    >{t('查看记录', 'View record')}</a
+                    >{t('view_record')}</a
                   ></td
                 ></tr
               >{/each}</tbody
@@ -131,10 +124,10 @@
         disabled={!query.hasNextPage || query.isFetchingNextPage}
         onclick={() => query.fetchNextPage()}
         >{query.isFetchingNextPage
-          ? t('正在加载…', 'Loading…')
+          ? t('loading')
           : query.hasNextPage
-            ? t('加载更多', 'Load more')
-            : t('已显示全部', 'All loaded')}</Button
+            ? t('load_more')
+            : t('all_loaded')}</Button
       >
     </div>{/if}
 </section>

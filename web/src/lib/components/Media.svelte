@@ -10,30 +10,27 @@
 </script>
 
 {#if references.length}<section class="panel">
-    <div class="panel-heading"><h2>{t('媒体', 'Media')}</h2></div>
+    <div class="panel-heading"><h2>{t('media')}</h2></div>
     <div class="panel-body media-grid">
       {#each references as ref (ref.key)}<div class="stack">
           {#if failed.includes(ref.key)}<p class="muted">
-              {t(
-                '媒体不可用，可能未上传或已删除',
-                'Media is unavailable. It may not have been uploaded or may have been deleted.',
-              )}
+              {t('media_is_unavailable_it_may_not_have_been_uploaded_or_may_have_been_dele')}
             </p>
           {:else if /^image\/(jpeg|png|gif|webp|avif)$/.test(ref.contentType ?? '')}<button
               type="button"
               class="media-button"
-              aria-label={t('放大图片', 'Enlarge image')}
+              aria-label={t('enlarge_image')}
               onclick={() => (selected = ref.key)}
               ><img
                 src={mediaURL(ref.key)}
-                alt={t('记录附件', 'Record attachment')}
+                alt={t('record_attachment')}
                 loading="lazy"
                 onerror={() => (failed = [...failed, ref.key])}
               /></button
             >
-          {:else}<p class="muted">{ref.contentType || t('附件', 'Attachment')}</p>{/if}
+          {:else}<p class="muted">{ref.contentType || t('attachment')}</p>{/if}
           <a class="text-link" href={mediaURL(ref.key)} target="_blank" rel="noopener noreferrer"
-            >{t('打开原文件', 'Open original file')}</a
+            >{t('open_original_file')}</a
           >
         </div>{/each}
     </div>
@@ -45,14 +42,14 @@
   }}
   ><Dialog.Content class="sm:max-w-3xl" showCloseButton={false}
     ><Dialog.Header
-      ><Dialog.Title>{t('图片预览', 'Image preview')}</Dialog.Title><Dialog.Description
-        >{t('云端保存的原始附件', 'Original attachment saved in the cloud')}</Dialog.Description
+      ><Dialog.Title>{t('image_preview')}</Dialog.Title><Dialog.Description
+        >{t('original_attachment_saved_in_the_cloud')}</Dialog.Description
       ></Dialog.Header
     >{#if selected}<img
         class="preview-image"
         src={mediaURL(selected)}
-        alt={t('放大后的记录附件', 'Enlarged record attachment')}
-      />{/if}<Button variant="outline" onclick={() => (selected = '')}>{t('关闭', 'Close')}</Button
+        alt={t('enlarged_record_attachment')}
+      />{/if}<Button variant="outline" onclick={() => (selected = '')}>{t('close')}</Button
     ></Dialog.Content
   ></Dialog.Root
 >

@@ -10,17 +10,15 @@
   }: { pending?: boolean; error?: Error | null; empty?: boolean; retry?: () => unknown } = $props();
 </script>
 
-{#if pending}<div class="status" role="status">{t('正在加载云端数据…', 'Loading cloud data…')}</div>
+{#if pending}<div class="status" role="status">{t('loading_cloud_data')}</div>
 {:else if error}<div class="status" role="alert">
     <p>
-      {error instanceof APIError
-        ? error.message
-        : t('暂时无法获取数据，请重试', 'Unable to load data. Try again.')}
+      {error instanceof APIError ? error.message : t('unable_to_load_data_try_again')}
     </p>
     {#if error instanceof APIError && error.requestId}<small
-        >{t('请求编号', 'Request ID')}: {error.requestId}</small
-      >{/if}{#if retry}<Button variant="outline" onclick={retry}>{t('重试', 'Retry')}</Button>{/if}
+        >{t('request_id')}: {error.requestId}</small
+      >{/if}{#if retry}<Button variant="outline" onclick={retry}>{t('retry')}</Button>{/if}
   </div>
 {:else if empty}<div class="status">
-    {t('暂无符合条件的云端数据', 'No cloud data matches these filters.')}
+    {t('no_cloud_data_matches_these_filters')}
   </div>{/if}

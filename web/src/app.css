@@ -501,7 +501,8 @@ tbody tr:hover {
   min-height: 100dvh;
   display: grid;
   place-items: center;
-  padding: 2rem;
+  padding: 5rem 2rem 3rem;
+  position: relative;
 }
 .login-card {
   width: min(28rem, 100%);
@@ -649,18 +650,107 @@ tbody tr:hover {
   }
 }
 
+/* Shared appearance and language menus. */
+.login-preferences {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+}
 .preferences {
   display: flex;
-  gap: 0.65rem;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  flex: none;
 }
-.preferences label {
+.preferences .preference-trigger {
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 50%;
+  color: var(--muted-foreground);
+}
+.preferences .preference-trigger:hover,
+.preferences .preference-trigger[aria-expanded='true'] {
+  color: var(--foreground);
+  background: var(--muted);
+}
+.preference-menu {
+  z-index: 60;
+  width: 11.5rem;
+  max-width: calc(100vw - 1.5rem);
+  padding: 0.4rem;
+  background: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  box-shadow:
+    0 6px 20px #0000000a,
+    0 18px 45px #0000000d;
+  outline: none;
+}
+.preference-menu-heading {
+  padding: 0.6rem 0.7rem 0.5rem;
+  color: var(--muted-foreground);
   font-size: 0.72rem;
+  font-weight: 500;
 }
-.preferences select {
-  min-height: 2.2rem;
-  padding: 0.35rem 0.5rem;
-  font-size: 0.78rem;
+.preference-option {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2.65rem;
+  padding: 0.65rem 0.7rem;
+  border-radius: 0.5rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  outline: none;
+}
+.preference-option > svg,
+.preference-language-mark {
+  color: var(--muted-foreground);
+}
+.preference-option[data-highlighted] {
+  background: var(--muted);
+}
+.preference-option[data-state='checked'] {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 7%, var(--card));
+}
+.preference-option[data-state='checked'] > svg,
+.preference-option[data-state='checked'] .preference-language-mark {
+  color: var(--primary);
+}
+.preference-check {
+  margin-left: auto;
+  width: 1rem;
+  height: 1rem;
+  color: var(--primary);
+}
+.preference-language-mark {
+  display: grid;
+  place-items: center;
+  width: 1.1rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+.topbar-divider {
+  height: 1.1rem;
+  border-left: 1px solid var(--border);
+  margin: 0 0.3rem;
+}
+@media (max-width: 720px) {
+  .login-shell {
+    padding: 5rem 1rem 2rem;
+  }
+  .login-preferences {
+    top: 1rem;
+    right: 1rem;
+  }
+  .topbar-actions {
+    gap: 0.3rem;
+  }
+  .topbar-divider {
+    margin: 0 0.15rem;
+  }
 }
 .stack {
   display: grid;

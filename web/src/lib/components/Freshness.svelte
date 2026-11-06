@@ -5,6 +5,6 @@
 </script>
 
 <p class="freshness">
-  {t('数据获取于', 'Fetched at')}
-  {time(at)} · {timezone()}<br />{t('仅含已同步到云端的数据', 'Includes synced cloud data only')}
+  {t('fetched_at')}
+  {time(at)} · {timezone()}<br />{t('includes_synced_cloud_data_only')}
 </p>

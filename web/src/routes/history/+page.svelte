@@ -43,18 +43,15 @@
 
 <div class="page-heading">
   <div>
-    <p class="eyebrow">{t('已提交的变化', 'COMMITTED CHANGES')}</p>
-    <h1>{t('变更历史', 'Change history')}</h1>
+    <p class="eyebrow">{t('committed_changes')}</p>
+    <h1>{t('change_history')}</h1>
     <p>
-      {t(
-        '查看什么时候改了什么、从哪台设备修改和提交。',
-        'See what changed, when it changed, and which devices edited and submitted it.',
-      )}
+      {t('see_what_changed_when_it_changed_and_which_devices_edited_and_submitted')}
     </p>
   </div>
 </div>
 {#if !session.historySupported}<div class="notice">
-    {t('当前服务端未开放变更历史', 'Change history is unavailable on this server.')}
+    {t('change_history_is_unavailable_on_this_server')}
   </div>{:else}<section class="panel">
     <form
       class="filters"
@@ -71,47 +68,35 @@
       }}
     >
       <label
-        >{t('记录类型', 'Record type')}<select
-          aria-label={t('记录类型', 'Record type')}
-          bind:value={table}
-          ><option value="">{t('全部', 'All')}</option>{#each entities as item (item.table)}<option
+        >{t('record_type')}<select aria-label={t('record_type')} bind:value={table}
+          ><option value="">{t('all')}</option>{#each entities as item (item.table)}<option
               value={item.table}>{entityTitle(item.table)}</option
             >{/each}</select
         ></label
-      ><label>{t('记录 ID', 'Record ID')}<input bind:value={id} disabled={!table} /></label><label
-        >{t('操作', 'Change')}<select aria-label={t('操作', 'Change')} bind:value={operation}
-          ><option value="">{t('全部', 'All')}</option
+      ><label>{t('record_id')}<input bind:value={id} disabled={!table} /></label><label
+        >{t('change')}<select aria-label={t('change')} bind:value={operation}
+          ><option value="">{t('all')}</option
           >{#each ['insert', 'update', 'delete', 'restore'] as op (op)}<option value={op}
               >{operationText(op)}</option
             >{/each}</select
         ></label
       ><label
-        >{t('原始修改平台', 'Original platform')}<select
-          aria-label={t('原始修改平台', 'Original platform')}
-          bind:value={client}
-          ><option value="">{t('全部', 'All')}</option><option value="ios">iOS App</option><option
+        >{t('original_platform')}<select aria-label={t('original_platform')} bind:value={client}
+          ><option value="">{t('all')}</option><option value="ios">iOS App</option><option
             value="android">Android App</option
-          ><option value="web">Web</option><option value="unknown">{t('未知', 'Unknown')}</option
-          ></select
+          ><option value="web">Web</option><option value="unknown">{t('unknown')}</option></select
         ></label
       ><label
-        >{t('提交设备', 'Submitting device')}<select
-          aria-label={t('提交设备', 'Submitting device')}
-          bind:value={deviceId}
-          ><option value="">{t('全部', 'All')}</option
+        >{t('submitting_device')}<select aria-label={t('submitting_device')} bind:value={deviceId}
+          ><option value="">{t('all')}</option
           >{#each devices.data?.devices ?? [] as device (device.id)}<option value={device.id}
               >{device.name || device.id}</option
             >{/each}</select
         ></label
-      ><DateRange bind:from bind:to /><Button type="submit" variant="outline"
-        >{t('查询', 'Search')}</Button
-      >
+      ><DateRange bind:from bind:to /><Button type="submit" variant="outline">{t('search')}</Button>
     </form>
     <div class="panel-body freshness">
-      {t(
-        '日期按服务端接受时间筛选；列表按云端提交顺序排列。客户端时间来自设备，可能存在偏差。翻页保留首次查询范围，刷新可查看新变化。',
-        'Dates filter server acceptance time. Changes are ordered by cloud revision. Client times may differ from the server. Pagination keeps the initial query range; refresh to see new changes.',
-      )}
+      {t('dates_filter_server_acceptance_time_changes_are_ordered_by_cloud_revisio')}
     </div>
     <QueryStatus
       pending={query.isPending}
@@ -125,10 +110,10 @@
         disabled={!query.hasNextPage || query.isFetchingNextPage}
         onclick={() => query.fetchNextPage()}
         >{query.isFetchingNextPage
-          ? t('正在加载…', 'Loading…')
+          ? t('loading')
           : query.hasNextPage
-            ? t('加载更多', 'Load more')
-            : t('已显示全部', 'All loaded')}</Button
+            ? t('load_more')
+            : t('all_loaded')}</Button
       >
     </div>
   </section>{/if}

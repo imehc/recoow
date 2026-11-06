@@ -28,8 +28,8 @@
           {#if typeof value === 'string' && value && ['image_asset_id', 'asset_id'].includes(key)}<a
               class="text-link"
               href={'/records/media_assets/' + encodeURIComponent(value)}
-              >{value} · {t('查看媒体', 'View media')}</a
+              >{value} · {t('view_media')}</a
             >{:else}{valueText(table, key, value)}{/if}
         </dd>
       </div>{/each}
-  </dl>{:else}<p class="muted">{t('没有记录快照', 'No record snapshot')}</p>{/if}
+  </dl>{:else}<p class="muted">{t('no_record_snapshot')}</p>{/if}
