@@ -162,7 +162,7 @@ final class AppDataTransferService: @unchecked Sendable {
     }
 
     nonisolated private func mergeMissingRows(from sourceURL: URL, scopes: Set<AppDataImportScope>) throws -> Int {
-        try database.writer.write { db in
+        try database.writer.writeWithoutTransaction { db in
             let sourcePath = sourceURL.path(percentEncoded: false)
             var importedRowCount = 0
 
@@ -174,61 +174,65 @@ final class AppDataTransferService: @unchecked Sendable {
                 try? db.execute(sql: "DETACH DATABASE \(Self.incomingSchemaName)")
             }
 
-            let selectedTableNames = Set(scopes.flatMap { $0.tableNames })
-            for tableName in Self.mergeTableOrder where selectedTableNames.contains(tableName) {
-                guard tableName != "media_assets", tableName != "media_attachments" else {
-                    continue
-                }
+            try db.inTransaction {
+                let selectedTableNames = Set(scopes.flatMap { $0.tableNames })
+                for tableName in Self.mergeTableOrder where selectedTableNames.contains(tableName) {
+                    guard tableName != "media_assets", tableName != "media_attachments" else {
+                        continue
+                    }
 
-                guard try db.tableExists(tableName),
-                      try db.tableExists(tableName, in: Self.incomingSchemaName)
-                else {
-                    continue
-                }
+                    guard try db.tableExists(tableName),
+                          try db.tableExists(tableName, in: Self.incomingSchemaName)
+                    else {
+                        continue
+                    }
 
-                let columns = try commonColumns(db: db, tableName: tableName)
-                guard columns.contains("id") else { continue }
+                    let columns = try commonColumns(db: db, tableName: tableName)
+                    guard columns.contains("id") else { continue }
 
-                importedRowCount += try mergeMissingRows(
-                    db: db,
-                    tableName: tableName,
-                    columns: columns,
-                    whereClause: try businessTableImportWhereClause(db: db, tableName: tableName, columns: columns)
-                )
-            }
-
-            if try db.tableExists("media_assets"),
-               try db.tableExists("media_assets", in: Self.incomingSchemaName),
-               let whereClause = try mediaAssetImportWhereClause(db: db, scopes: scopes) {
-                let columns = try commonColumns(db: db, tableName: "media_assets")
-                if columns.contains("id") {
                     importedRowCount += try mergeMissingRows(
                         db: db,
-                        tableName: "media_assets",
+                        tableName: tableName,
                         columns: columns,
-                        whereClause: whereClause
+                        whereClause: try businessTableImportWhereClause(db: db, tableName: tableName, columns: columns)
                     )
                 }
-            }
 
-            let mediaOwnerTypes = Set(scopes.flatMap { $0.mediaOwnerTypes })
-            if mediaOwnerTypes.isEmpty == false,
-               try db.tableExists("media_attachments"),
-               try db.tableExists("media_attachments", in: Self.incomingSchemaName) {
-                let columns = try commonColumns(db: db, tableName: "media_attachments")
-                if columns.contains("id"), columns.contains("owner_type"), columns.contains("owner_id") {
-                    importedRowCount += try mergeMissingRows(
-                        db: db,
-                        tableName: "media_attachments",
-                        columns: columns,
-                        whereClause: try mediaAttachmentImportWhereClause(db: db, ownerTypes: mediaOwnerTypes)
-                    )
+                if try db.tableExists("media_assets"),
+                   try db.tableExists("media_assets", in: Self.incomingSchemaName),
+                   let whereClause = try mediaAssetImportWhereClause(db: db, scopes: scopes) {
+                    let columns = try commonColumns(db: db, tableName: "media_assets")
+                    if columns.contains("id") {
+                        importedRowCount += try mergeMissingRows(
+                            db: db,
+                            tableName: "media_assets",
+                            columns: columns,
+                            whereClause: whereClause
+                        )
+                    }
                 }
-            }
 
+                let mediaOwnerTypes = Set(scopes.flatMap { $0.mediaOwnerTypes })
+                if mediaOwnerTypes.isEmpty == false,
+                   try db.tableExists("media_attachments"),
+                   try db.tableExists("media_attachments", in: Self.incomingSchemaName) {
+                    let columns = try commonColumns(db: db, tableName: "media_attachments")
+                    if columns.contains("id"), columns.contains("owner_type"), columns.contains("owner_id") {
+                        importedRowCount += try mergeMissingRows(
+                            db: db,
+                            tableName: "media_attachments",
+                            columns: columns,
+                            whereClause: try mediaAttachmentImportWhereClause(db: db, ownerTypes: mediaOwnerTypes)
+                        )
+                    }
+                }
+
+                return .commit
+            }
             return importedRowCount
         }
     }
+
 
     nonisolated private func mergeMissingRows(
         db: Database,
@@ -241,8 +245,16 @@ final class AppDataTransferService: @unchecked Sendable {
             .map { selectExpression(for: $0, tableName: tableName) }
             .joined(separator: ", ")
         let extraWhere = whereClause.map { " AND \($0)" } ?? ""
-        let before = db.totalChangesCount
-
+        if try db.tableExists("record_origins", in: Self.incomingSchemaName) {
+            try db.execute(sql: """
+                INSERT OR REPLACE INTO record_origins (table_name, entity_id, device_id, updated_at, origin_json)
+                SELECT origin.table_name, origin.entity_id, origin.device_id, origin.updated_at, origin.origin_json
+                FROM incoming.record_origins origin JOIN incoming.\(Self.quotedIdentifier(tableName)) src ON origin.entity_id = src.id
+                WHERE origin.table_name = ? AND origin.device_id = src.device_id AND origin.updated_at = src.updated_at
+                  AND NOT EXISTS (SELECT 1 FROM \(Self.quotedIdentifier(tableName)) dst WHERE dst.id = src.id)\(extraWhere)
+                """, arguments: [tableName])
+        }
+        let businessBefore = db.totalChangesCount
         // 增量导入只补主键不存在的记录；本机已有记录不更新、不删除，贴近后续局域网/服务器同步的缺失数据补齐语义。
         try db.execute(sql: """
             INSERT OR IGNORE INTO \(Self.quotedIdentifier(tableName)) (\(quotedColumns))
@@ -255,7 +267,7 @@ final class AppDataTransferService: @unchecked Sendable {
             )\(extraWhere)
             """)
 
-        return db.totalChangesCount - before
+        return db.totalChangesCount - businessBefore
     }
 
     nonisolated private func businessTableImportWhereClause(

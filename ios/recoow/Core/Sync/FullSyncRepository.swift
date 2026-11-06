@@ -68,6 +68,8 @@ nonisolated final class FullSyncRepository: @unchecked Sendable {
                 try Self.reset(db: db, scope: scope, watermark: capabilities.dataset.head)
                 target = try SyncTarget.fetchOne(db, sql: "SELECT * FROM sync_targets WHERE scope = ?", arguments: [scope])!
             }
+            try db.execute(sql: "UPDATE sync_targets SET supports_origin = ? WHERE scope = ?",
+                           arguments: [capabilities.features.contains("mutation_origin_v1"), scope])
             if !target.seeded {
                 try db.execute(sql: "UPDATE sync_targets SET bootstrap_watermark = ? WHERE scope = ?",
                                arguments: [capabilities.dataset.head, scope])
@@ -125,9 +127,9 @@ nonisolated final class FullSyncRepository: @unchecked Sendable {
             SELECT id FROM sync_outbox WHERE scope = ? AND table_name = ? AND entity_id = ? AND status = 'pending' ORDER BY id DESC LIMIT 1
             """, arguments: [scope, table, entityID])
         try db.execute(sql: """
-            INSERT INTO sync_outbox (scope, mutation_id, table_name, entity_id, operation, payload_json, base_version, predecessor_id, local_change_id, capture_pending)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, arguments: [scope, UUID().uuidString, table, entityID, operation.rawValue, payloadJSON, version, predecessor, localChangeID, capturePending])
+            INSERT INTO sync_outbox (scope, mutation_id, table_name, entity_id, operation, payload_json, base_version, predecessor_id, local_change_id, capture_pending, origin_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, arguments: [scope, UUID().uuidString, table, entityID, operation.rawValue, payloadJSON, version, predecessor, localChangeID, capturePending, try ClientSource.stored(db: db, table: table, id: entityID, snapshot: object(payloadJSON))])
     }
 
     func pending(scope: String, limit: Int = 40) throws -> [PreparedSyncMutation] {
@@ -144,8 +146,11 @@ nonisolated final class FullSyncRepository: @unchecked Sendable {
                 """, arguments: [scope, limit])
             return try rows.map { row in
                 let outboxID: Int64 = row["id"]
+                let supportsOrigin = try Bool.fetchOne(db, sql: "SELECT supports_origin FROM sync_targets WHERE scope = ?", arguments: [scope]) == true
                 if let prepared: String = row["prepared_json"] {
-                    return PreparedSyncMutation(outboxID: outboxID, item: try Self.decodePush(prepared))
+                    let item = try Self.decodePush(prepared)
+                    guard supportsOrigin || item.origin == nil else { throw CloudAPIError.syncRejected(AppLocalization.string("服务端不支持已冻结的来源资料，请更新后端")) }
+                    return PreparedSyncMutation(outboxID: outboxID, item: item)
                 }
                 let table: String = row["table_name"]
                 let entityID: String = row["entity_id"]
@@ -175,9 +180,10 @@ nonisolated final class FullSyncRepository: @unchecked Sendable {
                 guard let updatedAt = object["updated_at"] as? Int64, let deviceID = object["device_id"] as? String else {
                     throw CloudAPIError.syncRejected(AppLocalization.format("本地 %@/%@ 缺少同步元数据", table, entityID))
                 }
-                let item = CloudPushItem(table: table, id: entityID, operation: row["operation"], updatedAtMs: updatedAt,
+                var item = CloudPushItem(table: table, id: entityID, operation: row["operation"], updatedAtMs: updatedAt,
                                          deviceID: deviceID, snapshot: object, mutationID: row["mutation_id"],
                                          baseVersion: baseVersion, dataVersion: entity.version)
+                if supportsOrigin, let origin: String = row["origin_json"] { item.origin = try Self.object(origin) }
                 let encoded = try Self.json(RecoowAPIClient.object(for: item))
                 try db.execute(sql: "UPDATE sync_outbox SET prepared_json = ?, base_version = ? WHERE id = ?", arguments: [encoded, baseVersion, outboxID])
                 try SyncMediaTransfer.queueUploads(db: db, scope: scope, item: item)
@@ -278,7 +284,7 @@ nonisolated final class FullSyncRepository: @unchecked Sendable {
         }
         return CloudPushItem(table: table, id: id, operation: operation, updatedAtMs: timestamp, deviceID: deviceID,
                              snapshot: snapshot, mutationID: mutationID, baseVersion: base, dataVersion: version,
-                             resolution: object["resolution"] as? String, expectedVersion: object["expectedVersion"] as? Int64)
+                             resolution: object["resolution"] as? String, expectedVersion: object["expectedVersion"] as? Int64, origin: object["origin"] as? [String: Any])
     }
 
     private func createSafetyBackup() throws {

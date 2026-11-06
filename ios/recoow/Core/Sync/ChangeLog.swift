@@ -92,9 +92,11 @@ nonisolated struct RemoteRowUpdate: @unchecked Sendable {
 final class ChangeLogRepository: @unchecked Sendable {
     private let database: AppDatabase
     private let encoder: JSONEncoder
+    private let deviceName: String
 
     init(database: AppDatabase) {
         self.database = database
+        self.deviceName = RecoowAPIClient.currentDeviceName()
         encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
     }
@@ -132,6 +134,10 @@ final class ChangeLogRepository: @unchecked Sendable {
             lastError: captureError,
             syncedAtMilliseconds: nil
         )
+        let snapshot = try FullSyncRepository.object(record.payloadJSON)
+        let device = snapshot["device_id"] as? String ?? ""
+        let origin = ClientSource.origin(deviceID: device, localDeviceID: DeviceIdentifier().value, deviceName: deviceName)
+        try ClientSource.save(db: db, table: table, id: entityID, snapshot: snapshot, originJSON: origin)
         try record.insert(db)
         let changeID = db.lastInsertedRowID
         for scope in scopes {

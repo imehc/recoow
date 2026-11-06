@@ -93,6 +93,7 @@ final class RemoteSyncEngine: SyncEngine, @unchecked Sendable {
         do {
             let capabilities = try await client.capabilities()
             try capabilities.validate(accountID: accountID)
+            if capabilities.features.contains("device_profiles_v1") { try await client.registerDeviceProfile() }
             guard isCurrent() else { throw CloudAPIError.syncRejected(AppLocalization.string("连接或本地数据库已改变")) }
             if let oldScope = config.activeScope, oldScope.hasPrefix(connectionID + ":"),
                oldScope != connectionID + ":" + capabilities.dataset.generation {

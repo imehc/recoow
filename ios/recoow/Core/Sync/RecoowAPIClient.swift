@@ -80,6 +80,7 @@ nonisolated struct CloudPushItem: @unchecked Sendable {
     var dataVersion: Int = 1
     var resolution: String?
     var expectedVersion: Int64?
+    var origin: [String: Any]?
 }
 
 nonisolated enum CloudAPIError: LocalizedError {
@@ -114,6 +115,7 @@ final class RecoowAPIClient: @unchecked Sendable {
     private let config: RecoowSyncConfig
     private let session: URLSession
     private let deviceName: String
+    private let localDeviceID: String
     private var fixedBaseURL: String?
     private var fixedToken: String?
 
@@ -121,6 +123,7 @@ final class RecoowAPIClient: @unchecked Sendable {
         self.config = config
         self.session = session
         self.deviceName = Self.currentDeviceName()
+        self.localDeviceID = DeviceIdentifier().value
     }
 
     func frozenSession() -> RecoowAPIClient {
@@ -189,6 +192,7 @@ final class RecoowAPIClient: @unchecked Sendable {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
+        applySourceHeaders(to: &request)
         request.timeoutInterval = 60
         if let token = config.deviceToken, token.isEmpty == false {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -245,6 +249,7 @@ final class RecoowAPIClient: @unchecked Sendable {
 
         var request = URLRequest(url: url)
         request.httpMethod = method
+        applySourceHeaders(to: &request)
         request.timeoutInterval = 60
         request.setValue(contentType, forHTTPHeaderField: "Content-Type")
         if auth, let token = fixedToken ?? config.deviceToken, token.isEmpty == false {
@@ -270,6 +275,22 @@ final class RecoowAPIClient: @unchecked Sendable {
         } catch {
             throw CloudAPIError.transport(error.localizedDescription)
         }
+    }
+
+    func registerDeviceProfile() async throws {
+        var profile = ClientSource.environment
+        profile["localDeviceId"] = localDeviceID
+        profile["deviceName"] = deviceName
+        let data = try JSONSerialization.data(withJSONObject: profile)
+        _ = try await send(path: "/api/devices/current/profile", method: "PUT", body: data, auth: true)
+    }
+
+    private func applySourceHeaders(to request: inout URLRequest) {
+        let environment = ClientSource.environment
+        for (key, header) in [("client", "X-Recoow-Client"), ("appVersion", "X-Recoow-App-Version"), ("os", "X-Recoow-OS"), ("osVersion", "X-Recoow-OS-Version")] {
+            request.setValue(environment[key], forHTTPHeaderField: header)
+        }
+        request.setValue(localDeviceID, forHTTPHeaderField: "X-Recoow-Device-Id")
     }
 
     private func baseURL() -> String {
@@ -302,6 +323,7 @@ final class RecoowAPIClient: @unchecked Sendable {
         ]
         object["resolution"] = item.resolution
         object["expectedVersion"] = item.expectedVersion
+        object["origin"] = item.origin
         return object
     }
 
@@ -314,7 +336,7 @@ final class RecoowAPIClient: @unchecked Sendable {
         return message
     }
 
-    private static func currentDeviceName() -> String {
+    static func currentDeviceName() -> String {
         #if os(iOS)
         let name = UIDevice.current.name
         if name.isEmpty == false {

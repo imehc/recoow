@@ -78,12 +78,16 @@ extension FullSyncRepository {
                 let operation: ChangeOperation = deletedAt == nil ? .update : .delete
                 try Self.enqueue(db: db, scope: scope, table: conflict.table, entityID: conflict.entityID,
                                  operation: operation, payloadJSON: String(decoding: payload, as: UTF8.self), localChangeID: nil)
-                let item = CloudPushItem(table: conflict.table, id: conflict.entityID, operation: operation.rawValue,
+                var item = CloudPushItem(table: conflict.table, id: conflict.entityID, operation: operation.rawValue,
                                          updatedAtMs: (snapshot["updated_at"] as! NSNumber).int64Value,
                                          deviceID: snapshot["device_id"] as! String, snapshot: snapshot,
                                          mutationID: try String.fetchOne(db, sql: "SELECT mutation_id FROM sync_outbox WHERE id = ?", arguments: [db.lastInsertedRowID])!,
                                          baseVersion: base, dataVersion: entity.version,
                                          resolution: keepLocal ? "local" : "remote", expectedVersion: remote.version)
+                if try Bool.fetchOne(db, sql: "SELECT supports_origin FROM sync_targets WHERE scope = ?", arguments: [scope]) == true,
+                   let origin = try ClientSource.stored(db: db, table: conflict.table, id: conflict.entityID, snapshot: snapshot) {
+                    item.origin = try Self.object(origin)
+                }
                 try db.execute(sql: "UPDATE sync_outbox SET prepared_json = ?, base_version = ? WHERE id = ?",
                                arguments: [try Self.json(RecoowAPIClient.object(for: item)), base, db.lastInsertedRowID])
                 try SyncMediaTransfer.queueUploads(db: db, scope: scope, item: item)
