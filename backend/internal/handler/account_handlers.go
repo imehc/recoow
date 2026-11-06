@@ -8,14 +8,14 @@ import (
 )
 
 type initRequest struct {
-	BootstrapToken string `json:"bootstrapToken"`
+	BootstrapToken string `json:"bootstrap_token"`
 }
 
 type initResponse struct {
-	RecoveryKey string `json:"recoveryKey"` // 仅此一次返回明文
-	DeviceToken string `json:"deviceToken"`
-	DeviceID    string `json:"deviceId"`
-	AccountID   string `json:"accountId"`
+	RecoveryKey string `json:"recovery_key"` // 仅此一次返回明文
+	DeviceToken string `json:"device_token"`
+	DeviceID    string `json:"device_id"`
+	AccountID   string `json:"account_id"`
 }
 
 // handleInitAccount 注册一个新账号（同一实例可注册多个，彼此数据隔离）。
@@ -67,8 +67,8 @@ func (s *Server) handleInitAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 type recoverRequest struct {
-	RecoveryKey string `json:"recoveryKey"`
-	DeviceName  string `json:"deviceName"`
+	RecoveryKey string `json:"recovery_key"`
+	DeviceName  string `json:"device_name"`
 }
 
 // handleRecover 用恢复密钥把账号重新绑到一台新设备（换机 / 重装 / 丢机）。
@@ -101,13 +101,13 @@ func (s *Server) handleRecover(w http.ResponseWriter, r *http.Request) {
 
 type pairRequest struct {
 	Code       string `json:"code"`
-	DeviceName string `json:"deviceName"`
+	DeviceName string `json:"device_name"`
 }
 
 type pairResponse struct {
-	DeviceToken string `json:"deviceToken"`
-	DeviceID    string `json:"deviceId"`
-	AccountID   string `json:"accountId"`
+	DeviceToken string `json:"device_token"`
+	DeviceID    string `json:"device_id"`
+	AccountID   string `json:"account_id"`
 }
 
 func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
@@ -140,8 +140,8 @@ type deviceView struct {
 	Profile    *domain.DeviceProfile `json:"profile,omitempty"`
 	ID         string                `json:"id"`
 	Name       string                `json:"name"`
-	IsOwner    bool                  `json:"isOwner"`
-	LastSeenAt string                `json:"lastSeenAt"`
+	IsOwner    bool                  `json:"is_owner"`
+	LastSeenAt string                `json:"last_seen_at"`
 }
 
 func (s *Server) handleListDevices(w http.ResponseWriter, r *http.Request) {

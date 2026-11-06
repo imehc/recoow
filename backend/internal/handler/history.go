@@ -38,7 +38,7 @@ func (s *Server) handleChangeEvents(writer http.ResponseWriter, request *http.Re
 	query := domain.ChangeEventQuery{Generation: request.URL.Query().Get("generation"), Limit: 50,
 		Table: request.URL.Query().Get("table"), ID: request.URL.Query().Get("id"),
 		Operation: request.URL.Query().Get("operation"), Client: request.URL.Query().Get("client"),
-		DeviceID: request.URL.Query().Get("deviceId"), FromMs: from, ToMs: to}
+		DeviceID: request.URL.Query().Get("device_id"), FromMs: from, ToMs: to}
 	if query.Table != "" && !s.schemas.Known(query.Table) || query.ID != "" && query.Table == "" || len(query.ID) > 200 || len(query.DeviceID) > 200 {
 		writeError(writer, 400, "invalid history entity filter")
 		return
@@ -95,13 +95,13 @@ func (s *Server) handleChangeEvents(writer http.ResponseWriter, request *http.Re
 		Generation string               `json:"generation"`
 		Watermark  int64                `json:"watermark"`
 		More       bool                 `json:"more"`
-		NextCursor *string              `json:"nextCursor"`
+		NextCursor *string              `json:"next_cursor"`
 	}{page.Events, page.Generation, page.Watermark, page.More, nextCursor})
 }
 
 func (s *Server) handleChangeEvent(writer http.ResponseWriter, request *http.Request) {
 	device, _ := s.deviceFrom(request.Context())
-	detail, err := s.st.ChangeEvent(device.AccountID, request.PathValue("eventId"))
+	detail, err := s.st.ChangeEvent(device.AccountID, request.PathValue("event_id"))
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			writeError(writer, 404, "history event not found")

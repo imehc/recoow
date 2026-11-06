@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Recoow API
   version: 1.0.0
-  description: iOS、Android、Web 的唯一接口契约。设备配对和恢复保持兼容；未知快照字段须保留。接口契约版本与应用发布版本独立。
+  description: 三端共用接口。JSON 字段及参数采用 snake_case；未知快照字段保留原样。
 servers:
   - url: /
 paths:
@@ -26,6 +26,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BackendVersion'
+      parameters:
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/change-events:
     get:
       operationId: listChangeEvents
@@ -41,11 +43,12 @@ paths:
           in: query
           schema:
             type: string
-          description: 账号、数据集世代、查询版本与筛选条件绑定的分页游标，后续页保留原筛选条件。
+          description: 分页或增量游标
         - name: generation
           in: query
           schema:
             type: string
+          description: 数据集世代
         - name: limit
           in: query
           schema:
@@ -53,45 +56,52 @@ paths:
             minimum: 1
             maximum: 200
             default: 50
+          description: 单页数量上限
         - name: table
           in: query
           schema:
             type: string
+          description: 实体类型
         - name: id
           in: query
           schema:
             type: string
             maxLength: 200
-          description: 记录 ID，必须与 table 一起提供。
+          description: 记录ID
         - name: operation
           in: query
           schema:
             $ref: '#/components/schemas/HistoryOperation'
+          description: 变更操作
         - name: client
           in: query
           schema:
             $ref: '#/components/schemas/ClientType'
-          description: 原始修改平台，不是本次提交平台。
-        - name: deviceId
+          description: 客户端平台
+        - name: device_id
           in: query
           schema:
             type: string
             maxLength: 200
-          description: 本次鉴权提交设备的服务端 ID。
-        - name: fromMs
+          description: 设备ID
+          x-recoow-legacy-name: deviceId
+        - name: from_ms
           in: query
           schema:
             type: integer
             format: int64
             minimum: 0
-          description: 服务端接受时间的包含下界；缺少该时间的旧历史不匹配时间筛选。
-        - name: toMs
+          description: 起始时间（毫秒时间戳，含）
+          x-recoow-legacy-name: fromMs
+        - name: to_ms
           in: query
           schema:
             type: integer
             format: int64
             minimum: 0
-          description: 服务端接受时间的不包含上界。
+          description: 结束时间（毫秒时间戳，不含）
+          x-recoow-legacy-name: toMs
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '200':
           description: 按云端修订顺序倒序分页，列表只包含事件摘要。
@@ -105,7 +115,7 @@ paths:
           description: 凭据无效
         '409':
           description: reset_required，数据集世代已变化，需要重新查询。
-  /api/change-events/{eventId}:
+  /api/change-events/{event_id}:
     get:
       operationId: getChangeEvent
       summary: 查看一次云端变更的来源、时间与字段差异
@@ -116,11 +126,14 @@ paths:
         - sessionToken: []
         - sessionCookie: []
       parameters:
-        - name: eventId
+        - name: event_id
           in: path
           required: true
           schema:
             type: string
+          x-recoow-legacy-name: eventId
+          description: 变更事件ID
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '200':
           description: 对比提交前的云端版本与最终提交版本，不使用当前记录替代历史快照。
@@ -163,6 +176,8 @@ paths:
           description: 无效资料
         '401':
           description: 未鉴权
+      parameters:
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/devices:
     get:
       operationId: listDevices
@@ -204,6 +219,8 @@ paths:
         - deviceToken: []
         - sessionToken: []
         - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/devices/{id}:
     delete:
       operationId: revokeDevice
@@ -251,6 +268,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/sync/dataset:
     delete:
       operationId: clearSyncDataset
@@ -264,6 +283,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 数据集世代
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '200':
           description: 清空后的数据集状态
@@ -318,6 +339,8 @@ paths:
         - deviceToken: []
         - sessionToken: []
         - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/media/objects/{key}:
     put:
       operationId: putMediaObject
@@ -365,6 +388,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 媒体对象键
+        - $ref: '#/components/parameters/APIFieldCase'
       requestBody:
         required: true
         content:
@@ -419,6 +444,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 媒体对象键
+        - $ref: '#/components/parameters/APIFieldCase'
     head:
       operationId: headMediaObject
       summary: headMediaObject
@@ -461,6 +488,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 媒体对象键
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteMediaObject
       summary: deleteMediaObject
@@ -507,6 +536,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 媒体对象键
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/accounts:
     post:
       operationId: initAccount
@@ -539,6 +570,7 @@ paths:
           description: 当前安装的本地来源标识，不是服务端设备 ID
           schema:
             type: string
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '201':
           description: 成功
@@ -609,6 +641,7 @@ paths:
           description: 当前安装的本地来源标识，不是服务端设备 ID
           schema:
             type: string
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '201':
           description: 成功
@@ -679,6 +712,7 @@ paths:
           description: 当前安装的本地来源标识，不是服务端设备 ID
           schema:
             type: string
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '201':
           description: 成功
@@ -758,6 +792,8 @@ paths:
         - deviceToken: []
         - sessionToken: []
         - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/sync/mutations:
     post:
       operationId: pushSync
@@ -769,6 +805,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '200':
           description: 成功
@@ -857,16 +894,20 @@ paths:
           required: false
           schema:
             type: string
+          description: 数据集世代
         - name: cursor
           in: query
           required: false
           schema:
             type: integer
+          description: 分页或增量游标
         - name: limit
           in: query
           required: false
           schema:
             type: integer
+          description: 单页数量上限
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/sync/snapshots:
     get:
       operationId: bootstrapSync
@@ -914,21 +955,26 @@ paths:
           required: false
           schema:
             type: string
+          description: 数据集世代
         - name: watermark
           in: query
           required: false
           schema:
             type: integer
+          description: 本次查询的云端版本上限
         - name: after
           in: query
           required: false
           schema:
             type: integer
+          description: 上一页末尾版本
         - name: limit
           in: query
           required: false
           schema:
             type: integer
+          description: 单页数量上限
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/sync/manifests:
     get:
       operationId: getSyncManifest
@@ -945,6 +991,7 @@ paths:
           required: true
           schema:
             type: string
+          description: 数据集世代
         - name: watermark
           in: query
           required: true
@@ -952,18 +999,22 @@ paths:
             type: integer
             format: int64
             minimum: 0
+          description: 本次查询的云端版本上限
         - name: after
           in: query
           schema:
             type: integer
             format: int64
             minimum: 0
+          description: 上一页末尾版本
         - name: limit
           in: query
           schema:
             type: integer
             minimum: 1
             maximum: 500
+          description: 单页数量上限
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '200':
           description: 固定水位清单，包含墓碑
@@ -1006,6 +1057,8 @@ paths:
           description: 未认证
         '409':
           description: 世代或水位失效，需要重建基线
+      parameters:
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/exports:
     get:
       operationId: exportAccount
@@ -1047,6 +1100,8 @@ paths:
         - deviceToken: []
         - sessionToken: []
         - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/exports/sql:
     get:
       operationId: exportAccountSQL
@@ -1088,6 +1143,8 @@ paths:
         - deviceToken: []
         - sessionToken: []
         - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/users:
     post:
       operationId: registerUser
@@ -1120,6 +1177,7 @@ paths:
           description: 当前安装的本地来源标识，不是服务端设备 ID
           schema:
             type: string
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '201':
           description: 成功
@@ -1205,6 +1263,8 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CredentialsRequest'
+      parameters:
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/sessions:
     post:
       operationId: login
@@ -1237,6 +1297,7 @@ paths:
           description: 当前安装的本地来源标识，不是服务端设备 ID
           schema:
             type: string
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '200':
           description: 成功
@@ -1316,6 +1377,8 @@ paths:
         - deviceToken: []
         - sessionToken: []
         - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/users/me:
     get:
       operationId: getIdentity
@@ -1357,6 +1420,8 @@ paths:
         - deviceToken: []
         - sessionToken: []
         - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/users/me/password:
     put:
       operationId: changePassword
@@ -1404,6 +1469,8 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/PasswordRequest'
+      parameters:
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/statistics:
     get:
       operationId: getStatistics
@@ -1446,16 +1513,21 @@ paths:
         - sessionToken: []
         - sessionCookie: []
       parameters:
-        - name: fromMs
+        - name: from_ms
           in: query
           required: false
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           required: false
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/openapi.yaml:
     get:
       operationId: getOpenAPI
@@ -1494,6 +1566,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security: []
+      parameters:
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/anniversaries:
     get:
       operationId: listAnniversariesRecord
@@ -1523,22 +1597,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createAnniversariesRecord
       tags:
@@ -1549,6 +1631,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -1597,6 +1680,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateAnniversariesRecordById
       tags:
@@ -1633,6 +1718,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteAnniversariesRecordById
       tags:
@@ -1669,6 +1756,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/bills:
     get:
       operationId: listBillsRecord
@@ -1698,22 +1787,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createBillsRecord
       tags:
@@ -1724,6 +1821,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -1772,6 +1870,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateBillsRecordById
       tags:
@@ -1808,6 +1908,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteBillsRecordById
       tags:
@@ -1844,6 +1946,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/decision-choice-records:
     get:
       operationId: listDecisionChoiceRecordsRecord
@@ -1873,22 +1977,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createDecisionChoiceRecordsRecord
       tags:
@@ -1899,6 +2011,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -1947,6 +2060,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateDecisionChoiceRecordsRecordById
       tags:
@@ -1983,6 +2098,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteDecisionChoiceRecordsRecordById
       tags:
@@ -2019,6 +2136,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/decision-collections:
     get:
       operationId: listDecisionCollectionsRecord
@@ -2048,22 +2167,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createDecisionCollectionsRecord
       tags:
@@ -2074,6 +2201,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -2122,6 +2250,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateDecisionCollectionsRecordById
       tags:
@@ -2158,6 +2288,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteDecisionCollectionsRecordById
       tags:
@@ -2194,6 +2326,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/decision-options:
     get:
       operationId: listDecisionOptionsRecord
@@ -2223,22 +2357,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createDecisionOptionsRecord
       tags:
@@ -2249,6 +2391,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -2297,6 +2440,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateDecisionOptionsRecordById
       tags:
@@ -2333,6 +2478,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteDecisionOptionsRecordById
       tags:
@@ -2369,6 +2516,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/diary-entries:
     get:
       operationId: listDiaryEntriesRecord
@@ -2398,22 +2547,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createDiaryEntriesRecord
       tags:
@@ -2424,6 +2581,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -2472,6 +2630,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateDiaryEntriesRecordById
       tags:
@@ -2508,6 +2668,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteDiaryEntriesRecordById
       tags:
@@ -2544,6 +2706,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/diary-links:
     get:
       operationId: listDiaryLinksRecord
@@ -2573,22 +2737,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createDiaryLinksRecord
       tags:
@@ -2599,6 +2771,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -2647,6 +2820,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateDiaryLinksRecordById
       tags:
@@ -2683,6 +2858,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteDiaryLinksRecordById
       tags:
@@ -2719,6 +2896,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/diary-tags:
     get:
       operationId: listDiaryTagsRecord
@@ -2748,22 +2927,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createDiaryTagsRecord
       tags:
@@ -2774,6 +2961,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -2822,6 +3010,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateDiaryTagsRecordById
       tags:
@@ -2858,6 +3048,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteDiaryTagsRecordById
       tags:
@@ -2894,6 +3086,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/food-day-records:
     get:
       operationId: listFoodDayRecordsRecord
@@ -2923,22 +3117,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createFoodDayRecordsRecord
       tags:
@@ -2949,6 +3151,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -2997,6 +3200,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateFoodDayRecordsRecordById
       tags:
@@ -3033,6 +3238,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteFoodDayRecordsRecordById
       tags:
@@ -3069,6 +3276,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/food-entries:
     get:
       operationId: listFoodEntriesRecord
@@ -3098,22 +3307,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createFoodEntriesRecord
       tags:
@@ -3124,6 +3341,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -3172,6 +3390,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateFoodEntriesRecordById
       tags:
@@ -3208,6 +3428,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteFoodEntriesRecordById
       tags:
@@ -3244,6 +3466,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/item-categories:
     get:
       operationId: listItemCategoriesRecord
@@ -3273,22 +3497,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createItemCategoriesRecord
       tags:
@@ -3299,6 +3531,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -3347,6 +3580,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateItemCategoriesRecordById
       tags:
@@ -3383,6 +3618,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteItemCategoriesRecordById
       tags:
@@ -3419,6 +3656,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/media-assets:
     get:
       operationId: listMediaAssetsRecord
@@ -3448,22 +3687,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createMediaAssetsRecord
       tags:
@@ -3474,6 +3721,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -3522,6 +3770,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateMediaAssetsRecordById
       tags:
@@ -3558,6 +3808,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteMediaAssetsRecordById
       tags:
@@ -3594,6 +3846,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/media-attachments:
     get:
       operationId: listMediaAttachmentsRecord
@@ -3623,22 +3877,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createMediaAttachmentsRecord
       tags:
@@ -3649,6 +3911,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -3697,6 +3960,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateMediaAttachmentsRecordById
       tags:
@@ -3733,6 +3998,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteMediaAttachmentsRecordById
       tags:
@@ -3769,6 +4036,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/reminder-completions:
     get:
       operationId: listReminderCompletionsRecord
@@ -3798,22 +4067,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createReminderCompletionsRecord
       tags:
@@ -3824,6 +4101,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -3872,6 +4150,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateReminderCompletionsRecordById
       tags:
@@ -3908,6 +4188,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteReminderCompletionsRecordById
       tags:
@@ -3944,6 +4226,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/reminders:
     get:
       operationId: listRemindersRecord
@@ -3973,22 +4257,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createRemindersRecord
       tags:
@@ -3999,6 +4291,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -4047,6 +4340,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateRemindersRecordById
       tags:
@@ -4083,6 +4378,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteRemindersRecordById
       tags:
@@ -4119,6 +4416,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/stored-items:
     get:
       operationId: listStoredItemsRecord
@@ -4148,22 +4447,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createStoredItemsRecord
       tags:
@@ -4174,6 +4481,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -4222,6 +4530,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateStoredItemsRecordById
       tags:
@@ -4258,6 +4568,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteStoredItemsRecordById
       tags:
@@ -4294,6 +4606,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/stored-value-accounts:
     get:
       operationId: listStoredValueAccountsRecord
@@ -4323,22 +4637,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createStoredValueAccountsRecord
       tags:
@@ -4349,6 +4671,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -4397,6 +4720,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateStoredValueAccountsRecordById
       tags:
@@ -4433,6 +4758,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteStoredValueAccountsRecordById
       tags:
@@ -4469,6 +4796,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/stored-value-adjustments:
     get:
       operationId: listStoredValueAdjustmentsRecord
@@ -4498,22 +4827,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createStoredValueAdjustmentsRecord
       tags:
@@ -4524,6 +4861,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -4572,6 +4910,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateStoredValueAdjustmentsRecordById
       tags:
@@ -4608,6 +4948,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteStoredValueAdjustmentsRecordById
       tags:
@@ -4644,6 +4986,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/track-points:
     get:
       operationId: listTrackPointsRecord
@@ -4673,22 +5017,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createTrackPointsRecord
       tags:
@@ -4699,6 +5051,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -4747,6 +5100,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateTrackPointsRecordById
       tags:
@@ -4783,6 +5138,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteTrackPointsRecordById
       tags:
@@ -4819,6 +5176,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/track-segments:
     get:
       operationId: listTrackSegmentsRecord
@@ -4848,22 +5207,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createTrackSegmentsRecord
       tags:
@@ -4874,6 +5241,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -4922,6 +5290,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateTrackSegmentsRecordById
       tags:
@@ -4958,6 +5328,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteTrackSegmentsRecordById
       tags:
@@ -4994,6 +5366,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
   /api/tracks:
     get:
       operationId: listTracksRecord
@@ -5023,22 +5397,30 @@ paths:
           in: query
           schema:
             type: string
+          description: 分页或增量游标
         - name: limit
           in: query
           schema:
             type: integer
+          description: 单页数量上限
         - name: q
           in: query
           schema:
             type: string
-        - name: fromMs
+          description: 搜索关键词
+        - name: from_ms
           in: query
           schema:
             type: integer
-        - name: toMs
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒时间戳，含）
+        - name: to_ms
           in: query
           schema:
             type: integer
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒时间戳，不含）
+        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createTracksRecord
       tags:
@@ -5049,6 +5431,7 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -5097,6 +5480,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateTracksRecordById
       tags:
@@ -5133,6 +5518,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteTracksRecordById
       tags:
@@ -5169,6 +5556,8 @@ paths:
           required: true
           schema:
             type: string
+          description: 记录ID
+        - $ref: '#/components/parameters/APIFieldCase'
 components:
   parameters:
     ClientHeader:
@@ -5194,6 +5583,15 @@ components:
       schema:
         type: string
         maxLength: 80
+    APIFieldCase:
+      name: X-Recoow-Field-Case
+      in: header
+      required: false
+      description: 新版发送 snake_case；未声明的旧客户端保留驼峰响应。
+      schema:
+        type: string
+        enum:
+          - snake_case
   securitySchemes:
     deviceToken:
       type: http
@@ -5216,11 +5614,11 @@ components:
       properties:
         version:
           type: string
-          description: 后端发布版本，与同步协议和数据表版本独立。
+          description: 后端版本
           example: 0.0.2
         commit:
           type: string
-          description: 构建对应的 Git 提交；未提供构建信息时为 unknown。
+          description: 构建提交版本
     AnniversariesSnapshot:
       type: object
       additionalProperties: true
@@ -5247,6 +5645,7 @@ components:
             labels:
               zh: id
               en: id
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -5257,6 +5656,7 @@ components:
             labels:
               zh: created_at
               en: created at
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -5267,6 +5667,7 @@ components:
             labels:
               zh: updated_at
               en: updated at
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -5278,6 +5679,7 @@ components:
             labels:
               zh: deleted_at
               en: deleted at
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -5287,6 +5689,7 @@ components:
             labels:
               zh: device_id
               en: device id
+          description: 设备ID
         server_version:
           type: integer
           format: int64
@@ -5298,6 +5701,7 @@ components:
             labels:
               zh: server_version
               en: server version
+          description: 已确认的云端版本
         title:
           type: string
           x-recoow:
@@ -5306,6 +5710,7 @@ components:
             labels:
               zh: title
               en: title
+          description: 记录标题
         note:
           type: string
           nullable: true
@@ -5315,6 +5720,7 @@ components:
             labels:
               zh: note
               en: note
+          description: 备注
         category:
           type: string
           x-recoow:
@@ -5323,6 +5729,7 @@ components:
             labels:
               zh: category
               en: category
+          description: 分类
         occurred_at:
           type: integer
           format: int64
@@ -5332,6 +5739,7 @@ components:
             labels:
               zh: occurred_at
               en: occurred at
+          description: 发生时间（毫秒时间戳）
         date_calendar:
           type: string
           x-recoow:
@@ -5340,6 +5748,7 @@ components:
             labels:
               zh: date_calendar
               en: date calendar
+          description: 日期历法
         is_yearly:
           type: boolean
           x-recoow:
@@ -5348,6 +5757,7 @@ components:
             labels:
               zh: is_yearly
               en: is yearly
+          description: 是否每年重复
         lead_time_minutes:
           type: integer
           format: int64
@@ -5357,6 +5767,7 @@ components:
             labels:
               zh: lead_time_minutes
               en: lead time minutes
+          description: 提前提醒分钟数
         is_enabled:
           type: boolean
           x-recoow:
@@ -5365,6 +5776,7 @@ components:
             labels:
               zh: is_enabled
               en: is enabled
+          description: 是否启用
         reminder_time_minutes:
           type: integer
           format: int64
@@ -5374,6 +5786,7 @@ components:
             labels:
               zh: reminder_time_minutes
               en: reminder time minutes
+          description: 当日提醒时间（自零点起的分钟数）
       x-recoow-sync:
         table: anniversaries
         manifestVersion: 1
@@ -5412,6 +5825,7 @@ components:
               en: ID
             searchable: false
             listable: true
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -5423,6 +5837,7 @@ components:
               zh: 创建时间
               en: Created
             listable: false
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -5434,6 +5849,7 @@ components:
               zh: 更新时间
               en: Updated
             listable: false
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -5446,6 +5862,7 @@ components:
               zh: 删除时间
               en: Deleted
             listable: false
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -5456,6 +5873,7 @@ components:
               zh: 来源设备
               en: Device
             listable: false
+          description: 来源设备
         server_version:
           type: integer
           format: int64
@@ -5468,6 +5886,7 @@ components:
               zh: 服务端版本
               en: Server ver.
             listable: false
+          description: 服务端版本
         title:
           type: string
           x-recoow:
@@ -5479,6 +5898,7 @@ components:
             searchable: true
             listable: true
             group: 基本信息
+          description: 标题
         original_amount_cents:
           type: integer
           format: int64
@@ -5491,6 +5911,7 @@ components:
             unit: 分
             listable: true
             group: 金额
+          description: 原价（分）
         discount_amount_cents:
           type: integer
           format: int64
@@ -5504,6 +5925,7 @@ components:
             unit: 分
             listable: true
             group: 金额
+          description: 优惠（分）
         final_amount_cents:
           type: integer
           format: int64
@@ -5516,6 +5938,7 @@ components:
             unit: 分
             listable: true
             group: 金额
+          description: 实付（分）
         transaction_type:
           type: string
           enum:
@@ -5531,6 +5954,7 @@ components:
             searchable: true
             listable: true
             group: 基本信息
+          description: 收支类型
         category:
           type: string
           x-recoow:
@@ -5542,6 +5966,7 @@ components:
             searchable: true
             listable: true
             group: 基本信息
+          description: 分类
         payment_method:
           type: string
           enum:
@@ -5562,6 +5987,7 @@ components:
             searchable: true
             listable: true
             group: 基本信息
+          description: 支付方式
         note:
           type: string
           nullable: true
@@ -5573,6 +5999,7 @@ components:
               en: Note
             searchable: true
             group: 备注
+          description: 备注
         start_location:
           type: string
           nullable: true
@@ -5583,6 +6010,7 @@ components:
               zh: 起点
               en: From
             group: 行程
+          description: 起点
         end_location:
           type: string
           nullable: true
@@ -5593,6 +6021,7 @@ components:
               zh: 终点
               en: To
             group: 行程
+          description: 终点
         transport_lines:
           type: string
           nullable: true
@@ -5603,6 +6032,7 @@ components:
               zh: 出行线路
               en: Route
             group: 行程
+          description: 出行线路
         occurred_at:
           type: integer
           format: int64
@@ -5616,6 +6046,7 @@ components:
             listable: true
             sortable: true
             group: 时间
+          description: 发生时间（毫秒时间戳）
         image_data:
           type: string
           format: byte
@@ -5628,6 +6059,7 @@ components:
               zh: 内嵌图片数据
               en: Embedded image data
             group: 媒体
+          description: 内嵌图片数据
         image_asset_id:
           type: string
           nullable: true
@@ -5639,6 +6071,7 @@ components:
               en: Receipt image
             listable: false
             group: 媒体
+          description: 凭证图片
         settlement_status:
           type: string
           enum:
@@ -5654,6 +6087,7 @@ components:
               en: Settlement
             listable: true
             group: 结算
+          description: 结算状态
         group_buy_valid_until:
           type: integer
           format: int64
@@ -5666,6 +6100,7 @@ components:
               en: Group-buy valid until
             listable: false
             group: 结算
+          description: 团购有效期至（毫秒时间戳）
         redeemed_at:
           type: integer
           format: int64
@@ -5678,6 +6113,7 @@ components:
               en: Redeemed
             listable: false
             group: 结算
+          description: 核销时间（毫秒时间戳）
         refund_reason:
           type: string
           nullable: true
@@ -5688,6 +6124,7 @@ components:
               zh: 退款原因
               en: Refund reason
             group: 结算
+          description: 退款原因
         stored_value_account_id:
           type: string
           nullable: true
@@ -5699,6 +6136,7 @@ components:
               en: Stored-value account
             listable: false
             group: 关联
+          description: 储值账户
         stored_value_effects:
           type: string
           nullable: true
@@ -5709,6 +6147,7 @@ components:
               zh: 累计储值影响
               en: Applied balance effects
             listable: false
+          description: 累计储值影响
         utility_account_number:
           type: string
           nullable: true
@@ -5719,6 +6158,7 @@ components:
               zh: 缴费号码
               en: Utility account number
             group: 基本信息
+          description: 缴费号码
       x-recoow-sync:
         table: bills
         manifestVersion: 5
@@ -5755,6 +6195,7 @@ components:
             labels:
               zh: id
               en: id
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -5765,6 +6206,7 @@ components:
             labels:
               zh: created_at
               en: created at
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -5775,6 +6217,7 @@ components:
             labels:
               zh: updated_at
               en: updated at
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -5786,6 +6229,7 @@ components:
             labels:
               zh: deleted_at
               en: deleted at
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -5795,6 +6239,7 @@ components:
             labels:
               zh: device_id
               en: device id
+          description: 设备ID
         server_version:
           type: integer
           format: int64
@@ -5806,6 +6251,7 @@ components:
             labels:
               zh: server_version
               en: server version
+          description: 已确认的云端版本
         collection_id:
           type: string
           x-recoow:
@@ -5814,6 +6260,7 @@ components:
             labels:
               zh: collection_id
               en: collection id
+          description: 集合ID
         collection_title:
           type: string
           x-recoow:
@@ -5822,6 +6269,7 @@ components:
             labels:
               zh: collection_title
               en: collection title
+          description: 集合标题
         option_id:
           type: string
           x-recoow:
@@ -5830,6 +6278,7 @@ components:
             labels:
               zh: option_id
               en: option id
+          description: 候选项ID
         option_title:
           type: string
           x-recoow:
@@ -5838,6 +6287,7 @@ components:
             labels:
               zh: option_title
               en: option title
+          description: 候选项标题
         option_detail:
           type: string
           nullable: true
@@ -5847,6 +6297,7 @@ components:
             labels:
               zh: option_detail
               en: option detail
+          description: 候选项详情
         option_custom_info:
           type: string
           nullable: true
@@ -5856,6 +6307,7 @@ components:
             labels:
               zh: option_custom_info
               en: option custom info
+          description: 候选项补充信息
         option_image_data:
           type: string
           format: byte
@@ -5867,6 +6319,7 @@ components:
             labels:
               zh: option_image_data
               en: option image data
+          description: 候选项内嵌图片数据
         option_image_asset_id:
           type: string
           nullable: true
@@ -5876,6 +6329,7 @@ components:
             labels:
               zh: option_image_asset_id
               en: option image asset id
+          description: 候选项图片ID
         selected_at:
           type: integer
           format: int64
@@ -5885,6 +6339,7 @@ components:
             labels:
               zh: selected_at
               en: selected at
+          description: 抽选时间（毫秒时间戳）
       x-recoow-sync:
         table: decision_choice_records
         manifestVersion: 1
@@ -5915,6 +6370,7 @@ components:
             labels:
               zh: id
               en: id
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -5925,6 +6381,7 @@ components:
             labels:
               zh: created_at
               en: created at
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -5935,6 +6392,7 @@ components:
             labels:
               zh: updated_at
               en: updated at
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -5946,6 +6404,7 @@ components:
             labels:
               zh: deleted_at
               en: deleted at
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -5955,6 +6414,7 @@ components:
             labels:
               zh: device_id
               en: device id
+          description: 设备ID
         server_version:
           type: integer
           format: int64
@@ -5966,6 +6426,7 @@ components:
             labels:
               zh: server_version
               en: server version
+          description: 已确认的云端版本
         title:
           type: string
           x-recoow:
@@ -5974,6 +6435,7 @@ components:
             labels:
               zh: title
               en: title
+          description: 记录标题
         note:
           type: string
           nullable: true
@@ -5983,6 +6445,7 @@ components:
             labels:
               zh: note
               en: note
+          description: 备注
       x-recoow-sync:
         table: decision_collections
         manifestVersion: 1
@@ -6014,6 +6477,7 @@ components:
             labels:
               zh: id
               en: id
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -6024,6 +6488,7 @@ components:
             labels:
               zh: created_at
               en: created at
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -6034,6 +6499,7 @@ components:
             labels:
               zh: updated_at
               en: updated at
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -6045,6 +6511,7 @@ components:
             labels:
               zh: deleted_at
               en: deleted at
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -6054,6 +6521,7 @@ components:
             labels:
               zh: device_id
               en: device id
+          description: 设备ID
         server_version:
           type: integer
           format: int64
@@ -6065,6 +6533,7 @@ components:
             labels:
               zh: server_version
               en: server version
+          description: 已确认的云端版本
         collection_id:
           type: string
           x-recoow:
@@ -6073,6 +6542,7 @@ components:
             labels:
               zh: collection_id
               en: collection id
+          description: 集合ID
         title:
           type: string
           x-recoow:
@@ -6081,6 +6551,7 @@ components:
             labels:
               zh: title
               en: title
+          description: 记录标题
         detail:
           type: string
           nullable: true
@@ -6090,6 +6561,7 @@ components:
             labels:
               zh: detail
               en: detail
+          description: 详情
         custom_info:
           type: string
           nullable: true
@@ -6099,6 +6571,7 @@ components:
             labels:
               zh: custom_info
               en: custom info
+          description: 补充信息
         image_data:
           type: string
           format: byte
@@ -6110,6 +6583,7 @@ components:
             labels:
               zh: image_data
               en: image data
+          description: 内嵌图片数据
         image_asset_id:
           type: string
           nullable: true
@@ -6119,6 +6593,7 @@ components:
             labels:
               zh: image_asset_id
               en: image asset id
+          description: 图片素材ID
         weight:
           type: integer
           format: int64
@@ -6128,6 +6603,7 @@ components:
             labels:
               zh: weight
               en: weight
+          description: 抽选权重
         is_enabled:
           type: boolean
           x-recoow:
@@ -6136,6 +6612,7 @@ components:
             labels:
               zh: is_enabled
               en: is enabled
+          description: 是否启用
       x-recoow-sync:
         table: decision_options
         manifestVersion: 1
@@ -6172,6 +6649,7 @@ components:
             labels:
               zh: id
               en: id
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -6182,6 +6660,7 @@ components:
             labels:
               zh: created_at
               en: created at
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -6192,6 +6671,7 @@ components:
             labels:
               zh: updated_at
               en: updated at
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -6203,6 +6683,7 @@ components:
             labels:
               zh: deleted_at
               en: deleted at
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -6212,6 +6693,7 @@ components:
             labels:
               zh: device_id
               en: device id
+          description: 设备ID
         server_version:
           type: integer
           format: int64
@@ -6223,6 +6705,7 @@ components:
             labels:
               zh: server_version
               en: server version
+          description: 已确认的云端版本
         title:
           type: string
           x-recoow:
@@ -6231,6 +6714,7 @@ components:
             labels:
               zh: title
               en: title
+          description: 记录标题
         content:
           type: string
           x-recoow:
@@ -6239,6 +6723,7 @@ components:
             labels:
               zh: content
               en: content
+          description: 正文
         mood:
           type: string
           x-recoow:
@@ -6247,6 +6732,7 @@ components:
             labels:
               zh: mood
               en: mood
+          description: 心情
         tags_json:
           type: string
           x-recoow:
@@ -6255,6 +6741,7 @@ components:
             labels:
               zh: tags_json
               en: tags json
+          description: 标签（JSON 文本）
         occurred_at:
           type: integer
           format: int64
@@ -6264,6 +6751,7 @@ components:
             labels:
               zh: occurred_at
               en: occurred at
+          description: 发生时间（毫秒时间戳）
         latitude:
           type: number
           format: double
@@ -6274,6 +6762,7 @@ components:
             labels:
               zh: latitude
               en: latitude
+          description: 纬度
         longitude:
           type: number
           format: double
@@ -6284,6 +6773,7 @@ components:
             labels:
               zh: longitude
               en: longitude
+          description: 经度
         horizontal_accuracy:
           type: number
           format: double
@@ -6294,6 +6784,7 @@ components:
             labels:
               zh: horizontal_accuracy
               en: horizontal accuracy
+          description: 水平精度（米）
       x-recoow-sync:
         table: diary_entries
         manifestVersion: 1
@@ -6326,6 +6817,7 @@ components:
             labels:
               zh: id
               en: id
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -6336,6 +6828,7 @@ components:
             labels:
               zh: created_at
               en: created at
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -6346,6 +6839,7 @@ components:
             labels:
               zh: updated_at
               en: updated at
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -6357,6 +6851,7 @@ components:
             labels:
               zh: deleted_at
               en: deleted at
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -6366,6 +6861,7 @@ components:
             labels:
               zh: device_id
               en: device id
+          description: 设备ID
         server_version:
           type: integer
           format: int64
@@ -6377,6 +6873,7 @@ components:
             labels:
               zh: server_version
               en: server version
+          description: 已确认的云端版本
         diary_id:
           type: string
           x-recoow:
@@ -6385,6 +6882,7 @@ components:
             labels:
               zh: diary_id
               en: diary id
+          description: 日记ID
         source_type:
           type: string
           x-recoow:
@@ -6393,6 +6891,7 @@ components:
             labels:
               zh: source_type
               en: source type
+          description: 来源类型
         source_id:
           type: string
           x-recoow:
@@ -6401,6 +6900,7 @@ components:
             labels:
               zh: source_id
               en: source id
+          description: 来源记录ID
         source_title:
           type: string
           x-recoow:
@@ -6409,6 +6909,7 @@ components:
             labels:
               zh: source_title
               en: source title
+          description: 来源标题
         source_subtitle:
           type: string
           nullable: true
@@ -6418,6 +6919,7 @@ components:
             labels:
               zh: source_subtitle
               en: source subtitle
+          description: 来源摘要
         source_icon:
           type: string
           x-recoow:
@@ -6426,6 +6928,7 @@ components:
             labels:
               zh: source_icon
               en: source icon
+          description: 来源图标
         source_occurred_at:
           type: integer
           format: int64
@@ -6436,6 +6939,7 @@ components:
             labels:
               zh: source_occurred_at
               en: source occurred at
+          description: 来源时间（毫秒时间戳）
         snapshot_json:
           type: string
           nullable: true
@@ -6445,6 +6949,7 @@ components:
             labels:
               zh: snapshot_json
               en: snapshot json
+          description: 来源快照（JSON 文本）
       x-recoow-sync:
         table: diary_links
         manifestVersion: 1
@@ -6475,6 +6980,7 @@ components:
             labels:
               zh: id
               en: id
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -6485,6 +6991,7 @@ components:
             labels:
               zh: created_at
               en: created at
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -6495,6 +7002,7 @@ components:
             labels:
               zh: updated_at
               en: updated at
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -6506,6 +7014,7 @@ components:
             labels:
               zh: deleted_at
               en: deleted at
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -6515,6 +7024,7 @@ components:
             labels:
               zh: device_id
               en: device id
+          description: 设备ID
         server_version:
           type: integer
           format: int64
@@ -6526,6 +7036,7 @@ components:
             labels:
               zh: server_version
               en: server version
+          description: 已确认的云端版本
         name:
           type: string
           x-recoow:
@@ -6534,6 +7045,7 @@ components:
             labels:
               zh: name
               en: name
+          description: 名称
         note:
           type: string
           nullable: true
@@ -6543,6 +7055,7 @@ components:
             labels:
               zh: note
               en: note
+          description: 备注
       x-recoow-sync:
         table: diary_tags
         manifestVersion: 1
@@ -6572,6 +7085,7 @@ components:
             labels:
               zh: id
               en: id
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -6582,6 +7096,7 @@ components:
             labels:
               zh: created_at
               en: created at
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -6592,6 +7107,7 @@ components:
             labels:
               zh: updated_at
               en: updated at
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -6603,6 +7119,7 @@ components:
             labels:
               zh: deleted_at
               en: deleted at
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -6612,6 +7129,7 @@ components:
             labels:
               zh: device_id
               en: device id
+          description: 设备ID
         server_version:
           type: integer
           format: int64
@@ -6623,6 +7141,7 @@ components:
             labels:
               zh: server_version
               en: server version
+          description: 已确认的云端版本
         title:
           type: string
           x-recoow:
@@ -6631,6 +7150,7 @@ components:
             labels:
               zh: title
               en: title
+          description: 记录标题
         day_start_at:
           type: integer
           format: int64
@@ -6640,6 +7160,7 @@ components:
             labels:
               zh: day_start_at
               en: day start at
+          description: 当天零点（毫秒时间戳）
       x-recoow-sync:
         table: food_day_records
         manifestVersion: 1
@@ -6671,6 +7192,7 @@ components:
             labels:
               zh: id
               en: id
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -6681,6 +7203,7 @@ components:
             labels:
               zh: created_at
               en: created at
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -6691,6 +7214,7 @@ components:
             labels:
               zh: updated_at
               en: updated at
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -6702,6 +7226,7 @@ components:
             labels:
               zh: deleted_at
               en: deleted at
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -6711,6 +7236,7 @@ components:
             labels:
               zh: device_id
               en: device id
+          description: 设备ID
         server_version:
           type: integer
           format: int64
@@ -6722,6 +7248,7 @@ components:
             labels:
               zh: server_version
               en: server version
+          description: 已确认的云端版本
         title:
           type: string
           x-recoow:
@@ -6730,6 +7257,7 @@ components:
             labels:
               zh: title
               en: title
+          description: 记录标题
         meal_kind:
           type: string
           x-recoow:
@@ -6738,6 +7266,7 @@ components:
             labels:
               zh: meal_kind
               en: meal kind
+          description: 餐别
         portion:
           type: string
           nullable: true
@@ -6747,6 +7276,7 @@ components:
             labels:
               zh: portion
               en: portion
+          description: 分量
         note:
           type: string
           nullable: true
@@ -6756,6 +7286,7 @@ components:
             labels:
               zh: note
               en: note
+          description: 备注
         bill_id:
           type: string
           nullable: true
@@ -6765,6 +7296,7 @@ components:
             labels:
               zh: bill_id
               en: bill id
+          description: 账单ID
         bill_ids_json:
           type: string
           x-recoow:
@@ -6773,6 +7305,7 @@ components:
             labels:
               zh: bill_ids_json
               en: bill ids json
+          description: 关联账单ID列表（JSON 文本）
         occurred_at:
           type: integer
           format: int64
@@ -6782,6 +7315,7 @@ components:
             labels:
               zh: occurred_at
               en: occurred at
+          description: 发生时间（毫秒时间戳）
       x-recoow-sync:
         table: food_entries
         manifestVersion: 1
@@ -6812,6 +7346,7 @@ components:
             labels:
               zh: id
               en: id
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -6822,6 +7357,7 @@ components:
             labels:
               zh: created_at
               en: created at
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -6832,6 +7368,7 @@ components:
             labels:
               zh: updated_at
               en: updated at
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -6843,6 +7380,7 @@ components:
             labels:
               zh: deleted_at
               en: deleted at
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -6852,6 +7390,7 @@ components:
             labels:
               zh: device_id
               en: device id
+          description: 设备ID
         server_version:
           type: integer
           format: int64
@@ -6863,6 +7402,7 @@ components:
             labels:
               zh: server_version
               en: server version
+          description: 已确认的云端版本
         name:
           type: string
           x-recoow:
@@ -6871,6 +7411,7 @@ components:
             labels:
               zh: name
               en: name
+          description: 名称
         note:
           type: string
           nullable: true
@@ -6880,6 +7421,7 @@ components:
             labels:
               zh: note
               en: note
+          description: 备注
       x-recoow-sync:
         table: item_categories
         manifestVersion: 1
@@ -6914,6 +7456,7 @@ components:
             labels:
               zh: id
               en: id
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -6924,6 +7467,7 @@ components:
             labels:
               zh: created_at
               en: created at
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -6934,6 +7478,7 @@ components:
             labels:
               zh: updated_at
               en: updated at
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -6945,6 +7490,7 @@ components:
             labels:
               zh: deleted_at
               en: deleted at
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -6954,6 +7500,7 @@ components:
             labels:
               zh: device_id
               en: device id
+          description: 设备ID
         server_version:
           type: integer
           format: int64
@@ -6965,6 +7512,7 @@ components:
             labels:
               zh: server_version
               en: server version
+          description: 已确认的云端版本
         kind:
           type: string
           x-recoow:
@@ -6973,6 +7521,7 @@ components:
             labels:
               zh: kind
               en: kind
+          description: 类型
         title:
           type: string
           nullable: true
@@ -6982,6 +7531,7 @@ components:
             labels:
               zh: title
               en: title
+          description: 记录标题
         storage_backend:
           type: string
           x-recoow:
@@ -6990,6 +7540,7 @@ components:
             labels:
               zh: storage_backend
               en: storage backend
+          description: 存储类型
         storage_key:
           type: string
           x-recoow:
@@ -6998,6 +7549,7 @@ components:
             labels:
               zh: storage_key
               en: storage key
+          description: 存储对象键
         mime_type:
           type: string
           x-recoow:
@@ -7006,6 +7558,7 @@ components:
             labels:
               zh: mime_type
               en: mime type
+          description: 媒体类型（MIME）
         byte_count:
           type: integer
           format: int64
@@ -7015,6 +7568,7 @@ components:
             labels:
               zh: byte_count
               en: byte count
+          description: 媒体字节数
         checksum:
           type: string
           x-recoow:
@@ -7023,6 +7577,7 @@ components:
             labels:
               zh: checksum
               en: checksum
+          description: SHA-256 校验和
         width:
           type: integer
           format: int64
@@ -7033,6 +7588,7 @@ components:
             labels:
               zh: width
               en: width
+          description: 图片宽度（像素）
         height:
           type: integer
           format: int64
@@ -7043,6 +7599,7 @@ components:
             labels:
               zh: height
               en: height
+          description: 图片高度（像素）
         sort_order:
           type: integer
           format: int64
@@ -7052,6 +7609,7 @@ components:
             labels:
               zh: sort_order
               en: sort order
+          description: 排序位置
         inline_data:
           type: string
           format: byte
@@ -7063,6 +7621,7 @@ components:
             labels:
               zh: inline_data
               en: inline data
+          description: 内嵌媒体数据
       x-recoow-sync:
         table: media_assets
         manifestVersion: 2
@@ -7095,6 +7654,7 @@ components:
             labels:
               zh: id
               en: id
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -7105,6 +7665,7 @@ components:
             labels:
               zh: created_at
               en: created at
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -7115,6 +7676,7 @@ components:
             labels:
               zh: updated_at
               en: updated at
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -7126,6 +7688,7 @@ components:
             labels:
               zh: deleted_at
               en: deleted at
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -7135,6 +7698,7 @@ components:
             labels:
               zh: device_id
               en: device id
+          description: 设备ID
         server_version:
           type: integer
           format: int64
@@ -7146,6 +7710,7 @@ components:
             labels:
               zh: server_version
               en: server version
+          description: 已确认的云端版本
         owner_type:
           type: string
           x-recoow:
@@ -7154,6 +7719,7 @@ components:
             labels:
               zh: owner_type
               en: owner type
+          description: 所属实体类型
         owner_id:
           type: string
           x-recoow:
@@ -7162,6 +7728,7 @@ components:
             labels:
               zh: owner_id
               en: owner id
+          description: 所属记录ID
         kind:
           type: string
           x-recoow:
@@ -7170,6 +7737,7 @@ components:
             labels:
               zh: kind
               en: kind
+          description: 类型
         title:
           type: string
           nullable: true
@@ -7179,6 +7747,7 @@ components:
             labels:
               zh: title
               en: title
+          description: 记录标题
         asset_id:
           type: string
           nullable: true
@@ -7188,6 +7757,7 @@ components:
             labels:
               zh: asset_id
               en: asset id
+          description: 素材ID
         data:
           type: string
           format: byte
@@ -7198,6 +7768,7 @@ components:
             labels:
               zh: data
               en: data
+          description: 内嵌媒体数据
         mime_type:
           type: string
           x-recoow:
@@ -7206,6 +7777,7 @@ components:
             labels:
               zh: mime_type
               en: mime type
+          description: 媒体类型（MIME）
         duration_seconds:
           type: number
           format: double
@@ -7216,6 +7788,7 @@ components:
             labels:
               zh: duration_seconds
               en: duration seconds
+          description: 媒体时长（秒）
         width:
           type: integer
           format: int64
@@ -7226,6 +7799,7 @@ components:
             labels:
               zh: width
               en: width
+          description: 图片宽度（像素）
         height:
           type: integer
           format: int64
@@ -7236,6 +7810,7 @@ components:
             labels:
               zh: height
               en: height
+          description: 图片高度（像素）
         sort_order:
           type: integer
           format: int64
@@ -7245,6 +7820,7 @@ components:
             labels:
               zh: sort_order
               en: sort order
+          description: 排序位置
       x-recoow-sync:
         table: media_attachments
         manifestVersion: 1
@@ -7278,6 +7854,7 @@ components:
             labels:
               zh: id
               en: id
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -7288,6 +7865,7 @@ components:
             labels:
               zh: created_at
               en: created at
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -7298,6 +7876,7 @@ components:
             labels:
               zh: updated_at
               en: updated at
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -7309,6 +7888,7 @@ components:
             labels:
               zh: deleted_at
               en: deleted at
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -7318,6 +7898,7 @@ components:
             labels:
               zh: device_id
               en: device id
+          description: 设备ID
         server_version:
           type: integer
           format: int64
@@ -7329,6 +7910,7 @@ components:
             labels:
               zh: server_version
               en: server version
+          description: 已确认的云端版本
         reminder_id:
           type: string
           x-recoow:
@@ -7337,6 +7919,7 @@ components:
             labels:
               zh: reminder_id
               en: reminder id
+          description: 打卡任务ID
         date_key:
           type: string
           x-recoow:
@@ -7345,6 +7928,7 @@ components:
             labels:
               zh: date_key
               en: date key
+          description: 打卡日期
         completed_at:
           type: integer
           format: int64
@@ -7354,6 +7938,7 @@ components:
             labels:
               zh: completed_at
               en: completed at
+          description: 完成时间（毫秒时间戳）
         kind:
           type: string
           x-recoow:
@@ -7362,6 +7947,7 @@ components:
             labels:
               zh: kind
               en: kind
+          description: 类型
         note:
           type: string
           nullable: true
@@ -7371,6 +7957,7 @@ components:
             labels:
               zh: note
               en: note
+          description: 备注
       x-recoow-sync:
         table: reminder_completions
         manifestVersion: 1
@@ -7411,6 +7998,7 @@ components:
               en: ID
             searchable: false
             listable: true
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -7422,6 +8010,7 @@ components:
               zh: 创建时间
               en: Created
             listable: false
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -7433,6 +8022,7 @@ components:
               zh: 更新时间
               en: Updated
             listable: false
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -7445,6 +8035,7 @@ components:
               zh: 删除时间
               en: Deleted
             listable: false
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -7455,6 +8046,7 @@ components:
               zh: 来源设备
               en: Device
             listable: false
+          description: 来源设备
         server_version:
           type: integer
           format: int64
@@ -7467,6 +8059,7 @@ components:
               zh: 服务端版本
               en: Server ver.
             listable: false
+          description: 服务端版本
         title:
           type: string
           x-recoow:
@@ -7478,6 +8071,7 @@ components:
             searchable: true
             listable: true
             group: 基本信息
+          description: 名称
         note:
           type: string
           nullable: true
@@ -7489,6 +8083,7 @@ components:
               en: Note
             searchable: true
             group: 备注
+          description: 备注
         memory_icon:
           type: string
           x-recoow:
@@ -7499,6 +8094,7 @@ components:
               en: Icon
             listable: true
             group: 基本信息
+          description: 图标
         image_data:
           type: string
           format: byte
@@ -7511,6 +8107,7 @@ components:
               zh: 内嵌图片数据
               en: Embedded image data
             group: 媒体
+          description: 内嵌图片数据
         image_asset_id:
           type: string
           nullable: true
@@ -7522,6 +8119,7 @@ components:
               en: Cover image
             listable: false
             group: 媒体
+          description: 封面图片
         scheduled_at:
           type: integer
           format: int64
@@ -7535,6 +8133,7 @@ components:
             listable: true
             sortable: true
             group: 排期
+          description: 开始时间（毫秒时间戳）
         lead_time_minutes:
           type: integer
           format: int64
@@ -7547,6 +8146,7 @@ components:
             unit: 分钟
             listable: false
             group: 排期
+          description: 提前提醒（分钟）
         is_enabled:
           type: boolean
           default: true
@@ -7558,6 +8158,7 @@ components:
               en: Enabled
             listable: true
             group: 状态
+          description: 启用
         schedule_kind:
           type: string
           enum:
@@ -7575,6 +8176,7 @@ components:
               en: Schedule kind
             listable: true
             group: 排期
+          description: 打卡类型
         end_at:
           type: integer
           format: int64
@@ -7587,6 +8189,7 @@ components:
               en: End
             listable: false
             group: 排期
+          description: 结束时间（毫秒时间戳）
         reminder_time_minutes:
           type: integer
           format: int64
@@ -7599,6 +8202,7 @@ components:
             unit: 分钟
             listable: false
             group: 排期
+          description: 提醒时间（分钟）
         weekdays:
           type: string
           nullable: true
@@ -7610,6 +8214,7 @@ components:
               en: Weekdays
             listable: false
             group: 排期
+          description: 重复星期
         continuous_days:
           type: integer
           format: int64
@@ -7622,6 +8227,7 @@ components:
             unit: 天
             listable: false
             group: 挑战
+          description: 目标天数（天）
         completed_at:
           type: integer
           format: int64
@@ -7634,6 +8240,7 @@ components:
               en: Completed
             listable: false
             group: 打卡
+          description: 完成时间（毫秒时间戳）
         imported_completed_days:
           type: integer
           format: int64
@@ -7647,6 +8254,7 @@ components:
             unit: 天
             listable: false
             group: 打卡
+          description: 导入完成天数（天）
         completed_date_keys:
           type: string
           nullable: true
@@ -7659,6 +8267,7 @@ components:
             listable: false
             group: 打卡
             derived: true
+          description: 已完成日期
         completion_records:
           type: string
           nullable: true
@@ -7671,6 +8280,7 @@ components:
             listable: false
             group: 打卡
             derived: true
+          description: 打卡明细
         ended_early_at:
           type: integer
           format: int64
@@ -7683,6 +8293,7 @@ components:
               en: Ended early
             listable: false
             group: 状态
+          description: 提前结束时间（毫秒时间戳）
         early_end_reason:
           type: string
           nullable: true
@@ -7693,6 +8304,7 @@ components:
               zh: 提前结束原因
               en: Reason
             group: 状态
+          description: 提前结束原因
         paused_at:
           type: integer
           format: int64
@@ -7705,6 +8317,7 @@ components:
               en: Paused
             listable: false
             group: 状态
+          description: 暂停时间（毫秒时间戳）
         pause_reason:
           type: string
           nullable: true
@@ -7715,6 +8328,7 @@ components:
               zh: 暂停原因
               en: Pause reason
             group: 状态
+          description: 暂停原因
         total_paused_milliseconds:
           type: integer
           format: int64
@@ -7728,6 +8342,7 @@ components:
             unit: 毫秒
             listable: false
             group: 状态
+          description: 累计暂停时长（毫秒）
       x-recoow-sync:
         table: reminders
         manifestVersion: 4
@@ -7759,6 +8374,7 @@ components:
             labels:
               zh: id
               en: id
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -7769,6 +8385,7 @@ components:
             labels:
               zh: created_at
               en: created at
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -7779,6 +8396,7 @@ components:
             labels:
               zh: updated_at
               en: updated at
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -7790,6 +8408,7 @@ components:
             labels:
               zh: deleted_at
               en: deleted at
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -7799,6 +8418,7 @@ components:
             labels:
               zh: device_id
               en: device id
+          description: 设备ID
         server_version:
           type: integer
           format: int64
@@ -7810,6 +8430,7 @@ components:
             labels:
               zh: server_version
               en: server version
+          description: 已确认的云端版本
         category_id:
           type: string
           nullable: true
@@ -7819,6 +8440,7 @@ components:
             labels:
               zh: category_id
               en: category id
+          description: 分类ID
         title:
           type: string
           x-recoow:
@@ -7827,6 +8449,7 @@ components:
             labels:
               zh: title
               en: title
+          description: 记录标题
         location:
           type: string
           x-recoow:
@@ -7835,6 +8458,7 @@ components:
             labels:
               zh: location
               en: location
+          description: 存放位置
         note:
           type: string
           nullable: true
@@ -7844,6 +8468,7 @@ components:
             labels:
               zh: note
               en: note
+          description: 备注
         tags:
           type: string
           nullable: true
@@ -7853,6 +8478,7 @@ components:
             labels:
               zh: tags
               en: tags
+          description: 标签
         search_keywords:
           type: string
           nullable: true
@@ -7862,6 +8488,7 @@ components:
             labels:
               zh: search_keywords
               en: search keywords
+          description: 搜索关键词
         image_data:
           type: string
           format: byte
@@ -7873,6 +8500,7 @@ components:
             labels:
               zh: image_data
               en: image data
+          description: 内嵌图片数据
         image_asset_id:
           type: string
           nullable: true
@@ -7882,6 +8510,7 @@ components:
             labels:
               zh: image_asset_id
               en: image asset id
+          description: 图片素材ID
       x-recoow-sync:
         table: stored_items
         manifestVersion: 1
@@ -7918,6 +8547,7 @@ components:
               en: ID
             searchable: false
             listable: true
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -7929,6 +8559,7 @@ components:
               zh: 创建时间
               en: Created
             listable: false
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -7940,6 +8571,7 @@ components:
               zh: 更新时间
               en: Updated
             listable: false
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -7952,6 +8584,7 @@ components:
               zh: 删除时间
               en: Deleted
             listable: false
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -7962,6 +8595,7 @@ components:
               zh: 来源设备
               en: Device
             listable: false
+          description: 来源设备
         server_version:
           type: integer
           format: int64
@@ -7974,6 +8608,7 @@ components:
               zh: 服务端版本
               en: Server ver.
             listable: false
+          description: 服务端版本
         name:
           type: string
           x-recoow:
@@ -7985,6 +8620,7 @@ components:
             searchable: true
             listable: true
             group: 基本信息
+          description: 名称
         kind:
           type: string
           enum:
@@ -8003,6 +8639,7 @@ components:
             searchable: true
             listable: true
             group: 基本信息
+          description: 类型
         balance_cents:
           type: integer
           format: int64
@@ -8016,6 +8653,7 @@ components:
             listable: true
             group: 金额
             derived: true
+          description: 余额（分）
         note:
           type: string
           nullable: true
@@ -8026,6 +8664,7 @@ components:
               zh: 备注
               en: Note
             group: 备注
+          description: 备注
       x-recoow-sync:
         table: stored_value_accounts
         manifestVersion: 3
@@ -8056,6 +8695,7 @@ components:
             labels:
               zh: id
               en: id
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -8066,6 +8706,7 @@ components:
             labels:
               zh: created_at
               en: created at
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -8076,6 +8717,7 @@ components:
             labels:
               zh: updated_at
               en: updated at
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -8087,6 +8729,7 @@ components:
             labels:
               zh: deleted_at
               en: deleted at
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -8096,6 +8739,7 @@ components:
             labels:
               zh: device_id
               en: device id
+          description: 设备ID
         server_version:
           type: integer
           format: int64
@@ -8107,6 +8751,7 @@ components:
             labels:
               zh: server_version
               en: server version
+          description: 已确认的云端版本
         account_id:
           type: string
           x-recoow:
@@ -8115,6 +8760,7 @@ components:
             labels:
               zh: account_id
               en: account id
+          description: 账号ID
         amount_cents:
           type: integer
           format: int64
@@ -8124,6 +8770,7 @@ components:
             labels:
               zh: amount_cents
               en: amount cents
+          description: 金额（分）
         reason:
           type: string
           x-recoow:
@@ -8132,6 +8779,7 @@ components:
             labels:
               zh: reason
               en: reason
+          description: 处理原因
       x-recoow-sync:
         table: stored_value_adjustments
         manifestVersion: 1
@@ -8165,6 +8813,7 @@ components:
             labels:
               zh: id
               en: id
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -8175,6 +8824,7 @@ components:
             labels:
               zh: created_at
               en: created at
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -8185,6 +8835,7 @@ components:
             labels:
               zh: updated_at
               en: updated at
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -8196,6 +8847,7 @@ components:
             labels:
               zh: deleted_at
               en: deleted at
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -8205,6 +8857,7 @@ components:
             labels:
               zh: device_id
               en: device id
+          description: 设备ID
         server_version:
           type: integer
           format: int64
@@ -8216,6 +8869,7 @@ components:
             labels:
               zh: server_version
               en: server version
+          description: 已确认的云端版本
         track_id:
           type: string
           x-recoow:
@@ -8224,6 +8878,7 @@ components:
             labels:
               zh: track_id
               en: track id
+          description: 轨迹ID
         latitude:
           type: number
           format: double
@@ -8233,6 +8888,7 @@ components:
             labels:
               zh: latitude
               en: latitude
+          description: 纬度
         longitude:
           type: number
           format: double
@@ -8242,6 +8898,7 @@ components:
             labels:
               zh: longitude
               en: longitude
+          description: 经度
         altitude:
           type: number
           format: double
@@ -8252,6 +8909,7 @@ components:
             labels:
               zh: altitude
               en: altitude
+          description: 海拔（米）
         horizontal_acc:
           type: number
           format: double
@@ -8262,6 +8920,7 @@ components:
             labels:
               zh: horizontal_acc
               en: horizontal acc
+          description: 水平精度（米）
         vertical_acc:
           type: number
           format: double
@@ -8272,6 +8931,7 @@ components:
             labels:
               zh: vertical_acc
               en: vertical acc
+          description: 垂直精度（米）
         speed_mps:
           type: number
           format: double
@@ -8282,6 +8942,7 @@ components:
             labels:
               zh: speed_mps
               en: speed mps
+          description: 速度（米/秒）
         course_deg:
           type: number
           format: double
@@ -8292,6 +8953,7 @@ components:
             labels:
               zh: course_deg
               en: course deg
+          description: 方向（度）
         timestamp_ms:
           type: integer
           format: int64
@@ -8301,6 +8963,7 @@ components:
             labels:
               zh: timestamp_ms
               en: timestamp ms
+          description: 采样时间（毫秒时间戳）
       x-recoow-sync:
         table: track_points
         manifestVersion: 1
@@ -8338,6 +9001,7 @@ components:
             labels:
               zh: id
               en: id
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -8348,6 +9012,7 @@ components:
             labels:
               zh: created_at
               en: created at
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -8358,6 +9023,7 @@ components:
             labels:
               zh: updated_at
               en: updated at
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -8369,6 +9035,7 @@ components:
             labels:
               zh: deleted_at
               en: deleted at
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -8378,6 +9045,7 @@ components:
             labels:
               zh: device_id
               en: device id
+          description: 设备ID
         server_version:
           type: integer
           format: int64
@@ -8389,6 +9057,7 @@ components:
             labels:
               zh: server_version
               en: server version
+          description: 已确认的云端版本
         track_id:
           type: string
           x-recoow:
@@ -8397,6 +9066,7 @@ components:
             labels:
               zh: track_id
               en: track id
+          description: 轨迹ID
         started_at:
           type: integer
           format: int64
@@ -8406,6 +9076,7 @@ components:
             labels:
               zh: started_at
               en: started at
+          description: 开始时间（毫秒时间戳）
         ended_at:
           type: integer
           format: int64
@@ -8415,6 +9086,7 @@ components:
             labels:
               zh: ended_at
               en: ended at
+          description: 结束时间（毫秒时间戳）
         distance_m:
           type: number
           format: double
@@ -8424,6 +9096,7 @@ components:
             labels:
               zh: distance_m
               en: distance m
+          description: 距离（米）
         duration_s:
           type: integer
           format: int64
@@ -8433,6 +9106,7 @@ components:
             labels:
               zh: duration_s
               en: duration s
+          description: 时长（秒）
         avg_speed_mps:
           type: number
           format: double
@@ -8443,6 +9117,7 @@ components:
             labels:
               zh: avg_speed_mps
               en: avg speed mps
+          description: 平均速度（米/秒）
         max_speed_mps:
           type: number
           format: double
@@ -8453,6 +9128,7 @@ components:
             labels:
               zh: max_speed_mps
               en: max speed mps
+          description: 最高速度（米/秒）
         motion_type:
           type: string
           x-recoow:
@@ -8461,6 +9137,7 @@ components:
             labels:
               zh: motion_type
               en: motion type
+          description: 运动方式
         source:
           type: string
           x-recoow:
@@ -8469,6 +9146,7 @@ components:
             labels:
               zh: source
               en: source
+          description: 记录来源
         confidence:
           type: number
           format: double
@@ -8478,6 +9156,7 @@ components:
             labels:
               zh: confidence
               en: confidence
+          description: 运动识别可信度
       x-recoow-sync:
         table: track_segments
         manifestVersion: 1
@@ -8513,6 +9192,7 @@ components:
             labels:
               zh: id
               en: id
+          description: 记录ID
         created_at:
           type: integer
           format: int64
@@ -8523,6 +9203,7 @@ components:
             labels:
               zh: created_at
               en: created at
+          description: 创建时间（毫秒时间戳）
         updated_at:
           type: integer
           format: int64
@@ -8533,6 +9214,7 @@ components:
             labels:
               zh: updated_at
               en: updated at
+          description: 更新时间（毫秒时间戳）
         deleted_at:
           type: integer
           format: int64
@@ -8544,6 +9226,7 @@ components:
             labels:
               zh: deleted_at
               en: deleted at
+          description: 删除时间（毫秒时间戳）
         device_id:
           type: string
           x-recoow:
@@ -8553,6 +9236,7 @@ components:
             labels:
               zh: device_id
               en: device id
+          description: 设备ID
         server_version:
           type: integer
           format: int64
@@ -8564,6 +9248,7 @@ components:
             labels:
               zh: server_version
               en: server version
+          description: 已确认的云端版本
         name:
           type: string
           x-recoow:
@@ -8572,6 +9257,7 @@ components:
             labels:
               zh: name
               en: name
+          description: 名称
         started_at:
           type: integer
           format: int64
@@ -8581,6 +9267,7 @@ components:
             labels:
               zh: started_at
               en: started at
+          description: 开始时间（毫秒时间戳）
         ended_at:
           type: integer
           format: int64
@@ -8591,6 +9278,7 @@ components:
             labels:
               zh: ended_at
               en: ended at
+          description: 结束时间（毫秒时间戳）
         desired_accuracy_m:
           type: integer
           format: int64
@@ -8600,6 +9288,7 @@ components:
             labels:
               zh: desired_accuracy_m
               en: desired accuracy m
+          description: 目标定位精度（米）
         distance_m:
           type: number
           format: double
@@ -8609,6 +9298,7 @@ components:
             labels:
               zh: distance_m
               en: distance m
+          description: 距离（米）
         duration_s:
           type: integer
           format: int64
@@ -8618,6 +9308,7 @@ components:
             labels:
               zh: duration_s
               en: duration s
+          description: 时长（秒）
         avg_speed_mps:
           type: number
           format: double
@@ -8628,6 +9319,7 @@ components:
             labels:
               zh: avg_speed_mps
               en: avg speed mps
+          description: 平均速度（米/秒）
         max_speed_mps:
           type: number
           format: double
@@ -8638,6 +9330,7 @@ components:
             labels:
               zh: max_speed_mps
               en: max speed mps
+          description: 最高速度（米/秒）
         note:
           type: string
           nullable: true
@@ -8647,6 +9340,7 @@ components:
             labels:
               zh: note
               en: note
+          description: 备注
         status:
           type: string
           x-recoow:
@@ -8655,6 +9349,7 @@ components:
             labels:
               zh: status
               en: status
+          description: 处理状态
       x-recoow-sync:
         table: tracks
         manifestVersion: 1
@@ -8669,65 +9364,90 @@ components:
       properties:
         error:
           type: string
+          description: 错误信息
       required:
         - error
     AccountInitRequest:
       type: object
       properties:
-        bootstrapToken:
+        bootstrap_token:
           type: string
+          x-recoow-legacy-name: bootstrapToken
+          description: 注册口令
     AccountInitResponse:
       type: object
       properties:
-        accountId:
+        account_id:
           type: string
-        deviceId:
+          x-recoow-legacy-name: accountId
+          description: 账号ID
+        device_id:
           type: string
-        deviceToken:
+          x-recoow-legacy-name: deviceId
+          description: 设备ID
+        device_token:
           type: string
-        recoveryKey:
+          x-recoow-legacy-name: deviceToken
+          description: 设备令牌
+        recovery_key:
           type: string
+          x-recoow-legacy-name: recoveryKey
+          description: 账号恢复密钥
       required:
-        - accountId
-        - deviceId
-        - deviceToken
-        - recoveryKey
+        - account_id
+        - device_id
+        - device_token
+        - recovery_key
     PairRequest:
       type: object
       properties:
         code:
           type: string
-        deviceName:
+          description: 配对码
+        device_name:
           type: string
+          x-recoow-legacy-name: deviceName
+          description: 设备名称
       required:
         - code
     RecoverRequest:
       type: object
       properties:
-        recoveryKey:
+        recovery_key:
           type: string
-        deviceName:
+          x-recoow-legacy-name: recoveryKey
+          description: 账号恢复密钥
+        device_name:
           type: string
+          x-recoow-legacy-name: deviceName
+          description: 设备名称
       required:
-        - recoveryKey
+        - recovery_key
     PairResponse:
       type: object
       properties:
-        accountId:
+        account_id:
           type: string
-        deviceId:
+          x-recoow-legacy-name: accountId
+          description: 账号ID
+        device_id:
           type: string
-        deviceToken:
+          x-recoow-legacy-name: deviceId
+          description: 设备ID
+        device_token:
           type: string
+          x-recoow-legacy-name: deviceToken
+          description: 设备令牌
       required:
-        - accountId
-        - deviceId
-        - deviceToken
+        - account_id
+        - device_id
+        - device_token
     PairingCodeResponse:
       type: object
       properties:
         code:
           type: string
+          description: 配对码
       required:
         - code
     Device:
@@ -8735,20 +9455,27 @@ components:
       properties:
         profile:
           $ref: '#/components/schemas/DeviceProfile'
+          description: 设备环境资料
         id:
           type: string
+          description: 记录ID
         name:
           type: string
-        isOwner:
+          description: 名称
+        is_owner:
           type: boolean
-        lastSeenAt:
+          x-recoow-legacy-name: isOwner
+          description: 是否为主设备
+        last_seen_at:
           type: string
           format: date-time
+          x-recoow-legacy-name: lastSeenAt
+          description: 最近访问时间
       required:
         - id
         - name
-        - isOwner
-        - lastSeenAt
+        - is_owner
+        - last_seen_at
     DevicesResponse:
       type: object
       properties:
@@ -8756,6 +9483,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Device'
+          description: 已绑定设备
       required:
         - devices
     OkResponse:
@@ -8763,6 +9491,7 @@ components:
       properties:
         ok:
           type: boolean
+          description: 是否成功
       required:
         - ok
     Dataset:
@@ -8770,16 +9499,20 @@ components:
       properties:
         generation:
           type: string
+          description: 数据集世代
         head:
           type: integer
           format: int64
-        minCursor:
+          description: 最新云端版本
+        min_cursor:
           type: integer
           format: int64
+          x-recoow-legacy-name: minCursor
+          description: 最小可用增量游标
       required:
         - generation
         - head
-        - minCursor
+        - min_cursor
     ClientType:
       type: string
       enum:
@@ -8802,14 +9535,20 @@ components:
       properties:
         client:
           $ref: '#/components/schemas/ClientType'
+          description: 客户端平台
         os:
           $ref: '#/components/schemas/OperatingSystem'
-        appVersion:
+          description: 设备系统
+        app_version:
           type: string
           maxLength: 80
-        osVersion:
+          x-recoow-legacy-name: appVersion
+          description: 客户端版本
+        os_version:
           type: string
           maxLength: 80
+          x-recoow-legacy-name: osVersion
+          description: 系统版本
       required:
         - client
         - os
@@ -8818,46 +9557,60 @@ components:
         - $ref: '#/components/schemas/ClientEnvironment'
         - type: object
           properties:
-            localDeviceId:
+            local_device_id:
               type: string
               maxLength: 200
+              x-recoow-legacy-name: localDeviceId
+              description: 本地安装标识
       description: 当前安装的本地来源标识，不是鉴权凭据；账号内有唯一匹配时可关联历史。
     DeviceProfileRequest:
       allOf:
         - $ref: '#/components/schemas/DeviceProfile'
         - type: object
           properties:
-            deviceName:
+            device_name:
               type: string
               maxLength: 200
+              x-recoow-legacy-name: deviceName
+              description: 设备名称
     ChangeOrigin:
       allOf:
         - $ref: '#/components/schemas/ClientEnvironment'
         - type: object
           properties:
-            deviceId:
+            device_id:
               type: string
               maxLength: 200
-            deviceName:
+              x-recoow-legacy-name: deviceId
+              description: 设备ID
+            device_name:
               type: string
               maxLength: 200
+              x-recoow-legacy-name: deviceName
+              description: 设备名称
           required:
-            - deviceId
+            - device_id
       description: 随 mutation 冻结的原始修改来源；deviceId 必须与变更信封一致，不等同于鉴权设备 ID。
     SubmissionSource:
       allOf:
         - $ref: '#/components/schemas/ClientEnvironment'
         - type: object
           properties:
-            deviceId:
+            device_id:
               type: string
-            deviceName:
+              x-recoow-legacy-name: deviceId
+              description: 设备ID
+            device_name:
               type: string
-            sessionId:
+              x-recoow-legacy-name: deviceName
+              description: 设备名称
+            session_id:
               type: string
+              x-recoow-legacy-name: sessionId
+              description: 会话ID
           required:
-            - deviceId
-            - deviceName
+            - device_id
+            - device_name
       description: 服务端从鉴权上下文获取的提交身份及此次请求的环境资料，按事件保存快照。
     HistoryOperation:
       type: string
@@ -8877,86 +9630,114 @@ components:
     ChangeEvent:
       type: object
       properties:
-        eventId:
+        event_id:
           type: string
+          x-recoow-legacy-name: eventId
+          description: 变更事件ID
         generation:
           type: string
+          description: 数据集世代
         version:
           type: integer
           format: int64
-        previousVersion:
+          description: 云端记录版本
+        previous_version:
           type: integer
           format: int64
+          x-recoow-legacy-name: previousVersion
+          description: 修改前的云端版本
         table:
           type: string
+          description: 实体类型
         id:
           type: string
+          description: 记录ID
         title:
           type: string
+          description: 记录标题
         operation:
           $ref: '#/components/schemas/HistoryOperation'
+          description: 变更操作
         method:
           $ref: '#/components/schemas/HistoryMethod'
-        operationId:
+          description: 变更处理方式
+        operation_id:
           type: string
-        triggerEventId:
+          x-recoow-legacy-name: operationId
+          description: 业务操作ID
+        trigger_event_id:
           type: string
           nullable: true
-        mutationId:
+          x-recoow-legacy-name: triggerEventId
+          description: 触发当前变更的事件ID
+        mutation_id:
           type: string
-        modifiedAtMs:
+          x-recoow-legacy-name: mutationId
+          description: 变更请求ID（重试保持不变）
+        modified_at_ms:
           type: integer
           format: int64
           nullable: true
-          description: 原始客户端修改时间；系统派生修订为空。
-        acceptedAtMs:
+          description: 本地修改时间（毫秒时间戳）
+          x-recoow-legacy-name: modifiedAtMs
+        accepted_at_ms:
           type: integer
           format: int64
           nullable: true
-          description: 服务端接受此修订的时间，事务成功后可见；旧历史缺少此值时为空。
-        originalRegisteredDeviceId:
+          description: 云端接收时间（毫秒时间戳）
+          x-recoow-legacy-name: acceptedAtMs
+        original_registered_device_id:
           type: string
           nullable: true
-          description: 提交时在当前账号内唯一匹配的登记设备 ID；来源声明不是鉴权证明，未知或重复匹配时为空。
-        originalSource:
+          description: 关联的原始编辑设备ID
+          x-recoow-legacy-name: originalRegisteredDeviceId
+        original_source:
           allOf:
             - $ref: '#/components/schemas/ChangeOrigin'
           nullable: true
+          x-recoow-legacy-name: originalSource
+          description: 原始编辑来源
         submission:
           allOf:
             - $ref: '#/components/schemas/SubmissionSource'
           nullable: true
+          description: 鉴权提交来源
       required:
-        - eventId
+        - event_id
         - generation
         - version
-        - previousVersion
+        - previous_version
         - table
         - id
         - title
         - operation
         - method
-        - operationId
-        - triggerEventId
-        - modifiedAtMs
-        - acceptedAtMs
-        - originalSource
+        - operation_id
+        - trigger_event_id
+        - modified_at_ms
+        - accepted_at_ms
+        - original_source
         - submission
     ChangeEventRef:
       type: object
       properties:
-        eventId:
+        event_id:
           type: string
+          x-recoow-legacy-name: eventId
+          description: 变更事件ID
         version:
           type: integer
           format: int64
-        acceptedAtMs:
+          description: 云端记录版本
+        accepted_at_ms:
           type: integer
           format: int64
+          x-recoow-legacy-name: acceptedAtMs
+          description: 云端接收时间（毫秒时间戳）
       required:
-        - eventId
+        - event_id
         - version
-        - acceptedAtMs
+        - accepted_at_ms
     ChangeEventPage:
       type: object
       properties:
@@ -8964,60 +9745,80 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ChangeEvent'
+          description: 变更事件
         generation:
           type: string
+          description: 数据集世代
         watermark:
           type: integer
           format: int64
+          description: 本次查询的云端版本上限
         more:
           type: boolean
-        nextCursor:
+          description: 是否还有下一页
+        next_cursor:
           type: string
           nullable: true
+          x-recoow-legacy-name: nextCursor
+          description: 下一页游标
       required:
         - events
         - generation
         - watermark
         - more
-        - nextCursor
+        - next_cursor
     FieldChange:
       type: object
       properties:
         field:
           type: string
-        beforePresent:
+          description: 字段名称
+        before_present:
           type: boolean
-        afterPresent:
+          x-recoow-legacy-name: beforePresent
+          description: 是否存在修改前字段
+        after_present:
           type: boolean
-        beforeValue:
+          x-recoow-legacy-name: afterPresent
+          description: 是否存在修改后字段
+        before_value:
           nullable: true
-        afterValue:
+          x-recoow-legacy-name: beforeValue
+          description: 修改前的字段值
+        after_value:
           nullable: true
+          x-recoow-legacy-name: afterValue
+          description: 修改后的字段值
       required:
         - field
-        - beforePresent
-        - afterPresent
-        - beforeValue
-        - afterValue
+        - before_present
+        - after_present
+        - before_value
+        - after_value
     ChangeEventDetail:
       type: object
       properties:
         event:
           $ref: '#/components/schemas/ChangeEvent'
+          description: 当前变更事件
         before:
           allOf:
             - $ref: '#/components/schemas/Row'
           nullable: true
+          description: 修改前快照
         after:
           $ref: '#/components/schemas/Row'
+          description: 修改后快照
         related:
           type: array
           items:
             $ref: '#/components/schemas/ChangeEvent'
+          description: 关联变更事件
         changes:
           type: array
           items:
             $ref: '#/components/schemas/FieldChange'
+          description: 字段差异
       required:
         - event
         - before
@@ -9033,24 +9834,53 @@ components:
     SyncCapabilities:
       type: object
       properties:
-        protocolVersion:
+        protocol_version:
           type: integer
-        accountId:
+          x-recoow-legacy-name: protocolVersion
+          description: 同步协议版本
+        account_id:
           type: string
+          x-recoow-legacy-name: accountId
+          description: 账号ID
         dataset:
           $ref: '#/components/schemas/Dataset'
+          description: 数据集状态
         contracts:
           type: object
           additionalProperties:
             type: integer
+          description: 各实体的数据版本
         features:
           type: array
           items:
             type: string
-          description: change_history_v1 提供变更查询及回执事件关联；mutation_origin_v1 接受冻结的原始来源资料，新客户端发送 origin 前须检查能力；device_profiles_v1 支持登记当前设备资料。
+          description: 支持的协议能力
+        schema_version:
+          type: integer
+          x-recoow-legacy-name: schemaVersion
+          description: 服务端实体清单版本
+        limits:
+          type: object
+          properties:
+            push_items:
+              type: integer
+              format: int64
+              x-recoow-legacy-name: pushItems
+              description: 单次上传条目上限
+            pull_entries:
+              type: integer
+              format: int64
+              x-recoow-legacy-name: pullEntries
+              description: 单页下载条目上限
+            media_bytes:
+              type: integer
+              format: int64
+              x-recoow-legacy-name: mediaBytes
+              description: 单个媒体字节上限
+          description: 同步传输上限
       required:
-        - protocolVersion
-        - accountId
+        - protocol_version
+        - account_id
         - dataset
         - contracts
     Row:
@@ -9058,31 +9888,43 @@ components:
       properties:
         table: &id025
           type: string
+          description: 实体类型
         id: &id026
           type: string
+          description: 记录ID
         snapshot:
           type: object
           additionalProperties: true
           nullable: true
+          description: 完整记录快照
         version: &id027
           type: integer
           format: int64
-        dataVersion: &id028
+          description: 云端记录版本
+        data_version: &id028
           type: integer
-        updatedAtMs: &id029
+          x-recoow-legacy-name: dataVersion
+          description: 实体数据版本
+        updated_at_ms: &id029
           type: integer
           format: int64
-        deviceId: &id030
+          x-recoow-legacy-name: updatedAtMs
+          description: 客户端更新时间（毫秒时间戳）
+        device_id: &id030
           type: string
-        deletedAtMs: &id031
+          x-recoow-legacy-name: deviceId
+          description: 设备ID
+        deleted_at_ms: &id031
           type: integer
           format: int64
-      required: &id032
+          x-recoow-legacy-name: deletedAtMs
+          description: 删除时间（毫秒时间戳；0为未删除）
+      required:
         - table
         - id
         - version
-        - updatedAtMs
-        - deviceId
+        - updated_at_ms
+        - device_id
     SyncManifestEntry:
       type: object
       required:
@@ -9090,45 +9932,58 @@ components:
         - id
         - version
         - operation
-        - updatedAtMs
-        - deviceId
+        - updated_at_ms
+        - device_id
         - deleted
-        - dataVersion
+        - data_version
         - digest
         - metadata
       properties:
         table:
           type: string
+          description: 实体类型
         id:
           type: string
+          description: 记录ID
         version:
           type: integer
           format: int64
+          description: 云端记录版本
         operation:
           type: string
           enum:
             - insert
             - update
             - delete
-        updatedAtMs:
+          description: 变更操作
+        updated_at_ms:
           type: integer
           format: int64
-        deviceId:
+          x-recoow-legacy-name: updatedAtMs
+          description: 客户端更新时间（毫秒时间戳）
+        device_id:
           type: string
+          x-recoow-legacy-name: deviceId
+          description: 设备ID
         deleted:
           type: boolean
-        deletedAtMs:
+          description: 是否已删除
+        deleted_at_ms:
           type: integer
           format: int64
-        dataVersion:
+          x-recoow-legacy-name: deletedAtMs
+          description: 删除时间（毫秒时间戳；0为未删除）
+        data_version:
           type: integer
+          x-recoow-legacy-name: dataVersion
+          description: 实体数据版本
         digest:
           type: string
-          description: SHA-256 内容摘要；空值表示需要完整快照。算法见后端架构中的摘要协议。
+          description: 记录内容摘要
         metadata:
           type: object
           additionalProperties: true
-          description: 摘要排除的四个顶层传输字段，保留字段缺省和 null 的区别。
+          description: 记录的同步元数据
     SyncManifestPage:
       type: object
       required:
@@ -9137,26 +9992,33 @@ components:
         - watermark
         - cursor
         - more
-        - digestVersion
+        - digest_version
       properties:
         entries:
           type: array
           items:
             $ref: '#/components/schemas/SyncManifestEntry'
+          description: 同步条目
         generation:
           type: string
+          description: 数据集世代
         watermark:
           type: integer
           format: int64
+          description: 本次查询的云端版本上限
         cursor:
           type: integer
           format: int64
+          description: 分页或增量游标
         more:
           type: boolean
-        digestVersion:
+          description: 是否还有下一页
+        digest_version:
           type: integer
           enum:
             - 1
+          x-recoow-legacy-name: digestVersion
+          description: 内容摘要算法版本
     SyncSnapshotQuery:
       type: object
       required:
@@ -9166,10 +10028,12 @@ components:
       properties:
         generation:
           type: string
+          description: 数据集世代
         watermark:
           type: integer
           format: int64
           minimum: 0
+          description: 本次查询的云端版本上限
         versions:
           type: array
           minItems: 1
@@ -9179,6 +10043,7 @@ components:
             type: integer
             format: int64
             minimum: 1
+          description: 所需快照的云端版本
     SyncSnapshotQueryResponse:
       type: object
       required:
@@ -9190,117 +10055,154 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Change'
+          description: 同步条目
         generation:
           type: string
+          description: 数据集世代
         watermark:
           type: integer
           format: int64
+          description: 本次查询的云端版本上限
     Change:
       type: object
       properties:
         table:
           type: string
+          description: 实体类型
         id:
           type: string
+          description: 记录ID
         operation:
           type: string
           enum:
             - insert
             - update
             - delete
+          description: 变更操作
         snapshot:
           type: object
           additionalProperties: true
           nullable: true
+          description: 完整记录快照
         version:
           type: integer
           format: int64
-        dataVersion:
+          description: 云端记录版本
+        data_version:
           type: integer
-        updatedAtMs:
+          x-recoow-legacy-name: dataVersion
+          description: 实体数据版本
+        updated_at_ms:
           type: integer
           format: int64
-        deviceId:
+          x-recoow-legacy-name: updatedAtMs
+          description: 客户端更新时间（毫秒时间戳）
+        device_id:
           type: string
+          x-recoow-legacy-name: deviceId
+          description: 设备ID
         deleted:
           type: boolean
-        deletedAtMs:
+          description: 是否已删除
+        deleted_at_ms:
           type: integer
           format: int64
+          x-recoow-legacy-name: deletedAtMs
+          description: 删除时间（毫秒时间戳；0为未删除）
       required:
         - table
         - id
         - operation
         - version
-        - updatedAtMs
-        - deviceId
+        - updated_at_ms
+        - device_id
         - deleted
     PushItem:
       type: object
       properties:
         origin:
           $ref: '#/components/schemas/ChangeOrigin'
+          description: 原始编辑环境
         table:
           type: string
+          description: 实体类型
         id:
           type: string
-        mutationId:
+          description: 记录ID
+        mutation_id:
           type: string
-        baseVersion:
+          x-recoow-legacy-name: mutationId
+          description: 变更请求ID（重试保持不变）
+        base_version:
           type: integer
           format: int64
+          x-recoow-legacy-name: baseVersion
+          description: 基础云端版本（新建为0）
         resolution:
           type: string
           enum:
             - local
             - remote
-          description: 仅用于人工确认冲突；选择争议字段或账单结算组，保留双方独立修改。缺少共同基础或删除冲突时选择整条记录。
-        expectedVersion:
+          description: 冲突处理选择
+        expected_version:
           type: integer
           format: int64
           minimum: 1
-          description: 人工确认时展示的云端版本，必须与 resolution 一起提供；版本变化则重新返回冲突。
-        dataVersion:
+          description: 冲突确认时的云端版本
+          x-recoow-legacy-name: expectedVersion
+        data_version:
           type: integer
+          x-recoow-legacy-name: dataVersion
+          description: 实体数据版本
         operation:
           type: string
           enum:
             - insert
             - update
             - delete
-        updatedAtMs:
+          description: 变更操作
+        updated_at_ms:
           type: integer
           format: int64
-        deviceId:
+          x-recoow-legacy-name: updatedAtMs
+          description: 客户端更新时间（毫秒时间戳）
+        device_id:
           type: string
+          x-recoow-legacy-name: deviceId
+          description: 设备ID
         snapshot:
           type: object
           additionalProperties: true
+          description: 完整记录快照
       required:
         - table
         - id
-        - mutationId
-        - baseVersion
-        - dataVersion
+        - mutation_id
+        - base_version
+        - data_version
         - operation
-        - updatedAtMs
-        - deviceId
+        - updated_at_ms
+        - device_id
     PushRequest:
       type: object
       properties:
-        protocolVersion:
+        protocol_version:
           type: integer
           enum:
             - 2
+          x-recoow-legacy-name: protocolVersion
+          description: 同步协议版本
         generation:
           type: string
+          description: 数据集世代
         items:
           type: array
           maxItems: 1000
           items:
             $ref: '#/components/schemas/PushItem'
+          description: 待同步变更
       required:
-        - protocolVersion
+        - protocol_version
         - generation
         - items
     PushResult:
@@ -9310,18 +10212,23 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ChangeEventRef'
-          description: 实际提交的主修订及派生修订关联；幂等重试返回原事件和时间，无变化或失败时省略。
+          description: 变更事件
         table:
           type: string
+          description: 实体类型
         id:
           type: string
+          description: 记录ID
         applied:
           type: boolean
+          description: 是否产生新修订
         operation:
           type: string
+          description: 变更操作
         version:
           type: integer
           format: int64
+          description: 云端记录版本
         status:
           type: string
           enum:
@@ -9333,10 +10240,14 @@ components:
             - mutation_reused
             - dependency_missing
             - invalid_revision
-        mutationId:
+          description: 处理状态
+        mutation_id:
           type: string
+          x-recoow-legacy-name: mutationId
+          description: 变更请求ID（重试保持不变）
         current:
           $ref: '#/components/schemas/Row'
+          description: 当前云端记录
       required:
         - table
         - id
@@ -9351,6 +10262,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PushResult'
+          description: 逐条处理结果
       required:
         - results
     PullResponse:
@@ -9360,13 +10272,17 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Change'
+          description: 同步条目
         cursor:
           type: integer
           format: int64
+          description: 分页或增量游标
         more:
           type: boolean
+          description: 是否还有下一页
         generation:
           type: string
+          description: 数据集世代
       required:
         - entries
         - cursor
@@ -9385,30 +10301,38 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Change'
+          description: 同步条目
         generation:
           type: string
+          description: 数据集世代
         watermark:
           type: integer
           format: int64
+          description: 本次查询的云端版本上限
         cursor:
           type: integer
           format: int64
+          description: 分页或增量游标
         more:
           type: boolean
+          description: 是否还有下一页
     ExportResponse:
       type: object
       properties:
-        exportedAt:
+        exported_at:
           type: string
           format: date-time
+          x-recoow-legacy-name: exportedAt
+          description: 导出时间
         tables:
           type: object
           additionalProperties:
             type: array
             items:
               $ref: '#/components/schemas/Row'
+          description: 按实体分组的记录
       required:
-        - exportedAt
+        - exported_at
         - tables
     CredentialsRequest:
       type: object
@@ -9417,11 +10341,13 @@ components:
           type: string
           minLength: 3
           maxLength: 64
+          description: 用户名
         password:
           type: string
           format: password
           minLength: 12
           maxLength: 256
+          description: 密码
       required:
         - username
         - password
@@ -9432,13 +10358,17 @@ components:
           type: string
           minLength: 3
           maxLength: 64
+          description: 用户名
         password:
           type: string
           format: password
           minLength: 12
           maxLength: 256
-        bootstrapToken:
+          description: 密码
+        bootstrap_token:
           type: string
+          x-recoow-legacy-name: bootstrapToken
+          description: 注册口令
       required:
         - username
         - password
@@ -9447,53 +10377,74 @@ components:
       properties:
         access:
           $ref: '#/components/schemas/SessionAccess'
-        userId:
+          description: 会话权限
+        user_id:
           type: string
+          x-recoow-legacy-name: userId
+          description: 用户ID
         username:
           type: string
-        accountId:
+          description: 用户名
+        account_id:
           type: string
-        deviceId:
+          x-recoow-legacy-name: accountId
+          description: 账号ID
+        device_id:
           type: string
-        accessToken:
+          x-recoow-legacy-name: deviceId
+          description: 设备ID
+        access_token:
           type: string
-        expiresAt:
+          x-recoow-legacy-name: accessToken
+          description: 会话令牌
+        expires_at:
           type: string
           format: date-time
+          x-recoow-legacy-name: expiresAt
+          description: 到期时间
       required:
-        - userId
+        - user_id
         - username
-        - accountId
-        - deviceId
-        - accessToken
-        - expiresAt
+        - account_id
+        - device_id
+        - access_token
+        - expires_at
     IdentityResponse:
       type: object
       properties:
-        userId:
+        user_id:
           type: string
+          x-recoow-legacy-name: userId
+          description: 用户ID
         username:
           type: string
-        accountId:
+          description: 用户名
+        account_id:
           type: string
+          x-recoow-legacy-name: accountId
+          description: 账号ID
       required:
-        - userId
+        - user_id
         - username
-        - accountId
+        - account_id
     PasswordRequest:
       type: object
       properties:
-        currentPassword:
+        current_password:
           type: string
           format: password
-        newPassword:
+          x-recoow-legacy-name: currentPassword
+          description: 当前密码
+        new_password:
           type: string
           format: password
           minLength: 12
           maxLength: 256
+          x-recoow-legacy-name: newPassword
+          description: 新密码
       required:
-        - currentPassword
-        - newPassword
+        - current_password
+        - new_password
     PageResponse:
       type: object
       properties:
@@ -9501,110 +10452,138 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Row'
-        nextCursor: &id033
+          description: 记录列表
+        next_cursor: &id032
           type: string
-        more: &id034
+          x-recoow-legacy-name: nextCursor
+          description: 下一页游标
+        more: &id033
           type: boolean
-      required: &id035
+          description: 是否还有下一页
+      required:
         - rows
-        - nextCursor
+        - next_cursor
         - more
     StatisticsResponse:
       type: object
       properties:
-        recordCounts:
+        record_counts:
           type: object
           additionalProperties:
             type: integer
             format: int64
-        billExpenseCents:
+          x-recoow-legacy-name: recordCounts
+          description: 各实体的记录数量
+        bill_expense_cents:
           type: integer
           format: int64
-        billIncomeCents:
+          x-recoow-legacy-name: billExpenseCents
+          description: 支出总额（分）
+        bill_income_cents:
           type: integer
           format: int64
-        billStoredValueUseCents:
+          x-recoow-legacy-name: billIncomeCents
+          description: 收入总额（分）
+        bill_stored_value_use_cents:
           type: integer
           format: int64
+          x-recoow-legacy-name: billStoredValueUseCents
+          description: 储值消费总额（分）
       required:
-        - recordCounts
-        - billExpenseCents
-        - billIncomeCents
-        - billStoredValueUseCents
+        - record_counts
+        - bill_expense_cents
+        - bill_income_cents
+        - bill_stored_value_use_cents
     MediaResponse:
       type: object
       properties:
         key:
           type: string
+          description: 媒体对象键
         checksum:
           type: string
+          description: SHA-256 校验和
         size:
           type: integer
           format: int64
-        contentType:
+          description: 媒体字节数
+        content_type:
           type: string
+          x-recoow-legacy-name: contentType
+          description: 媒体类型（MIME）
     RecordMutation:
       type: object
       required:
-        - mutationId
-        - baseVersion
-        - dataVersion
+        - mutation_id
+        - base_version
+        - data_version
         - snapshot
-        - updatedAtMs
+        - updated_at_ms
       properties:
-        mutationId: &id022
+        mutation_id: &id022
           type: string
-        baseVersion: &id023
+          x-recoow-legacy-name: mutationId
+          description: 变更请求ID（重试保持不变）
+        base_version: &id023
           type: integer
           format: int64
-        dataVersion: &id024
+          x-recoow-legacy-name: baseVersion
+          description: 基础云端版本（新建为0）
+        data_version: &id024
           type: integer
+          x-recoow-legacy-name: dataVersion
+          description: 实体数据版本
         snapshot:
           type: object
           additionalProperties: true
+          description: 完整记录快照
         resolution:
           type: string
           enum:
             - local
             - remote
-          description: 人工确认时选择争议内容，需同时提供 expectedVersion。
-        expectedVersion:
+          description: 冲突处理选择
+        expected_version:
           type: integer
           format: int64
           minimum: 1
-          description: 人工确认时展示的云端版本；版本变化则返回冲突。
-        updatedAtMs:
+          description: 冲突确认时的云端版本
+          x-recoow-legacy-name: expectedVersion
+        updated_at_ms:
           type: integer
           format: int64
           minimum: 1
-          description: 客户端生成的毫秒时间戳；相同 mutationId 重试时保持原值
+          description: 客户端更新时间（毫秒时间戳）
+          x-recoow-legacy-name: updatedAtMs
     RecordDeletion:
       type: object
       required:
-        - mutationId
-        - baseVersion
-        - dataVersion
-        - updatedAtMs
+        - mutation_id
+        - base_version
+        - data_version
+        - updated_at_ms
       properties:
-        mutationId: *id022
-        baseVersion: *id023
-        dataVersion: *id024
+        mutation_id: *id022
+        base_version: *id023
+        data_version: *id024
         resolution:
           type: string
           enum:
             - local
             - remote
-          description: 人工确认时选择争议内容，需同时提供 expectedVersion。
-        expectedVersion:
+          description: 冲突处理选择
+        expected_version:
           type: integer
           format: int64
           minimum: 1
-          description: 人工确认时展示的云端版本；版本变化则返回冲突。
-        updatedAtMs:
+          description: 冲突确认时的云端版本
+          x-recoow-legacy-name: expectedVersion
+        updated_at_ms:
           type: integer
           format: int64
           minimum: 1
-          description: 客户端生成的毫秒时间戳；相同 mutationId 重试时保持原值
+          description: 客户端更新时间（毫秒时间戳）
+          x-recoow-legacy-name: updatedAtMs
     AnniversariesRecord:
       type: object
       properties:
@@ -9612,12 +10591,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/AnniversariesSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     AnniversariesPage:
       type: object
       properties:
@@ -9625,9 +10610,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AnniversariesRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     BillsRecord:
       type: object
       properties:
@@ -9635,12 +10624,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/BillsSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     BillsPage:
       type: object
       properties:
@@ -9648,9 +10643,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BillsRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     DecisionChoiceRecordsRecord:
       type: object
       properties:
@@ -9658,12 +10657,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/DecisionChoiceRecordsSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     DecisionChoiceRecordsPage:
       type: object
       properties:
@@ -9671,9 +10676,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DecisionChoiceRecordsRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     DecisionCollectionsRecord:
       type: object
       properties:
@@ -9681,12 +10690,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/DecisionCollectionsSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     DecisionCollectionsPage:
       type: object
       properties:
@@ -9694,9 +10709,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DecisionCollectionsRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     DecisionOptionsRecord:
       type: object
       properties:
@@ -9704,12 +10723,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/DecisionOptionsSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     DecisionOptionsPage:
       type: object
       properties:
@@ -9717,9 +10742,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DecisionOptionsRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     DiaryEntriesRecord:
       type: object
       properties:
@@ -9727,12 +10756,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/DiaryEntriesSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     DiaryEntriesPage:
       type: object
       properties:
@@ -9740,9 +10775,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DiaryEntriesRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     DiaryLinksRecord:
       type: object
       properties:
@@ -9750,12 +10789,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/DiaryLinksSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     DiaryLinksPage:
       type: object
       properties:
@@ -9763,9 +10808,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DiaryLinksRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     DiaryTagsRecord:
       type: object
       properties:
@@ -9773,12 +10822,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/DiaryTagsSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     DiaryTagsPage:
       type: object
       properties:
@@ -9786,9 +10841,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DiaryTagsRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     FoodDayRecordsRecord:
       type: object
       properties:
@@ -9796,12 +10855,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/FoodDayRecordsSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     FoodDayRecordsPage:
       type: object
       properties:
@@ -9809,9 +10874,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FoodDayRecordsRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     FoodEntriesRecord:
       type: object
       properties:
@@ -9819,12 +10888,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/FoodEntriesSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     FoodEntriesPage:
       type: object
       properties:
@@ -9832,9 +10907,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FoodEntriesRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     ItemCategoriesRecord:
       type: object
       properties:
@@ -9842,12 +10921,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/ItemCategoriesSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     ItemCategoriesPage:
       type: object
       properties:
@@ -9855,9 +10940,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ItemCategoriesRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     MediaAssetsRecord:
       type: object
       properties:
@@ -9865,12 +10954,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/MediaAssetsSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     MediaAssetsPage:
       type: object
       properties:
@@ -9878,9 +10973,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MediaAssetsRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     MediaAttachmentsRecord:
       type: object
       properties:
@@ -9888,12 +10987,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/MediaAttachmentsSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     MediaAttachmentsPage:
       type: object
       properties:
@@ -9901,9 +11006,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MediaAttachmentsRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     ReminderCompletionsRecord:
       type: object
       properties:
@@ -9911,12 +11020,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/ReminderCompletionsSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     ReminderCompletionsPage:
       type: object
       properties:
@@ -9924,9 +11039,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ReminderCompletionsRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     RemindersRecord:
       type: object
       properties:
@@ -9934,12 +11053,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/RemindersSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     RemindersPage:
       type: object
       properties:
@@ -9947,9 +11072,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RemindersRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     StoredItemsRecord:
       type: object
       properties:
@@ -9957,12 +11086,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/StoredItemsSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     StoredItemsPage:
       type: object
       properties:
@@ -9970,9 +11105,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/StoredItemsRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     StoredValueAccountsRecord:
       type: object
       properties:
@@ -9980,12 +11119,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/StoredValueAccountsSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     StoredValueAccountsPage:
       type: object
       properties:
@@ -9993,9 +11138,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/StoredValueAccountsRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     StoredValueAdjustmentsRecord:
       type: object
       properties:
@@ -10003,12 +11152,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/StoredValueAdjustmentsSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     StoredValueAdjustmentsPage:
       type: object
       properties:
@@ -10016,9 +11171,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/StoredValueAdjustmentsRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     TrackPointsRecord:
       type: object
       properties:
@@ -10026,12 +11185,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/TrackPointsSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     TrackPointsPage:
       type: object
       properties:
@@ -10039,9 +11204,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TrackPointsRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     TrackSegmentsRecord:
       type: object
       properties:
@@ -10049,12 +11218,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/TrackSegmentsSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     TrackSegmentsPage:
       type: object
       properties:
@@ -10062,9 +11237,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TrackSegmentsRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more
     TracksRecord:
       type: object
       properties:
@@ -10072,12 +11251,18 @@ components:
         id: *id026
         snapshot:
           $ref: '#/components/schemas/TracksSnapshot'
+          description: 完整记录快照
         version: *id027
-        dataVersion: *id028
-        updatedAtMs: *id029
-        deviceId: *id030
-        deletedAtMs: *id031
-      required: *id032
+        data_version: *id028
+        updated_at_ms: *id029
+        device_id: *id030
+        deleted_at_ms: *id031
+      required:
+        - table
+        - id
+        - version
+        - updated_at_ms
+        - device_id
     TracksPage:
       type: object
       properties:
@@ -10085,6 +11270,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TracksRecord'
-        nextCursor: *id033
-        more: *id034
-      required: *id035
+          description: 记录列表
+        next_cursor: *id032
+        more: *id033
+      required:
+        - rows
+        - next_cursor
+        - more

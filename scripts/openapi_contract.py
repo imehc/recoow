@@ -50,5 +50,6 @@ def input_file_list():
     return "\n".join("$(SRCROOT)/../" + path for path in (
         "openapi/openapi.yaml", "scripts/sync-models.xcfilelist",
         "scripts/generate_sync_registry.py",
+        "scripts/generate_api_field_names.py",
         "scripts/openapi_contract.py",
     )) + "\n"

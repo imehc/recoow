@@ -13,15 +13,15 @@ import (
 func TestAccountRecoverRestoresOwnerDevice(t *testing.T) {
 	e := newEnv(t)
 	ownerToken, recoveryKey := e.initAccount(t)
-	if resp, _ := e.request(t, http.MethodPost, "/api/account-recoveries", "", map[string]string{"recoveryKey": "wrong-key"}); resp.Code != http.StatusUnauthorized {
+	if resp, _ := e.request(t, http.MethodPost, "/api/account-recoveries", "", map[string]string{"recovery_key": "wrong-key"}); resp.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401 for wrong key, got %d", resp.Code)
 	}
-	if resp, _ := e.request(t, http.MethodPost, "/api/account-recoveries", "", map[string]string{"recoveryKey": ""}); resp.Code != http.StatusUnauthorized {
+	if resp, _ := e.request(t, http.MethodPost, "/api/account-recoveries", "", map[string]string{"recovery_key": ""}); resp.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401 for empty key, got %d", resp.Code)
 	}
 
 	resp, data := e.request(t, http.MethodPost, "/api/account-recoveries", "",
-		map[string]string{"recoveryKey": recoveryKey, "deviceName": "换机后"})
+		map[string]string{"recovery_key": recoveryKey, "device_name": "换机后"})
 	if resp.Code != http.StatusCreated {
 		t.Fatalf("recover status=%d body=%s", resp.Code, data)
 	}
@@ -64,7 +64,7 @@ func TestAccountQuotaAndIsolation(t *testing.T) {
 	firstAccount := e.accountID
 
 	resp, data := e.request(t, http.MethodPost, "/api/accounts", "",
-		map[string]string{"bootstrapToken": "bootstrap-secret"})
+		map[string]string{"bootstrap_token": "bootstrap-secret"})
 	if resp.Code != http.StatusCreated {
 		t.Fatalf("second init status=%d body=%s", resp.Code, data)
 	}
@@ -73,7 +73,7 @@ func TestAccountQuotaAndIsolation(t *testing.T) {
 		t.Fatal("second account reused first id")
 	}
 	if resp, _ := e.request(t, http.MethodPost, "/api/accounts", "",
-		map[string]string{"bootstrapToken": "bootstrap-secret"}); resp.Code != http.StatusForbidden {
+		map[string]string{"bootstrap_token": "bootstrap-secret"}); resp.Code != http.StatusForbidden {
 		t.Fatalf("expected quota rejection, got %d", resp.Code)
 	}
 
@@ -81,7 +81,7 @@ func TestAccountQuotaAndIsolation(t *testing.T) {
 	if resp, body := e.request(t, http.MethodPost, "/api/sync/mutations", firstToken, map[string]any{
 		"items": []any{map[string]any{
 			"table": "bills", "id": "b1", "operation": "insert",
-			"updatedAtMs": 100, "deviceId": "dev-a", "snapshot": map[string]any{"id": "b1"},
+			"updated_at_ms": 100, "device_id": "dev-a", "snapshot": map[string]any{"id": "b1"},
 		}},
 	}); resp.Code != http.StatusOK {
 		t.Fatalf("push failed: %d %s", resp.Code, body)

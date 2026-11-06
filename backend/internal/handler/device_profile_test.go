@@ -2,7 +2,6 @@ package handler
 
 import (
 	"bytes"
-	"encoding/json"
 	"github.com/imehc/recoow/backend/internal/domain"
 	"net/http/httptest"
 	"testing"
@@ -10,7 +9,7 @@ import (
 
 func TestRegistrationHeadersAndAuthenticatedProfileUpdates(t *testing.T) {
 	e := newEnv(t)
-	r := httptest.NewRequest("POST", "/api/accounts", bytes.NewBufferString(`{"bootstrapToken":"bootstrap-secret"}`))
+	r := httptest.NewRequest("POST", "/api/accounts", bytes.NewBufferString(`{"bootstrap_token":"bootstrap-secret"}`))
 	r.Header.Set("X-Recoow-Client", "ios")
 	r.Header.Set("X-Recoow-OS", "ios")
 	r.Header.Set("X-Recoow-Device-Id", "local-installation")
@@ -25,7 +24,7 @@ func TestRegistrationHeadersAndAuthenticatedProfileUpdates(t *testing.T) {
 	if err != nil || device.Profile == nil || device.Profile.Client != "ios" || device.Profile.LocalDeviceID != "local-installation" {
 		t.Fatalf("registration profile: %+v %v", device, err)
 	}
-	profile := map[string]any{"client": "ios", "os": "ios", "localDeviceId": "local-installation", "appVersion": "1.1", "deviceName": "My phone"}
+	profile := map[string]any{"client": "ios", "os": "ios", "local_device_id": "local-installation", "app_version": "1.1", "device_name": "My phone"}
 	w, _ = e.request(t, "PUT", "/api/devices/current/profile", account.DeviceToken, profile)
 	if w.Code != 200 {
 		t.Fatal(w.Body.String())
@@ -44,10 +43,10 @@ func TestRegistrationHeadersAndAuthenticatedProfileUpdates(t *testing.T) {
 		t.Fatal(w.Body.String())
 	}
 	var session struct {
-		AccessToken string `json:"accessToken"`
-		DeviceID    string `json:"deviceId"`
+		AccessToken string `json:"access_token"`
+		DeviceID    string `json:"device_id"`
 	}
-	if err := json.Unmarshal(data, &session); err != nil {
+	if err := decodeResponse(data, &session); err != nil {
 		t.Fatal(err)
 	}
 	w, _ = e.request(t, "PUT", "/api/devices/current/profile", session.AccessToken, profile)

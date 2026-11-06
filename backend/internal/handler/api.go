@@ -18,6 +18,7 @@ import (
 	"github.com/imehc/recoow/backend/internal/handler/generated"
 	"github.com/imehc/recoow/backend/internal/schema"
 	"github.com/imehc/recoow/backend/internal/service"
+	"github.com/imehc/recoow/backend/internal/wire"
 )
 
 // Server 装配鉴权、字段清单与存储，并为各 handler 提供依赖。
@@ -90,7 +91,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/sync/snapshots", s.authRequired(http.HandlerFunc(s.handleBootstrap)))
 	mux.Handle("GET /api/sync/manifests", s.authRequired(http.HandlerFunc(s.handleManifest)))
 	mux.Handle("GET /api/change-events", s.authRequired(http.HandlerFunc(s.handleChangeEvents)))
-	mux.Handle("GET /api/change-events/{eventId}", s.authRequired(http.HandlerFunc(s.handleChangeEvent)))
+	mux.Handle("GET /api/change-events/{event_id}", s.authRequired(http.HandlerFunc(s.handleChangeEvent)))
 	mux.Handle("POST /api/sync/snapshot-queries", s.authRequired(http.HandlerFunc(s.handleSnapshotQuery)))
 	mux.Handle("DELETE /api/sync/dataset", s.authRequired(s.ownerOnly(http.HandlerFunc(s.handleClearDataset))))
 	mux.Handle("GET /api/exports", s.authRequired(http.HandlerFunc(s.handleExport)))
@@ -101,7 +102,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/media/objects/{key...}", s.authRequired(http.HandlerFunc(s.handleMediaGet)))
 	mux.Handle("DELETE /api/media/objects/{key...}", s.authRequired(http.HandlerFunc(s.handleMediaDelete)))
 
-	return requestLogger(s.log, s.cors(mux))
+	return requestLogger(s.log, s.cors(apiFieldCase(mux)))
 }
 
 // ---- 中间件 ----
@@ -214,7 +215,7 @@ func (s *Server) cors(next http.Handler) http.Handler {
 			w.Header().Add("Vary", "Origin")
 		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, HEAD, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Recoow-Client, X-Recoow-App-Version, X-Recoow-OS, X-Recoow-OS-Version, X-Recoow-Device-Id")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Recoow-Client, X-Recoow-App-Version, X-Recoow-OS, X-Recoow-OS-Version, X-Recoow-Device-Id, X-Recoow-Field-Case")
 		w.Header().Set("Access-Control-Expose-Headers", "Content-Length, ETag, X-Request-Id")
 
 		if r.Method == http.MethodOptions {
@@ -228,10 +229,26 @@ func (s *Server) cors(next http.Handler) http.Handler {
 // ---- 响应工具 ----
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
+	var encoded []byte
+	if v != nil {
+		var err error
+		encoded, err = json.Marshal(v)
+		legacy := false
+		if writer, ok := w.(*fieldCaseWriter); ok {
+			legacy = writer.legacy
+		}
+		if err == nil {
+			encoded, err = wire.Rename(encoded, legacy)
+		}
+		if err != nil {
+			status = http.StatusInternalServerError
+			encoded = []byte(`{"error":"response encoding failed"}`)
+		}
+	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
-	if v != nil {
-		_ = json.NewEncoder(w).Encode(v)
+	if encoded != nil {
+		_, _ = w.Write(append(encoded, '\n'))
 	}
 }
 
@@ -241,15 +258,11 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<20)
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(dst); err != nil {
-		if errors.Is(err, io.EOF) {
-			return errors.New("empty body")
-		}
+	data, err := io.ReadAll(r.Body)
+	if err != nil {
 		return err
 	}
-	return nil
+	return wire.Decode(data, dst)
 }
 
 func queryInt(r *http.Request, key string, def int64) int64 {

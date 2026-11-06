@@ -64,7 +64,7 @@ Web 登录使用独立的可过期会话，保存 token 哈希；默认 Cookie �
 | `GET /api/users/me`、`PUT /api/users/me/password` | 当前身份、修改密码 |
 | `GET/POST /api/{实体}`、`GET/PUT/DELETE /api/{实体}/{id}` | 本账号分页列表、详情与修订写入 |
 | `GET /api/statistics` | 本账号基础统计 |
-| `GET /api/change-events`、`GET /api/change-events/{eventId}` | 云端变更摘要、时间来源、历史快照与字段差异 |
+| `GET /api/change-events`、`GET /api/change-events/{event_id}` | 云端变更摘要、时间来源、历史快照与字段差异 |
 | `GET /api/sync/capabilities`、`GET /api/sync/snapshots` | 同步能力、固定水位快照 |
 | `GET /api/sync/manifests`、`POST /api/sync/snapshot-queries` | 首次绑定或备份恢复时比较数据目录，只读取缺失或不同的快照 |
 | `POST /api/sync/mutations`、`GET /api/sync/changes` | 修订写入、增量变化 |
@@ -82,9 +82,9 @@ Web 登录使用独立的可过期会话，保存 token 哈希；默认 Cookie �
 
 首次同步在服务端声明 `manifest_bootstrap_v1` 时先获取同一云端版本的数据目录，比较 ID、删除状态和内容摘要，再按目录中的版本批量读取必要快照。仍需比较完整目录，相同记录省去的是完整内容传输。已验证相同且尚未发送的本地盘点记录建立同步基线后跳过上传；已有冻结请求继续按原 mutation 重试。同 ID 内容不同和删除差异仍使用现有冲突规则。目录分批落地后接续原有增量变化，旧服务端回退到完整快照。媒体上传前使用 HEAD 核对云端声明的 checksum 和大小，下载继续复用本地已校验的内容。此优化不恢复备份中的鉴权凭据，也不直接信任备份游标。
 
-列表使用 `limit=1..200`、`cursor`、`q`、`fromMs`、`toMs`，按 ID 升序分页。日期筛选优先使用实体发生时间，缺少该字段时使用服务器更新时间。统计中的记录数量按更新时间统计；账单金额按 `occurred_at` 的左闭右开区间统计，退款和墓碑排除，分别返回支出、收入和储值消费。当前提供基础统计，复杂趋势和维度聚合可在后续增加。
+列表使用 `limit=1..200`、`cursor`、`q`、`from_ms`、`to_ms`，按 ID 升序分页。日期筛选优先使用实体发生时间，缺少该字段时使用服务器更新时间。统计中的记录数量按更新时间统计；账单金额按 `occurred_at` 的左闭右开区间统计，退款和墓碑排除，分别返回支出、收入和储值消费。当前提供基础统计，复杂趋势和维度聚合可在后续增加。
 
-写入提供 `mutationId`、`baseVersion`、`dataVersion`、`updatedAtMs` 与 `snapshot`；删除无需快照。更新使用详情接口读取到的完整快照，并携带最近确认的版本；版本过期时，以历史基础快照、本次快照和当前快照进行三方比较：独立字段修改自动合并；相同修改返回 duplicate；争议字段、账单结算组及删除冲突返回 409，缺依赖返回 422。人工确认仍携带原 baseVersion，并同时提供 `resolution=local|remote` 与界面展示的 `expectedVersion`；只选择争议内容，保留兼容修改，版本已变化则重新返回冲突。重试保持原 mutationId 和内容，Web 写入也会进入移动端同步日志。
+写入提供 `mutation_id`、`base_version`、`data_version`、`updated_at_ms` 与 `snapshot`；删除无需快照。更新使用详情接口读取到的完整快照，并携带最近确认的版本；版本过期时，以历史基础快照、本次快照和当前快照进行三方比较：独立字段修改自动合并；相同修改返回 duplicate；争议字段、账单结算组及删除冲突返回 409，缺依赖返回 422。人工确认仍携带原 base_version，并同时提供 `resolution=local|remote` 与界面展示的 `expected_version`；只选择争议内容，保留兼容修改，版本已变化则重新返回冲突。重试保持原 mutation_id 和内容，Web 写入也会进入移动端同步日志。
 
 `change_history_v1` 表示支持独立云端历史查询及回执 `events` 关联。事件保存客户端修改时间和服务端接受时间，按修订顺序排列；失败、无变化的 duplicate 和相同 mutation 重试不创建新事件。新增、修改、删除、墓碑恢复、自动合并和人工确认分别标识，派生修订标为系统计算并关联触发操作。列表支持实体、记录、原始平台、鉴权提交设备及服务端时间筛选，分页游标绑定账号、世代、查询版本与筛选条件；详情读取当时的前后快照，字段差异保留未知字段、null 与整数精度。
 
@@ -133,6 +133,6 @@ go run ./cmd/api
 
 资源 CRUD 接收完整同步快照，账单储值影响沿用同步修订规则。调用方需按契约构造账单字段；简化表单并非单独的后端接口。
 
-设备来源通过 `device_profiles_v1` 声明。账号初始化、配对、恢复和 Web 登录可使用来源 Header 登记环境，`X-Recoow-Device-Id` 只表示当前安装的本地来源标识。已绑定设备可调用 `PUT /api/devices/current/profile` 更新自身资料，Web 会话的客户端类型固定为 web，该接口不授予业务写权限。历史中的 `originalRegisteredDeviceId` 只在提交时对当前账号内的本地来源进行唯一匹配；重复、缺失及平台不一致时为空，关联不会用于鉴权，也不随设备解绑删除。
+设备来源通过 `device_profiles_v1` 声明。账号初始化、配对、恢复和 Web 登录可使用来源 Header 登记环境，`X-Recoow-Device-Id` 只表示当前安装的本地来源标识。已绑定设备可调用 `PUT /api/devices/current/profile` 更新自身资料，Web 会话的客户端类型固定为 web，该接口不授予业务写权限。历史中的 `original_registered_device_id` 只在提交时对当前账号内的本地来源进行唯一匹配；重复、缺失及平台不一致时为空，关联不会用于鉴权，也不随设备解绑删除。
 
 HTTP 运行日志记录服务端生成的 `X-Request-Id`、状态码、响应字节、耗时、已鉴权账号与提交设备，以及同步 mutation 结果计数；不记录请求查询参数、凭据或业务快照。HTTP 200 的批量同步仍需通过 mutation 结果区分成功、冲突和拒绝。

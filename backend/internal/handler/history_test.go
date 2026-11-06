@@ -13,7 +13,7 @@ import (
 
 type historyPageResponse struct {
 	domain.ChangeEventPage
-	NextCursor *string `json:"nextCursor"`
+	NextCursor *string `json:"next_cursor"`
 }
 
 func TestHistoryHTTPSourceTimeDetailsAndCursors(t *testing.T) {
@@ -30,7 +30,7 @@ func TestHistoryHTTPSourceTimeDetailsAndCursors(t *testing.T) {
 		Operation: domain.OpUpdate, UpdatedAtMs: 1000, DeviceID: "device-fixture"}
 	item.Snapshot, _ = json.Marshal(snapshot)
 	item.Origin = &domain.ChangeOrigin{ClientEnvironment: domain.ClientEnvironment{Client: "ios", OS: "ios", OSVersion: "26.1"}, DeviceID: item.DeviceID, DeviceName: "Offline iPhone"}
-	body := map[string]any{"protocolVersion": 2, "generation": state.Generation, "items": []domain.PushItem{item}}
+	body := map[string]any{"protocol_version": 2, "generation": state.Generation, "items": []domain.PushItem{item}}
 	raw, _ := json.Marshal(body)
 	request := httptest.NewRequest("POST", "/api/sync/mutations", bytes.NewReader(raw))
 	request.Header.Set("Authorization", "Bearer "+owner)
@@ -60,7 +60,7 @@ func TestHistoryHTTPSourceTimeDetailsAndCursors(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		id := "later-" + string(rune('a'+i))
 		snapshot := contractSnapshot(manifest, id)
-		_, data := e.request(t, "POST", "/api/diary-tags", owner, map[string]any{"mutationId": id, "baseVersion": 0, "dataVersion": 1, "updatedAtMs": 1000, "snapshot": snapshot})
+		_, data := e.request(t, "POST", "/api/diary-tags", owner, map[string]any{"mutation_id": id, "base_version": 0, "data_version": 1, "updated_at_ms": 1000, "snapshot": snapshot})
 		if len(decode[domain.PushResult](t, data).Events) != 1 {
 			t.Fatal("CRUD did not record event")
 		}

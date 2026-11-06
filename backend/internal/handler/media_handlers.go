@@ -87,7 +87,7 @@ func (s *Server) handleMediaPut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	expectChecksum := r.URL.Query().Get("checksum")
-	contentType := r.URL.Query().Get("contentType")
+	contentType := r.URL.Query().Get("content_type")
 	if contentType == "" {
 		contentType = r.Header.Get("Content-Type")
 	}
@@ -158,10 +158,10 @@ func (s *Server) handleMediaPut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{
-		"key":         key,
-		"checksum":    sum,
-		"size":        n,
-		"contentType": contentType,
+		"key":          key,
+		"checksum":     sum,
+		"size":         n,
+		"content_type": contentType,
 	})
 }
 

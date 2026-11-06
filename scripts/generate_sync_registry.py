@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 from openapi_contract import manifests as generate_manifests, input_file_list
+from generate_api_field_names import main as generate_api_field_names
 
 ROOT = Path(__file__).resolve().parent.parent
 DESTINATION = Path("ios/recoow/Core/Sync/SyncEntityCatalog.generated.swift")
@@ -71,6 +72,8 @@ def main():
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--write", action="store_true")
     arguments = parser.parse_args()
+    if arguments.check or arguments.write:
+        generate_api_field_names(platform='ios')
     generated = render()
     target = ROOT / DESTINATION
     current = target.read_text() if target.exists() else ""

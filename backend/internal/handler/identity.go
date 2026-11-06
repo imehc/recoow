@@ -115,8 +115,8 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 func (s *Server) handlePassword(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		Current string `json:"currentPassword"`
-		Next    string `json:"newPassword"`
+		Current string `json:"current_password"`
+		Next    string `json:"new_password"`
 	}
 	if err := decodeJSON(w, r, &input); err != nil {
 		writeError(w, 400, "invalid request")

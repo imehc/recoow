@@ -24,7 +24,7 @@ func (s *Server) resourceRoutes(mux *http.ServeMux) {
 }
 func rangeQuery(r *http.Request) (int64, int64, error) {
 	var from, to int64
-	for key, target := range map[string]*int64{"fromMs": &from, "toMs": &to} {
+	for key, target := range map[string]*int64{"from_ms": &from, "to_ms": &to} {
 		if value := r.URL.Query().Get(key); value != "" {
 			number, err := strconv.ParseInt(value, 10, 64)
 			if err != nil || number < 0 {
@@ -91,12 +91,12 @@ func (s *Server) handleResource(w http.ResponseWriter, r *http.Request, table st
 		return
 	}
 	var input struct {
-		MutationID      string          `json:"mutationId"`
+		MutationID      string          `json:"mutation_id"`
 		Resolution      string          `json:"resolution"`
-		ExpectedVersion *int64          `json:"expectedVersion"`
-		BaseVersion     *int64          `json:"baseVersion"`
-		DataVersion     int             `json:"dataVersion"`
-		UpdatedAtMs     int64           `json:"updatedAtMs"`
+		ExpectedVersion *int64          `json:"expected_version"`
+		BaseVersion     *int64          `json:"base_version"`
+		DataVersion     int             `json:"data_version"`
+		UpdatedAtMs     int64           `json:"updated_at_ms"`
 		Snapshot        json.RawMessage `json:"snapshot"`
 	}
 	if err := decodeJSON(w, r, &input); err != nil {

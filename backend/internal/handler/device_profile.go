@@ -34,7 +34,7 @@ func (s *Server) registrationProfiles(w http.ResponseWriter, r *http.Request, we
 func (s *Server) handleDeviceProfile(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		domain.DeviceProfile
-		DeviceName string `json:"deviceName"`
+		DeviceName string `json:"device_name"`
 	}
 	if err := decodeJSON(w, r, &input); err != nil {
 		writeError(w, 400, "invalid device profile")

@@ -88,7 +88,7 @@ func TestFullSyncGeneratedContractsAndAllEntities(test *testing.T) {
 	}
 	environment, token, dataset := fullSyncEnvironment(test, registry)
 	response, data := environment.request(test, http.MethodGet, "/api/sync/capabilities", token, nil)
-	if response.Code != http.StatusOK || !bytes.Contains(data, []byte(`"protocolVersion":2`)) {
+	if response.Code != http.StatusOK || !bytes.Contains(data, []byte(`"protocol_version":2`)) {
 		test.Fatalf("capabilities unavailable: %s", data)
 	}
 	content := []byte("complete-media-bytes")
@@ -131,7 +131,7 @@ func TestFullSyncGeneratedContractsAndAllEntities(test *testing.T) {
 				snapshot["checksum"] = checksum
 				snapshot["byte_count"] = len(content)
 				snapshot["mime_type"] = "image/jpeg"
-				snapshot["_media"] = map[string]any{"object": map[string]any{"key": key, "checksum": checksum, "size": len(content), "contentType": "image/jpeg"}}
+				snapshot["_media"] = map[string]any{"object": map[string]any{"key": key, "checksum": checksum, "size": len(content), "content_type": "image/jpeg"}}
 			case "reminder_completions":
 				snapshot["date_key"] = "2026-09-08"
 				snapshot["kind"] = "checkIn"
@@ -149,7 +149,7 @@ func TestFullSyncGeneratedContractsAndAllEntities(test *testing.T) {
 				test.Fatalf("%s: %d %s", table, response.Code, data)
 			}
 			var result struct{ Results []domain.PushResult }
-			if err := json.Unmarshal(data, &result); err != nil || len(result.Results) != 1 || result.Results[0].Status != domain.PushApplied {
+			if err := decodeResponse(data, &result); err != nil || len(result.Results) != 1 || result.Results[0].Status != domain.PushApplied {
 				test.Fatalf("%s not applied: %s (%v)", table, data, err)
 			}
 			written[table] = *result.Results[0].Current
@@ -198,7 +198,7 @@ func TestFullSyncGeneratedContractsAndAllEntities(test *testing.T) {
 			test.Fatalf("web/iOS shared write failed: %s", data)
 		}
 		var result struct{ Results []domain.PushResult }
-		_ = json.Unmarshal(data, &result)
+		_ = decodeResponse(data, &result)
 		current = *result.Results[0].Current
 		if !bytes.Contains(current.Snapshot, []byte(`"future_web_field"`)) {
 			test.Fatal("older client erased an unknown field")
@@ -240,7 +240,7 @@ func TestFullSyncVersionDefaultsPreserveExistingFields(test *testing.T) {
 			test.Fatalf("version upgrade: %d %s", response.Code, data)
 		}
 		var result struct{ Results []domain.PushResult }
-		_ = json.Unmarshal(data, &result)
+		_ = decodeResponse(data, &result)
 		if !bytes.Contains(result.Results[0].Current.Snapshot, []byte(`"enabled":false`)) {
 			test.Fatalf("old client default overwrote newer field: %s", data)
 		}

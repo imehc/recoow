@@ -34,7 +34,7 @@ func TestManifestFixedWatermarkAndSelectiveSnapshots(t *testing.T) {
 		t.Fatalf("manifest: %s", body)
 	}
 	var page domain.ManifestPage
-	if err := json.Unmarshal(body, &page); err != nil {
+	if err := decodeResponse(body, &page); err != nil {
 		t.Fatal(err)
 	}
 	if len(page.Entries) != 2 || !page.More || page.DigestVersion != 1 {
@@ -51,7 +51,7 @@ func TestManifestFixedWatermarkAndSelectiveSnapshots(t *testing.T) {
 		t.Fatalf("selective query: %s", body)
 	}
 	var queried struct{ Entries []domain.Change }
-	_ = json.Unmarshal(body, &queried)
+	_ = decodeResponse(body, &queried)
 	if len(queried.Entries) != 1 {
 		t.Fatalf("unrequested snapshots returned: %s", body)
 	}
@@ -65,7 +65,7 @@ func TestManifestFixedWatermarkAndSelectiveSnapshots(t *testing.T) {
 	}
 	_, body = env.request(t, http.MethodGet, path, token, nil)
 	var again domain.ManifestPage
-	_ = json.Unmarshal(body, &again)
+	_ = decodeResponse(body, &again)
 	if again.Entries[0].Digest != page.Entries[0].Digest {
 		t.Fatal("manifest changed after a concurrent edit")
 	}

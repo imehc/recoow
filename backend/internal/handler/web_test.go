@@ -40,7 +40,7 @@ func TestDeviceWritesRemainVisibleToReadOnlyWeb(t *testing.T) {
 	snapshot := contractSnapshot(manifest, "web-tag")
 	snapshot["name"] = "Web tag"
 	snapshot["future_field"] = map[string]any{"retained": true}
-	mutation := map[string]any{"mutationId": "web-create", "baseVersion": 0, "dataVersion": 1, "updatedAtMs": 1000, "snapshot": snapshot}
+	mutation := map[string]any{"mutation_id": "web-create", "base_version": 0, "data_version": 1, "updated_at_ms": 1000, "snapshot": snapshot}
 	response, body = e.request(t, "POST", "/api/diary-tags", owner, mutation)
 	if response.Code != 201 {
 		t.Fatalf("create: %d %s", response.Code, body)
@@ -55,8 +55,8 @@ func TestDeviceWritesRemainVisibleToReadOnlyWeb(t *testing.T) {
 	if response.Code != 200 || len(page.Rows) != 1 || !bytes.Contains(page.Rows[0].Snapshot, []byte("future_field")) {
 		t.Fatalf("mobile read: %d %s", response.Code, body)
 	}
-	mutation["mutationId"] = "stale-web-update"
-	mutation["updatedAtMs"] = 2000
+	mutation["mutation_id"] = "stale-web-update"
+	mutation["updated_at_ms"] = 2000
 	snapshot["name"] = "Unconfirmed edit"
 	response, body = e.request(t, "PUT", "/api/diary-tags/web-tag", owner, mutation)
 	if response.Code != 409 || decode[domain.PushResult](t, body).Status != domain.PushConflict {
@@ -108,7 +108,7 @@ func TestPasswordChangeRevokesAllWebSessions(t *testing.T) {
 		t.Fatalf("login: %s", body)
 	}
 	login := decode[loginResponse](t, body)
-	response, body = e.request(t, "PUT", "/api/users/me/password", owner, map[string]any{"currentPassword": credentials["password"], "newPassword": "replacement-long-password"})
+	response, body = e.request(t, "PUT", "/api/users/me/password", owner, map[string]any{"current_password": credentials["password"], "new_password": "replacement-long-password"})
 	if response.Code != 200 {
 		t.Fatalf("password: %s", body)
 	}
@@ -141,7 +141,7 @@ func TestBrowserLoginRejectsUntrustedOrigin(t *testing.T) {
 }
 
 func TestLoginResponseRemainsCompatibleWithoutAccess(t *testing.T) {
-	login := decode[loginResponse](t, []byte(`{"userId":"user","username":"owner","accountId":"account","deviceId":"device","accessToken":"fixture-token","expiresAt":"2026-11-06T00:00:00Z"}`))
+	login := decode[loginResponse](t, []byte(`{"user_id":"user","username":"owner","account_id":"account","device_id":"device","access_token":"fixture-token","expires_at":"2026-11-06T00:00:00Z"}`))
 	if login.AccountId != "account" || login.Access != nil {
 		t.Fatal("older server login response no longer decodes")
 	}

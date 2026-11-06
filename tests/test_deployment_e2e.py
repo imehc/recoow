@@ -70,15 +70,15 @@ class DeploymentEndToEndTests(unittest.TestCase):
         original_url = self.container_url(container)
         self.wait_ready(original_url)
         account = self.request(original_url, "POST", "/api/accounts", {})
-        token = account["deviceToken"]
+        token = account["device_token"]
         credentials = {"username": "e2e-owner", "password": "e2e-owner-long-password"}
         self.request(original_url, "POST", "/api/users/me/credentials", credentials, token)
         bill = {"id": "e2e-bill", "title": "备份前的账单", "original_amount_cents": 2500,
                 "discount_amount_cents": 0, "final_amount_cents": 2500, "transaction_type": "expense",
                 "category": "food", "payment_method": "cash", "occurred_at": 1000,
                 "settlement_status": "active", "future_field": {"integer": 9007199254740993}}
-        mutation = {"mutationId": "e2e-bill-create", "baseVersion": 0, "dataVersion": 3,
-                    "updatedAtMs": 1000, "snapshot": bill}
+        mutation = {"mutation_id": "e2e-bill-create", "base_version": 0, "data_version": 3,
+                    "updated_at_ms": 1000, "snapshot": bill}
         created = self.request(original_url, "POST", "/api/bills", mutation, token)
         self.assertEqual(created["status"], "applied")
         original_bill = self.request(original_url, "GET", "/api/bills/e2e-bill", token=token)
@@ -114,30 +114,30 @@ class DeploymentEndToEndTests(unittest.TestCase):
         self.assertEqual(before, self.request(restored_url, "GET", "/api/sync/capabilities", token=token))
         self.assertEqual(media, self.request(restored_url, "GET", f"/api/media/objects/{checksum}", token=token))
         login = self.request(restored_url, "POST", "/api/sessions", credentials)
-        self.assertEqual(login["accountId"], account["accountId"])
-        session = login["accessToken"]
+        self.assertEqual(login["account_id"], account["account_id"])
+        session = login["access_token"]
         self.assertEqual(original_bill, self.request(restored_url, "GET", "/api/bills/e2e-bill", token=session))
         # 回执、结构化账单和未知字段必须一起恢复；原 mutation 重试不能创建新版本。
         retry = self.request(restored_url, "POST", "/api/bills", mutation, token)
         self.assertEqual(retry["version"], created["version"])
-        update = dict(mutation, mutationId="e2e-bill-update", baseVersion=created["version"], updatedAtMs=2000,
+        update = dict(mutation, mutation_id="e2e-bill-update", base_version=created["version"], updated_at_ms=2000,
                       snapshot=dict(original_bill["snapshot"], title="恢复后的账单", original_amount_cents=1900, final_amount_cents=1900))
         updated = self.request(restored_url, "PUT", "/api/bills/e2e-bill", update, session)
         self.assertEqual(updated["status"], "applied")
         with self.assertRaises(urllib.error.HTTPError) as conflict:
             self.request(restored_url, "PUT", "/api/bills/e2e-bill",
-                         dict(update, mutationId="e2e-stale", snapshot=dict(update["snapshot"], title="过期修改")), session)
+                         dict(update, mutation_id="e2e-stale", snapshot=dict(update["snapshot"], title="过期修改")), session)
         self.assertEqual(conflict.exception.code, 409)
         page = self.request(restored_url, "GET", "/api/bills?q=" + urllib.parse.quote("恢复后"), token=token)
         self.assertEqual(len(page["rows"]), 1)
         self.assertEqual(page["rows"][0]["snapshot"]["future_field"], bill["future_field"])
-        self.assertEqual(self.request(restored_url, "GET", "/api/statistics", token=session)["billExpenseCents"], 1900)
+        self.assertEqual(self.request(restored_url, "GET", "/api/statistics", token=session)["bill_expense_cents"], 1900)
         deleted = self.request(restored_url, "DELETE", "/api/bills/e2e-bill",
-                               {"mutationId": "e2e-bill-delete", "baseVersion": updated["version"],
-                                "dataVersion": 3, "updatedAtMs": 3000}, session)
+                               {"mutation_id": "e2e-bill-delete", "base_version": updated["version"],
+                                "data_version": 3, "updated_at_ms": 3000}, session)
         self.assertEqual(deleted["status"], "applied")
         self.assertEqual(self.request(restored_url, "GET", "/api/bills", token=token)["rows"], [])
-        self.assertEqual(self.request(restored_url, "GET", "/api/statistics", token=session)["billExpenseCents"], 0)
+        self.assertEqual(self.request(restored_url, "GET", "/api/statistics", token=session)["bill_expense_cents"], 0)
         changes = self.request(restored_url, "GET", "/api/sync/changes?cursor=" + str(before["dataset"]["head"]), token=token)
         self.assertEqual([entry["operation"] for entry in changes["entries"]], ["update", "delete"])
         self.assertEqual(self.docker("inspect", "--format", "{{.Config.User}}", container).strip(), "recoow")

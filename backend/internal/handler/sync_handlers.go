@@ -16,7 +16,7 @@ const maxPullEntries = 2000
 
 type pushRequest struct {
 	Items           []domain.PushItem `json:"items"`
-	ProtocolVersion int               `json:"protocolVersion"`
+	ProtocolVersion int               `json:"protocol_version"`
 	Generation      string            `json:"generation"`
 }
 
@@ -212,5 +212,5 @@ func (s *Server) handleExport(w http.ResponseWriter, r *http.Request) {
 			out[t] = rows
 		}
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"exportedAt": nowRFC3339(), "tables": out})
+	writeJSON(w, http.StatusOK, map[string]any{"exported_at": nowRFC3339(), "tables": out})
 }

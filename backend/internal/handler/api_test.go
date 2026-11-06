@@ -13,6 +13,7 @@ import (
 	"github.com/imehc/recoow/backend/internal/config"
 	"github.com/imehc/recoow/backend/internal/domain"
 	"github.com/imehc/recoow/backend/internal/schema"
+	"github.com/imehc/recoow/backend/internal/wire"
 )
 
 // testManifests 提供内置的最小清单，避免测试依赖仓库外的 schema 目录。
@@ -80,10 +81,12 @@ func (e *testEnv) request(t *testing.T, method, path, token string, body any) (*
 	return rec, rec.Body.Bytes()
 }
 
+func decodeResponse(data []byte, target any) error { return wire.Unmarshal(data, target) }
+
 func decode[T any](t *testing.T, data []byte) T {
 	t.Helper()
 	var v T
-	if err := json.Unmarshal(data, &v); err != nil {
+	if err := decodeResponse(data, &v); err != nil {
 		t.Fatalf("decode %s: %v", string(data), err)
 	}
 	return v
@@ -91,7 +94,7 @@ func decode[T any](t *testing.T, data []byte) T {
 
 func (e *testEnv) initAccount(t *testing.T) (ownerToken, recoveryKey string) {
 	t.Helper()
-	resp, data := e.request(t, http.MethodPost, "/api/accounts", "", map[string]string{"bootstrapToken": "bootstrap-secret"})
+	resp, data := e.request(t, http.MethodPost, "/api/accounts", "", map[string]string{"bootstrap_token": "bootstrap-secret"})
 	if resp.Code != http.StatusCreated {
 		t.Fatalf("init status=%d body=%s", resp.Code, data)
 	}
@@ -112,7 +115,7 @@ func TestFullSyncLifecycle(t *testing.T) {
 	if resp, _ := e.request(t, http.MethodGet, "/api/devices", "", nil); resp.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401 without token, got %d", resp.Code)
 	}
-	if resp, _ := e.request(t, http.MethodPost, "/api/accounts", "", map[string]string{"bootstrapToken": "wrong"}); resp.Code != http.StatusForbidden {
+	if resp, _ := e.request(t, http.MethodPost, "/api/accounts", "", map[string]string{"bootstrap_token": "wrong"}); resp.Code != http.StatusForbidden {
 		t.Fatalf("expected 403 wrong bootstrap, got %d", resp.Code)
 	}
 
@@ -121,7 +124,7 @@ func TestFullSyncLifecycle(t *testing.T) {
 		t.Fatal("expected recovery key + token")
 	}
 	// 多账号：同一实例可以再注册一个账号，两个账号互不干扰。
-	resp2, secondData := e.request(t, http.MethodPost, "/api/accounts", "", map[string]string{"bootstrapToken": "bootstrap-secret"})
+	resp2, secondData := e.request(t, http.MethodPost, "/api/accounts", "", map[string]string{"bootstrap_token": "bootstrap-secret"})
 	if resp2.Code != http.StatusCreated {
 		t.Fatalf("expected 201 second init, got %d %s", resp2.Code, secondData)
 	}
@@ -143,14 +146,14 @@ func TestFullSyncLifecycle(t *testing.T) {
 		Code string `json:"code"`
 	}](t, data)
 
-	resp, data := e.request(t, http.MethodPost, "/api/device-pairings", "", map[string]string{"code": pair.Code, "deviceName": "iPad"})
+	resp, data := e.request(t, http.MethodPost, "/api/device-pairings", "", map[string]string{"code": pair.Code, "device_name": "iPad"})
 	if resp.Code != http.StatusCreated {
 		t.Fatalf("pair status=%d body=%s", resp.Code, data)
 	}
 	paired := decode[pairResponse](t, data)
 	dev2Token := paired.DeviceToken
 
-	if resp, _ := e.request(t, http.MethodPost, "/api/device-pairings", "", map[string]string{"code": pair.Code, "deviceName": "X"}); resp.Code != http.StatusUnauthorized {
+	if resp, _ := e.request(t, http.MethodPost, "/api/device-pairings", "", map[string]string{"code": pair.Code, "device_name": "X"}); resp.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401 reused code, got %d", resp.Code)
 	}
 

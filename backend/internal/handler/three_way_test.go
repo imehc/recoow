@@ -16,13 +16,13 @@ func TestResourceThreeWayMergeAndVersionedConfirmation(t *testing.T) {
 	e, token, _ := fullSyncEnvironment(t, registry)
 	write := func(mutation string, base int64, name, note, resolution string, expected *int64, status int) domain.PushResult {
 		t.Helper()
-		body := map[string]any{"mutationId": mutation, "baseVersion": base, "dataVersion": 1, "updatedAtMs": 1000,
+		body := map[string]any{"mutation_id": mutation, "base_version": base, "data_version": 1, "updated_at_ms": 1000,
 			"snapshot": map[string]any{"id": "tag", "created_at": 1000, "name": name, "note": note}}
 		if resolution != "" {
 			body["resolution"] = resolution
 		}
 		if expected != nil {
-			body["expectedVersion"] = *expected
+			body["expected_version"] = *expected
 		}
 		path, method := "/api/diary-tags/tag", "PUT"
 		if base == 0 && mutation == "create" {

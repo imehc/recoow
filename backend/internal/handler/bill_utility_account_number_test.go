@@ -57,7 +57,7 @@ func TestUtilityAccountNumberSyncCompatibility(t *testing.T) {
 				t.Fatalf("push failed: %d %s", response.Code, data)
 			}
 			var result struct{ Results []domain.PushResult }
-			if err := json.Unmarshal(data, &result); err != nil || len(result.Results) != 1 ||
+			if err := decodeResponse(data, &result); err != nil || len(result.Results) != 1 ||
 				result.Results[0].Status != domain.PushApplied || result.Results[0].Current == nil {
 				t.Fatalf("push not applied: %s (%v)", data, err)
 			}

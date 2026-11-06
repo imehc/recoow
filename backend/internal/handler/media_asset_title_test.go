@@ -33,7 +33,7 @@ func TestMediaAssetTitleSyncCompatibility(t *testing.T) {
 	snapshot["byte_count"] = len(content)
 	snapshot["mime_type"] = "image/jpeg"
 	snapshot["sort_order"] = 7
-	snapshot["_media"] = map[string]any{"object": map[string]any{"key": key, "checksum": checksum, "size": len(content), "contentType": "image/jpeg"}}
+	snapshot["_media"] = map[string]any{"object": map[string]any{"key": key, "checksum": checksum, "size": len(content), "content_type": "image/jpeg"}}
 	base := int64(0)
 	steps := []struct {
 		name    string
@@ -71,7 +71,7 @@ func TestMediaAssetTitleSyncCompatibility(t *testing.T) {
 				t.Fatalf("push failed: %d %s", response.Code, data)
 			}
 			var result struct{ Results []domain.PushResult }
-			if err := json.Unmarshal(data, &result); err != nil || len(result.Results) != 1 ||
+			if err := decodeResponse(data, &result); err != nil || len(result.Results) != 1 ||
 				result.Results[0].Status != domain.PushApplied || result.Results[0].Current == nil {
 				t.Fatalf("push not applied: %s (%v)", data, err)
 			}

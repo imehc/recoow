@@ -1,4 +1,5 @@
 $(SRCROOT)/../openapi/openapi.yaml
 $(SRCROOT)/../scripts/sync-models.xcfilelist
 $(SRCROOT)/../scripts/generate_sync_registry.py
+$(SRCROOT)/../scripts/generate_api_field_names.py
 $(SRCROOT)/../scripts/openapi_contract.py
