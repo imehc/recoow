@@ -12,17 +12,18 @@ test('cloud cookies, offline timestamps and read-only permissions work against G
   const username = `web-${randomUUID()}`;
   const password = randomUUID();
   const deviceHeaders = {
+    'X-Recoow-Field-Case': 'snake_case',
     'X-Recoow-Client': 'ios',
     'X-Recoow-OS': 'ios',
     'X-Recoow-Device-Id': randomUUID(),
   };
   const registered = await request.post('/api/accounts', {
     headers: deviceHeaders,
-    data: { bootstrapToken: process.env.RECOOW_TEST_BOOTSTRAP_TOKEN ?? '' },
+    data: { bootstrap_token: process.env.RECOOW_TEST_BOOTSTRAP_TOKEN ?? '' },
   });
   expect(registered.status()).toBe(201);
   const account = await registered.json();
-  const headers = { ...deviceHeaders, Authorization: `Bearer ${account.deviceToken}` };
+  const headers = { ...deviceHeaders, Authorization: `Bearer ${account.device_token}` };
   expect(
     (
       await request.post('/api/users/me/credentials', { headers, data: { username, password } })
@@ -44,10 +45,10 @@ test('cloud cookies, offline timestamps and read-only permissions work against G
   const created = await request.post('/api/diary-entries', {
     headers,
     data: {
-      mutationId: randomUUID(),
-      baseVersion: 0,
-      dataVersion: 1,
-      updatedAtMs: editedAt,
+      mutation_id: randomUUID(),
+      base_version: 0,
+      data_version: 1,
+      updated_at_ms: editedAt,
       snapshot,
     },
   });

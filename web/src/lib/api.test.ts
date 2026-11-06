@@ -16,18 +16,30 @@ describe('authenticated transport', () => {
   it('uses same-origin cookies without caching and identifies Web on iOS', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValue(new Response('{"userId":"u","username":"name","accountId":"a"}'));
+      .mockResolvedValue(new Response('{"user_id":"u","username":"name","account_id":"a"}'));
     vi.stubGlobal('fetch', fetchMock);
-    await api.me();
+    expect(await api.me()).toMatchObject({ userId: 'u', accountId: 'a' });
     const [url, options] = fetchMock.mock.calls[0];
     expect(url.origin).toBe('https://recoow.example');
     expect(options).toMatchObject({
       credentials: 'same-origin',
       cache: 'no-store',
       redirect: 'error',
-      headers: { 'X-Recoow-Client': 'web', 'X-Recoow-OS': 'ios' },
+      headers: {
+        'X-Recoow-Client': 'web',
+        'X-Recoow-OS': 'ios',
+        'X-Recoow-Field-Case': 'snake_case',
+      },
     });
     expect(options.headers.Authorization).toBeUndefined();
+  });
+  it('sends canonical query and profile fields', async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response('{}')));
+    vi.stubGlobal('fetch', fetchMock);
+    await api.history({ deviceId: 'device', fromMs: 1000, toMs: 2000 });
+    expect(fetchMock.mock.calls[0][0].search).toBe('?device_id=device&from_ms=1000&to_ms=2000');
+    await api.profile();
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({ app_version: '0.1.0' });
   });
   it('treats rejected login differently from session expiry', async () => {
     const listener = vi.fn();

@@ -1,5 +1,6 @@
 import { t } from './preferences.svelte.js';
 import { parse, LosslessNumber } from 'lossless-json';
+import { apiFields, apiFieldName } from './api-fields.js';
 import type { ChangeEventDetail } from '#lib/generated/api/models/ChangeEventDetail.js';
 import type { ChangeEventPage } from '#lib/generated/api/models/ChangeEventPage.js';
 import type { PageResponse } from '#lib/generated/api/models/PageResponse.js';
@@ -44,12 +45,14 @@ function operatingSystem(): string {
 }
 
 export function parseCloudJSON(text: string): unknown {
-  return parse(text, undefined, (value) => {
-    const number = Number(value);
-    return Number.isSafeInteger(number) && /^-?\d+$/.test(value)
-      ? number
-      : new LosslessNumber(value);
-  });
+  return apiFields(
+    parse(text, undefined, (value) => {
+      const number = Number(value);
+      return Number.isSafeInteger(number) && /^-?\d+$/.test(value)
+        ? number
+        : new LosslessNumber(value);
+    }),
+  );
 }
 
 async function request<T>(
@@ -59,7 +62,7 @@ async function request<T>(
 ): Promise<T> {
   const url = new URL(path, window.location.origin);
   for (const [key, value] of Object.entries(query))
-    if (value !== undefined && value !== '') url.searchParams.set(key, String(value));
+    if (value !== undefined && value !== '') url.searchParams.set(apiFieldName(key), String(value));
   const response = await fetch(url, {
     ...options,
     credentials: 'same-origin',
@@ -73,6 +76,7 @@ async function request<T>(
       'X-Recoow-Client': 'web',
       'X-Recoow-OS': operatingSystem(),
       'X-Recoow-App-Version': '0.1.0',
+      'X-Recoow-Field-Case': 'snake_case',
       ...options.headers,
     },
   });
@@ -104,7 +108,7 @@ export const api = {
       {},
       {
         method: 'PUT',
-        body: JSON.stringify({ client: 'web', os: operatingSystem(), appVersion: '0.1.0' }),
+        body: JSON.stringify({ client: 'web', os: operatingSystem(), app_version: '0.1.0' }),
       },
     ),
   records: (

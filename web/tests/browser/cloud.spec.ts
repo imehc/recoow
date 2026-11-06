@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { apiFields } from '../../src/lib/api-fields.js';
 
 const now = 1793923200000;
 const row = {
@@ -50,7 +51,11 @@ async function cloud(page: Page) {
     const req = route.request();
     const url = new URL(req.url());
     const send = (data: unknown, status = 200) =>
-      route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) });
+      route.fulfill({
+        status,
+        contentType: 'application/json',
+        body: JSON.stringify(apiFields(data, false)),
+      });
     if (req.method() !== 'GET' && !url.pathname.startsWith('/api/sessions'))
       state.writes.push(url.pathname);
     if (url.pathname === '/api/sessions') {
@@ -475,11 +480,11 @@ test('custom calendar and reset preserve date filtering and allow clearing', asy
   await expect(page.locator('.calendar-popover')).toHaveCount(0);
   await page.getByRole('button', { name: '查询', exact: true }).click();
   await expect
-    .poll(() => state.historyRequests.some((url) => url.searchParams.has('fromMs')))
+    .poll(() => state.historyRequests.some((url) => url.searchParams.has('from_ms')))
     .toBe(true);
-  const request = state.historyRequests.findLast((url) => url.searchParams.has('fromMs'))!;
-  const from = Number(request.searchParams.get('fromMs'));
-  const to = Number(request.searchParams.get('toMs'));
+  const request = state.historyRequests.findLast((url) => url.searchParams.has('from_ms'))!;
+  const from = Number(request.searchParams.get('from_ms'));
+  const to = Number(request.searchParams.get('to_ms'));
   expect(to - from).toBe(86400000);
   expect(selected).toMatch(/\d{4}\/\d{2}\/\d{2}/);
   await page.getByRole('button', { name: '清除开始日期' }).click();
