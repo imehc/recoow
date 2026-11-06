@@ -27,6 +27,7 @@ interface SyncApi {
     suspend fun get(path: String, query: Map<String, String> = emptyMap()): ByteArray
     suspend fun delete(path: String): ByteArray
     suspend fun post(path: String, body: JsonObject): ByteArray
+    suspend fun put(path: String, body: JsonObject): ByteArray = throw UnsupportedOperationException("PUT is unavailable")
     suspend fun upload(key: String, checksum: String, type: String, file: File): ByteArray
     suspend fun mediaExists(key: String, checksum: String, size: Long): Boolean = false
     suspend fun download(key: String, file: File, limit: Long)
@@ -45,7 +46,7 @@ interface SyncApiProvider {
     fun create(endpoint: String, token: String? = null): SyncApi
 }
 
-class SyncApiFactory(private val allowLocalHttp: Boolean = false) : SyncApiProvider {
+class SyncApiFactory(private val allowLocalHttp: Boolean = false, private val profile: JsonObject? = null) : SyncApiProvider {
     private val client = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false)
         .connectTimeout(20, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS)
         .callTimeout(120, TimeUnit.SECONDS).build()
@@ -69,6 +70,11 @@ class SyncApiFactory(private val allowLocalHttp: Boolean = false) : SyncApiProvi
             val original = chain.request()
             check(original.url.scheme == base.scheme && original.url.host == base.host && original.url.port == base.port)
             val request = original.newBuilder().header("Accept", "application/json")
+            if (profile != null) {
+                for ((key, header) in mapOf("client" to "X-Recoow-Client", "os" to "X-Recoow-OS", "appVersion" to "X-Recoow-App-Version", "osVersion" to "X-Recoow-OS-Version", "localDeviceId" to "X-Recoow-Device-Id")) {
+                    profile[key]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }?.let { request.header(header, it) }
+                }
+            }
             if (token != null) request.header("Authorization", "Bearer $token")
             chain.proceed(request.build())
         }.build()
@@ -77,6 +83,8 @@ class SyncApiFactory(private val allowLocalHttp: Boolean = false) : SyncApiProvi
             override suspend fun get(path: String, query: Map<String, String>) = read(retrofit.get(path, query))
             override suspend fun delete(path: String) = read(retrofit.delete(path))
             override suspend fun post(path: String, body: JsonObject) = read(retrofit.post(path, body.toString().toRequestBody("application/json".toMediaType())))
+            override suspend fun put(path: String, body: JsonObject) =
+                read(retrofit.put(path, emptyMap(), body.toString().toRequestBody("application/json".toMediaType())))
             override suspend fun upload(key: String, checksum: String, type: String, file: File) =
                 read(retrofit.put("api/media/objects/$key", mapOf("checksum" to checksum, "contentType" to type), file.asRequestBody(type.toMediaType())))
             override suspend fun mediaExists(key: String, checksum: String, size: Long): Boolean {

@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import androidx.room.ColumnInfo
 
 // These tables are local persistence policy, never part of an entity's wire payload.
 @Entity(tableName = "entity_snapshots", primaryKeys = ["tableName", "entityId"])
@@ -26,7 +27,15 @@ data class SyncTarget(@PrimaryKey val scope: String, val connectionId: String, v
 data class SyncOutbox(val scope: String, val mutationId: String, val tableName: String, val entityId: String,
     val operation: String, val dataVersion: Int, val payloadJson: String, val baseVersion: Long,
     val localChangeId: Long, val predecessorId: String? = null, val preparedJson: String? = null,
-    val status: String = "pending", val serverVersion: Long? = null, val attemptCount: Int = 0, val lastError: String? = null)
+    val status: String = "pending", val serverVersion: Long? = null, val attemptCount: Int = 0, val lastError: String? = null,
+    val originJson: String? = null)
+
+@Entity(tableName = "record_origins", primaryKeys = ["table_name", "entity_id"])
+data class RecordOrigin(@ColumnInfo(name = "table_name") val tableName: String,
+    @ColumnInfo(name = "entity_id") val entityId: String,
+    @ColumnInfo(name = "device_id") val deviceId: String,
+    @ColumnInfo(name = "updated_at") val updatedAt: Long,
+    @ColumnInfo(name = "origin_json") val originJson: String?)
 
 @Entity(tableName = "sync_rows", primaryKeys = ["scope", "tableName", "entityId"],
     foreignKeys = [ForeignKey(entity = SyncTarget::class, parentColumns = ["scope"], childColumns = ["scope"], onDelete = ForeignKey.CASCADE)])

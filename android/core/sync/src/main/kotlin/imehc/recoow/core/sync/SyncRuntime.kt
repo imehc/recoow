@@ -34,7 +34,7 @@ object SyncModule {
         val vault = CredentialVault(context)
         val store = SyncStore(host, received, vault)
         val debug = context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
-        return SyncEngine(vault, SyncApiFactory(allowLocalHttp = debug), store, received,
+        return SyncEngine(vault, SyncApiFactory(allowLocalHttp = debug, profile = host.clientSource?.profile()), store, received,
             MediaTransfer(store, File(context.cacheDir, "sync-transfer")), CredentialVault(context, "pending-sync-credentials"), StoredSyncPreferences(context))
     }
 }

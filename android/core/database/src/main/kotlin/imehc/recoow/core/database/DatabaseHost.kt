@@ -27,6 +27,7 @@ class DatabaseHost(
     val directory: File,
     private val recovery: DatabaseRecovery,
     private val migrations: List<Migration> = DatabaseMigrations.all,
+    val clientSource: LocalClientSource? = null,
 ) {
     private val context = context.applicationContext
     private val gate = Mutex()

@@ -240,7 +240,9 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
     }
 
     private suspend fun capabilities(api: SyncApi, connection: Credentials): Capabilities {
-        return Capabilities.decode(decodeObject(api.get("api/sync/capabilities")), connection.account, store.contracts)
+        val caps = Capabilities.decode(decodeObject(api.get("api/sync/capabilities")), connection.account, store.contracts)
+        if (caps.deviceProfiles) store.host.clientSource?.profile()?.let { api.put("api/devices/current/profile", it) }
+        return caps
     }
 
     private suspend fun receivePages(session: SyncSession, api: SyncApi, caps: Capabilities, bootstrapOnly: Boolean) {
@@ -298,10 +300,10 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
         try {
             val connection = requireNotNull(credentials.load())
             val capabilities = decodeObject(apiProvider.create(connection.endpoint, connection.token).get("api/sync/capabilities"))
-            Capabilities.decode(capabilities, connection.account, store.contracts)
+            val caps = Capabilities.decode(capabilities, connection.account, store.contracts)
             require(capabilities.getValue("features").jsonArray.any { it.jsonPrimitive.content == "conflict_resolution" }) { "Unsupported conflict resolution protocol; update backend" }
             val scope = store.host.access { requireNotNull(it.records().activeScope()) }
-            val session = SyncSession(connection, scope, store.host.sessionToken())
+            val session = SyncSession(connection, scope, store.host.sessionToken(), caps.mutationOrigin)
             store.resolve(session, table, id, remoteVersion, keepLocal,
                 requireNotNull(state.value.conflicts.find { it.table == table && it.id == id && it.remoteVersion == remoteVersion }).localSnapshot)
             refreshState(session)

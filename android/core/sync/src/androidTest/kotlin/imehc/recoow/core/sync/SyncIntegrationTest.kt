@@ -48,15 +48,16 @@ class SyncIntegrationTest {
     }
     private data class Client(val host: DatabaseHost, val records: RoomRecordRepository, val vault: MemoryVault,
         val engine: SyncEngine, val store: SyncStore, val received: ReceivedRecordStore)
-    private fun client(provider: SyncApiProvider = factory): Client {
+    private fun client(provider: SyncApiProvider = factory, withSource: Boolean = false): Client {
         val root = File(context.cacheDir, "sync-test-${UUID.randomUUID()}").apply { mkdirs() }; roots += root
         val directory = File(root, "live")
         val backup = LocalRollbackFiles(directory, File(root, "backups"), object : BackupPreferences {
             override suspend fun capture() = "{}"
             override suspend fun restore(json: String) { }
         }, "test-installation")
-        val host = DatabaseHost(context, directory, backup); hosts += host
-        val received = ReceivedRecordStore(host); val vault = MemoryVault(); val store = SyncStore(host, received, vault)
+        val vault = MemoryVault()
+        val host = DatabaseHost(context, directory, backup, clientSource = if (withSource) LocalClientSource(vault.localDeviceId, "Android phone", "original-version", "16") else null); hosts += host
+        val received = ReceivedRecordStore(host); val store = SyncStore(host, received, vault)
         return Client(host, RoomRecordRepository(host), vault,
             SyncEngine(vault, provider, store, received, MediaTransfer(store, File(root, "transfer")), MemoryVault(), TestSyncPreferences()), store, received)
     }
@@ -71,6 +72,36 @@ class SyncIntegrationTest {
         assertNull(client.vault.load())
         assertFalse(client.engine.state.value.running)
     }
+    @Test fun mutationSourceIsCapturedOfflineAndFrozenAcrossRetries() = runBlocking {
+        val client = client(withSource = true)
+        client.records.save(listOf(RecordChange("diary_tags", "source", """{"name":"offline","note":null}""", timestamp, client.vault.localDeviceId)))
+        val credentials = Credentials("test-connection", "http://127.0.0.1/", "account", "server-device", "token", null, true)
+        client.vault.save(credentials)
+        val caps = Capabilities("account", "generation", 0, 0, 1000, 500, 200L * 1024 * 1024, mutationOrigin = true)
+        val session = client.store.prepare(credentials, caps)
+        val first = client.store.pending(session, 1).single()
+        assertEquals("android", first.request.getValue("origin").jsonObject.text("client"))
+        assertEquals("original-version", first.request.getValue("origin").jsonObject.text("appVersion"))
+        client.store.access(session) { db ->
+            val saved = requireNotNull(db.records().mutation(session.scope, first.row.mutationId))
+            db.records().put(saved.copy(originJson = null))
+        }
+        assertEquals(first.request, client.store.pending(session, 1).single().request)
+    }
+
+    @Test fun legacyPreparedMutationKeepsItsOriginalShapeAfterCapabilityUpgrade() = runBlocking {
+        val client = client(withSource = true)
+        client.records.save(listOf(RecordChange("diary_tags", "legacy", """{"name":"offline","note":null}""", timestamp, client.vault.localDeviceId)))
+        val credentials = Credentials("test-connection", "http://127.0.0.1/", "account", "server-device", "token", null, true)
+        client.vault.save(credentials)
+        val caps = Capabilities("account", "generation", 0, 0, 1000, 500, 200L * 1024 * 1024)
+        val firstSession = client.store.prepare(credentials, caps)
+        val first = client.store.pending(firstSession, 1).single().request
+        assertFalse("origin" in first)
+        val upgraded = client.store.prepare(credentials, caps.copy(mutationOrigin = true))
+        assertEquals(first, client.store.pending(upgraded, 1).single().request)
+    }
+
     private fun requireBackend() = assumeTrue("Set syncBaseUrl for the local backend", InstrumentationRegistry.getArguments().containsKey("syncBaseUrl"))
     @Test fun manifestMatchAtomicallyEstablishesBaselineAndRetainsNewEdits() = runBlocking {
         val client = client()

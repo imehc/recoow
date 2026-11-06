@@ -62,13 +62,15 @@ class RoomRecordRepository(private val host: DatabaseHost, private val zone: () 
             PhysicalRecords.write(database.openHelper.writableDatabase, contract, snapshot, version, local = true, change.binaryFields)
             dao.put(EntitySnapshot(change.table, change.id, contract.version, snapshot.toString()))
             val operation = if (change.deleted) "delete" else "update"
+            val origin = host.clientSource?.origin(change.deviceId)
+            dao.put(RecordOrigin(change.table, change.id, change.deviceId, change.updatedAtMillis, origin))
             val mutation = UUID.randomUUID().toString()
             val localId = dao.log(LocalChange(mutationId = mutation, tableName = change.table, entityId = change.id,
                 operation = operation, dataVersion = contract.version, payloadJson = snapshot.toString(), changedAt = change.updatedAtMillis))
             if (scope != null) {
                 val predecessor = dao.pending(scope, change.table, change.id)?.mutationId
                 dao.enqueue(SyncOutbox(scope, mutation, change.table, change.id, operation, contract.version,
-                    snapshot.toString(), version ?: 0, localId, predecessorId = predecessor))
+                    snapshot.toString(), version ?: 0, localId, predecessorId = predecessor, originJson = origin))
             }
             queueNotification(database, change.table, change.id, change.updatedAtMillis)
         }

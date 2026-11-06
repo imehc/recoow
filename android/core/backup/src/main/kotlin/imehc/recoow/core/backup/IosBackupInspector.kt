@@ -55,7 +55,7 @@ class IosBackupInspector(private val temporaryDirectory: File) {
                     val format = metadata.getInt("formatVersion")
                     val schema = metadata.getInt("databaseSchemaVersion")
                     if (format != 1) throw InvalidBackupException("Unsupported backup format: $format")
-                    if (schema !in 1..36) throw InvalidBackupException("Unsupported iOS database schema: $schema")
+                    if (schema !in 1..37) throw InvalidBackupException("Unsupported iOS database schema: $schema")
                     metadata.getJSONObject("preferences").getJSONArray("hiddenToolRouteIDs")
                     val counts = TABLES.filter { it in tables }.associateWith { table ->
                         currentCoroutineContext().ensureActive()

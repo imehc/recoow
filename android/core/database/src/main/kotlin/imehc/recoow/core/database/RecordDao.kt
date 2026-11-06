@@ -8,6 +8,11 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface RecordDao {
+    @androidx.room.Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
+    suspend fun put(origin: RecordOrigin)
+    @Query("SELECT origin_json FROM record_origins WHERE table_name = :table AND entity_id = :id AND device_id = :device AND updated_at = :updated")
+    suspend fun origin(table: String, id: String, device: String, updated: Long): String?
+
     @Query("SELECT * FROM sync_outbox WHERE scope = :scope AND tableName = :table AND entityId = :id AND status = 'pending' AND preparedJson IS NULL AND baseVersion = 0 AND localChangeId = 0 LIMIT 1")
     suspend fun manifestSeed(scope: String, table: String, id: String): SyncOutbox?
     @Query("SELECT s.* FROM entity_snapshots s WHERE (s.tableName = 'tracks' AND s.entityId = :id) OR (s.tableName = 'track_points' AND s.entityId IN (SELECT id FROM track_points WHERE track_id = :id)) OR (s.tableName = 'track_segments' AND s.entityId IN (SELECT id FROM track_segments WHERE track_id = :id))")

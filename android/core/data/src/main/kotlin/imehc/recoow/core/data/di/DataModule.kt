@@ -80,14 +80,14 @@ object DataModule {
     fun preferenceStore(@ApplicationContext context: Context): DataStore<Preferences> = context.preferenceStore
 
     @Provides @Singleton
-    fun database(@ApplicationContext context: Context, preferences: DataStore<Preferences>): DatabaseHost {
+    fun database(@ApplicationContext context: Context, preferences: DataStore<Preferences>, deviceIdentity: imehc.recoow.core.domain.sync.DeviceIdentity): DatabaseHost {
         val root = File(context.noBackupFilesDir, "records")
         val identity = context.getSharedPreferences("installation", Context.MODE_PRIVATE)
         val id = identity.getString("id", null) ?: UUID.randomUUID().toString().also {
             check(identity.edit().putString("id", it).commit())
         }
         return DatabaseHost(context, root, LocalRollbackFiles(root, File(context.noBackupFilesDir, "rollback"),
-            PreferenceBackupAdapter(context, preferences), id))
+            PreferenceBackupAdapter(context, preferences), id), clientSource = imehc.recoow.core.database.LocalClientSource.current(context, deviceIdentity.id))
     }
 
     @Provides @Singleton

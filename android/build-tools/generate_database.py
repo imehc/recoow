@@ -25,7 +25,7 @@ INDEXES = {
     "decision_choice_records": [("deleted_at", "selected_at")],
 }
 LOCAL = ["EntitySnapshot", "LocalChange", "SyncTarget", "SyncOutbox", "SyncRow", "SyncInbox",
-         "SyncReceivedPage", "SyncConflict", "SyncMediaJob", "NotificationJob", "DatasetState"]
+         "SyncReceivedPage", "SyncConflict", "SyncMediaJob", "NotificationJob", "DatasetState", "RecordOrigin"]
 
 
 def quoted(value):

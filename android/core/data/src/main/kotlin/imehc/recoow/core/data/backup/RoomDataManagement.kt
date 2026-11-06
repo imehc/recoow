@@ -60,7 +60,7 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
                 val preferenceSnapshot = portable.capture()
                 val cancellation = currentCoroutineContext()
                 SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READWRITE or SQLiteDatabase.CREATE_IF_NECESSARY or SQLiteDatabase.NO_LOCALIZED_COLLATORS).use { output ->
-                    context.assets.open("ios-backup-schema-v36.sql").bufferedReader().use { reader ->
+                    context.assets.open("ios-backup-schema-v37.sql").bufferedReader().use { reader ->
                         reader.readText().lineSequence().filterNot { it.trimStart().startsWith("--") }.joinToString("\n")
                             .split(';').filter { it.isNotBlank() }.forEach(output::execSQL)
                     }
@@ -85,6 +85,7 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
                 val columns = columns(output, table).intersect(columns(output, table, "live")).joinToString { "\"$it\"" }
                 output.execSQL("INSERT INTO \"$table\" ($columns) SELECT $columns FROM live.\"$table\"")
             }
+            output.execSQL("INSERT INTO record_origins SELECT * FROM live.record_origins")
             // Read immutable objects only. Export must never fill inline_data in the online database.
             for (contract in contracts.values) output.rawQuery(
                 "SELECT entityId, json FROM live.entity_snapshots WHERE tableName=? ORDER BY entityId", arrayOf(contract.table)
@@ -109,7 +110,7 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
             } }
             val info = context.packageManager.getPackageInfo(context.packageName, 0)
             @Suppress("DEPRECATION") val build = if (android.os.Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()
-            val metadata = JSONObject().put("formatVersion", 1).put("databaseSchemaVersion", 36)
+            val metadata = JSONObject().put("formatVersion", 1).put("databaseSchemaVersion", 37)
                 .put("sourcePlatform", "android").put("sourceSchemaVersion", DatabaseHost.VERSION)
                 .put("appVersion", info.versionName ?: "unknown").put("appBuild", build.toString())
                 .put("exportedAt", Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS).toString()).put("sourceDeviceID", identity.id).put("preferences", preferenceSnapshot)
@@ -168,6 +169,7 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
             val sql = db.openHelper.writableDatabase
             sql.execSQL("ATTACH DATABASE ? AS incoming", arrayOf(backup.file.path))
             try {
+                val incomingHasOrigins = sql.query("SELECT 1 FROM incoming.sqlite_master WHERE type = 'table' AND name = 'record_origins'").use { it.moveToFirst() }
                 var imported = 0
                 db.withTransaction {
                     if (mode == ImportMode.REPLACE_ALL) clear(db, keepBinding = true)
@@ -248,10 +250,14 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
                                 db.records().put(EntitySnapshot(table, id, contract.version, payload))
                                 val mutation = UUID.randomUUID().toString()
                                 val operation = if (raw["deleted_at"] == JsonNull) "update" else "delete"
+                                val origin = if (incomingHasOrigins) {
+                                    sql.query("SELECT origin_json FROM incoming.record_origins WHERE table_name = ? AND entity_id = ? AND device_id = ? AND updated_at = ?", arrayOf<Any>(table, id, snapshot.getValue("device_id").jsonPrimitive.content, snapshot.getValue("updated_at").jsonPrimitive.long)).use { if (it.moveToFirst() && !it.isNull(0)) it.getString(0) else null }
+                                } else null
+                                db.records().put(RecordOrigin(table, id, snapshot.getValue("device_id").jsonPrimitive.content, snapshot.getValue("updated_at").jsonPrimitive.long, origin))
                                 val local = db.records().log(LocalChange(mutationId = mutation, tableName = table, entityId = id,
                                     operation = operation, dataVersion = contract.version, payloadJson = payload, changedAt = raw.getValue("updated_at").jsonPrimitive.long))
                                 db.records().activeScope()?.let { scope ->
-                                    db.records().enqueue(SyncOutbox(scope, mutation, table, id, operation, contract.version, payload, 0, local))
+                                    db.records().enqueue(SyncOutbox(scope, mutation, table, id, operation, contract.version, payload, 0, local, originJson = origin))
                                 }
                                 RoomRecordRepository.queueNotification(db, table, id, raw.getValue("updated_at").jsonPrimitive.long)
                                 imported++
@@ -288,7 +294,7 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
     private suspend fun clear(db: RecoowDatabase, keepBinding: Boolean) {
         val sql = db.openHelper.writableDatabase
         for (table in tables) sql.execSQL("DELETE FROM \"$table\"")
-        for (table in listOf("entity_snapshots", "local_changes", "notification_jobs", "sync_outbox", "sync_rows", "sync_inbox", "sync_received_pages", "sync_media_jobs", "sync_conflicts")) sql.execSQL("DELETE FROM $table")
+        for (table in listOf("record_origins", "entity_snapshots", "local_changes", "notification_jobs", "sync_outbox", "sync_rows", "sync_inbox", "sync_received_pages", "sync_media_jobs", "sync_conflicts")) sql.execSQL("DELETE FROM $table")
         if (keepBinding) sql.execSQL("UPDATE sync_targets SET receivedCursor=0, appliedCursor=0, bootstrapWatermark=0, bootstrapAfter=0, bootstrapComplete=0, seeded=0, failureCount=0, nextAttemptAt=0")
         else { sql.execSQL("DELETE FROM dataset_state"); sql.execSQL("DELETE FROM sync_targets") }
     }

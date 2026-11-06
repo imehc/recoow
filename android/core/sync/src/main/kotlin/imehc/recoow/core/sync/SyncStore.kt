@@ -12,7 +12,7 @@ import java.util.UUID
 import kotlinx.serialization.json.*
 
 class AccountReplacementRequired : IllegalStateException("Account replacement requires a local backup and explicit selection")
-data class SyncSession(val connection: Credentials, val scope: String, val databaseToken: Long)
+data class SyncSession(val connection: Credentials, val scope: String, val databaseToken: Long, val supportsOrigin: Boolean = false)
 data class PreparedMutation(val row: SyncOutbox, val request: JsonObject)
 
 class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStore, private val credentials: CredentialStore) {
@@ -62,7 +62,7 @@ class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStor
                 if (!target.seeded) { seed(db, scope); dao.put(target.copy(seeded = true)) }
             }
         }
-        return SyncSession(connection, scope, host.sessionToken())
+        return SyncSession(connection, scope, host.sessionToken(), capabilities.mutationOrigin)
     }
 
     private fun invalidCursor(target: SyncTarget, caps: Capabilities) = if (target.bootstrapComplete)
@@ -84,7 +84,7 @@ class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStor
                 bootstrapWatermark = caps.head, seeded = true)
             db.records().put(target); seed(db, session.scope)
         } }
-        return session.copy(databaseToken = host.sessionToken())
+        return session.copy(databaseToken = host.sessionToken(), supportsOrigin = caps.mutationOrigin)
     }
 
     private suspend fun seed(db: RecoowDatabase, scope: String) {
@@ -110,7 +110,8 @@ class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStor
         // Initial inventory is not a new local edit. Zero identifies an unsent seed.
         val local = if (seed) 0L else db.records().log(LocalChange(mutationId = mutation, tableName = table, entityId = id, operation = operation,
             dataVersion = version, payloadJson = payload.toString(), changedAt = payload.integer("updated_at")))
-        val row = SyncOutbox(scope, mutation, table, id, operation, version, payload.toString(), base, local)
+        val origin = db.records().origin(table, id, payload.text("device_id"), payload.integer("updated_at"))
+        val row = SyncOutbox(scope, mutation, table, id, operation, version, payload.toString(), base, local, originJson = origin)
         db.records().enqueue(row)
         return row
     }
@@ -184,8 +185,10 @@ class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStor
                     put("mutationId", row.mutationId); put("baseVersion", base); put("dataVersion", row.dataVersion)
                     put("updatedAtMs", JsonObject(payload).integer("updated_at")); put("deviceId", JsonObject(payload).text("device_id"))
                     put("snapshot", normalized)
+                    row.originJson?.let { if (session.supportsOrigin) put("origin", Json.parseToJsonElement(it)) }
                 }.also { dao.put(row.copy(preparedJson = it.toString(), baseVersion = base)) }
             }
+            require(session.supportsOrigin || "origin" !in request) { "Server does not support the frozen mutation source" }
             queueUploads(db, session.scope, row, request)
             PreparedMutation(row, request)
         }
@@ -272,6 +275,7 @@ class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStor
             put("table", table); put("id", id); put("operation", row.operation)
             put("mutationId", row.mutationId); put("baseVersion", base); put("dataVersion", row.dataVersion)
             put("updatedAtMs", snapshot.integer("updated_at")); put("deviceId", snapshot.text("device_id"))
+            row.originJson?.let { if (session.supportsOrigin) put("origin", Json.parseToJsonElement(it)) }
             put("snapshot", normalized); put("resolution", if (keepLocal) "local" else "remote"); put("expectedVersion", remoteVersion)
         }
         dao.put(row.copy(preparedJson = request.toString()))
