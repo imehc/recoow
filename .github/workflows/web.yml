@@ -1,0 +1,117 @@
+name: Web
+
+on:
+  pull_request:
+    paths:
+      [
+        'web/**',
+        'backend/**',
+        'openapi/**',
+        'scripts/**',
+        'Makefile',
+        '.github/actions/setup-contract-tooling/**',
+        '.github/workflows/web.yml',
+      ]
+  push:
+    branches: ['**']
+    paths:
+      [
+        'web/**',
+        'backend/**',
+        'openapi/**',
+        'scripts/**',
+        'Makefile',
+        '.github/actions/setup-contract-tooling/**',
+        '.github/workflows/web.yml',
+      ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: recoow_migrator
+          POSTGRES_PASSWORD: recoow-web-migration-only
+          POSTGRES_DB: recoow_web
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U recoow_migrator -d recoow_web"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: ./.github/actions/setup-contract-tooling
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - name: Install Web dependencies
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+      - name: Format, lint, types and unit tests
+        working-directory: web
+        run: |
+          pnpm format:check
+          pnpm lint
+          pnpm check
+          pnpm test
+      - name: Build static site
+        working-directory: web
+        run: pnpm build
+      - name: Start isolated Go backend
+        env:
+          PGPASSWORD: recoow-web-migration-only
+          RECOOW_DATABASE_URL: postgres://recoow_web_app:recoow-web-runtime-only@127.0.0.1:5432/recoow_web?sslmode=disable
+          RECOOW_MIGRATION_DATABASE_URL: postgres://recoow_migrator:recoow-web-migration-only@127.0.0.1:5432/recoow_web?sslmode=disable
+          RECOOW_OPENAPI: ${{ github.workspace }}/openapi/openapi.yaml
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          psql -h 127.0.0.1 -U recoow_migrator -d recoow_web -v ON_ERROR_STOP=1 -c "CREATE ROLE recoow_web_app LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD 'recoow-web-runtime-only';"
+          make generate-go-api
+          (cd backend && go build -o "$RUNNER_TEMP/recoow-web-api" ./cmd/api)
+          "$RUNNER_TEMP/recoow-web-api" -migrate
+          RECOOW_ALLOW_INSECURE_COOKIES=1 RECOOW_DATA="$RUNNER_TEMP/recoow-web-data" RECOOW_LISTEN=127.0.0.1:8080 "$RUNNER_TEMP/recoow-web-api" > "$RUNNER_TEMP/recoow-web-api.log" 2>&1 &
+          for attempt in {1..30}; do
+            if [ "$(curl -sS --max-time 2 -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/sync/capabilities)" = 401 ]; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Install browser
+        working-directory: web
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Check browser flows and Go integration
+        working-directory: web
+        env:
+          RECOOW_TEST_BACKEND: '1'
+          RECOOW_API_URL: http://127.0.0.1:8080
+        run: pnpm test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-build-and-browser
+          path: |
+            web/build/
+            web/test-results/
+            ${{ runner.temp }}/recoow-web-api.log
