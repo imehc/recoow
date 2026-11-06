@@ -33,3 +33,6 @@ backend/data/
 /.venv/
 # Private updater for the user's Huawei server.
 /scripts/update-huawei-backend.py
+
+# Local pnpm download store.
+/.pnpm-store/
