@@ -1,5 +1,7 @@
 import { isLosslessNumber, stringify } from 'lossless-json';
 import { preferences, t } from './preferences.svelte.js';
+import { clientValue } from './client-values.js';
+import { clientTypeTitles } from './record-groups.js';
 import { entities } from './generated/catalog';
 
 export { entities };
@@ -59,7 +61,7 @@ const labels: Record<string, string> = {
   date_key: '日期',
   date_calendar: '日历类型',
   day_start_at: '日期',
-  reminder_time_minutes: '提醒时间（当日分钟）',
+  reminder_time_minutes: '提醒时间',
   lead_time_minutes: '提前提醒（分钟）',
   kind: '类型',
   meal_kind: '餐别',
@@ -75,6 +77,39 @@ const labels: Record<string, string> = {
   accuracy: '精度',
   speed: '速度',
   _media: '媒体引用',
+  mood: '心情',
+  collection_id: '集合关联',
+  collection_title: '集合',
+  option_id: '候选项关联',
+  option_title: '候选项',
+  option_detail: '候选项详情',
+  option_custom_info: '候选项补充信息',
+  option_image_asset_id: '候选项图片',
+  custom_info: '补充信息',
+  weight: '权重',
+  source_subtitle: '来源摘要',
+  source_icon: '来源图标',
+  source_occurred_at: '来源时间',
+  snapshot_json: '历史快照',
+  storage_backend: '存储位置',
+  asset_id: '素材关联',
+  width: '宽度',
+  height: '高度',
+  duration_seconds: '时长（秒）',
+  horizontal_accuracy: '水平精度',
+  horizontal_acc: '水平精度',
+  vertical_acc: '垂直精度',
+  speed_mps: '速度（米/秒）',
+  course_deg: '方向（度）',
+  distance_m: '距离（米）',
+  duration_s: '时长（秒）',
+  avg_speed_mps: '平均速度（米/秒）',
+  max_speed_mps: '最高速度（米/秒）',
+  desired_accuracy_m: '目标精度（米）',
+  motion_type: '运动方式',
+  confidence: '可信度',
+  status: '状态',
+  search_keywords: '搜索关键词',
 };
 
 export function fieldLabel(table: string, key: string): string {
@@ -118,13 +153,28 @@ export function time(value: unknown): string {
       }).format(date);
 }
 export const timezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
-export function valueText(table: string, key: string, value: unknown, present = true): string {
+export function valueText(
+  table: string,
+  key: string,
+  value: unknown,
+  present = true,
+  snapshot?: Record<string, unknown> | null,
+): string {
   if (!present) return t('missing');
   if (value === null) return t('null');
   if (value === undefined) return t('not_recorded');
   if (key.endsWith('_cents')) return money(value);
+  if (typeof value === 'string') {
+    const label = clientValue(table, key, value, snapshot);
+    if (label !== undefined) return label;
+  }
   const field = entity(table)?.fields.find((field) => field.name === key);
   if (field?.format === 'ts_ms') return time(value);
+  if (key === 'reminder_time_minutes') {
+    const minutes = integer(value);
+    if (minutes !== null && minutes >= 0n && minutes < 1440n)
+      return `${String(minutes / 60n).padStart(2, '0')}:${String(minutes % 60n).padStart(2, '0')}`;
+  }
   if (typeof value === 'boolean') return value ? t('yes') : t('no');
   if (isLosslessNumber(value)) return value.value;
   if (typeof value === 'object') return stringify(value, undefined, 2) ?? t('not_recorded');
@@ -186,4 +236,7 @@ export function dateRange(from: string, to: string): Record<string, number | und
   return { fromMs: start, toMs: end?.getTime() };
 }
 
-export const entityTitle = (table: string) => entity(table)?.titles[preferences.locale] ?? table;
+export const entityTitle = (table: string) =>
+  clientTypeTitles[table]?.[preferences.locale] ??
+  entity(table)?.titles[preferences.locale] ??
+  table;

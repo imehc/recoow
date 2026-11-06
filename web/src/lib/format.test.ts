@@ -50,3 +50,30 @@ describe('preferences and attachments', () => {
     expect(mediaReferences({ _media: 'invalid' })).toEqual([]);
   });
 });
+
+describe('client enum labels', () => {
+  it('matches mobile values in details and historical snapshots without losing unknown values', () => {
+    preferences.language = 'zh';
+    expect(valueText('bills', 'payment_method', 'wechat')).toBe('微信');
+    expect(valueText('bills', 'transaction_type', 'storedValueUse')).toBe('储值消费');
+    expect(valueText('bills', 'category', 'other', true, { transaction_type: 'income' })).toBe(
+      '其他收入',
+    );
+    expect(valueText('bills', 'category', 'other', true, { transaction_type: 'expense' })).toBe(
+      '其他',
+    );
+    expect(valueText('food_entries', 'meal_kind', 'lateNightSnack')).toBe('夜宵');
+    expect(valueText('reminder_completions', 'kind', 'makeUp')).toBe('补签');
+    expect(valueText('tracks', 'status', 'finished')).toBe('已完成');
+    expect(valueText('bills', 'payment_method', 'legacy-wallet')).toBe('legacy-wallet');
+    expect(valueText('diary_entries', 'content', 'wechat')).toBe('wechat');
+    preferences.language = 'en';
+    expect(valueText('bills', 'payment_method', 'wechat')).toBe('WeChat');
+    expect(valueText('anniversaries', 'date_calendar', 'chinese')).toBe('Lunar');
+  });
+  it('formats reminder clock time while preserving out of range legacy data', () => {
+    expect(valueText('reminders', 'reminder_time_minutes', 1200)).toBe('20:00');
+    expect(valueText('reminders', 'reminder_time_minutes', 0)).toBe('00:00');
+    expect(valueText('reminders', 'reminder_time_minutes', 1500)).toBe('1500');
+  });
+});

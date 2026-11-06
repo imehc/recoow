@@ -1,6 +1,6 @@
 <script lang="ts">
   import { DropdownMenu } from 'bits-ui';
-  import { Check, Languages, Monitor, Moon, Sun } from '@lucide/svelte';
+  import { Check, Globe, Languages, Monitor, Moon, Sun } from '@lucide/svelte';
   import { Button } from '#lib/components/ui/button/index.js';
   import { preferences, t, type Language, type Theme } from '#lib/preferences.svelte.js';
   const themes = $derived([
@@ -9,9 +9,9 @@
     { value: 'dark', label: t('dark'), icon: Moon },
   ]);
   const languages = $derived([
-    { value: 'system', label: t('browser'), mark: '◎' },
-    { value: 'zh', label: '简体中文', mark: '中' },
-    { value: 'en', label: 'English', mark: 'EN' },
+    { value: 'system', label: t('system'), icon: Globe },
+    { value: 'zh', label: '简体中文', icon: Languages },
+    { value: 'en', label: 'English', icon: Languages },
   ]);
   const selectedTheme = $derived(
     themes.find((item) => item.value === preferences.theme) ?? themes[0],
@@ -104,9 +104,7 @@
               textValue={item.label}
             >
               {#snippet children({ checked })}
-                <span class="preference-language-mark" aria-hidden="true">{item.mark}</span><span
-                  >{item.label}</span
-                ><span class="preference-check"
+                <item.icon size={17} /><span>{item.label}</span><span class="preference-check"
                   >{#if checked}<Check size={16} />{/if}</span
                 >
               {/snippet}

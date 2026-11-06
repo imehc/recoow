@@ -4,11 +4,16 @@
   import { api } from '#lib/api.js';
   import { session } from '#lib/session.svelte.js';
   import { t } from '#lib/preferences.svelte.js';
-  import { entities, entityTitle, dateRange, operationText } from '#lib/format.js';
+  import { dateRange, operationText, entityTitle } from '#lib/format.js';
   import { Button } from '#lib/components/ui/button/index.js';
   import DateRange from '#lib/components/DateRange.svelte';
   import Freshness from '#lib/components/Freshness.svelte';
   import HistoryList from '#lib/components/HistoryList.svelte';
+  import PageHeader from '#lib/components/PageHeader.svelte';
+  import SelectField from '#lib/components/SelectField.svelte';
+  import { Collapsible } from 'bits-ui';
+  import { ChevronDown } from '@lucide/svelte';
+  import { recordGroups, groupTitle } from '#lib/record-groups.js';
   import QueryStatus from '#lib/components/QueryStatus.svelte';
   let table = $state('');
   let id = $state('');
@@ -18,10 +23,14 @@
   let from = $state('');
   let to = $state('');
   let filters = $state<Record<string, string | number | undefined>>({});
+  let advancedOpen = $state(false);
   $effect(() => {
-    table = page.url.searchParams.get('table') ?? '';
-    id = page.url.searchParams.get('id') ?? '';
-    filters = { table, id: table ? id : '' };
+    const nextTable = page.url.searchParams.get('table') ?? '';
+    const nextId = page.url.searchParams.get('id') ?? '';
+    table = nextTable;
+    id = nextId;
+    advancedOpen = !!nextId;
+    filters = { table: nextTable, id: nextTable ? nextId : '' };
   });
   const devices = createQuery(() => ({
     queryKey: ['devices'],
@@ -41,18 +50,14 @@
   const events = $derived(query.data?.pages.flatMap((part) => part.events) ?? []);
 </script>
 
-<div class="page-heading">
-  <div>
-    <p class="eyebrow">{t('committed_changes')}</p>
-    <h1>{t('change_history')}</h1>
-    <p>
-      {t('see_what_changed_when_it_changed_and_which_devices_edited_and_submitted')}
-    </p>
-  </div>
-</div>
+<PageHeader
+  title={t('change_history')}
+  description={t('see_what_changed_when_it_changed_and_which_devices_edited_and_submitted')}
+/>
 {#if !session.historySupported}<div class="notice">
     {t('change_history_is_unavailable_on_this_server')}
-  </div>{:else}<section class="panel">
+  </div>{:else}
+  <section class="panel filter-panel" aria-label={t('filters')}>
     <form
       class="filters"
       onsubmit={(event) => {
@@ -67,43 +72,98 @@
         };
       }}
     >
-      <label
-        >{t('record_type')}<select aria-label={t('record_type')} bind:value={table}
-          ><option value="">{t('all')}</option>{#each entities as item (item.table)}<option
-              value={item.table}>{entityTitle(item.table)}</option
-            >{/each}</select
-        ></label
-      ><label>{t('record_id')}<input bind:value={id} disabled={!table} /></label><label
-        >{t('change')}<select aria-label={t('change')} bind:value={operation}
-          ><option value="">{t('all')}</option
-          >{#each ['insert', 'update', 'delete', 'restore'] as op (op)}<option value={op}
-              >{operationText(op)}</option
-            >{/each}</select
-        ></label
-      ><label
-        >{t('original_platform')}<select aria-label={t('original_platform')} bind:value={client}
-          ><option value="">{t('all')}</option><option value="ios">iOS App</option><option
-            value="android">Android App</option
-          ><option value="web">Web</option><option value="unknown">{t('unknown')}</option></select
-        ></label
-      ><label
-        >{t('submitting_device')}<select aria-label={t('submitting_device')} bind:value={deviceId}
-          ><option value="">{t('all')}</option
-          >{#each devices.data?.devices ?? [] as device (device.id)}<option value={device.id}
-              >{device.name || device.id}</option
-            >{/each}</select
-        ></label
-      ><DateRange bind:from bind:to /><Button type="submit" variant="outline">{t('search')}</Button>
+      <SelectField
+        label={t('record_type')}
+        bind:value={table}
+        options={[
+          { value: '', label: t('all') },
+          ...recordGroups.flatMap((group) =>
+            group.tables.map((table) => ({
+              value: table,
+              label: entityTitle(table),
+              group: groupTitle(group),
+            })),
+          ),
+        ]}
+      />
+      <SelectField
+        label={t('original_platform')}
+        bind:value={client}
+        options={[
+          { value: '', label: t('all') },
+          { value: 'ios', label: 'iOS App' },
+          { value: 'android', label: 'Android App' },
+          { value: 'web', label: 'Web' },
+          { value: 'unknown', label: t('unknown') },
+        ]}
+      />
+      <DateRange bind:from bind:to />
+      <p class="filter-hint overview-hint">{t('history_date_hint')}</p>
+      <Collapsible.Root bind:open={advancedOpen} class="advanced-filters">
+        <div class="filter-actions">
+          <Collapsible.Trigger class="advanced-toggle"
+            >{t('advanced_filters')}<ChevronDown size={14} /></Collapsible.Trigger
+          >
+          <div class="filter-buttons">
+            <Button type="submit">{t('search')}</Button><Button
+              variant="outline"
+              onclick={() => {
+                table = '';
+                id = '';
+                client = '';
+                operation = '';
+                deviceId = '';
+                from = '';
+                to = '';
+                filters = {};
+              }}>{t('reset_filters')}</Button
+            >
+          </div>
+        </div>
+        <Collapsible.Content
+          ><div class="advanced-grid">
+            <label class="form-field"
+              >{t('record_id')}<input bind:value={id} disabled={!table} /></label
+            >
+            <SelectField
+              label={t('change')}
+              bind:value={operation}
+              options={[
+                { value: '', label: t('all') },
+                ...['insert', 'update', 'delete', 'restore'].map((op) => ({
+                  value: op,
+                  label: operationText(op),
+                })),
+              ]}
+            />
+            <SelectField
+              label={t('submitting_device')}
+              bind:value={deviceId}
+              options={[
+                { value: '', label: t('all') },
+                ...(devices.data?.devices ?? []).map((device) => ({
+                  value: device.id,
+                  label: device.name || device.id,
+                })),
+              ]}
+            />
+          </div></Collapsible.Content
+        >
+      </Collapsible.Root>
     </form>
-    <div class="panel-body freshness">
-      {t('dates_filter_server_acceptance_time_changes_are_ordered_by_cloud_revisio')}
+  </section>
+  <section class="panel">
+    <div class="results-heading">
+      <h2>{t('results')}</h2>
+      <span class="result-count">{t('events_loaded', { count: events.length })}</span>
     </div>
     <QueryStatus
       pending={query.isPending}
       error={query.error}
       empty={!events.length}
       retry={() => query.refetch()}
-    />{#if events.length}<HistoryList {events} />{/if}
+    />
+    {#if events.length}<HistoryList {events} />{/if}
     <div class="table-footer">
       <Freshness at={query.dataUpdatedAt} /><Button
         variant="outline"
@@ -116,4 +176,5 @@
             : t('all_loaded')}</Button
       >
     </div>
-  </section>{/if}
+  </section>
+{/if}

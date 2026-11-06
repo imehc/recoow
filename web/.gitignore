@@ -7,3 +7,7 @@ src/lib/generated/
 !.env.example
 test-results/
 playwright-report/
+.impeccable/review/
+.impeccable/questions/
+.impeccable/mocks/
+.impeccable/config.local.json

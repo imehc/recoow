@@ -9,6 +9,7 @@
   import Freshness from '#lib/components/Freshness.svelte';
   import Fields from '#lib/components/Fields.svelte';
   import Media from '#lib/components/Media.svelte';
+  import PageHeader from '#lib/components/PageHeader.svelte';
   const table = $derived(page.params.table ?? '');
   const id = $derived(page.params.id ?? '');
   const query = createQuery(() => ({
@@ -18,13 +19,11 @@
   }));
 </script>
 
-<div class="page-heading">
-  <div>
-    <p class="eyebrow"><a href={'/records/' + table}>{entityTitle(table)}</a></p>
-    <h1>{title(query.data?.snapshot, t('record_details'))}</h1>
-    <p class="record-id">{id}</p>
-  </div>
-</div>
+<PageHeader
+  title={title(query.data?.snapshot, t('record_details'))}
+  description={entityTitle(table)}
+  back={'/records/' + table}
+/>
 <QueryStatus
   pending={query.isPending && !!entity(table)}
   error={query.error}
@@ -66,6 +65,7 @@
             >{/if}
         </div>
       </section>
+      <p class="record-id">ID: {id}</p>
       <Freshness at={query.dataUpdatedAt} />
     </aside>
   </div>{/if}

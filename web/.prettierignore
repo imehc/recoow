@@ -5,3 +5,4 @@ src/lib/generated/
 pnpm-lock.yaml
 test-results/
 playwright-report/
+.impeccable/

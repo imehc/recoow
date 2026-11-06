@@ -77,15 +77,16 @@ test('cloud cookies, offline timestamps and read-only permissions work against G
   );
   expect(writeStatus).toBe(403);
   await page.getByRole('link', { name: '查看记录', exact: true }).click();
-  await page.getByRole('link', { name: '查看这条记录的所有变化 →' }).click();
+  await page.getByRole('link', { name: '查看全部变化' }).click();
   await page.getByRole('link', { name: '查看变化', exact: true }).click();
   await expect(page.getByRole('heading', { name: '时间与来源' })).toBeVisible();
   const times = await page.locator('.field').allTextContents();
-  expect(times.find((text) => text.includes('客户端修改时间'))).not.toBe(
-    times.find((text) => text.includes('服务端接受时间')),
+  expect(times.find((text) => text.includes('修改时间'))).not.toBe(
+    times.find((text) => text.includes('云端接收时间')),
   );
-  await page.getByRole('button', { name: '退出登录' }).click();
-  await expect(page.getByRole('heading', { name: '查看你的云端记录' })).toBeVisible();
+  await page.getByRole('button', { name: '账号菜单' }).click();
+  await page.getByRole('menuitem', { name: '退出登录' }).click();
+  await expect(page.getByRole('heading', { name: '登录 recoow' })).toBeVisible();
   expect(
     (await page.context().cookies()).filter((cookie) => cookie.name === 'recoow_session'),
   ).toEqual([]);

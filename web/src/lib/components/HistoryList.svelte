@@ -2,11 +2,12 @@
   import type { ChangeEvent } from '#lib/generated/api/models/ChangeEvent.js';
   import { entityTitle, operationText, source, time } from '#lib/format.js';
   import { t } from '#lib/preferences.svelte.js';
+  import { ArrowRight } from '@lucide/svelte';
   let { events }: { events: ChangeEvent[] } = $props();
 </script>
 
 <div class="table-wrap">
-  <table>
+  <table class="data-table">
     <thead
       ><tr
         ><th>{t('record_change')}</th><th>{t('original_source')}</th><th
@@ -20,13 +21,18 @@
               >{event.title || event.id}</a
             >
             <div class="record-id">
-              {entityTitle(event.table)} · {operationText(event.operation)}
+              {entityTitle(event.table)}
+              <span class={'operation-badge ' + event.operation}
+                >{operationText(event.operation)}</span
+              >
             </div></td
-          ><td>{source(event.originalSource)}</td><td>{time(event.modifiedAtMs)}</td><td
-            >{time(event.acceptedAtMs)}</td
-          ><td
+          ><td data-label={t('original_source')}>{source(event.originalSource)}</td><td
+            data-label={t('client_modified_at')}
+            class="time-cell">{time(event.modifiedAtMs)}</td
+          ><td data-label={t('server_accepted_at')} class="time-cell">{time(event.acceptedAtMs)}</td
+          ><td class="row-action"
             ><a class="text-link" href={'/history/' + encodeURIComponent(event.eventId)}
-              >{t('view_change')}</a
+              >{t('view_change')}<ArrowRight size={14} /></a
             ></td
           ></tr
         >{/each}</tbody

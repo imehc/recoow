@@ -7,6 +7,8 @@
   import type { ECharts } from 'echarts/core';
   import { preferences, t } from '#lib/preferences.svelte.js';
   import { entityTitle } from '#lib/format.js';
+  import { Collapsible } from 'bits-ui';
+  import { ChevronDown } from '@lucide/svelte';
   use([BarChart, GridComponent, TooltipComponent, CanvasRenderer]);
   let { counts }: { counts: Record<string, number> } = $props();
   let element: HTMLDivElement;
@@ -27,16 +29,23 @@
     };
   });
   $effect(() => {
-    const color = preferences.dark ? '#9ba8bf' : '#748095';
+    const color = preferences.dark ? '#a3a3a3' : '#646b76';
     chart?.setOption({
       animation: !matchMedia('(prefers-reduced-motion: reduce)').matches,
-      grid: { left: 115, right: 35, top: 10, bottom: 25 },
-      tooltip: { trigger: 'axis' },
+      grid: { left: 100, right: 40, top: 20, bottom: 32 },
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: preferences.dark ? '#292929' : '#fff',
+        borderWidth: 0,
+        textStyle: { color: preferences.dark ? '#ededed' : '#1f2329' },
+      },
       xAxis: {
         type: 'value',
         minInterval: 1,
         axisLabel: { color },
-        splitLine: { lineStyle: { color: preferences.dark ? '#303a4e' : '#e5e9f1' } },
+        splitLine: {
+          lineStyle: { color: preferences.dark ? '#363636' : '#e5e7eb', type: 'dashed' },
+        },
       },
       yAxis: {
         type: 'category',
@@ -49,10 +58,11 @@
         {
           type: 'bar',
           data: rows.map(([, count]) => Number(count)),
-          barMaxWidth: 18,
+          barMaxWidth: 14,
+          label: { show: true, position: 'right', color, fontSize: 11 },
           itemStyle: {
-            color: preferences.dark ? '#9ba7ff' : '#5365d7',
-            borderRadius: [0, 4, 4, 0],
+            color: preferences.dark ? '#69a9ff' : '#1668dc',
+            borderRadius: [0, 3, 3, 0],
           },
         },
       ],
@@ -66,12 +76,14 @@
   role="img"
   aria-label={t('cloud_record_counts_by_entity_a_complete_data_list_is_provided_below')}
 ></div>
-<details class="panel-body">
-  <summary>{t('view_all_counts')}</summary>
-  <dl class="field-list">
-    {#each Object.entries(counts) as [table, count] (table)}<div class="field">
-        <dt>{entityTitle(table)}</dt>
-        <dd>{String(count)}</dd>
-      </div>{/each}
-  </dl>
-</details>
+<Collapsible.Root class="counts-toggle">
+  <Collapsible.Trigger>{t('view_all_counts')}<ChevronDown size={14} /></Collapsible.Trigger>
+  <Collapsible.Content>
+    <dl class="field-list">
+      {#each Object.entries(counts) as [table, count] (table)}<div class="field">
+          <dt>{entityTitle(table)}</dt>
+          <dd>{String(count)}</dd>
+        </div>{/each}
+    </dl>
+  </Collapsible.Content>
+</Collapsible.Root>

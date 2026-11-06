@@ -4,7 +4,7 @@
   let { at }: { at: number } = $props();
 </script>
 
-<p class="freshness">
-  {t('fetched_at')}
-  {time(at)} · {timezone()}<br />{t('includes_synced_cloud_data_only')}
-</p>
+{#if at > 0}<p class="freshness" title={t('includes_synced_cloud_data_only')}>
+    {t('fetched_at')}
+    {time(at)} · {timezone()}
+  </p>{/if}

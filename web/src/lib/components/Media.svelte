@@ -3,13 +3,16 @@
   import { Button } from '#lib/components/ui/button/index.js';
   import { t } from '#lib/preferences.svelte.js';
   import { mediaReferences, mediaURL } from '#lib/media.js';
-  let { snapshot }: { snapshot?: Record<string, unknown> | null } = $props();
+  let {
+    snapshot,
+    embedded = false,
+  }: { snapshot?: Record<string, unknown> | null; embedded?: boolean } = $props();
   let selected = $state('');
   let failed = $state<string[]>([]);
   const references = $derived(mediaReferences(snapshot));
 </script>
 
-{#if references.length}<section class="panel">
+{#if references.length}<section class:panel={!embedded} class:embedded-media={embedded}>
     <div class="panel-heading"><h2>{t('media')}</h2></div>
     <div class="panel-body media-grid">
       {#each references as ref (ref.key)}<div class="stack">

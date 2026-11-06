@@ -5,6 +5,9 @@
   import { session } from '#lib/session.svelte.js';
   import { t } from '#lib/preferences.svelte.js';
   import { dateRange, integer, money } from '#lib/format.js';
+  import { ChevronRight } from '@lucide/svelte';
+  import PageHeader from '#lib/components/PageHeader.svelte';
+  import { recordGroups, groupTitle } from '#lib/record-groups.js';
   import { Button } from '#lib/components/ui/button/index.js';
   import DateRange from '#lib/components/DateRange.svelte';
   import Freshness from '#lib/components/Freshness.svelte';
@@ -31,60 +34,92 @@
   );
 </script>
 
-<div class="page-heading">
-  <div>
-    <p class="eyebrow">{t('your_cloud_space_58c2d0')}</p>
-    <h1>{t('record_overview')}</h1>
-    <p>{t('explore_your_synced_records_and_how_they_changed')}</p>
-  </div>
-</div>
-<section class="panel" style="margin-bottom: 1.4rem">
+<PageHeader
+  title={t('record_overview')}
+  description={t('explore_your_synced_records_and_how_they_changed')}
+/>
+<section class="panel filter-panel">
   <form
-    class="filters"
+    class="filters overview-filters"
     onsubmit={(event) => {
       event.preventDefault();
       range = dateRange(from, to);
     }}
   >
-    <DateRange bind:from bind:to /><Button type="submit" variant="outline"
-      >{t('apply_date_range')}</Button
-    >
+    <DateRange bind:from bind:to />
+    <div class="filter-buttons">
+      <Button type="submit">{t('apply_date_range')}</Button><Button
+        variant="outline"
+        onclick={() => {
+          from = '';
+          to = '';
+          range = {};
+        }}>{t('reset_filters')}</Button
+      >
+    </div>
+    <p class="filter-hint overview-hint">
+      {t('counts_use_client_modification_dates_amounts_use_bill_dates_and_exclude')}
+    </p>
   </form>
-  <div class="panel-body freshness">
-    {t('counts_use_client_modification_time_amounts_use_the_bill_date_and_exclud')}
-  </div>
 </section>
 <QueryStatus pending={stats.isPending} error={stats.error} retry={() => stats.refetch()} />
-{#if stats.data}<div class="metrics">
-    {#each [{ label: t('total_records'), value: String(total), icon: Files }, { label: t('bill_expenses'), value: money(stats.data.billExpenseCents), icon: ArrowUpRight }, { label: t('bill_income'), value: money(stats.data.billIncomeCents), icon: ArrowDownLeft }, { label: t('stored_value_used'), value: money(stats.data.billStoredValueUseCents), icon: Wallet }] as metric (metric.label)}<div
-        class="panel metric"
+{#if stats.data}<section class="panel summary-strip" aria-label={t('record_overview')}>
+    <div class="summary-item">
+      <span class="summary-label"><Files size={16} />{t('total_records')}</span><strong
+        class="summary-value">{total.toLocaleString()}</strong
       >
-        <div class="metric-icon"><metric.icon size={19} /></div>
-        <div class="metric-label">{metric.label}</div>
-        <div class="metric-value">{metric.value}</div>
-        <div class="metric-note">{t('selected_date_range')}</div>
-      </div>{/each}
+    </div>
+    <div class="summary-item">
+      <span class="summary-label"><ArrowUpRight size={16} />{t('bill_expenses')}</span><strong
+        class="summary-value expense">{money(stats.data.billExpenseCents)}</strong
+      >
+    </div>
+    <div class="summary-item">
+      <span class="summary-label"><ArrowDownLeft size={16} />{t('bill_income')}</span><strong
+        class="summary-value income">{money(stats.data.billIncomeCents)}</strong
+      >
+    </div>
+    <div class="summary-item">
+      <span class="summary-label"><Wallet size={16} />{t('stored_value_use')}</span><strong
+        class="summary-value">{money(stats.data.billStoredValueUseCents)}</strong
+      >
+    </div>
+  </section>{/if}
+<div class="overview-grid">
+  <section class="panel">
+    <div class="panel-heading"><h2>{t('record_distribution')}</h2></div>
+    {#if stats.data && total > 0}<CountChart counts={stats.data.recordCounts} />{:else}<QueryStatus
+        pending={stats.isPending}
+        error={stats.error}
+        empty={!!stats.data}
+      />{/if}
+  </section>
+  <section class="panel">
+    <div class="panel-heading">
+      <h2>{t('recent_cloud_changes')}</h2>
+      <a class="text-link" href="/history">{t('view_all')}</a>
+    </div>
+    {#if !session.historySupported}<div class="status">
+        {t('change_history_is_unavailable_on_this_server')}
+      </div>{:else}<QueryStatus
+        pending={recent.isPending}
+        error={recent.error}
+        empty={!recent.data?.events.length}
+        retry={() => recent.refetch()}
+      />{#if recent.data}<RecentHistory events={recent.data.events} />{/if}{/if}
+  </section>
+</div>
+<section class="panel">
+  <div class="panel-heading">
+    <h2>{t('record_categories')}</h2>
+    <a class="text-link" href="/records">{t('view_all')}</a>
   </div>
-  <div class="overview-grid">
-    <section class="panel">
-      <div class="panel-heading"><h2>{t('records_by_type')}</h2></div>
-      <CountChart counts={stats.data.recordCounts} />
-    </section>
-    <section class="panel">
-      <div class="panel-heading">
-        <h2>{t('recent_cloud_changes')}</h2>
-        <a class="text-link" href="/history">{t('view_all')}</a>
-      </div>
-      {#if session.historySupported}<QueryStatus
-          pending={recent.isPending}
-          error={recent.error}
-          empty={!recent.data?.events.length}
-          retry={() => recent.refetch()}
-        />{#if recent.data?.events.length}<RecentHistory
-            events={recent.data.events}
-          />{/if}{:else}<div class="status">
-          {t('change_history_is_unavailable_on_this_server')}
-        </div>{/if}
-    </section>
+  <div class="category-links">
+    {#each recordGroups as group (group.id)}<a
+        class="category-link"
+        href={'/records/' + group.tables[0]}
+        ><span>{groupTitle(group)}</span><ChevronRight size={14} /></a
+      >{/each}
   </div>
-  <div style="margin-top: 1rem"><Freshness at={stats.dataUpdatedAt} /></div>{/if}
+</section>
+<div class="page-freshness"><Freshness at={stats.dataUpdatedAt} /></div>

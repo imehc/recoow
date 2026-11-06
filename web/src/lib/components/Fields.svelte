@@ -1,6 +1,7 @@
 <script lang="ts">
   import { entity, fieldLabel, valueText } from '#lib/format.js';
   import { t } from '#lib/preferences.svelte.js';
+  import ExpandableText from './ExpandableText.svelte';
   let {
     table,
     snapshot,
@@ -29,7 +30,9 @@
               class="text-link"
               href={'/records/media_assets/' + encodeURIComponent(value)}
               >{value} · {t('view_media')}</a
-            >{:else}{valueText(table, key, value)}{/if}
+            >{:else if typeof value === 'string' && (value.length > 500 || value.split('\n').length > 12)}<ExpandableText
+              text={valueText(table, key, value, true, snapshot)}
+            />{:else}{valueText(table, key, value, true, snapshot)}{/if}
         </dd>
       </div>{/each}
   </dl>{:else}<p class="muted">{t('no_record_snapshot')}</p>{/if}
