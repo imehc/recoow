@@ -177,18 +177,23 @@ func (storage *postgresStore) syncStateLocked(accountID string) (domain.DatasetS
 func (storage *postgresStore) Bootstrap(accountID string, request domain.BootstrapRequest) (domain.BootstrapPage, error) {
 	storage.mu.Lock()
 	defer storage.mu.Unlock()
-	state, err := storage.syncStateLocked(accountID)
-	if err != nil {
-		return domain.BootstrapPage{}, err
-	}
-	if err := service.ValidateBootstrap(state, request); err != nil {
-		return domain.BootstrapPage{}, err
-	}
 	tx, beginErr := storage.beginAccount(accountID)
 	if beginErr != nil {
 		return domain.BootstrapPage{}, beginErr
 	}
 	defer tx.Rollback()
+	var generation string
+	if err := tx.QueryRow("SELECT generation FROM sync_metadata WHERE account_id = ? FOR SHARE", accountID).Scan(&generation); err != nil {
+		return domain.BootstrapPage{}, err
+	}
+	syncState, err := sqlgen.New(tx.Tx).GetSyncState(storage.ctx, accountID)
+	if err != nil {
+		return domain.BootstrapPage{}, err
+	}
+	state := domain.DatasetState{Generation: generation, Head: syncState.Head, MinCursor: syncState.MinCursor}
+	if err := service.ValidateBootstrap(state, request); err != nil {
+		return domain.BootstrapPage{}, err
+	}
 	rows, err := tx.Query(
 		`SELECT table_name, id, snapshot, updated_at_ms, device_id, deleted_at_ms, version, data_version
 		 FROM change_log WHERE account_id = ? AND version IN

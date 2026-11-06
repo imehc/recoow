@@ -41,7 +41,7 @@ func (s *Server) handleMediaHead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p := s.st.MediaPath(d.AccountID, m.Checksum)
-	if _, err := os.Stat(p); err != nil {
+	if file, err := os.Stat(p); err != nil || file.Size() != m.Size {
 		writeError(w, http.StatusNotFound, "object not found")
 		return
 	}

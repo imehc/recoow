@@ -1,6 +1,9 @@
 package domain
 
-import "errors"
+import (
+	"encoding/json"
+	"errors"
+)
 
 var ErrResetRequired = errors.New("reset_required")
 
@@ -28,6 +31,28 @@ type BootstrapPage struct {
 	Watermark  int64    `json:"watermark"`
 	Cursor     int64    `json:"cursor"`
 	More       bool     `json:"more"`
+}
+
+// SnapshotQuery fetches immutable revisions selected from a fixed-watermark manifest.
+type SnapshotQuery struct {
+	Generation string  `json:"generation"`
+	Watermark  int64   `json:"watermark"`
+	Versions   []int64 `json:"versions"`
+}
+
+type ManifestEntry struct {
+	Change
+	Digest   string                     `json:"digest"`
+	Metadata map[string]json.RawMessage `json:"metadata"`
+}
+
+type ManifestPage struct {
+	Entries       []ManifestEntry `json:"entries"`
+	Generation    string          `json:"generation"`
+	Watermark     int64           `json:"watermark"`
+	Cursor        int64           `json:"cursor"`
+	More          bool            `json:"more"`
+	DigestVersion int             `json:"digestVersion"`
 }
 
 type MutationReceipt struct {

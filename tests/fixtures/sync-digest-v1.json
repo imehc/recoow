@@ -1,0 +1,39 @@
+[
+  {
+    "snapshot": "{}",
+    "digest": "fc7dbfb18a28b6816bc41180a1afdf45b6479756d81d68d3c4119e6fe170566f"
+  },
+  {
+    "snapshot": "{\"updated_at\":123,\"device_id\":\"phone\",\"server_version\":5,\"sync_status\":1}",
+    "digest": "fc7dbfb18a28b6816bc41180a1afdf45b6479756d81d68d3c4119e6fe170566f"
+  },
+  {
+    "snapshot": "{\"a\":1,\"b\":true,\"c\":null,\"text\":\"中文/😀\\n\\\"\"}",
+    "digest": "de9e763d127f445aa91a108b1d60cb6f31fe1822a3f8aa3d758e1991ccba3a53"
+  },
+  {
+    "snapshot": "{\"c\":null,\"text\":\"中文/😀\\n\\\"\",\"b\":true,\"a\":1.0}",
+    "digest": "de9e763d127f445aa91a108b1d60cb6f31fe1822a3f8aa3d758e1991ccba3a53"
+  },
+  {
+    "snapshot": "{\"values\":[-0.0,1e3,-1.2300e-4,9007199254740993,9223372036854775807],\"nested\":{\"future\":false}}",
+    "digest": "67f5bf4e4f810337a80733117e304e8075575a5adbe883850805300540bca139"
+  },
+  {
+    "snapshot": "{\"😀\":1,\"\\ue000\":2,\"𐀀\":3,\"é\":4,\"é\":5}",
+    "digest": "8c575ed1c7cbdfca0f587f684d155ac8a2a6a4416599479c627f53caa4c44141",
+    "swiftComparable": false
+  },
+  {
+    "snapshot": "{\"optional\":null}",
+    "digest": "801cd1bd60d815b9a0a8be619cb1398fade94b5433a58653673232d227158efd"
+  },
+  {
+    "snapshot": "{\"future\":{\"nested\":[{},[],null,\"a:b{c}\"]}}",
+    "digest": "7c68f2624a1f68eae08e4a99df35c7cb87d280c262a87723574b202d2f41a8aa"
+  },
+  {
+    "snapshot": "{\"😀\":1,\"\\ue000\":2,\"𐀀\":3,\"é\":4}",
+    "digest": "398310e4bf92fe679bf191c76474b98130d6cdadd17f80f55ba2c1587eae4d68"
+  }
+]

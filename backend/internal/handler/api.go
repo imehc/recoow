@@ -87,6 +87,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/sync/changes", s.authRequired(http.HandlerFunc(s.handlePull)))
 	mux.Handle("GET /api/sync/capabilities", s.authRequired(http.HandlerFunc(s.handleCapabilities)))
 	mux.Handle("GET /api/sync/snapshots", s.authRequired(http.HandlerFunc(s.handleBootstrap)))
+	mux.Handle("GET /api/sync/manifests", s.authRequired(http.HandlerFunc(s.handleManifest)))
+	mux.Handle("POST /api/sync/snapshot-queries", s.authRequired(http.HandlerFunc(s.handleSnapshotQuery)))
 	mux.Handle("DELETE /api/sync/dataset", s.authRequired(s.ownerOnly(http.HandlerFunc(s.handleClearDataset))))
 	mux.Handle("GET /api/exports", s.authRequired(http.HandlerFunc(s.handleExport)))
 	mux.Handle("GET /api/exports/sql", s.authRequired(http.HandlerFunc(s.handleExportSQL)))
