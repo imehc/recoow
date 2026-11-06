@@ -7,11 +7,12 @@ package sqlgen
 
 import (
 	"context"
+	"encoding/json"
 )
 
 const createDevice = `-- name: CreateDevice :exec
-INSERT INTO devices (id, account_id, name, token_hash, is_owner, created_at, last_seen_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO devices (id, account_id, name, token_hash, is_owner, created_at, last_seen_at, profile)
+VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, 'null'::jsonb))
 `
 
 type CreateDeviceParams struct {
@@ -22,6 +23,7 @@ type CreateDeviceParams struct {
 	IsOwner    int64
 	CreatedAt  string
 	LastSeenAt string
+	Profile    interface{}
 }
 
 func (q *Queries) CreateDevice(ctx context.Context, arg CreateDeviceParams) error {
@@ -33,6 +35,7 @@ func (q *Queries) CreateDevice(ctx context.Context, arg CreateDeviceParams) erro
 		arg.IsOwner,
 		arg.CreatedAt,
 		arg.LastSeenAt,
+		arg.Profile,
 	)
 	return err
 }
@@ -50,7 +53,7 @@ func (q *Queries) DeleteDevice(ctx context.Context, id string) (int64, error) {
 }
 
 const getDevice = `-- name: GetDevice :one
-SELECT id, account_id, name, token_hash, is_owner, created_at, last_seen_at FROM devices WHERE id = $1
+SELECT id, account_id, name, token_hash, is_owner, created_at, last_seen_at, profile FROM devices WHERE id = $1
 `
 
 func (q *Queries) GetDevice(ctx context.Context, id string) (Device, error) {
@@ -64,12 +67,13 @@ func (q *Queries) GetDevice(ctx context.Context, id string) (Device, error) {
 		&i.IsOwner,
 		&i.CreatedAt,
 		&i.LastSeenAt,
+		&i.Profile,
 	)
 	return i, err
 }
 
 const getDeviceByTokenHash = `-- name: GetDeviceByTokenHash :one
-SELECT id, account_id, name, token_hash, is_owner, created_at, last_seen_at FROM devices WHERE token_hash = $1
+SELECT id, account_id, name, token_hash, is_owner, created_at, last_seen_at, profile FROM devices WHERE token_hash = $1
 `
 
 func (q *Queries) GetDeviceByTokenHash(ctx context.Context, tokenHash string) (Device, error) {
@@ -83,12 +87,13 @@ func (q *Queries) GetDeviceByTokenHash(ctx context.Context, tokenHash string) (D
 		&i.IsOwner,
 		&i.CreatedAt,
 		&i.LastSeenAt,
+		&i.Profile,
 	)
 	return i, err
 }
 
 const listDevices = `-- name: ListDevices :many
-SELECT id, account_id, name, token_hash, is_owner, created_at, last_seen_at FROM devices
+SELECT id, account_id, name, token_hash, is_owner, created_at, last_seen_at, profile FROM devices
 WHERE account_id = $1 ORDER BY created_at, id
 `
 
@@ -109,6 +114,7 @@ func (q *Queries) ListDevices(ctx context.Context, accountID string) ([]Device, 
 			&i.IsOwner,
 			&i.CreatedAt,
 			&i.LastSeenAt,
+			&i.Profile,
 		); err != nil {
 			return nil, err
 		}
@@ -134,6 +140,31 @@ type TouchDeviceParams struct {
 
 func (q *Queries) TouchDevice(ctx context.Context, arg TouchDeviceParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, touchDevice, arg.LastSeenAt, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const updateDeviceProfile = `-- name: UpdateDeviceProfile :execrows
+UPDATE devices SET profile = $1, name = CASE WHEN $2::text = '' THEN name ELSE $2::text END
+WHERE id = $3 AND account_id = $4
+`
+
+type UpdateDeviceProfileParams struct {
+	Profile   json.RawMessage
+	Name      string
+	ID        string
+	AccountID string
+}
+
+func (q *Queries) UpdateDeviceProfile(ctx context.Context, arg UpdateDeviceProfileParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateDeviceProfile,
+		arg.Profile,
+		arg.Name,
+		arg.ID,
+		arg.AccountID,
+	)
 	if err != nil {
 		return 0, err
 	}

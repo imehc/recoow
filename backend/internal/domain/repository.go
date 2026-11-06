@@ -24,7 +24,8 @@ type Store interface {
 	GetAccount(id string) (Account, error)
 	GetAccountByRecoveryKeyHash(recoveryKeyHash []byte) (Account, error)
 	CountAccounts() (int, error)
-	CreateDevice(accountID, name string, tokenHash []byte, isOwner bool) (Device, error)
+	CreateDevice(accountID, name string, tokenHash []byte, isOwner bool, profile ...DeviceProfile) (Device, error)
+	UpdateDeviceProfile(accountID, deviceID, name string, profile DeviceProfile) error
 	GetDeviceByTokenHash(tokenHash []byte) (Device, error)
 	GetDevice(id string) (Device, error)
 	ListDevices(accountID string) ([]Device, error)

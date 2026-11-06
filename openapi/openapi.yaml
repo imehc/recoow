@@ -30,7 +30,8 @@ paths:
     get:
       operationId: listChangeEvents
       summary: 查看已提交到云端的业务变更
-      tags: [History]
+      tags:
+      - History
       security:
       - deviceToken: []
       - sessionToken: []
@@ -38,46 +39,66 @@ paths:
       parameters:
       - name: cursor
         in: query
-        schema: {type: string}
+        schema:
+          type: string
         description: 账号、数据集世代、查询版本与筛选条件绑定的分页游标，后续页保留原筛选条件。
       - name: generation
         in: query
-        schema: {type: string}
+        schema:
+          type: string
       - name: limit
         in: query
-        schema: {type: integer, minimum: 1, maximum: 200, default: 50}
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
       - name: table
         in: query
-        schema: {type: string}
+        schema:
+          type: string
       - name: id
         in: query
-        schema: {type: string, maxLength: 200}
+        schema:
+          type: string
+          maxLength: 200
         description: 记录 ID，必须与 table 一起提供。
       - name: operation
         in: query
-        schema: {$ref: '#/components/schemas/HistoryOperation'}
+        schema:
+          $ref: '#/components/schemas/HistoryOperation'
       - name: client
         in: query
-        schema: {$ref: '#/components/schemas/ClientType'}
+        schema:
+          $ref: '#/components/schemas/ClientType'
         description: 原始修改平台，不是本次提交平台。
       - name: deviceId
         in: query
-        schema: {type: string, maxLength: 200}
+        schema:
+          type: string
+          maxLength: 200
         description: 本次鉴权提交设备的服务端 ID。
       - name: fromMs
         in: query
-        schema: {type: integer, format: int64, minimum: 0}
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
         description: 服务端接受时间的包含下界；缺少该时间的旧历史不匹配时间筛选。
       - name: toMs
         in: query
-        schema: {type: integer, format: int64, minimum: 0}
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
         description: 服务端接受时间的不包含上界。
       responses:
         '200':
           description: 按云端修订顺序倒序分页，列表只包含事件摘要。
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/ChangeEventPage'}
+              schema:
+                $ref: '#/components/schemas/ChangeEventPage'
         '400':
           description: 无效筛选或游标
         '401':
@@ -88,7 +109,8 @@ paths:
     get:
       operationId: getChangeEvent
       summary: 查看一次云端变更的来源、时间与字段差异
-      tags: [History]
+      tags:
+      - History
       security:
       - deviceToken: []
       - sessionToken: []
@@ -97,17 +119,50 @@ paths:
       - name: eventId
         in: path
         required: true
-        schema: {type: string}
+        schema:
+          type: string
       responses:
         '200':
           description: 对比提交前的云端版本与最终提交版本，不使用当前记录替代历史快照。
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/ChangeEventDetail'}
+              schema:
+                $ref: '#/components/schemas/ChangeEventDetail'
         '401':
           description: 凭据无效
         '404':
           description: 事件不存在或不属于当前账号
+  /api/devices/current/profile:
+    put:
+      operationId: updateCurrentDeviceProfile
+      summary: 登记当前鉴权设备的来源资料
+      description: 仅更新当前设备元数据，不授予写权限；客户端先检查 device_profiles_v1 能力。
+      security:
+      - deviceToken: []
+      - sessionToken: []
+      - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceProfileRequest'
+      responses:
+        '200':
+          description: 已登记
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required:
+                - ok
+        '400':
+          description: 无效资料
+        '401':
+          description: 未鉴权
   /api/devices:
     get:
       operationId: listDevices
@@ -458,6 +513,32 @@ paths:
       summary: initAccount
       tags:
       - Authentication
+      parameters:
+      - name: X-Recoow-Client
+        in: header
+        description: 此次请求的客户端类型，不参与鉴权
+        schema:
+          type: string
+      - name: X-Recoow-App-Version
+        in: header
+        description: 此次请求的应用版本
+        schema:
+          type: string
+      - name: X-Recoow-OS
+        in: header
+        description: 此次请求的运行系统
+        schema:
+          type: string
+      - name: X-Recoow-OS-Version
+        in: header
+        description: 此次请求的系统版本
+        schema:
+          type: string
+      - name: X-Recoow-Device-Id
+        in: header
+        description: 当前安装的本地来源标识，不是服务端设备 ID
+        schema:
+          type: string
       responses:
         '201':
           description: 成功
@@ -502,6 +583,32 @@ paths:
       summary: recoverAccount
       tags:
       - Authentication
+      parameters:
+      - name: X-Recoow-Client
+        in: header
+        description: 此次请求的客户端类型，不参与鉴权
+        schema:
+          type: string
+      - name: X-Recoow-App-Version
+        in: header
+        description: 此次请求的应用版本
+        schema:
+          type: string
+      - name: X-Recoow-OS
+        in: header
+        description: 此次请求的运行系统
+        schema:
+          type: string
+      - name: X-Recoow-OS-Version
+        in: header
+        description: 此次请求的系统版本
+        schema:
+          type: string
+      - name: X-Recoow-Device-Id
+        in: header
+        description: 当前安装的本地来源标识，不是服务端设备 ID
+        schema:
+          type: string
       responses:
         '201':
           description: 成功
@@ -546,6 +653,32 @@ paths:
       summary: pairDevice
       tags:
       - Authentication
+      parameters:
+      - name: X-Recoow-Client
+        in: header
+        description: 此次请求的客户端类型，不参与鉴权
+        schema:
+          type: string
+      - name: X-Recoow-App-Version
+        in: header
+        description: 此次请求的应用版本
+        schema:
+          type: string
+      - name: X-Recoow-OS
+        in: header
+        description: 此次请求的运行系统
+        schema:
+          type: string
+      - name: X-Recoow-OS-Version
+        in: header
+        description: 此次请求的系统版本
+        schema:
+          type: string
+      - name: X-Recoow-Device-Id
+        in: header
+        description: 当前安装的本地来源标识，不是服务端设备 ID
+        schema:
+          type: string
       responses:
         '201':
           description: 成功
@@ -961,6 +1094,32 @@ paths:
       summary: registerUser
       tags:
       - Authentication
+      parameters:
+      - name: X-Recoow-Client
+        in: header
+        description: 此次请求的客户端类型，不参与鉴权
+        schema:
+          type: string
+      - name: X-Recoow-App-Version
+        in: header
+        description: 此次请求的应用版本
+        schema:
+          type: string
+      - name: X-Recoow-OS
+        in: header
+        description: 此次请求的运行系统
+        schema:
+          type: string
+      - name: X-Recoow-OS-Version
+        in: header
+        description: 此次请求的系统版本
+        schema:
+          type: string
+      - name: X-Recoow-Device-Id
+        in: header
+        description: 当前安装的本地来源标识，不是服务端设备 ID
+        schema:
+          type: string
       responses:
         '201':
           description: 成功
@@ -1052,6 +1211,32 @@ paths:
       summary: login
       tags:
       - Authentication
+      parameters:
+      - name: X-Recoow-Client
+        in: header
+        description: 此次请求的客户端类型，不参与鉴权
+        schema:
+          type: string
+      - name: X-Recoow-App-Version
+        in: header
+        description: 此次请求的应用版本
+        schema:
+          type: string
+      - name: X-Recoow-OS
+        in: header
+        description: 此次请求的运行系统
+        schema:
+          type: string
+      - name: X-Recoow-OS-Version
+        in: header
+        description: 此次请求的系统版本
+        schema:
+          type: string
+      - name: X-Recoow-Device-Id
+        in: header
+        description: 当前安装的本地来源标识，不是服务端设备 ID
+        schema:
+          type: string
       responses:
         '200':
           description: 成功
@@ -4989,20 +5174,26 @@ components:
     ClientHeader:
       name: X-Recoow-Client
       in: header
-      schema: {$ref: '#/components/schemas/ClientType'}
+      schema:
+        $ref: '#/components/schemas/ClientType'
       description: 此次请求的提交平台，缺省为 unknown；鉴权 Web 会话始终记为 web。
     AppVersionHeader:
       name: X-Recoow-App-Version
       in: header
-      schema: {type: string, maxLength: 80}
+      schema:
+        type: string
+        maxLength: 80
     OSHeader:
       name: X-Recoow-OS
       in: header
-      schema: {$ref: '#/components/schemas/OperatingSystem'}
+      schema:
+        $ref: '#/components/schemas/OperatingSystem'
     OSVersionHeader:
       name: X-Recoow-OS-Version
       in: header
-      schema: {type: string, maxLength: 80}
+      schema:
+        type: string
+        maxLength: 80
   securitySchemes:
     deviceToken:
       type: http
@@ -8542,6 +8733,8 @@ components:
     Device:
       type: object
       properties:
+        profile:
+          $ref: '#/components/schemas/DeviceProfile'
         id:
           type: string
         name:
@@ -8589,59 +8782,128 @@ components:
       - minCursor
     ClientType:
       type: string
-      enum: [ios, android, web, unknown]
+      enum:
+      - ios
+      - android
+      - web
+      - unknown
     OperatingSystem:
       type: string
-      enum: [ios, android, macos, windows, linux, unknown]
+      enum:
+      - ios
+      - android
+      - macos
+      - windows
+      - linux
+      - unknown
     ClientEnvironment:
       type: object
       description: 客户端声明的运行环境，仅用于来源展示，不参与鉴权。
       properties:
-        client: {$ref: '#/components/schemas/ClientType'}
-        os: {$ref: '#/components/schemas/OperatingSystem'}
-        appVersion: {type: string, maxLength: 80}
-        osVersion: {type: string, maxLength: 80}
-      required: [client, os]
+        client:
+          $ref: '#/components/schemas/ClientType'
+        os:
+          $ref: '#/components/schemas/OperatingSystem'
+        appVersion:
+          type: string
+          maxLength: 80
+        osVersion:
+          type: string
+          maxLength: 80
+      required:
+      - client
+      - os
+    DeviceProfile:
+      allOf:
+      - $ref: '#/components/schemas/ClientEnvironment'
+      - type: object
+        properties:
+          localDeviceId:
+            type: string
+            maxLength: 200
+      description: 当前安装的本地来源标识，不是鉴权凭据；账号内有唯一匹配时可关联历史。
+    DeviceProfileRequest:
+      allOf:
+      - $ref: '#/components/schemas/DeviceProfile'
+      - type: object
+        properties:
+          deviceName:
+            type: string
+            maxLength: 200
     ChangeOrigin:
       allOf:
       - $ref: '#/components/schemas/ClientEnvironment'
       - type: object
         properties:
-          deviceId: {type: string, maxLength: 200}
-          deviceName: {type: string, maxLength: 200}
-        required: [deviceId]
+          deviceId:
+            type: string
+            maxLength: 200
+          deviceName:
+            type: string
+            maxLength: 200
+        required:
+        - deviceId
       description: 随 mutation 冻结的原始修改来源；deviceId 必须与变更信封一致，不等同于鉴权设备 ID。
     SubmissionSource:
       allOf:
       - $ref: '#/components/schemas/ClientEnvironment'
       - type: object
         properties:
-          deviceId: {type: string}
-          deviceName: {type: string}
-          sessionId: {type: string}
-        required: [deviceId, deviceName]
+          deviceId:
+            type: string
+          deviceName:
+            type: string
+          sessionId:
+            type: string
+        required:
+        - deviceId
+        - deviceName
       description: 服务端从鉴权上下文获取的提交身份及此次请求的环境资料，按事件保存快照。
     HistoryOperation:
       type: string
-      enum: [insert, update, delete, restore]
+      enum:
+      - insert
+      - update
+      - delete
+      - restore
     HistoryMethod:
       type: string
-      enum: [normal, automatic_merge, manual_resolution, system, unknown]
+      enum:
+      - normal
+      - automatic_merge
+      - manual_resolution
+      - system
+      - unknown
     ChangeEvent:
       type: object
       properties:
-        eventId: {type: string}
-        generation: {type: string}
-        version: {type: integer, format: int64}
-        previousVersion: {type: integer, format: int64}
-        table: {type: string}
-        id: {type: string}
-        title: {type: string}
-        operation: {$ref: '#/components/schemas/HistoryOperation'}
-        method: {$ref: '#/components/schemas/HistoryMethod'}
-        operationId: {type: string}
-        triggerEventId: {type: string, nullable: true}
-        mutationId: {type: string}
+        eventId:
+          type: string
+        generation:
+          type: string
+        version:
+          type: integer
+          format: int64
+        previousVersion:
+          type: integer
+          format: int64
+        table:
+          type: string
+        id:
+          type: string
+        title:
+          type: string
+        operation:
+          $ref: '#/components/schemas/HistoryOperation'
+        method:
+          $ref: '#/components/schemas/HistoryMethod'
+        operationId:
+          type: string
+        triggerEventId:
+          type: string
+          nullable: true
+        mutationId:
+          type: string
         modifiedAtMs:
           type: integer
           format: int64
@@ -8652,58 +8914,121 @@ components:
           format: int64
           nullable: true
           description: 服务端接受此修订的时间，事务成功后可见；旧历史缺少此值时为空。
+        originalRegisteredDeviceId:
+          type: string
+          nullable: true
+          description: 提交时在当前账号内唯一匹配的登记设备 ID；来源声明不是鉴权证明，未知或重复匹配时为空。
         originalSource:
-          allOf: [{$ref: '#/components/schemas/ChangeOrigin'}]
+          allOf:
+          - $ref: '#/components/schemas/ChangeOrigin'
           nullable: true
         submission:
-          allOf: [{$ref: '#/components/schemas/SubmissionSource'}]
+          allOf:
+          - $ref: '#/components/schemas/SubmissionSource'
           nullable: true
-      required: [eventId, generation, version, previousVersion, table, id, title, operation, method, operationId, triggerEventId, modifiedAtMs, acceptedAtMs, originalSource, submission]
+      required:
+      - eventId
+      - generation
+      - version
+      - previousVersion
+      - table
+      - id
+      - title
+      - operation
+      - method
+      - operationId
+      - triggerEventId
+      - modifiedAtMs
+      - acceptedAtMs
+      - originalSource
+      - submission
     ChangeEventRef:
       type: object
       properties:
-        eventId: {type: string}
-        version: {type: integer, format: int64}
-        acceptedAtMs: {type: integer, format: int64}
-      required: [eventId, version, acceptedAtMs]
+        eventId:
+          type: string
+        version:
+          type: integer
+          format: int64
+        acceptedAtMs:
+          type: integer
+          format: int64
+      required:
+      - eventId
+      - version
+      - acceptedAtMs
     ChangeEventPage:
       type: object
       properties:
         events:
           type: array
-          items: {$ref: '#/components/schemas/ChangeEvent'}
-        generation: {type: string}
-        watermark: {type: integer, format: int64}
-        more: {type: boolean}
-        nextCursor: {type: string, nullable: true}
-      required: [events, generation, watermark, more, nextCursor]
+          items:
+            $ref: '#/components/schemas/ChangeEvent'
+        generation:
+          type: string
+        watermark:
+          type: integer
+          format: int64
+        more:
+          type: boolean
+        nextCursor:
+          type: string
+          nullable: true
+      required:
+      - events
+      - generation
+      - watermark
+      - more
+      - nextCursor
     FieldChange:
       type: object
       properties:
-        field: {type: string}
-        beforePresent: {type: boolean}
-        afterPresent: {type: boolean}
-        beforeValue: {nullable: true}
-        afterValue: {nullable: true}
-      required: [field, beforePresent, afterPresent, beforeValue, afterValue]
+        field:
+          type: string
+        beforePresent:
+          type: boolean
+        afterPresent:
+          type: boolean
+        beforeValue:
+          nullable: true
+        afterValue:
+          nullable: true
+      required:
+      - field
+      - beforePresent
+      - afterPresent
+      - beforeValue
+      - afterValue
     ChangeEventDetail:
       type: object
       properties:
-        event: {$ref: '#/components/schemas/ChangeEvent'}
+        event:
+          $ref: '#/components/schemas/ChangeEvent'
         before:
-          allOf: [{$ref: '#/components/schemas/Row'}]
+          allOf:
+          - $ref: '#/components/schemas/Row'
           nullable: true
-        after: {$ref: '#/components/schemas/Row'}
+        after:
+          $ref: '#/components/schemas/Row'
         related:
           type: array
-          items: {$ref: '#/components/schemas/ChangeEvent'}
+          items:
+            $ref: '#/components/schemas/ChangeEvent'
         changes:
           type: array
-          items: {$ref: '#/components/schemas/FieldChange'}
-      required: [event, before, after, related, changes]
+          items:
+            $ref: '#/components/schemas/FieldChange'
+      required:
+      - event
+      - before
+      - after
+      - related
+      - changes
     SessionAccess:
       type: string
-      enum: [read_only, read_write]
+      enum:
+      - read_only
+      - read_write
       description: 由服务端授权的会话访问范围。登录默认只读，客户端和 Header 不能开启写权限。
     SyncCapabilities:
       type: object
@@ -8720,8 +9045,9 @@ components:
             type: integer
         features:
           type: array
-          items: {type: string}
-          description: change_history_v1 提供变更查询及回执事件关联；mutation_origin_v1 接受冻结的原始来源资料，新客户端发送 origin 前须检查能力。
+          items:
+            type: string
+          description: change_history_v1 提供变更查询及回执事件关联；mutation_origin_v1 接受冻结的原始来源资料，新客户端发送 origin 前须检查能力；device_profiles_v1 支持登记当前设备资料。
       required:
       - protocolVersion
       - accountId
@@ -8780,7 +9106,10 @@ components:
           format: int64
         operation:
           type: string
-          enum: [insert, update, delete]
+          enum:
+          - insert
+          - update
+          - delete
         updatedAtMs:
           type: integer
           format: int64
@@ -8802,7 +9131,13 @@ components:
           description: 摘要排除的四个顶层传输字段，保留字段缺省和 null 的区别。
     SyncManifestPage:
       type: object
-      required: [entries, generation, watermark, cursor, more, digestVersion]
+      required:
+      - entries
+      - generation
+      - watermark
+      - cursor
+      - more
+      - digestVersion
       properties:
         entries:
           type: array
@@ -8820,10 +9155,14 @@ components:
           type: boolean
         digestVersion:
           type: integer
-          enum: [1]
+          enum:
+          - 1
     SyncSnapshotQuery:
       type: object
-      required: [generation, watermark, versions]
+      required:
+      - generation
+      - watermark
+      - versions
       properties:
         generation:
           type: string
@@ -8842,7 +9181,10 @@ components:
             minimum: 1
     SyncSnapshotQueryResponse:
       type: object
-      required: [entries, generation, watermark]
+      required:
+      - entries
+      - generation
+      - watermark
       properties:
         entries:
           type: array
@@ -8909,7 +9251,9 @@ components:
           format: int64
         resolution:
           type: string
-          enum: [local, remote]
+          enum:
+          - local
+          - remote
           description: 仅用于人工确认冲突；选择争议字段或账单结算组，保留双方独立修改。缺少共同基础或删除冲突时选择整条记录。
         expectedVersion:
           type: integer
@@ -8964,7 +9308,8 @@ components:
       properties:
         events:
           type: array
-          items: {$ref: '#/components/schemas/ChangeEventRef'}
+          items:
+            $ref: '#/components/schemas/ChangeEventRef'
           description: 实际提交的主修订及派生修订关联；幂等重试返回原事件和时间，无变化或失败时省略。
         table:
           type: string
@@ -9100,7 +9445,8 @@ components:
     LoginResponse:
       type: object
       properties:
-        access: {$ref: '#/components/schemas/SessionAccess'}
+        access:
+          $ref: '#/components/schemas/SessionAccess'
         userId:
           type: string
         username:
@@ -9218,7 +9564,9 @@ components:
           additionalProperties: true
         resolution:
           type: string
-          enum: [local, remote]
+          enum:
+          - local
+          - remote
           description: 人工确认时选择争议内容，需同时提供 expectedVersion。
         expectedVersion:
           type: integer
@@ -9243,7 +9591,9 @@ components:
         dataVersion: *id024
         resolution:
           type: string
-          enum: [local, remote]
+          enum:
+          - local
+          - remote
           description: 人工确认时选择争议内容，需同时提供 expectedVersion。
         expectedVersion:
           type: integer

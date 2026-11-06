@@ -74,13 +74,14 @@ type Account struct {
 // 这里的 device_id 由服务端签发且具权威性，客户端上报的 device_id
 // （用于 LWW 平票）只出现在每次变更里，绝不用于鉴权。
 type Device struct {
-	ID         string    `json:"id"`
-	AccountID  string    `json:"account_id"`
-	Name       string    `json:"name"`
-	TokenHash  []byte    `json:"token_hash"`
-	IsOwner    bool      `json:"is_owner"`
-	CreatedAt  time.Time `json:"created_at"`
-	LastSeenAt time.Time `json:"last_seen_at"`
+	Profile    *DeviceProfile `json:"profile,omitempty"`
+	ID         string         `json:"id"`
+	AccountID  string         `json:"account_id"`
+	Name       string         `json:"name"`
+	TokenHash  []byte         `json:"token_hash"`
+	IsOwner    bool           `json:"is_owner"`
+	CreatedAt  time.Time      `json:"created_at"`
+	LastSeenAt time.Time      `json:"last_seen_at"`
 }
 
 // PushItem 表示一条基于已确认版本的客户端变更。

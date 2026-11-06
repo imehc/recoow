@@ -151,22 +151,32 @@ func deviceModel(record sqlgen.Device, err error) (domain.Device, error) {
 		return domain.Device{}, err
 	}
 	seen, err := parseRFC3339(record.LastSeenAt)
-	return domain.Device{ID: record.ID, AccountID: record.AccountID, Name: record.Name, TokenHash: hash, IsOwner: record.IsOwner != 0, CreatedAt: created, LastSeenAt: seen}, err
+	var profile *domain.DeviceProfile
+	if len(record.Profile) > 0 {
+		if decodeErr := json.Unmarshal(record.Profile, &profile); decodeErr != nil {
+			return domain.Device{}, decodeErr
+		}
+	}
+	return domain.Device{Profile: profile, ID: record.ID, AccountID: record.AccountID, Name: record.Name, TokenHash: hash, IsOwner: record.IsOwner != 0, CreatedAt: created, LastSeenAt: seen}, err
 }
-func (s *postgresStore) CreateDevice(accountID, name string, tokenHash []byte, owner bool) (domain.Device, error) {
+func (s *postgresStore) CreateDevice(accountID, name string, tokenHash []byte, owner bool, profiles ...domain.DeviceProfile) (domain.Device, error) {
 	if err := requireAccountLocked(s.db, s.ctx, accountID); err != nil {
 		return domain.Device{}, err
 	}
+	profile, raw, err := deviceProfile(profiles)
+	if err != nil {
+		return domain.Device{}, err
+	}
 	now := time.Now().UTC()
-	record := sqlgen.CreateDeviceParams{ID: newID(), AccountID: accountID, Name: name, TokenHash: hexHash(tokenHash), IsOwner: int64(boolInt(owner)), CreatedAt: rfc3339(now), LastSeenAt: rfc3339(now)}
-	err := sqlgen.New(s.db.DB).CreateDevice(s.ctx, record)
+	record := sqlgen.CreateDeviceParams{Profile: raw, ID: newID(), AccountID: accountID, Name: name, TokenHash: hexHash(tokenHash), IsOwner: int64(boolInt(owner)), CreatedAt: rfc3339(now), LastSeenAt: rfc3339(now)}
+	err = sqlgen.New(s.db.DB).CreateDevice(s.ctx, record)
 	if errors.Is(identityError(err), domain.ErrConflict) {
 		return domain.Device{}, domain.ErrDeviceExists
 	}
 	if err != nil {
 		return domain.Device{}, err
 	}
-	return domain.Device{ID: record.ID, AccountID: accountID, Name: name, TokenHash: tokenHash, IsOwner: owner, CreatedAt: now, LastSeenAt: now}, nil
+	return domain.Device{Profile: profile, ID: record.ID, AccountID: accountID, Name: name, TokenHash: tokenHash, IsOwner: owner, CreatedAt: now, LastSeenAt: now}, nil
 }
 func (s *postgresStore) GetDeviceByTokenHash(hash []byte) (domain.Device, error) {
 	return deviceModel(sqlgen.New(s.db.DB).GetDeviceByTokenHash(s.ctx, hexHash(hash)))

@@ -81,23 +81,24 @@ type Bill struct {
 }
 
 type ChangeEvent struct {
-	EventID         string
-	AccountID       string
-	Generation      string
-	Version         int64
-	PreviousVersion int64
-	TableName       string
-	ID              string
-	Title           string
-	Operation       string
-	Method          string
-	OperationID     string
-	TriggerEventID  sql.NullString
-	MutationID      sql.NullString
-	ModifiedAtMs    sql.NullInt64
-	AcceptedAtMs    sql.NullInt64
-	OriginalSource  json.RawMessage
-	Submission      json.RawMessage
+	EventID                    string
+	AccountID                  string
+	Generation                 string
+	Version                    int64
+	PreviousVersion            int64
+	TableName                  string
+	ID                         string
+	Title                      string
+	Operation                  string
+	Method                     string
+	OperationID                string
+	TriggerEventID             sql.NullString
+	MutationID                 sql.NullString
+	ModifiedAtMs               sql.NullInt64
+	AcceptedAtMs               sql.NullInt64
+	OriginalSource             json.RawMessage
+	Submission                 json.RawMessage
+	OriginalRegisteredDeviceID sql.NullString
 }
 
 type ChangeLog struct {
@@ -190,6 +191,7 @@ type Device struct {
 	IsOwner    int64
 	CreatedAt  string
 	LastSeenAt string
+	Profile    json.RawMessage
 }
 
 type DevicePairingCode struct {

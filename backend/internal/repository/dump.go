@@ -70,9 +70,17 @@ func writeSQLDump(w io.Writer, d dumpData) error {
 		}
 	}
 	for _, dv := range devices {
-		if _, err := fmt.Fprintf(w, "INSERT INTO devices (id, account_id, name, token_hash, is_owner, created_at, last_seen_at) VALUES (%s, %s, %s, %s, %d, %s, %s);\n",
+		profile := "'null'::jsonb"
+		if dv.Profile != nil {
+			raw, err := json.Marshal(dv.Profile)
+			if err != nil {
+				return err
+			}
+			profile = sqlStr(string(raw))
+		}
+		if _, err := fmt.Fprintf(w, "INSERT INTO devices (id, account_id, name, token_hash, is_owner, created_at, last_seen_at, profile) VALUES (%s, %s, %s, %s, %d, %s, %s, %s);\n",
 			sqlStr(dv.ID), sqlStr(dv.AccountID), sqlStr(dv.Name), sqlStr(hex.EncodeToString(dv.TokenHash)),
-			boolInt(dv.IsOwner), sqlStr(rfc3339(dv.CreatedAt)), sqlStr(rfc3339(dv.LastSeenAt))); err != nil {
+			boolInt(dv.IsOwner), sqlStr(rfc3339(dv.CreatedAt)), sqlStr(rfc3339(dv.LastSeenAt)), profile); err != nil {
 			return err
 		}
 	}

@@ -101,7 +101,7 @@ func (s *memoryStore) CountAccounts() (int, error) {
 	return len(s.accounts), nil
 }
 
-func (s *memoryStore) CreateDevice(accountID, name string, tokenHash []byte, isOwner bool) (domain.Device, error) {
+func (s *memoryStore) CreateDevice(accountID, name string, tokenHash []byte, isOwner bool, profiles ...domain.DeviceProfile) (domain.Device, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, ok := s.accounts[accountID]; !ok {
@@ -112,8 +112,13 @@ func (s *memoryStore) CreateDevice(accountID, name string, tokenHash []byte, isO
 			return domain.Device{}, domain.ErrDeviceExists
 		}
 	}
+	profile, _, err := deviceProfile(profiles)
+	if err != nil {
+		return domain.Device{}, err
+	}
 	now := time.Now().UTC()
 	d := domain.Device{
+		Profile:    profile,
 		ID:         newID(),
 		AccountID:  accountID,
 		Name:       name,
@@ -123,7 +128,7 @@ func (s *memoryStore) CreateDevice(accountID, name string, tokenHash []byte, isO
 		LastSeenAt: now,
 	}
 	s.devices[d.ID] = d
-	return d, nil
+	return cloneDevice(d), nil
 }
 
 func (s *memoryStore) GetDeviceByTokenHash(tokenHash []byte) (domain.Device, error) {
@@ -131,7 +136,7 @@ func (s *memoryStore) GetDeviceByTokenHash(tokenHash []byte) (domain.Device, err
 	defer s.mu.Unlock()
 	for _, d := range s.devices {
 		if string(d.TokenHash) == string(tokenHash) {
-			return d, nil
+			return cloneDevice(d), nil
 		}
 	}
 	return domain.Device{}, domain.ErrNotFound
@@ -144,7 +149,7 @@ func (s *memoryStore) GetDevice(id string) (domain.Device, error) {
 	if !ok {
 		return domain.Device{}, domain.ErrNotFound
 	}
-	return d, nil
+	return cloneDevice(d), nil
 }
 
 func (s *memoryStore) ListDevices(accountID string) ([]domain.Device, error) {
@@ -153,7 +158,7 @@ func (s *memoryStore) ListDevices(accountID string) ([]domain.Device, error) {
 	out := make([]domain.Device, 0, len(s.devices))
 	for _, d := range s.devices {
 		if d.AccountID == accountID {
-			out = append(out, d)
+			out = append(out, cloneDevice(d))
 		}
 	}
 	return out, nil

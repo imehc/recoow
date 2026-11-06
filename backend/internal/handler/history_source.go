@@ -10,6 +10,9 @@ import (
 
 func (s *Server) readOnlySessionRequest(request *http.Request) bool {
 	path := request.URL.Path
+	if request.Method == http.MethodPut && path == "/api/devices/current/profile" {
+		return true
+	}
 	if request.Method == http.MethodDelete && path == "/api/sessions/current" {
 		return true
 	}
@@ -43,6 +46,19 @@ func (s *Server) readOnlySessionRequest(request *http.Request) bool {
 
 func (s *Server) pushContext(writer http.ResponseWriter, request *http.Request, generation string, directEdit bool) (domain.PushContext, bool) {
 	device, _ := s.deviceFrom(request.Context())
+	environment, ok := s.requestEnvironment(writer, request)
+	if !ok {
+		return domain.PushContext{}, false
+	}
+	submission := &domain.SubmissionSource{ClientEnvironment: environment, DeviceID: device.ID, DeviceName: device.Name}
+	if session, ok := request.Context().Value(sessionKey).(domain.Session); ok {
+		submission.SessionID = session.ID
+		submission.Client = "web"
+	}
+	return domain.PushContext{Generation: generation, Submission: submission, DirectEdit: directEdit}, true
+}
+
+func (s *Server) requestEnvironment(writer http.ResponseWriter, request *http.Request) (domain.ClientEnvironment, bool) {
 	environment := domain.ClientEnvironment{Client: "unknown", OS: "unknown"}
 	for _, header := range []struct {
 		name   string
@@ -54,7 +70,7 @@ func (s *Server) pushContext(writer http.ResponseWriter, request *http.Request, 
 		values := request.Header.Values(header.name)
 		if len(values) > 1 {
 			writeError(writer, 400, "duplicate client environment header")
-			return domain.PushContext{}, false
+			return domain.ClientEnvironment{}, false
 		}
 		if len(values) == 1 && values[0] != "" {
 			*header.target = strings.TrimSpace(values[0])
@@ -62,12 +78,7 @@ func (s *Server) pushContext(writer http.ResponseWriter, request *http.Request, 
 	}
 	if err := service.ValidateEnvironment(environment); err != nil {
 		writeError(writer, 400, err.Error())
-		return domain.PushContext{}, false
+		return domain.ClientEnvironment{}, false
 	}
-	submission := &domain.SubmissionSource{ClientEnvironment: environment, DeviceID: device.ID, DeviceName: device.Name}
-	if session, ok := request.Context().Value(sessionKey).(domain.Session); ok {
-		submission.SessionID = session.ID
-		submission.Client = "web"
-	}
-	return domain.PushContext{Generation: generation, Submission: submission, DirectEdit: directEdit}, true
+	return environment, true
 }

@@ -106,6 +106,7 @@ func (s *Server) handlePush(w http.ResponseWriter, r *http.Request) {
 			results[acceptedIndices[index]] = result
 		}
 	}
+	recordPushResults(r, results)
 	writeJSON(w, http.StatusOK, map[string]any{"results": results})
 }
 

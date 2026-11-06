@@ -64,7 +64,11 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 429, "too many login attempts")
 		return
 	}
-	login, err := s.identity.Login(input.Username, input.Password)
+	profiles, ok := s.registrationProfiles(w, r, true)
+	if !ok {
+		return
+	}
+	login, err := s.identity.Login(input.Username, input.Password, profiles...)
 	if err != nil {
 		writeError(w, 401, "invalid credentials")
 		return
@@ -135,6 +139,10 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "invalid origin")
 		return
 	}
+	profiles, ok := s.registrationProfiles(w, r, false)
+	if !ok {
+		return
+	}
 	var input generated.RegisterRequest
 	if err := decodeJSON(w, r, &input); err != nil {
 		writeError(w, 400, "invalid request")
@@ -175,7 +183,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 500, "registration failed")
 		return
 	}
-	device, err := s.st.CreateDevice(account.ID, "账号主设备", service.HashToken(token), true)
+	device, err := s.st.CreateDevice(account.ID, "账号主设备", service.HashToken(token), true, profiles...)
 	if err != nil {
 		writeError(w, 500, "registration failed")
 		return

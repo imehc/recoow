@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/imehc/recoow/backend/internal/buildinfo"
 	"github.com/imehc/recoow/backend/internal/config"
@@ -80,6 +79,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/account-recoveries", s.handleRecover)
 	mux.HandleFunc("POST /api/device-pairings", s.handlePair)
 
+	mux.Handle("PUT /api/devices/current/profile", s.authRequired(http.HandlerFunc(s.handleDeviceProfile)))
 	mux.Handle("GET /api/devices", s.authRequired(http.HandlerFunc(s.handleListDevices)))
 	mux.Handle("POST /api/device-pairing-codes", s.authRequired(s.ownerOnly(http.HandlerFunc(s.handleCreatePairingCode))))
 	mux.Handle("DELETE /api/devices/{id}", s.authRequired(http.HandlerFunc(s.handleDeleteDevice)))
@@ -139,6 +139,9 @@ func (s *Server) authRequired(next http.Handler) http.Handler {
 		if err != nil {
 			writeError(w, http.StatusUnauthorized, "invalid or revoked token")
 			return
+		}
+		if fields, ok := r.Context().Value(requestLogKey).(*requestLogFields); ok {
+			fields.accountID, fields.deviceID, fields.session = d.AccountID, d.ID, session.ID != ""
 		}
 		_ = s.st.TouchDeviceLastSeen(d.ID)
 		ctx := context.WithValue(r.Context(), deviceKey, d)
@@ -211,22 +214,14 @@ func (s *Server) cors(next http.Handler) http.Handler {
 			w.Header().Add("Vary", "Origin")
 		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, HEAD, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Recoow-Client, X-Recoow-App-Version, X-Recoow-OS, X-Recoow-OS-Version")
-		w.Header().Set("Access-Control-Expose-Headers", "Content-Length, ETag")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Recoow-Client, X-Recoow-App-Version, X-Recoow-OS, X-Recoow-OS-Version, X-Recoow-Device-Id")
+		w.Header().Set("Access-Control-Expose-Headers", "Content-Length, ETag, X-Request-Id")
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		next.ServeHTTP(w, r)
-	})
-}
-
-func requestLogger(log *slog.Logger, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		next.ServeHTTP(w, r)
-		log.Info("http", "method", r.Method, "path", r.URL.Path, "dur", time.Since(start).Round(time.Millisecond))
 	})
 }
 

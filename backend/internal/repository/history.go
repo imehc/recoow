@@ -14,7 +14,7 @@ import (
 	"github.com/imehc/recoow/backend/internal/service"
 )
 
-const eventColumns = "event_id, account_id, generation, version, previous_version, table_name, id, title, operation, method, operation_id, trigger_event_id, mutation_id, modified_at_ms, accepted_at_ms, original_source, submission"
+const eventColumns = "event_id, account_id, generation, version, previous_version, table_name, id, title, operation, method, operation_id, trigger_event_id, mutation_id, modified_at_ms, accepted_at_ms, original_source, submission, original_registered_device_id"
 
 func cloneEvent(event domain.ChangeEvent) domain.ChangeEvent {
 	if event.OriginalSource != nil {
@@ -37,6 +37,10 @@ func cloneEvent(event domain.ChangeEvent) domain.ChangeEvent {
 		copy := *event.TriggerEventID
 		event.TriggerEventID = &copy
 	}
+	if event.OriginalRegisteredDeviceID != nil {
+		copy := *event.OriginalRegisteredDeviceID
+		event.OriginalRegisteredDeviceID = &copy
+	}
 	return event
 }
 
@@ -54,6 +58,8 @@ func storedEvent(event domain.ChangeEvent, accountID, generation string, submiss
 	event.AcceptedAtMs, event.Submission = &accepted, submission
 	if directEdit && submission != nil && event.Method != "system" {
 		event.OriginalSource = &domain.ChangeOrigin{ClientEnvironment: submission.ClientEnvironment, DeviceID: submission.DeviceID, DeviceName: submission.DeviceName}
+		id := submission.DeviceID
+		event.OriginalRegisteredDeviceID = &id
 	}
 	return cloneEvent(event), nil
 }
@@ -61,6 +67,19 @@ func storedEvent(event domain.ChangeEvent, accountID, generation string, submiss
 func (adapter memoryRevision) WriteChangeEvent(event domain.ChangeEvent) (domain.ChangeEvent, error) {
 	event, err := storedEvent(event, adapter.accountID, adapter.store.generations[adapter.accountID], adapter.submission, adapter.directEdit)
 	if err == nil {
+		for _, device := range adapter.store.devices {
+			if adapter.directEdit {
+				break
+			}
+			if device.AccountID == adapter.accountID && matchingOrigin(device, event.OriginalSource) {
+				if event.OriginalRegisteredDeviceID != nil {
+					event.OriginalRegisteredDeviceID = nil
+					break
+				}
+				id := device.ID
+				event.OriginalRegisteredDeviceID = &id
+			}
+		}
 		adapter.store.events = append(adapter.store.events, event)
 	}
 	return cloneEvent(event), err
@@ -88,13 +107,23 @@ func eventValues(event domain.ChangeEvent) ([]any, error) {
 	}
 	return []any{event.EventID, event.AccountID, event.Generation, event.Version, event.PreviousVersion, event.Table, event.ID,
 		event.Title, event.Operation, event.Method, event.OperationID, event.TriggerEventID, mutation,
-		event.ModifiedAtMs, event.AcceptedAtMs, original, submission}, nil
+		event.ModifiedAtMs, event.AcceptedAtMs, original, submission, event.OriginalRegisteredDeviceID}, nil
 }
 
 func (adapter postgresRevision) WriteChangeEvent(event domain.ChangeEvent) (domain.ChangeEvent, error) {
 	event, err := storedEvent(event, adapter.accountID, adapter.generation, adapter.submission, adapter.directEdit)
 	if err != nil {
 		return event, err
+	}
+	if event.OriginalRegisteredDeviceID == nil && event.OriginalSource != nil && event.OriginalSource.Client != "unknown" {
+		var id sql.NullString
+		err := adapter.transaction.QueryRow("SELECT CASE WHEN COUNT(*) = 1 THEN MIN(id) END FROM devices WHERE account_id = ? AND profile->>'localDeviceId' = ? AND profile->>'client' = ?", adapter.accountID, event.OriginalSource.DeviceID, event.OriginalSource.Client).Scan(&id)
+		if err != nil {
+			return event, err
+		}
+		if id.Valid {
+			event.OriginalRegisteredDeviceID = &id.String
+		}
 	}
 	values, err := eventValues(event)
 	if err != nil {
@@ -106,12 +135,12 @@ func (adapter postgresRevision) WriteChangeEvent(event domain.ChangeEvent) (doma
 
 func scanEvent(scanner rowScanner) (domain.ChangeEvent, error) {
 	var event domain.ChangeEvent
-	var trigger, mutation sql.NullString
+	var trigger, mutation, registered sql.NullString
 	var modified, accepted sql.NullInt64
 	var original, submission []byte
 	err := scanner.Scan(&event.EventID, &event.AccountID, &event.Generation, &event.Version, &event.PreviousVersion,
 		&event.Table, &event.ID, &event.Title, &event.Operation, &event.Method, &event.OperationID, &trigger, &mutation,
-		&modified, &accepted, &original, &submission)
+		&modified, &accepted, &original, &submission, &registered)
 	if err != nil {
 		return event, err
 	}
@@ -119,6 +148,9 @@ func scanEvent(scanner rowScanner) (domain.ChangeEvent, error) {
 		event.TriggerEventID = &trigger.String
 	}
 	event.MutationID = mutation.String
+	if registered.Valid {
+		event.OriginalRegisteredDeviceID = &registered.String
+	}
 	if modified.Valid {
 		event.ModifiedAtMs = &modified.Int64
 	}

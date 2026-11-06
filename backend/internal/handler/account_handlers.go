@@ -21,6 +21,10 @@ type initResponse struct {
 // handleInitAccount 注册一个新账号（同一实例可注册多个，彼此数据隔离）。
 // 设置了 RECOOW_BOOTSTRAP_TOKEN 时需带对应令牌，RECOOW_MAX_ACCOUNTS 可限总量。
 func (s *Server) handleInitAccount(w http.ResponseWriter, r *http.Request) {
+	profiles, ok := s.registrationProfiles(w, r, false)
+	if !ok {
+		return
+	}
 	var req initRequest
 	if err := decodeJSON(w, r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -41,7 +45,7 @@ func (s *Server) handleInitAccount(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	accountID, recoveryKey, token, deviceID, err := s.auth.InitAccount()
+	accountID, recoveryKey, token, deviceID, err := s.auth.InitAccount(profiles...)
 	if err != nil {
 		if err == domain.ErrAccountQuota {
 			writeError(w, http.StatusForbidden, "account quota exceeded")
@@ -70,12 +74,16 @@ type recoverRequest struct {
 // handleRecover 用恢复密钥把账号重新绑到一台新设备（换机 / 重装 / 丢机）。
 // 恢复密钥是账号的唯一凭据，因此这条路径不设注册闸门，但校验失败即拒绝。
 func (s *Server) handleRecover(w http.ResponseWriter, r *http.Request) {
+	profiles, ok := s.registrationProfiles(w, r, false)
+	if !ok {
+		return
+	}
 	var req recoverRequest
 	if err := decodeJSON(w, r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	accountID, token, deviceID, err := s.auth.Recover(req.RecoveryKey, req.DeviceName)
+	accountID, token, deviceID, err := s.auth.Recover(req.RecoveryKey, req.DeviceName, profiles...)
 	if err != nil {
 		if err == service.ErrUnauthorized {
 			writeError(w, http.StatusUnauthorized, "invalid recovery key")
@@ -103,12 +111,16 @@ type pairResponse struct {
 }
 
 func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
+	profiles, ok := s.registrationProfiles(w, r, false)
+	if !ok {
+		return
+	}
 	var req pairRequest
 	if err := decodeJSON(w, r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	accountID, token, deviceID, err := s.auth.Pair(req.Code, req.DeviceName)
+	accountID, token, deviceID, err := s.auth.Pair(req.Code, req.DeviceName, profiles...)
 	if err != nil {
 		if err == service.ErrBadCode || err == domain.ErrDeviceExists {
 			writeError(w, http.StatusUnauthorized, "invalid or already-used pairing code")
@@ -125,10 +137,11 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 }
 
 type deviceView struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	IsOwner    bool   `json:"isOwner"`
-	LastSeenAt string `json:"lastSeenAt"`
+	Profile    *domain.DeviceProfile `json:"profile,omitempty"`
+	ID         string                `json:"id"`
+	Name       string                `json:"name"`
+	IsOwner    bool                  `json:"isOwner"`
+	LastSeenAt string                `json:"lastSeenAt"`
 }
 
 func (s *Server) handleListDevices(w http.ResponseWriter, r *http.Request) {
@@ -142,6 +155,7 @@ func (s *Server) handleListDevices(w http.ResponseWriter, r *http.Request) {
 	for _, dv := range devices {
 		out = append(out, deviceView{
 			ID:         dv.ID,
+			Profile:    dv.Profile,
 			Name:       dv.Name,
 			IsOwner:    dv.IsOwner,
 			LastSeenAt: dv.LastSeenAt.Format("2006-01-02T15:04:05Z07:00"),

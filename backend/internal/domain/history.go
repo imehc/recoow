@@ -10,6 +10,11 @@ type ClientEnvironment struct {
 	OSVersion  string `json:"osVersion,omitempty"`
 }
 
+type DeviceProfile struct {
+	ClientEnvironment
+	LocalDeviceID string `json:"localDeviceId,omitempty"`
+}
+
 type ChangeOrigin struct {
 	ClientEnvironment
 	DeviceID   string `json:"deviceId"`
@@ -31,23 +36,24 @@ type PushContext struct {
 }
 
 type ChangeEvent struct {
-	AccountID       string            `json:"-"`
-	EventID         string            `json:"eventId"`
-	Generation      string            `json:"generation"`
-	Version         int64             `json:"version"`
-	PreviousVersion int64             `json:"previousVersion"`
-	Table           string            `json:"table"`
-	ID              string            `json:"id"`
-	Title           string            `json:"title"`
-	Operation       string            `json:"operation"`
-	Method          string            `json:"method"`
-	OperationID     string            `json:"operationId"`
-	TriggerEventID  *string           `json:"triggerEventId"`
-	MutationID      string            `json:"mutationId,omitempty"`
-	ModifiedAtMs    *int64            `json:"modifiedAtMs"`
-	AcceptedAtMs    *int64            `json:"acceptedAtMs"`
-	OriginalSource  *ChangeOrigin     `json:"originalSource"`
-	Submission      *SubmissionSource `json:"submission"`
+	AccountID                  string            `json:"-"`
+	EventID                    string            `json:"eventId"`
+	Generation                 string            `json:"generation"`
+	Version                    int64             `json:"version"`
+	PreviousVersion            int64             `json:"previousVersion"`
+	Table                      string            `json:"table"`
+	ID                         string            `json:"id"`
+	Title                      string            `json:"title"`
+	Operation                  string            `json:"operation"`
+	Method                     string            `json:"method"`
+	OperationID                string            `json:"operationId"`
+	TriggerEventID             *string           `json:"triggerEventId"`
+	MutationID                 string            `json:"mutationId,omitempty"`
+	ModifiedAtMs               *int64            `json:"modifiedAtMs"`
+	AcceptedAtMs               *int64            `json:"acceptedAtMs"`
+	OriginalSource             *ChangeOrigin     `json:"originalSource"`
+	OriginalRegisteredDeviceID *string           `json:"originalRegisteredDeviceId"`
+	Submission                 *SubmissionSource `json:"submission"`
 }
 
 type ChangeEventRef struct {

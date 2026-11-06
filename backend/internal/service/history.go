@@ -36,6 +36,20 @@ func validSourceText(value string, maxBytes int) bool {
 	return len(value) <= maxBytes && utf8.ValidString(value) && !strings.ContainsFunc(value, unicode.IsControl)
 }
 
+func ValidateDeviceProfile(profile domain.DeviceProfile) error {
+	if !validSourceText(profile.LocalDeviceID, 200) {
+		return fmt.Errorf("invalid local device identifier")
+	}
+	return ValidateEnvironment(profile.ClientEnvironment)
+}
+
+func ValidateDeviceName(name string) error {
+	if !validSourceText(name, 200) {
+		return fmt.Errorf("invalid device name")
+	}
+	return nil
+}
+
 func ValidateOrigin(item domain.PushItem) error {
 	if item.Origin == nil {
 		return nil

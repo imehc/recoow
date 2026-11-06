@@ -15,7 +15,14 @@ import (
 func TestPostgresSQLExportRestoresAndCanRestart(t *testing.T) {
 	storage := testPostgresStore(t)
 	account := mustAccount(t, storage)
-	pushRevision(t, storage, account, revisionItem("diary_tags", "export-tag", "export-mutation", 0, map[string]any{"name": "O'Reilly", "future": true}), domain.PushApplied)
+	profile := domain.DeviceProfile{ClientEnvironment: domain.ClientEnvironment{Client: "ios", OS: "ios", AppVersion: "original"}, LocalDeviceID: "device-a"}
+	device, err := storage.CreateDevice(account, "Export phone", []byte("export-profile-device"), true, profile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	item := revisionItem("diary_tags", "export-tag", "export-mutation", 0, map[string]any{"name": "O'Reilly", "future": true})
+	item.Origin = &domain.ChangeOrigin{ClientEnvironment: profile.ClientEnvironment, DeviceID: item.DeviceID}
+	pushRevision(t, storage, account, item, domain.PushApplied)
 	var dump bytes.Buffer
 	if err := storage.(domain.SQLDumper).ExportSQL(&dump, account); err != nil {
 		t.Fatal(err)
@@ -58,6 +65,14 @@ func TestPostgresSQLExportRestoresAndCanRestart(t *testing.T) {
 	var receipts int
 	if err := target.QueryRow("SELECT COUNT(*) FROM mutation_receipts").Scan(&receipts); err != nil || receipts != 1 {
 		t.Fatalf("receipt restore: %d %v", receipts, err)
+	}
+	var restoredProfile []byte
+	if err := target.QueryRow("SELECT profile FROM devices WHERE id=$1", device.ID).Scan(&restoredProfile); err != nil || !bytes.Contains(restoredProfile, []byte("device-a")) {
+		t.Fatal("device profile was lost in export", err)
+	}
+	var originalDevice string
+	if err := target.QueryRow("SELECT original_registered_device_id FROM change_events").Scan(&originalDevice); err != nil || originalDevice != device.ID {
+		t.Fatal("event source association was lost in export", err)
 	}
 	var eventID, generation string
 	var accepted int64

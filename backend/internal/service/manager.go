@@ -30,7 +30,7 @@ func NewManager(st domain.Store, ttl time.Duration) *Manager {
 
 // InitAccount 新建一个账号，返回账号 id、主设备的恢复密钥与设备令牌。
 // 恢复密钥只返回一次，服务端只保留其哈希。
-func (m *Manager) InitAccount() (accountID, recoveryKey, token, deviceID string, err error) {
+func (m *Manager) InitAccount(profiles ...domain.DeviceProfile) (accountID, recoveryKey, token, deviceID string, err error) {
 	recoveryKey, err = NewRecoveryKey()
 	if err != nil {
 		return "", "", "", "", err
@@ -43,7 +43,7 @@ func (m *Manager) InitAccount() (accountID, recoveryKey, token, deviceID string,
 	if err != nil {
 		return "", "", "", "", err
 	}
-	dev, err := m.st.CreateDevice(acc.ID, "本机（主设备）", HashToken(token), true)
+	dev, err := m.st.CreateDevice(acc.ID, "本机（主设备）", HashToken(token), true, profiles...)
 	if err != nil {
 		return "", "", "", "", err
 	}
@@ -52,7 +52,7 @@ func (m *Manager) InitAccount() (accountID, recoveryKey, token, deviceID string,
 
 // Recover 用恢复密钥重建一台主设备：换机或重装后凭密钥把账号找回。
 // 恢复密钥即账号凭据，因此这里只校验其哈希、不再回传明文。
-func (m *Manager) Recover(recoveryKey, deviceName string) (accountID, token, deviceID string, err error) {
+func (m *Manager) Recover(recoveryKey, deviceName string, profiles ...domain.DeviceProfile) (accountID, token, deviceID string, err error) {
 	if recoveryKey == "" {
 		return "", "", "", ErrUnauthorized
 	}
@@ -67,7 +67,7 @@ func (m *Manager) Recover(recoveryKey, deviceName string) (accountID, token, dev
 	if deviceName == "" {
 		deviceName = "本机（主设备）"
 	}
-	dev, err := m.st.CreateDevice(acc.ID, deviceName, HashToken(token), true)
+	dev, err := m.st.CreateDevice(acc.ID, deviceName, HashToken(token), true, profiles...)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -83,7 +83,7 @@ func (m *Manager) IssuePairingCode(accountID string) (string, error) {
 	err = m.st.IssuePairingCode(hex.EncodeToString(HashToken(code)), accountID, time.Now().UTC().Add(m.ttl))
 	return code, err
 }
-func (m *Manager) Pair(code, deviceName string) (accountID, token, deviceID string, err error) {
+func (m *Manager) Pair(code, deviceName string, profiles ...domain.DeviceProfile) (accountID, token, deviceID string, err error) {
 	accountID, err = m.st.ConsumePairingCode(hex.EncodeToString(HashToken(code)))
 	if err != nil {
 		return "", "", "", ErrBadCode
@@ -92,7 +92,7 @@ func (m *Manager) Pair(code, deviceName string) (accountID, token, deviceID stri
 	if err != nil {
 		return "", "", "", err
 	}
-	device, err := m.st.CreateDevice(accountID, deviceName, HashToken(token), false)
+	device, err := m.st.CreateDevice(accountID, deviceName, HashToken(token), false, profiles...)
 	if err != nil {
 		return "", "", "", err
 	}

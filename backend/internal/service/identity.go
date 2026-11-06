@@ -55,7 +55,7 @@ func (identity *Identity) Register(username, password string) (domain.Account, d
 	account, user, err := identity.store.RegisterUser(normalized, encoded, HashToken(recovery))
 	return account, user, recovery, err
 }
-func (identity *Identity) Login(username, password string) (Login, error) {
+func (identity *Identity) Login(username, password string, profiles ...domain.DeviceProfile) (Login, error) {
 	normalized, _ := NormalizeUsername(username)
 	user, err := identity.store.UserByUsername(normalized)
 	encoded := identity.dummyHash
@@ -76,7 +76,7 @@ func (identity *Identity) Login(username, password string) (Login, error) {
 		return Login{}, err
 	}
 	// 会话凭据与设备凭据分离，避免过期会话被当成长期设备 token。
-	device, err := identity.store.CreateDevice(user.AccountID, "Web 会话", HashToken(hiddenToken), true)
+	device, err := identity.store.CreateDevice(user.AccountID, "Web 会话", HashToken(hiddenToken), true, profiles...)
 	if err != nil {
 		return Login{}, err
 	}
