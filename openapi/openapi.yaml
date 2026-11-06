@@ -4,14 +4,14 @@ info:
   version: 1.0.0
   description: iOS、Android、Web 的唯一接口契约。设备配对和恢复保持兼容；未知快照字段须保留。接口契约版本与应用发布版本独立。
 servers:
-- url: /
+  - url: /
 paths:
   /api/version:
     get:
       operationId: getBackendVersion
       summary: 查询运行中的后端版本
       tags:
-      - Management
+        - Management
       security: []
       responses:
         '200':
@@ -21,7 +21,7 @@ paths:
               schema:
                 type: string
                 enum:
-                - no-store
+                  - no-store
           content:
             application/json:
               schema:
@@ -31,67 +31,67 @@ paths:
       operationId: listChangeEvents
       summary: 查看已提交到云端的业务变更
       tags:
-      - History
+        - History
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-        description: 账号、数据集世代、查询版本与筛选条件绑定的分页游标，后续页保留原筛选条件。
-      - name: generation
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-          minimum: 1
-          maximum: 200
-          default: 50
-      - name: table
-        in: query
-        schema:
-          type: string
-      - name: id
-        in: query
-        schema:
-          type: string
-          maxLength: 200
-        description: 记录 ID，必须与 table 一起提供。
-      - name: operation
-        in: query
-        schema:
-          $ref: '#/components/schemas/HistoryOperation'
-      - name: client
-        in: query
-        schema:
-          $ref: '#/components/schemas/ClientType'
-        description: 原始修改平台，不是本次提交平台。
-      - name: deviceId
-        in: query
-        schema:
-          type: string
-          maxLength: 200
-        description: 本次鉴权提交设备的服务端 ID。
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-          format: int64
-          minimum: 0
-        description: 服务端接受时间的包含下界；缺少该时间的旧历史不匹配时间筛选。
-      - name: toMs
-        in: query
-        schema:
-          type: integer
-          format: int64
-          minimum: 0
-        description: 服务端接受时间的不包含上界。
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: 账号、数据集世代、查询版本与筛选条件绑定的分页游标，后续页保留原筛选条件。
+        - name: generation
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: table
+          in: query
+          schema:
+            type: string
+        - name: id
+          in: query
+          schema:
+            type: string
+            maxLength: 200
+          description: 记录 ID，必须与 table 一起提供。
+        - name: operation
+          in: query
+          schema:
+            $ref: '#/components/schemas/HistoryOperation'
+        - name: client
+          in: query
+          schema:
+            $ref: '#/components/schemas/ClientType'
+          description: 原始修改平台，不是本次提交平台。
+        - name: deviceId
+          in: query
+          schema:
+            type: string
+            maxLength: 200
+          description: 本次鉴权提交设备的服务端 ID。
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+          description: 服务端接受时间的包含下界；缺少该时间的旧历史不匹配时间筛选。
+        - name: toMs
+          in: query
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+          description: 服务端接受时间的不包含上界。
       responses:
         '200':
           description: 按云端修订顺序倒序分页，列表只包含事件摘要。
@@ -110,17 +110,17 @@ paths:
       operationId: getChangeEvent
       summary: 查看一次云端变更的来源、时间与字段差异
       tags:
-      - History
+        - History
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       parameters:
-      - name: eventId
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           description: 对比提交前的云端版本与最终提交版本，不使用当前记录替代历史快照。
@@ -138,9 +138,9 @@ paths:
       summary: 登记当前鉴权设备的来源资料
       description: 仅更新当前设备元数据，不授予写权限；客户端先检查 device_profiles_v1 能力。
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       requestBody:
         required: true
         content:
@@ -158,7 +158,7 @@ paths:
                   ok:
                     type: boolean
                 required:
-                - ok
+                  - ok
         '400':
           description: 无效资料
         '401':
@@ -168,7 +168,7 @@ paths:
       operationId: listDevices
       summary: listDevices
       tags:
-      - Management
+        - Management
       responses:
         '200':
           description: 成功
@@ -201,15 +201,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
   /api/devices/{id}:
     delete:
       operationId: revokeDevice
       summary: revokeDevice
       tags:
-      - Management
+        - Management
       responses:
         '200':
           description: 成功
@@ -242,28 +242,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/sync/dataset:
     delete:
       operationId: clearSyncDataset
       summary: 主设备清空当前账号的云端备份，保留账号和设备绑定
       description: 删除全部业务记录、媒体和同步历史，并更换数据集世代。客户端应暂停同步，避免立即重新上传本机数据。
       tags:
-      - Sync
+        - Sync
       parameters:
-      - name: generation
-        in: query
-        required: true
-        schema:
-          type: string
+        - name: generation
+          in: query
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           description: 清空后的数据集状态
@@ -282,7 +282,7 @@ paths:
       operationId: getSyncCapabilities
       summary: getSyncCapabilities
       tags:
-      - Sync
+        - Sync
       responses:
         '200':
           description: 成功
@@ -315,15 +315,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
   /api/media/objects/{key}:
     put:
       operationId: putMediaObject
       summary: putMediaObject
       tags:
-      - Management
+        - Management
       responses:
         '200':
           description: 成功
@@ -356,15 +356,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       parameters:
-      - name: key
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -376,7 +376,7 @@ paths:
       operationId: getMediaObject
       summary: getMediaObject
       tags:
-      - Management
+        - Management
       responses:
         '200':
           description: 成功
@@ -410,20 +410,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       parameters:
-      - name: key
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
     head:
       operationId: headMediaObject
       summary: headMediaObject
       tags:
-      - Management
+        - Management
       responses:
         '200':
           description: 成功
@@ -452,20 +452,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       parameters:
-      - name: key
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteMediaObject
       summary: deleteMediaObject
       tags:
-      - Management
+        - Management
       responses:
         '200':
           description: 成功
@@ -498,47 +498,47 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       parameters:
-      - name: key
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
   /api/accounts:
     post:
       operationId: initAccount
       summary: initAccount
       tags:
-      - Authentication
+        - Authentication
       parameters:
-      - name: X-Recoow-Client
-        in: header
-        description: 此次请求的客户端类型，不参与鉴权
-        schema:
-          type: string
-      - name: X-Recoow-App-Version
-        in: header
-        description: 此次请求的应用版本
-        schema:
-          type: string
-      - name: X-Recoow-OS
-        in: header
-        description: 此次请求的运行系统
-        schema:
-          type: string
-      - name: X-Recoow-OS-Version
-        in: header
-        description: 此次请求的系统版本
-        schema:
-          type: string
-      - name: X-Recoow-Device-Id
-        in: header
-        description: 当前安装的本地来源标识，不是服务端设备 ID
-        schema:
-          type: string
+        - name: X-Recoow-Client
+          in: header
+          description: 此次请求的客户端类型，不参与鉴权
+          schema:
+            type: string
+        - name: X-Recoow-App-Version
+          in: header
+          description: 此次请求的应用版本
+          schema:
+            type: string
+        - name: X-Recoow-OS
+          in: header
+          description: 此次请求的运行系统
+          schema:
+            type: string
+        - name: X-Recoow-OS-Version
+          in: header
+          description: 此次请求的系统版本
+          schema:
+            type: string
+        - name: X-Recoow-Device-Id
+          in: header
+          description: 当前安装的本地来源标识，不是服务端设备 ID
+          schema:
+            type: string
       responses:
         '201':
           description: 成功
@@ -582,33 +582,33 @@ paths:
       operationId: recoverAccount
       summary: recoverAccount
       tags:
-      - Authentication
+        - Authentication
       parameters:
-      - name: X-Recoow-Client
-        in: header
-        description: 此次请求的客户端类型，不参与鉴权
-        schema:
-          type: string
-      - name: X-Recoow-App-Version
-        in: header
-        description: 此次请求的应用版本
-        schema:
-          type: string
-      - name: X-Recoow-OS
-        in: header
-        description: 此次请求的运行系统
-        schema:
-          type: string
-      - name: X-Recoow-OS-Version
-        in: header
-        description: 此次请求的系统版本
-        schema:
-          type: string
-      - name: X-Recoow-Device-Id
-        in: header
-        description: 当前安装的本地来源标识，不是服务端设备 ID
-        schema:
-          type: string
+        - name: X-Recoow-Client
+          in: header
+          description: 此次请求的客户端类型，不参与鉴权
+          schema:
+            type: string
+        - name: X-Recoow-App-Version
+          in: header
+          description: 此次请求的应用版本
+          schema:
+            type: string
+        - name: X-Recoow-OS
+          in: header
+          description: 此次请求的运行系统
+          schema:
+            type: string
+        - name: X-Recoow-OS-Version
+          in: header
+          description: 此次请求的系统版本
+          schema:
+            type: string
+        - name: X-Recoow-Device-Id
+          in: header
+          description: 当前安装的本地来源标识，不是服务端设备 ID
+          schema:
+            type: string
       responses:
         '201':
           description: 成功
@@ -652,33 +652,33 @@ paths:
       operationId: pairDevice
       summary: pairDevice
       tags:
-      - Authentication
+        - Authentication
       parameters:
-      - name: X-Recoow-Client
-        in: header
-        description: 此次请求的客户端类型，不参与鉴权
-        schema:
-          type: string
-      - name: X-Recoow-App-Version
-        in: header
-        description: 此次请求的应用版本
-        schema:
-          type: string
-      - name: X-Recoow-OS
-        in: header
-        description: 此次请求的运行系统
-        schema:
-          type: string
-      - name: X-Recoow-OS-Version
-        in: header
-        description: 此次请求的系统版本
-        schema:
-          type: string
-      - name: X-Recoow-Device-Id
-        in: header
-        description: 当前安装的本地来源标识，不是服务端设备 ID
-        schema:
-          type: string
+        - name: X-Recoow-Client
+          in: header
+          description: 此次请求的客户端类型，不参与鉴权
+          schema:
+            type: string
+        - name: X-Recoow-App-Version
+          in: header
+          description: 此次请求的应用版本
+          schema:
+            type: string
+        - name: X-Recoow-OS
+          in: header
+          description: 此次请求的运行系统
+          schema:
+            type: string
+        - name: X-Recoow-OS-Version
+          in: header
+          description: 此次请求的系统版本
+          schema:
+            type: string
+        - name: X-Recoow-Device-Id
+          in: header
+          description: 当前安装的本地来源标识，不是服务端设备 ID
+          schema:
+            type: string
       responses:
         '201':
           description: 成功
@@ -722,7 +722,7 @@ paths:
       operationId: createPairingCode
       summary: createPairingCode
       tags:
-      - Management
+        - Management
       responses:
         '200':
           description: 成功
@@ -755,20 +755,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
   /api/sync/mutations:
     post:
       operationId: pushSync
       summary: 提交修订；重试保留 mutationId 和原请求，冲突返回 current
       tags:
-      - Sync
+        - Sync
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '200':
           description: 成功
@@ -801,9 +801,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       requestBody:
         required: true
         content:
@@ -815,7 +815,7 @@ paths:
       operationId: pullSync
       summary: pullSync
       tags:
-      - Sync
+        - Sync
       responses:
         '200':
           description: 成功
@@ -848,31 +848,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       parameters:
-      - name: generation
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: cursor
-        in: query
-        required: false
-        schema:
-          type: integer
-      - name: limit
-        in: query
-        required: false
-        schema:
-          type: integer
+        - name: generation
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
   /api/sync/snapshots:
     get:
       operationId: bootstrapSync
       summary: bootstrapSync
       tags:
-      - Sync
+        - Sync
       responses:
         '200':
           description: 成功
@@ -905,65 +905,65 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       parameters:
-      - name: generation
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: watermark
-        in: query
-        required: false
-        schema:
-          type: integer
-      - name: after
-        in: query
-        required: false
-        schema:
-          type: integer
-      - name: limit
-        in: query
-        required: false
-        schema:
-          type: integer
+        - name: generation
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: watermark
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: after
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
   /api/sync/manifests:
     get:
       operationId: getSyncManifest
       summary: 固定水位的轻量同步清单；仅内容不同或缺失时下载快照
       tags:
-      - Sync
+        - Sync
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       parameters:
-      - name: generation
-        in: query
-        required: true
-        schema:
-          type: string
-      - name: watermark
-        in: query
-        required: true
-        schema:
-          type: integer
-          format: int64
-          minimum: 0
-      - name: after
-        in: query
-        schema:
-          type: integer
-          format: int64
-          minimum: 0
-      - name: limit
-        in: query
-        schema:
-          type: integer
-          minimum: 1
-          maximum: 500
+        - name: generation
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: watermark
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+        - name: after
+          in: query
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
       responses:
         '200':
           description: 固定水位清单，包含墓碑
@@ -982,11 +982,11 @@ paths:
       operationId: querySyncSnapshots
       summary: 按清单修订版本读取不可变快照，保持请求顺序
       tags:
-      - Sync
+        - Sync
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       requestBody:
         required: true
         content:
@@ -1011,7 +1011,7 @@ paths:
       operationId: exportAccount
       summary: exportAccount
       tags:
-      - Management
+        - Management
       responses:
         '200':
           description: 成功
@@ -1044,15 +1044,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
   /api/exports/sql:
     get:
       operationId: exportAccountSQL
       summary: exportAccountSQL
       tags:
-      - Management
+        - Management
       responses:
         '200':
           description: 成功
@@ -1085,41 +1085,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
   /api/users:
     post:
       operationId: registerUser
       summary: registerUser
       tags:
-      - Authentication
+        - Authentication
       parameters:
-      - name: X-Recoow-Client
-        in: header
-        description: 此次请求的客户端类型，不参与鉴权
-        schema:
-          type: string
-      - name: X-Recoow-App-Version
-        in: header
-        description: 此次请求的应用版本
-        schema:
-          type: string
-      - name: X-Recoow-OS
-        in: header
-        description: 此次请求的运行系统
-        schema:
-          type: string
-      - name: X-Recoow-OS-Version
-        in: header
-        description: 此次请求的系统版本
-        schema:
-          type: string
-      - name: X-Recoow-Device-Id
-        in: header
-        description: 当前安装的本地来源标识，不是服务端设备 ID
-        schema:
-          type: string
+        - name: X-Recoow-Client
+          in: header
+          description: 此次请求的客户端类型，不参与鉴权
+          schema:
+            type: string
+        - name: X-Recoow-App-Version
+          in: header
+          description: 此次请求的应用版本
+          schema:
+            type: string
+        - name: X-Recoow-OS
+          in: header
+          description: 此次请求的运行系统
+          schema:
+            type: string
+        - name: X-Recoow-OS-Version
+          in: header
+          description: 此次请求的系统版本
+          schema:
+            type: string
+        - name: X-Recoow-Device-Id
+          in: header
+          description: 当前安装的本地来源标识，不是服务端设备 ID
+          schema:
+            type: string
       responses:
         '201':
           description: 成功
@@ -1163,7 +1163,7 @@ paths:
       operationId: bindCredentials
       summary: bindCredentials
       tags:
-      - Authentication
+        - Authentication
       responses:
         '201':
           description: 成功
@@ -1196,9 +1196,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       requestBody:
         required: true
         content:
@@ -1210,33 +1210,33 @@ paths:
       operationId: login
       summary: login
       tags:
-      - Authentication
+        - Authentication
       parameters:
-      - name: X-Recoow-Client
-        in: header
-        description: 此次请求的客户端类型，不参与鉴权
-        schema:
-          type: string
-      - name: X-Recoow-App-Version
-        in: header
-        description: 此次请求的应用版本
-        schema:
-          type: string
-      - name: X-Recoow-OS
-        in: header
-        description: 此次请求的运行系统
-        schema:
-          type: string
-      - name: X-Recoow-OS-Version
-        in: header
-        description: 此次请求的系统版本
-        schema:
-          type: string
-      - name: X-Recoow-Device-Id
-        in: header
-        description: 当前安装的本地来源标识，不是服务端设备 ID
-        schema:
-          type: string
+        - name: X-Recoow-Client
+          in: header
+          description: 此次请求的客户端类型，不参与鉴权
+          schema:
+            type: string
+        - name: X-Recoow-App-Version
+          in: header
+          description: 此次请求的应用版本
+          schema:
+            type: string
+        - name: X-Recoow-OS
+          in: header
+          description: 此次请求的运行系统
+          schema:
+            type: string
+        - name: X-Recoow-OS-Version
+          in: header
+          description: 此次请求的系统版本
+          schema:
+            type: string
+        - name: X-Recoow-Device-Id
+          in: header
+          description: 当前安装的本地来源标识，不是服务端设备 ID
+          schema:
+            type: string
       responses:
         '200':
           description: 成功
@@ -1280,7 +1280,7 @@ paths:
       operationId: logout
       summary: logout
       tags:
-      - Authentication
+        - Authentication
       responses:
         '200':
           description: 成功
@@ -1313,15 +1313,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
   /api/users/me:
     get:
       operationId: getIdentity
       summary: getIdentity
       tags:
-      - Authentication
+        - Authentication
       responses:
         '200':
           description: 成功
@@ -1354,15 +1354,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
   /api/users/me/password:
     put:
       operationId: changePassword
       summary: changePassword
       tags:
-      - Authentication
+        - Authentication
       responses:
         '200':
           description: 成功
@@ -1395,9 +1395,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       requestBody:
         required: true
         content:
@@ -1409,7 +1409,7 @@ paths:
       operationId: getStatistics
       summary: getStatistics
       tags:
-      - Management
+        - Management
       responses:
         '200':
           description: 成功
@@ -1442,26 +1442,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security:
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       parameters:
-      - name: fromMs
-        in: query
-        required: false
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        required: false
-        schema:
-          type: integer
+        - name: fromMs
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          required: false
+          schema:
+            type: integer
   /api/openapi.yaml:
     get:
       operationId: getOpenAPI
       summary: getOpenAPI
       tags:
-      - Management
+        - Management
       responses:
         '200':
           description: 成功
@@ -1498,11 +1498,11 @@ paths:
     get:
       operationId: listAnniversariesRecord
       tags:
-      - anniversaries
+        - anniversaries
       security: &id001
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -1519,36 +1519,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createAnniversariesRecord
       tags:
-      - anniversaries
+        - anniversaries
       security: *id001
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -1574,7 +1574,7 @@ paths:
     get:
       operationId: getAnniversariesRecordById
       tags:
-      - anniversaries
+        - anniversaries
       security: *id001
       responses:
         '200':
@@ -1592,15 +1592,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateAnniversariesRecordById
       tags:
-      - anniversaries
+        - anniversaries
       security: *id001
       responses:
         '200':
@@ -1624,19 +1624,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteAnniversariesRecordById
       tags:
-      - anniversaries
+        - anniversaries
       security: *id001
       responses:
         '200':
@@ -1660,24 +1660,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/bills:
     get:
       operationId: listBillsRecord
       tags:
-      - bills
+        - bills
       security: &id002
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -1694,36 +1694,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createBillsRecord
       tags:
-      - bills
+        - bills
       security: *id002
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -1749,7 +1749,7 @@ paths:
     get:
       operationId: getBillsRecordById
       tags:
-      - bills
+        - bills
       security: *id002
       responses:
         '200':
@@ -1767,15 +1767,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateBillsRecordById
       tags:
-      - bills
+        - bills
       security: *id002
       responses:
         '200':
@@ -1799,19 +1799,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteBillsRecordById
       tags:
-      - bills
+        - bills
       security: *id002
       responses:
         '200':
@@ -1835,24 +1835,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/decision-choice-records:
     get:
       operationId: listDecisionChoiceRecordsRecord
       tags:
-      - decision_choice_records
+        - decision_choice_records
       security: &id003
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -1869,36 +1869,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createDecisionChoiceRecordsRecord
       tags:
-      - decision_choice_records
+        - decision_choice_records
       security: *id003
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -1924,7 +1924,7 @@ paths:
     get:
       operationId: getDecisionChoiceRecordsRecordById
       tags:
-      - decision_choice_records
+        - decision_choice_records
       security: *id003
       responses:
         '200':
@@ -1942,15 +1942,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateDecisionChoiceRecordsRecordById
       tags:
-      - decision_choice_records
+        - decision_choice_records
       security: *id003
       responses:
         '200':
@@ -1974,19 +1974,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteDecisionChoiceRecordsRecordById
       tags:
-      - decision_choice_records
+        - decision_choice_records
       security: *id003
       responses:
         '200':
@@ -2010,24 +2010,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/decision-collections:
     get:
       operationId: listDecisionCollectionsRecord
       tags:
-      - decision_collections
+        - decision_collections
       security: &id004
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -2044,36 +2044,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createDecisionCollectionsRecord
       tags:
-      - decision_collections
+        - decision_collections
       security: *id004
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -2099,7 +2099,7 @@ paths:
     get:
       operationId: getDecisionCollectionsRecordById
       tags:
-      - decision_collections
+        - decision_collections
       security: *id004
       responses:
         '200':
@@ -2117,15 +2117,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateDecisionCollectionsRecordById
       tags:
-      - decision_collections
+        - decision_collections
       security: *id004
       responses:
         '200':
@@ -2149,19 +2149,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteDecisionCollectionsRecordById
       tags:
-      - decision_collections
+        - decision_collections
       security: *id004
       responses:
         '200':
@@ -2185,24 +2185,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/decision-options:
     get:
       operationId: listDecisionOptionsRecord
       tags:
-      - decision_options
+        - decision_options
       security: &id005
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -2219,36 +2219,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createDecisionOptionsRecord
       tags:
-      - decision_options
+        - decision_options
       security: *id005
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -2274,7 +2274,7 @@ paths:
     get:
       operationId: getDecisionOptionsRecordById
       tags:
-      - decision_options
+        - decision_options
       security: *id005
       responses:
         '200':
@@ -2292,15 +2292,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateDecisionOptionsRecordById
       tags:
-      - decision_options
+        - decision_options
       security: *id005
       responses:
         '200':
@@ -2324,19 +2324,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteDecisionOptionsRecordById
       tags:
-      - decision_options
+        - decision_options
       security: *id005
       responses:
         '200':
@@ -2360,24 +2360,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/diary-entries:
     get:
       operationId: listDiaryEntriesRecord
       tags:
-      - diary_entries
+        - diary_entries
       security: &id006
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -2394,36 +2394,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createDiaryEntriesRecord
       tags:
-      - diary_entries
+        - diary_entries
       security: *id006
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -2449,7 +2449,7 @@ paths:
     get:
       operationId: getDiaryEntriesRecordById
       tags:
-      - diary_entries
+        - diary_entries
       security: *id006
       responses:
         '200':
@@ -2467,15 +2467,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateDiaryEntriesRecordById
       tags:
-      - diary_entries
+        - diary_entries
       security: *id006
       responses:
         '200':
@@ -2499,19 +2499,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteDiaryEntriesRecordById
       tags:
-      - diary_entries
+        - diary_entries
       security: *id006
       responses:
         '200':
@@ -2535,24 +2535,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/diary-links:
     get:
       operationId: listDiaryLinksRecord
       tags:
-      - diary_links
+        - diary_links
       security: &id007
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -2569,36 +2569,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createDiaryLinksRecord
       tags:
-      - diary_links
+        - diary_links
       security: *id007
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -2624,7 +2624,7 @@ paths:
     get:
       operationId: getDiaryLinksRecordById
       tags:
-      - diary_links
+        - diary_links
       security: *id007
       responses:
         '200':
@@ -2642,15 +2642,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateDiaryLinksRecordById
       tags:
-      - diary_links
+        - diary_links
       security: *id007
       responses:
         '200':
@@ -2674,19 +2674,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteDiaryLinksRecordById
       tags:
-      - diary_links
+        - diary_links
       security: *id007
       responses:
         '200':
@@ -2710,24 +2710,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/diary-tags:
     get:
       operationId: listDiaryTagsRecord
       tags:
-      - diary_tags
+        - diary_tags
       security: &id008
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -2744,36 +2744,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createDiaryTagsRecord
       tags:
-      - diary_tags
+        - diary_tags
       security: *id008
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -2799,7 +2799,7 @@ paths:
     get:
       operationId: getDiaryTagsRecordById
       tags:
-      - diary_tags
+        - diary_tags
       security: *id008
       responses:
         '200':
@@ -2817,15 +2817,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateDiaryTagsRecordById
       tags:
-      - diary_tags
+        - diary_tags
       security: *id008
       responses:
         '200':
@@ -2849,19 +2849,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteDiaryTagsRecordById
       tags:
-      - diary_tags
+        - diary_tags
       security: *id008
       responses:
         '200':
@@ -2885,24 +2885,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/food-day-records:
     get:
       operationId: listFoodDayRecordsRecord
       tags:
-      - food_day_records
+        - food_day_records
       security: &id009
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -2919,36 +2919,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createFoodDayRecordsRecord
       tags:
-      - food_day_records
+        - food_day_records
       security: *id009
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -2974,7 +2974,7 @@ paths:
     get:
       operationId: getFoodDayRecordsRecordById
       tags:
-      - food_day_records
+        - food_day_records
       security: *id009
       responses:
         '200':
@@ -2992,15 +2992,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateFoodDayRecordsRecordById
       tags:
-      - food_day_records
+        - food_day_records
       security: *id009
       responses:
         '200':
@@ -3024,19 +3024,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteFoodDayRecordsRecordById
       tags:
-      - food_day_records
+        - food_day_records
       security: *id009
       responses:
         '200':
@@ -3060,24 +3060,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/food-entries:
     get:
       operationId: listFoodEntriesRecord
       tags:
-      - food_entries
+        - food_entries
       security: &id010
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -3094,36 +3094,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createFoodEntriesRecord
       tags:
-      - food_entries
+        - food_entries
       security: *id010
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -3149,7 +3149,7 @@ paths:
     get:
       operationId: getFoodEntriesRecordById
       tags:
-      - food_entries
+        - food_entries
       security: *id010
       responses:
         '200':
@@ -3167,15 +3167,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateFoodEntriesRecordById
       tags:
-      - food_entries
+        - food_entries
       security: *id010
       responses:
         '200':
@@ -3199,19 +3199,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteFoodEntriesRecordById
       tags:
-      - food_entries
+        - food_entries
       security: *id010
       responses:
         '200':
@@ -3235,24 +3235,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/item-categories:
     get:
       operationId: listItemCategoriesRecord
       tags:
-      - item_categories
+        - item_categories
       security: &id011
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -3269,36 +3269,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createItemCategoriesRecord
       tags:
-      - item_categories
+        - item_categories
       security: *id011
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -3324,7 +3324,7 @@ paths:
     get:
       operationId: getItemCategoriesRecordById
       tags:
-      - item_categories
+        - item_categories
       security: *id011
       responses:
         '200':
@@ -3342,15 +3342,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateItemCategoriesRecordById
       tags:
-      - item_categories
+        - item_categories
       security: *id011
       responses:
         '200':
@@ -3374,19 +3374,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteItemCategoriesRecordById
       tags:
-      - item_categories
+        - item_categories
       security: *id011
       responses:
         '200':
@@ -3410,24 +3410,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/media-assets:
     get:
       operationId: listMediaAssetsRecord
       tags:
-      - media_assets
+        - media_assets
       security: &id012
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -3444,36 +3444,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createMediaAssetsRecord
       tags:
-      - media_assets
+        - media_assets
       security: *id012
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -3499,7 +3499,7 @@ paths:
     get:
       operationId: getMediaAssetsRecordById
       tags:
-      - media_assets
+        - media_assets
       security: *id012
       responses:
         '200':
@@ -3517,15 +3517,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateMediaAssetsRecordById
       tags:
-      - media_assets
+        - media_assets
       security: *id012
       responses:
         '200':
@@ -3549,19 +3549,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteMediaAssetsRecordById
       tags:
-      - media_assets
+        - media_assets
       security: *id012
       responses:
         '200':
@@ -3585,24 +3585,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/media-attachments:
     get:
       operationId: listMediaAttachmentsRecord
       tags:
-      - media_attachments
+        - media_attachments
       security: &id013
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -3619,36 +3619,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createMediaAttachmentsRecord
       tags:
-      - media_attachments
+        - media_attachments
       security: *id013
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -3674,7 +3674,7 @@ paths:
     get:
       operationId: getMediaAttachmentsRecordById
       tags:
-      - media_attachments
+        - media_attachments
       security: *id013
       responses:
         '200':
@@ -3692,15 +3692,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateMediaAttachmentsRecordById
       tags:
-      - media_attachments
+        - media_attachments
       security: *id013
       responses:
         '200':
@@ -3724,19 +3724,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteMediaAttachmentsRecordById
       tags:
-      - media_attachments
+        - media_attachments
       security: *id013
       responses:
         '200':
@@ -3760,24 +3760,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/reminder-completions:
     get:
       operationId: listReminderCompletionsRecord
       tags:
-      - reminder_completions
+        - reminder_completions
       security: &id014
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -3794,36 +3794,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createReminderCompletionsRecord
       tags:
-      - reminder_completions
+        - reminder_completions
       security: *id014
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -3849,7 +3849,7 @@ paths:
     get:
       operationId: getReminderCompletionsRecordById
       tags:
-      - reminder_completions
+        - reminder_completions
       security: *id014
       responses:
         '200':
@@ -3867,15 +3867,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateReminderCompletionsRecordById
       tags:
-      - reminder_completions
+        - reminder_completions
       security: *id014
       responses:
         '200':
@@ -3899,19 +3899,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteReminderCompletionsRecordById
       tags:
-      - reminder_completions
+        - reminder_completions
       security: *id014
       responses:
         '200':
@@ -3935,24 +3935,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/reminders:
     get:
       operationId: listRemindersRecord
       tags:
-      - reminders
+        - reminders
       security: &id015
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -3969,36 +3969,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createRemindersRecord
       tags:
-      - reminders
+        - reminders
       security: *id015
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -4024,7 +4024,7 @@ paths:
     get:
       operationId: getRemindersRecordById
       tags:
-      - reminders
+        - reminders
       security: *id015
       responses:
         '200':
@@ -4042,15 +4042,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateRemindersRecordById
       tags:
-      - reminders
+        - reminders
       security: *id015
       responses:
         '200':
@@ -4074,19 +4074,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteRemindersRecordById
       tags:
-      - reminders
+        - reminders
       security: *id015
       responses:
         '200':
@@ -4110,24 +4110,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/stored-items:
     get:
       operationId: listStoredItemsRecord
       tags:
-      - stored_items
+        - stored_items
       security: &id016
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -4144,36 +4144,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createStoredItemsRecord
       tags:
-      - stored_items
+        - stored_items
       security: *id016
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -4199,7 +4199,7 @@ paths:
     get:
       operationId: getStoredItemsRecordById
       tags:
-      - stored_items
+        - stored_items
       security: *id016
       responses:
         '200':
@@ -4217,15 +4217,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateStoredItemsRecordById
       tags:
-      - stored_items
+        - stored_items
       security: *id016
       responses:
         '200':
@@ -4249,19 +4249,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteStoredItemsRecordById
       tags:
-      - stored_items
+        - stored_items
       security: *id016
       responses:
         '200':
@@ -4285,24 +4285,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/stored-value-accounts:
     get:
       operationId: listStoredValueAccountsRecord
       tags:
-      - stored_value_accounts
+        - stored_value_accounts
       security: &id017
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -4319,36 +4319,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createStoredValueAccountsRecord
       tags:
-      - stored_value_accounts
+        - stored_value_accounts
       security: *id017
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -4374,7 +4374,7 @@ paths:
     get:
       operationId: getStoredValueAccountsRecordById
       tags:
-      - stored_value_accounts
+        - stored_value_accounts
       security: *id017
       responses:
         '200':
@@ -4392,15 +4392,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateStoredValueAccountsRecordById
       tags:
-      - stored_value_accounts
+        - stored_value_accounts
       security: *id017
       responses:
         '200':
@@ -4424,19 +4424,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteStoredValueAccountsRecordById
       tags:
-      - stored_value_accounts
+        - stored_value_accounts
       security: *id017
       responses:
         '200':
@@ -4460,24 +4460,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/stored-value-adjustments:
     get:
       operationId: listStoredValueAdjustmentsRecord
       tags:
-      - stored_value_adjustments
+        - stored_value_adjustments
       security: &id018
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -4494,36 +4494,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createStoredValueAdjustmentsRecord
       tags:
-      - stored_value_adjustments
+        - stored_value_adjustments
       security: *id018
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -4549,7 +4549,7 @@ paths:
     get:
       operationId: getStoredValueAdjustmentsRecordById
       tags:
-      - stored_value_adjustments
+        - stored_value_adjustments
       security: *id018
       responses:
         '200':
@@ -4567,15 +4567,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateStoredValueAdjustmentsRecordById
       tags:
-      - stored_value_adjustments
+        - stored_value_adjustments
       security: *id018
       responses:
         '200':
@@ -4599,19 +4599,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteStoredValueAdjustmentsRecordById
       tags:
-      - stored_value_adjustments
+        - stored_value_adjustments
       security: *id018
       responses:
         '200':
@@ -4635,24 +4635,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/track-points:
     get:
       operationId: listTrackPointsRecord
       tags:
-      - track_points
+        - track_points
       security: &id019
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -4669,36 +4669,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createTrackPointsRecord
       tags:
-      - track_points
+        - track_points
       security: *id019
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -4724,7 +4724,7 @@ paths:
     get:
       operationId: getTrackPointsRecordById
       tags:
-      - track_points
+        - track_points
       security: *id019
       responses:
         '200':
@@ -4742,15 +4742,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateTrackPointsRecordById
       tags:
-      - track_points
+        - track_points
       security: *id019
       responses:
         '200':
@@ -4774,19 +4774,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteTrackPointsRecordById
       tags:
-      - track_points
+        - track_points
       security: *id019
       responses:
         '200':
@@ -4810,24 +4810,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/track-segments:
     get:
       operationId: listTrackSegmentsRecord
       tags:
-      - track_segments
+        - track_segments
       security: &id020
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -4844,36 +4844,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createTrackSegmentsRecord
       tags:
-      - track_segments
+        - track_segments
       security: *id020
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -4899,7 +4899,7 @@ paths:
     get:
       operationId: getTrackSegmentsRecordById
       tags:
-      - track_segments
+        - track_segments
       security: *id020
       responses:
         '200':
@@ -4917,15 +4917,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateTrackSegmentsRecordById
       tags:
-      - track_segments
+        - track_segments
       security: *id020
       responses:
         '200':
@@ -4949,19 +4949,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteTrackSegmentsRecordById
       tags:
-      - track_segments
+        - track_segments
       security: *id020
       responses:
         '200':
@@ -4985,24 +4985,24 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
   /api/tracks:
     get:
       operationId: listTracksRecord
       tags:
-      - tracks
+        - tracks
       security: &id021
-      - deviceToken: []
-      - sessionToken: []
-      - sessionCookie: []
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
       responses:
         '200':
           description: 成功
@@ -5019,36 +5019,36 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: cursor
-        in: query
-        schema:
-          type: string
-      - name: limit
-        in: query
-        schema:
-          type: integer
-      - name: q
-        in: query
-        schema:
-          type: string
-      - name: fromMs
-        in: query
-        schema:
-          type: integer
-      - name: toMs
-        in: query
-        schema:
-          type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: fromMs
+          in: query
+          schema:
+            type: integer
+        - name: toMs
+          in: query
+          schema:
+            type: integer
     post:
       operationId: createTracksRecord
       tags:
-      - tracks
+        - tracks
       security: *id021
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
       responses:
         '400':
           description: 请求不合法
@@ -5074,7 +5074,7 @@ paths:
     get:
       operationId: getTracksRecordById
       tags:
-      - tracks
+        - tracks
       security: *id021
       responses:
         '200':
@@ -5092,15 +5092,15 @@ paths:
         '409':
           description: 修订冲突
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     put:
       operationId: updateTracksRecordById
       tags:
-      - tracks
+        - tracks
       security: *id021
       responses:
         '200':
@@ -5124,19 +5124,19 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordMutation'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
     delete:
       operationId: deleteTracksRecordById
       tags:
-      - tracks
+        - tracks
       security: *id021
       responses:
         '200':
@@ -5160,15 +5160,15 @@ paths:
             schema:
               $ref: '#/components/schemas/RecordDeletion'
       parameters:
-      - $ref: '#/components/parameters/ClientHeader'
-      - $ref: '#/components/parameters/AppVersionHeader'
-      - $ref: '#/components/parameters/OSHeader'
-      - $ref: '#/components/parameters/OSVersionHeader'
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
 components:
   parameters:
     ClientHeader:
@@ -5211,8 +5211,8 @@ components:
     BackendVersion:
       type: object
       required:
-      - version
-      - commit
+        - version
+        - commit
       properties:
         version:
           type: string
@@ -5225,18 +5225,18 @@ components:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - title
-      - category
-      - occurred_at
-      - date_calendar
-      - is_yearly
-      - lead_time_minutes
-      - is_enabled
-      - reminder_time_minutes
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - title
+        - category
+        - occurred_at
+        - date_calendar
+        - is_yearly
+        - lead_time_minutes
+        - is_enabled
+        - reminder_time_minutes
       properties:
         id:
           type: string
@@ -5387,19 +5387,19 @@ components:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - title
-      - original_amount_cents
-      - discount_amount_cents
-      - final_amount_cents
-      - transaction_type
-      - category
-      - payment_method
-      - occurred_at
-      - settlement_status
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - title
+        - original_amount_cents
+        - discount_amount_cents
+        - final_amount_cents
+        - transaction_type
+        - category
+        - payment_method
+        - occurred_at
+        - settlement_status
       properties:
         id:
           type: string
@@ -5519,9 +5519,9 @@ components:
         transaction_type:
           type: string
           enum:
-          - expense
-          - income
-          - storedValueUse
+            - expense
+            - income
+            - storedValueUse
           x-recoow:
             format: enum
             editable: true
@@ -5545,14 +5545,14 @@ components:
         payment_method:
           type: string
           enum:
-          - alipay
-          - bankCard
-          - cash
-          - creditCard
-          - douyinPay
-          - other
-          - unionPay
-          - wechat
+            - alipay
+            - bankCard
+            - cash
+            - creditCard
+            - douyinPay
+            - other
+            - unionPay
+            - wechat
           x-recoow:
             format: enum
             editable: true
@@ -5642,9 +5642,9 @@ components:
         settlement_status:
           type: string
           enum:
-          - active
-          - redeemed
-          - refunded
+            - active
+            - redeemed
+            - refunded
           default: active
           x-recoow:
             format: enum
@@ -5728,23 +5728,23 @@ components:
           zh: 账单
           en: Bills
         dependencies:
-        - field: stored_value_account_id
-          table: stored_value_accounts
-        - field: image_asset_id
-          table: media_assets
+          - field: stored_value_account_id
+            table: stored_value_accounts
+          - field: image_asset_id
+            table: media_assets
     DecisionChoiceRecordsSnapshot:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - collection_id
-      - collection_title
-      - option_id
-      - option_title
-      - selected_at
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - collection_id
+        - collection_title
+        - option_id
+        - option_title
+        - selected_at
       properties:
         id:
           type: string
@@ -5894,17 +5894,17 @@ components:
           zh: 决策历史
           en: decision choice records
         dependencies:
-        - field: option_image_asset_id
-          table: media_assets
+          - field: option_image_asset_id
+            table: media_assets
     DecisionCollectionsSnapshot:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - title
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - title
       properties:
         id:
           type: string
@@ -5996,14 +5996,14 @@ components:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - collection_id
-      - title
-      - weight
-      - is_enabled
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - collection_id
+        - title
+        - weight
+        - is_enabled
       properties:
         id:
           type: string
@@ -6145,23 +6145,23 @@ components:
           zh: 决策选项
           en: decision options
         dependencies:
-        - field: collection_id
-          table: decision_collections
-        - field: image_asset_id
-          table: media_assets
+          - field: collection_id
+            table: decision_collections
+          - field: image_asset_id
+            table: media_assets
     DiaryEntriesSnapshot:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - title
-      - content
-      - mood
-      - tags_json
-      - occurred_at
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - title
+        - content
+        - mood
+        - tags_json
+        - occurred_at
       properties:
         id:
           type: string
@@ -6307,15 +6307,15 @@ components:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - diary_id
-      - source_type
-      - source_id
-      - source_title
-      - source_icon
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - diary_id
+        - source_type
+        - source_id
+        - source_title
+        - source_icon
       properties:
         id:
           type: string
@@ -6454,17 +6454,17 @@ components:
           zh: 日记关联
           en: diary links
         dependencies:
-        - field: diary_id
-          table: diary_entries
+          - field: diary_id
+            table: diary_entries
     DiaryTagsSnapshot:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - name
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - name
       properties:
         id:
           type: string
@@ -6556,12 +6556,12 @@ components:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - title
-      - day_start_at
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - title
+        - day_start_at
       properties:
         id:
           type: string
@@ -6653,14 +6653,14 @@ components:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - title
-      - meal_kind
-      - bill_ids_json
-      - occurred_at
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - title
+        - meal_kind
+        - bill_ids_json
+        - occurred_at
       properties:
         id:
           type: string
@@ -6791,17 +6791,17 @@ components:
           zh: 饮食记录
           en: food entries
         dependencies:
-        - field: bill_id
-          table: bills
+          - field: bill_id
+            table: bills
     ItemCategoriesSnapshot:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - name
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - name
       properties:
         id:
           type: string
@@ -6893,17 +6893,17 @@ components:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - kind
-      - storage_backend
-      - storage_key
-      - mime_type
-      - byte_count
-      - checksum
-      - sort_order
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - kind
+        - storage_backend
+        - storage_key
+        - mime_type
+        - byte_count
+        - checksum
+        - sort_order
       properties:
         id:
           type: string
@@ -7076,15 +7076,15 @@ components:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - owner_type
-      - owner_id
-      - kind
-      - mime_type
-      - sort_order
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - owner_type
+        - owner_id
+        - kind
+        - mime_type
+        - sort_order
       properties:
         id:
           type: string
@@ -7254,20 +7254,20 @@ components:
           zh: 媒体附件
           en: media attachments
         dependencies:
-        - field: asset_id
-          table: media_assets
+          - field: asset_id
+            table: media_assets
     ReminderCompletionsSnapshot:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - reminder_id
-      - date_key
-      - completed_at
-      - kind
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - reminder_id
+        - date_key
+        - completed_at
+        - kind
       properties:
         id:
           type: string
@@ -7380,25 +7380,25 @@ components:
           zh: 打卡明细
           en: reminder completions
         dependencies:
-        - field: reminder_id
-          table: reminders
+          - field: reminder_id
+            table: reminders
     RemindersSnapshot:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - title
-      - memory_icon
-      - scheduled_at
-      - lead_time_minutes
-      - is_enabled
-      - schedule_kind
-      - reminder_time_minutes
-      - continuous_days
-      - imported_completed_days
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - title
+        - memory_icon
+        - scheduled_at
+        - lead_time_minutes
+        - is_enabled
+        - schedule_kind
+        - reminder_time_minutes
+        - continuous_days
+        - imported_completed_days
       properties:
         id:
           type: string
@@ -7561,12 +7561,12 @@ components:
         schedule_kind:
           type: string
           enum:
-          - continuousDays
-          - dailyGoal
-          - dateRange
-          - single
-          - weekdays
-          - weekly
+            - continuousDays
+            - dailyGoal
+            - dateRange
+            - single
+            - weekdays
+            - weekly
           x-recoow:
             format: enum
             editable: true
@@ -7737,18 +7737,18 @@ components:
           zh: 提醒 / 打卡
           en: Reminders
         dependencies:
-        - field: image_asset_id
-          table: media_assets
+          - field: image_asset_id
+            table: media_assets
     StoredItemsSnapshot:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - title
-      - location
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - title
+        - location
       properties:
         id:
           type: string
@@ -7891,21 +7891,21 @@ components:
           zh: 物品
           en: stored items
         dependencies:
-        - field: category_id
-          table: item_categories
-        - field: image_asset_id
-          table: media_assets
+          - field: category_id
+            table: item_categories
+          - field: image_asset_id
+            table: media_assets
     StoredValueAccountsSnapshot:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - name
-      - kind
-      - balance_cents
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - name
+        - kind
+        - balance_cents
       properties:
         id:
           type: string
@@ -7988,12 +7988,12 @@ components:
         kind:
           type: string
           enum:
-          - giftCard
-          - mealCard
-          - membershipCard
-          - other
-          - phoneBalance
-          - transitCard
+            - giftCard
+            - mealCard
+            - membershipCard
+            - other
+            - phoneBalance
+            - transitCard
           x-recoow:
             format: enum
             editable: true
@@ -8039,13 +8039,13 @@ components:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - account_id
-      - amount_cents
-      - reason
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - account_id
+        - amount_cents
+        - reason
       properties:
         id:
           type: string
@@ -8141,20 +8141,20 @@ components:
           zh: 储值调整流水
           en: stored value adjustments
         dependencies:
-        - field: account_id
-          table: stored_value_accounts
+          - field: account_id
+            table: stored_value_accounts
     TrackPointsSnapshot:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - track_id
-      - latitude
-      - longitude
-      - timestamp_ms
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - track_id
+        - latitude
+        - longitude
+        - timestamp_ms
       properties:
         id:
           type: string
@@ -8310,24 +8310,24 @@ components:
           zh: 轨迹点
           en: track points
         dependencies:
-        - field: track_id
-          table: tracks
+          - field: track_id
+            table: tracks
     TrackSegmentsSnapshot:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - track_id
-      - started_at
-      - ended_at
-      - distance_m
-      - duration_s
-      - motion_type
-      - source
-      - confidence
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - track_id
+        - started_at
+        - ended_at
+        - distance_m
+        - duration_s
+        - motion_type
+        - source
+        - confidence
       properties:
         id:
           type: string
@@ -8487,22 +8487,22 @@ components:
           zh: 轨迹分段
           en: track segments
         dependencies:
-        - field: track_id
-          table: tracks
+          - field: track_id
+            table: tracks
     TracksSnapshot:
       type: object
       additionalProperties: true
       required:
-      - id
-      - created_at
-      - updated_at
-      - device_id
-      - name
-      - started_at
-      - desired_accuracy_m
-      - distance_m
-      - duration_s
-      - status
+        - id
+        - created_at
+        - updated_at
+        - device_id
+        - name
+        - started_at
+        - desired_accuracy_m
+        - distance_m
+        - duration_s
+        - status
       properties:
         id:
           type: string
@@ -8670,7 +8670,7 @@ components:
         error:
           type: string
       required:
-      - error
+        - error
     AccountInitRequest:
       type: object
       properties:
@@ -8688,10 +8688,10 @@ components:
         recoveryKey:
           type: string
       required:
-      - accountId
-      - deviceId
-      - deviceToken
-      - recoveryKey
+        - accountId
+        - deviceId
+        - deviceToken
+        - recoveryKey
     PairRequest:
       type: object
       properties:
@@ -8700,7 +8700,7 @@ components:
         deviceName:
           type: string
       required:
-      - code
+        - code
     RecoverRequest:
       type: object
       properties:
@@ -8709,7 +8709,7 @@ components:
         deviceName:
           type: string
       required:
-      - recoveryKey
+        - recoveryKey
     PairResponse:
       type: object
       properties:
@@ -8720,16 +8720,16 @@ components:
         deviceToken:
           type: string
       required:
-      - accountId
-      - deviceId
-      - deviceToken
+        - accountId
+        - deviceId
+        - deviceToken
     PairingCodeResponse:
       type: object
       properties:
         code:
           type: string
       required:
-      - code
+        - code
     Device:
       type: object
       properties:
@@ -8745,10 +8745,10 @@ components:
           type: string
           format: date-time
       required:
-      - id
-      - name
-      - isOwner
-      - lastSeenAt
+        - id
+        - name
+        - isOwner
+        - lastSeenAt
     DevicesResponse:
       type: object
       properties:
@@ -8757,14 +8757,14 @@ components:
           items:
             $ref: '#/components/schemas/Device'
       required:
-      - devices
+        - devices
     OkResponse:
       type: object
       properties:
         ok:
           type: boolean
       required:
-      - ok
+        - ok
     Dataset:
       type: object
       properties:
@@ -8777,25 +8777,25 @@ components:
           type: integer
           format: int64
       required:
-      - generation
-      - head
-      - minCursor
+        - generation
+        - head
+        - minCursor
     ClientType:
       type: string
       enum:
-      - ios
-      - android
-      - web
-      - unknown
+        - ios
+        - android
+        - web
+        - unknown
     OperatingSystem:
       type: string
       enum:
-      - ios
-      - android
-      - macos
-      - windows
-      - linux
-      - unknown
+        - ios
+        - android
+        - macos
+        - windows
+        - linux
+        - unknown
     ClientEnvironment:
       type: object
       description: 客户端声明的运行环境，仅用于来源展示，不参与鉴权。
@@ -8811,69 +8811,69 @@ components:
           type: string
           maxLength: 80
       required:
-      - client
-      - os
+        - client
+        - os
     DeviceProfile:
       allOf:
-      - $ref: '#/components/schemas/ClientEnvironment'
-      - type: object
-        properties:
-          localDeviceId:
-            type: string
-            maxLength: 200
+        - $ref: '#/components/schemas/ClientEnvironment'
+        - type: object
+          properties:
+            localDeviceId:
+              type: string
+              maxLength: 200
       description: 当前安装的本地来源标识，不是鉴权凭据；账号内有唯一匹配时可关联历史。
     DeviceProfileRequest:
       allOf:
-      - $ref: '#/components/schemas/DeviceProfile'
-      - type: object
-        properties:
-          deviceName:
-            type: string
-            maxLength: 200
+        - $ref: '#/components/schemas/DeviceProfile'
+        - type: object
+          properties:
+            deviceName:
+              type: string
+              maxLength: 200
     ChangeOrigin:
       allOf:
-      - $ref: '#/components/schemas/ClientEnvironment'
-      - type: object
-        properties:
-          deviceId:
-            type: string
-            maxLength: 200
-          deviceName:
-            type: string
-            maxLength: 200
-        required:
-        - deviceId
+        - $ref: '#/components/schemas/ClientEnvironment'
+        - type: object
+          properties:
+            deviceId:
+              type: string
+              maxLength: 200
+            deviceName:
+              type: string
+              maxLength: 200
+          required:
+            - deviceId
       description: 随 mutation 冻结的原始修改来源；deviceId 必须与变更信封一致，不等同于鉴权设备 ID。
     SubmissionSource:
       allOf:
-      - $ref: '#/components/schemas/ClientEnvironment'
-      - type: object
-        properties:
-          deviceId:
-            type: string
-          deviceName:
-            type: string
-          sessionId:
-            type: string
-        required:
-        - deviceId
-        - deviceName
+        - $ref: '#/components/schemas/ClientEnvironment'
+        - type: object
+          properties:
+            deviceId:
+              type: string
+            deviceName:
+              type: string
+            sessionId:
+              type: string
+          required:
+            - deviceId
+            - deviceName
       description: 服务端从鉴权上下文获取的提交身份及此次请求的环境资料，按事件保存快照。
     HistoryOperation:
       type: string
       enum:
-      - insert
-      - update
-      - delete
-      - restore
+        - insert
+        - update
+        - delete
+        - restore
     HistoryMethod:
       type: string
       enum:
-      - normal
-      - automatic_merge
-      - manual_resolution
-      - system
-      - unknown
+        - normal
+        - automatic_merge
+        - manual_resolution
+        - system
+        - unknown
     ChangeEvent:
       type: object
       properties:
@@ -8920,28 +8920,28 @@ components:
           description: 提交时在当前账号内唯一匹配的登记设备 ID；来源声明不是鉴权证明，未知或重复匹配时为空。
         originalSource:
           allOf:
-          - $ref: '#/components/schemas/ChangeOrigin'
+            - $ref: '#/components/schemas/ChangeOrigin'
           nullable: true
         submission:
           allOf:
-          - $ref: '#/components/schemas/SubmissionSource'
+            - $ref: '#/components/schemas/SubmissionSource'
           nullable: true
       required:
-      - eventId
-      - generation
-      - version
-      - previousVersion
-      - table
-      - id
-      - title
-      - operation
-      - method
-      - operationId
-      - triggerEventId
-      - modifiedAtMs
-      - acceptedAtMs
-      - originalSource
-      - submission
+        - eventId
+        - generation
+        - version
+        - previousVersion
+        - table
+        - id
+        - title
+        - operation
+        - method
+        - operationId
+        - triggerEventId
+        - modifiedAtMs
+        - acceptedAtMs
+        - originalSource
+        - submission
     ChangeEventRef:
       type: object
       properties:
@@ -8954,9 +8954,9 @@ components:
           type: integer
           format: int64
       required:
-      - eventId
-      - version
-      - acceptedAtMs
+        - eventId
+        - version
+        - acceptedAtMs
     ChangeEventPage:
       type: object
       properties:
@@ -8975,11 +8975,11 @@ components:
           type: string
           nullable: true
       required:
-      - events
-      - generation
-      - watermark
-      - more
-      - nextCursor
+        - events
+        - generation
+        - watermark
+        - more
+        - nextCursor
     FieldChange:
       type: object
       properties:
@@ -8994,11 +8994,11 @@ components:
         afterValue:
           nullable: true
       required:
-      - field
-      - beforePresent
-      - afterPresent
-      - beforeValue
-      - afterValue
+        - field
+        - beforePresent
+        - afterPresent
+        - beforeValue
+        - afterValue
     ChangeEventDetail:
       type: object
       properties:
@@ -9006,7 +9006,7 @@ components:
           $ref: '#/components/schemas/ChangeEvent'
         before:
           allOf:
-          - $ref: '#/components/schemas/Row'
+            - $ref: '#/components/schemas/Row'
           nullable: true
         after:
           $ref: '#/components/schemas/Row'
@@ -9019,16 +9019,16 @@ components:
           items:
             $ref: '#/components/schemas/FieldChange'
       required:
-      - event
-      - before
-      - after
-      - related
-      - changes
+        - event
+        - before
+        - after
+        - related
+        - changes
     SessionAccess:
       type: string
       enum:
-      - read_only
-      - read_write
+        - read_only
+        - read_write
       description: 由服务端授权的会话访问范围。登录默认只读，客户端和 Header 不能开启写权限。
     SyncCapabilities:
       type: object
@@ -9049,10 +9049,10 @@ components:
             type: string
           description: change_history_v1 提供变更查询及回执事件关联；mutation_origin_v1 接受冻结的原始来源资料，新客户端发送 origin 前须检查能力；device_profiles_v1 支持登记当前设备资料。
       required:
-      - protocolVersion
-      - accountId
-      - dataset
-      - contracts
+        - protocolVersion
+        - accountId
+        - dataset
+        - contracts
     Row:
       type: object
       properties:
@@ -9078,24 +9078,24 @@ components:
           type: integer
           format: int64
       required: &id032
-      - table
-      - id
-      - version
-      - updatedAtMs
-      - deviceId
+        - table
+        - id
+        - version
+        - updatedAtMs
+        - deviceId
     SyncManifestEntry:
       type: object
       required:
-      - table
-      - id
-      - version
-      - operation
-      - updatedAtMs
-      - deviceId
-      - deleted
-      - dataVersion
-      - digest
-      - metadata
+        - table
+        - id
+        - version
+        - operation
+        - updatedAtMs
+        - deviceId
+        - deleted
+        - dataVersion
+        - digest
+        - metadata
       properties:
         table:
           type: string
@@ -9107,9 +9107,9 @@ components:
         operation:
           type: string
           enum:
-          - insert
-          - update
-          - delete
+            - insert
+            - update
+            - delete
         updatedAtMs:
           type: integer
           format: int64
@@ -9132,12 +9132,12 @@ components:
     SyncManifestPage:
       type: object
       required:
-      - entries
-      - generation
-      - watermark
-      - cursor
-      - more
-      - digestVersion
+        - entries
+        - generation
+        - watermark
+        - cursor
+        - more
+        - digestVersion
       properties:
         entries:
           type: array
@@ -9156,13 +9156,13 @@ components:
         digestVersion:
           type: integer
           enum:
-          - 1
+            - 1
     SyncSnapshotQuery:
       type: object
       required:
-      - generation
-      - watermark
-      - versions
+        - generation
+        - watermark
+        - versions
       properties:
         generation:
           type: string
@@ -9182,9 +9182,9 @@ components:
     SyncSnapshotQueryResponse:
       type: object
       required:
-      - entries
-      - generation
-      - watermark
+        - entries
+        - generation
+        - watermark
       properties:
         entries:
           type: array
@@ -9205,9 +9205,9 @@ components:
         operation:
           type: string
           enum:
-          - insert
-          - update
-          - delete
+            - insert
+            - update
+            - delete
         snapshot:
           type: object
           additionalProperties: true
@@ -9228,13 +9228,13 @@ components:
           type: integer
           format: int64
       required:
-      - table
-      - id
-      - operation
-      - version
-      - updatedAtMs
-      - deviceId
-      - deleted
+        - table
+        - id
+        - operation
+        - version
+        - updatedAtMs
+        - deviceId
+        - deleted
     PushItem:
       type: object
       properties:
@@ -9252,8 +9252,8 @@ components:
         resolution:
           type: string
           enum:
-          - local
-          - remote
+            - local
+            - remote
           description: 仅用于人工确认冲突；选择争议字段或账单结算组，保留双方独立修改。缺少共同基础或删除冲突时选择整条记录。
         expectedVersion:
           type: integer
@@ -9265,9 +9265,9 @@ components:
         operation:
           type: string
           enum:
-          - insert
-          - update
-          - delete
+            - insert
+            - update
+            - delete
         updatedAtMs:
           type: integer
           format: int64
@@ -9277,21 +9277,21 @@ components:
           type: object
           additionalProperties: true
       required:
-      - table
-      - id
-      - mutationId
-      - baseVersion
-      - dataVersion
-      - operation
-      - updatedAtMs
-      - deviceId
+        - table
+        - id
+        - mutationId
+        - baseVersion
+        - dataVersion
+        - operation
+        - updatedAtMs
+        - deviceId
     PushRequest:
       type: object
       properties:
         protocolVersion:
           type: integer
           enum:
-          - 2
+            - 2
         generation:
           type: string
         items:
@@ -9300,9 +9300,9 @@ components:
           items:
             $ref: '#/components/schemas/PushItem'
       required:
-      - protocolVersion
-      - generation
-      - items
+        - protocolVersion
+        - generation
+        - items
     PushResult:
       type: object
       properties:
@@ -9325,25 +9325,25 @@ components:
         status:
           type: string
           enum:
-          - applied
-          - duplicate
-          - conflict
-          - unsupported_table
-          - invalid_operation
-          - mutation_reused
-          - dependency_missing
-          - invalid_revision
+            - applied
+            - duplicate
+            - conflict
+            - unsupported_table
+            - invalid_operation
+            - mutation_reused
+            - dependency_missing
+            - invalid_revision
         mutationId:
           type: string
         current:
           $ref: '#/components/schemas/Row'
       required:
-      - table
-      - id
-      - applied
-      - operation
-      - version
-      - status
+        - table
+        - id
+        - applied
+        - operation
+        - version
+        - status
     PushResponse:
       type: object
       properties:
@@ -9352,7 +9352,7 @@ components:
           items:
             $ref: '#/components/schemas/PushResult'
       required:
-      - results
+        - results
     PullResponse:
       type: object
       properties:
@@ -9368,18 +9368,18 @@ components:
         generation:
           type: string
       required:
-      - entries
-      - cursor
-      - more
-      - generation
+        - entries
+        - cursor
+        - more
+        - generation
     BootstrapResponse:
       type: object
       required:
-      - entries
-      - generation
-      - watermark
-      - cursor
-      - more
+        - entries
+        - generation
+        - watermark
+        - cursor
+        - more
       properties:
         entries:
           type: array
@@ -9408,8 +9408,8 @@ components:
             items:
               $ref: '#/components/schemas/Row'
       required:
-      - exportedAt
-      - tables
+        - exportedAt
+        - tables
     CredentialsRequest:
       type: object
       properties:
@@ -9423,8 +9423,8 @@ components:
           minLength: 12
           maxLength: 256
       required:
-      - username
-      - password
+        - username
+        - password
     RegisterRequest:
       type: object
       properties:
@@ -9440,8 +9440,8 @@ components:
         bootstrapToken:
           type: string
       required:
-      - username
-      - password
+        - username
+        - password
     LoginResponse:
       type: object
       properties:
@@ -9461,12 +9461,12 @@ components:
           type: string
           format: date-time
       required:
-      - userId
-      - username
-      - accountId
-      - deviceId
-      - accessToken
-      - expiresAt
+        - userId
+        - username
+        - accountId
+        - deviceId
+        - accessToken
+        - expiresAt
     IdentityResponse:
       type: object
       properties:
@@ -9477,9 +9477,9 @@ components:
         accountId:
           type: string
       required:
-      - userId
-      - username
-      - accountId
+        - userId
+        - username
+        - accountId
     PasswordRequest:
       type: object
       properties:
@@ -9492,8 +9492,8 @@ components:
           minLength: 12
           maxLength: 256
       required:
-      - currentPassword
-      - newPassword
+        - currentPassword
+        - newPassword
     PageResponse:
       type: object
       properties:
@@ -9506,9 +9506,9 @@ components:
         more: &id034
           type: boolean
       required: &id035
-      - rows
-      - nextCursor
-      - more
+        - rows
+        - nextCursor
+        - more
     StatisticsResponse:
       type: object
       properties:
@@ -9527,10 +9527,10 @@ components:
           type: integer
           format: int64
       required:
-      - recordCounts
-      - billExpenseCents
-      - billIncomeCents
-      - billStoredValueUseCents
+        - recordCounts
+        - billExpenseCents
+        - billIncomeCents
+        - billStoredValueUseCents
     MediaResponse:
       type: object
       properties:
@@ -9546,11 +9546,11 @@ components:
     RecordMutation:
       type: object
       required:
-      - mutationId
-      - baseVersion
-      - dataVersion
-      - snapshot
-      - updatedAtMs
+        - mutationId
+        - baseVersion
+        - dataVersion
+        - snapshot
+        - updatedAtMs
       properties:
         mutationId: &id022
           type: string
@@ -9565,8 +9565,8 @@ components:
         resolution:
           type: string
           enum:
-          - local
-          - remote
+            - local
+            - remote
           description: 人工确认时选择争议内容，需同时提供 expectedVersion。
         expectedVersion:
           type: integer
@@ -9581,10 +9581,10 @@ components:
     RecordDeletion:
       type: object
       required:
-      - mutationId
-      - baseVersion
-      - dataVersion
-      - updatedAtMs
+        - mutationId
+        - baseVersion
+        - dataVersion
+        - updatedAtMs
       properties:
         mutationId: *id022
         baseVersion: *id023
@@ -9592,8 +9592,8 @@ components:
         resolution:
           type: string
           enum:
-          - local
-          - remote
+            - local
+            - remote
           description: 人工确认时选择争议内容，需同时提供 expectedVersion。
         expectedVersion:
           type: integer
