@@ -4,26 +4,42 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"golang.org/x/crypto/argon2"
 	"strings"
 )
 
+var (
+	ErrInvalidUsername = errors.New("invalid username")
+	ErrInvalidPassword = errors.New("invalid password")
+)
+
+// NewUsername 为账号生成稳定的字母与数字标识；唯一性由存储层保证。
+func NewUsername() (string, error) {
+	value := make([]byte, 8)
+	if _, err := rand.Read(value); err != nil {
+		return "", err
+	}
+	return "u" + hex.EncodeToString(value), nil
+}
+
 func NormalizeUsername(username string) (string, error) {
 	username = strings.ToLower(strings.TrimSpace(username))
 	if len(username) < 3 || len(username) > 64 {
-		return "", fmt.Errorf("用户名须为 3 至 64 个字符")
+		return "", fmt.Errorf("%w: 用户名须为 3 至 64 个字符", ErrInvalidUsername)
 	}
 	for _, char := range username {
 		if !(char >= 'a' && char <= 'z' || char >= '0' && char <= '9' || strings.ContainsRune("._-@", char)) {
-			return "", fmt.Errorf("用户名仅支持字母、数字、点、下划线、连字符和 @")
+			return "", fmt.Errorf("%w: 用户名仅支持字母、数字、点、下划线、连字符和 @", ErrInvalidUsername)
 		}
 	}
 	return username, nil
 }
 func HashPassword(password string) (string, error) {
 	if len(password) < 12 || len(password) > 256 {
-		return "", fmt.Errorf("密码须为 12 至 256 字节")
+		return "", fmt.Errorf("%w: 密码须为 12 至 256 字节", ErrInvalidPassword)
 	}
 	salt := make([]byte, 16)
 	if _, err := rand.Read(salt); err != nil {

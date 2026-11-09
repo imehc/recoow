@@ -7,6 +7,7 @@ package sqlgen
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 )
 
@@ -24,6 +25,46 @@ type CleanupExpiredSessionsParams struct {
 
 func (q *Queries) CleanupExpiredSessions(ctx context.Context, arg CleanupExpiredSessionsParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, cleanupExpiredSessions, arg.ExpiresAt, arg.BatchSize)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const createLoginDevice = `-- name: CreateLoginDevice :execrows
+INSERT INTO devices (id, account_id, name, token_hash, is_owner, created_at, last_seen_at, profile)
+SELECT $1::text AS id, users.account_id, $2::text AS name, $3::text AS token_hash, 0::bigint AS is_owner,
+    $4::text AS created_at, $5::text AS last_seen_at, COALESCE($6, 'null'::jsonb) AS profile
+FROM users WHERE users.id = $7 AND users.account_id = $8
+    AND users.password_hash = $9 AND NOT users.disabled
+FOR SHARE
+`
+
+type CreateLoginDeviceParams struct {
+	ID           string
+	Name         string
+	TokenHash    string
+	CreatedAt    string
+	LastSeenAt   string
+	Profile      json.RawMessage
+	UserID       string
+	AccountID    string
+	PasswordHash string
+}
+
+// 与改密共用用户行锁，旧密码验证结果不能在改密后签发设备凭据。
+func (q *Queries) CreateLoginDevice(ctx context.Context, arg CreateLoginDeviceParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, createLoginDevice,
+		arg.ID,
+		arg.Name,
+		arg.TokenHash,
+		arg.CreatedAt,
+		arg.LastSeenAt,
+		arg.Profile,
+		arg.UserID,
+		arg.AccountID,
+		arg.PasswordHash,
+	)
 	if err != nil {
 		return 0, err
 	}
@@ -145,6 +186,25 @@ type SetPasswordParams struct {
 
 func (q *Queries) SetPassword(ctx context.Context, arg SetPasswordParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, setPassword, arg.PasswordHash, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const setPasswordIfCurrent = `-- name: SetPasswordIfCurrent :execrows
+UPDATE users SET password_hash = $1
+WHERE id = $2 AND password_hash = $3 AND NOT disabled
+`
+
+type SetPasswordIfCurrentParams struct {
+	PasswordHash string
+	ID           string
+	ExpectedHash string
+}
+
+func (q *Queries) SetPasswordIfCurrent(ctx context.Context, arg SetPasswordIfCurrentParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setPasswordIfCurrent, arg.PasswordHash, arg.ID, arg.ExpectedHash)
 	if err != nil {
 		return 0, err
 	}

@@ -12,6 +12,7 @@ type initRequest struct {
 }
 
 type initResponse struct {
+	Username    string `json:"username,omitempty"`
 	RecoveryKey string `json:"recovery_key"` // 仅此一次返回明文
 	DeviceToken string `json:"device_token"`
 	DeviceID    string `json:"device_id"`

@@ -54,23 +54,60 @@ func (storage *postgresStore) UserByAccount(accountID string) (domain.User, erro
 	return domainUser(sqlgen.New(storage.db.DB).UserByAccount(storage.ctx, accountID))
 }
 func (storage *postgresStore) SetPassword(userID, passwordHash string) error {
+	return storage.setPassword(userID, "", passwordHash)
+}
+func (storage *postgresStore) SetPasswordIfCurrent(userID, expectedHash, passwordHash string) error {
+	if expectedHash == "" {
+		return domain.ErrConflict
+	}
+	return storage.setPassword(userID, expectedHash, passwordHash)
+}
+func (storage *postgresStore) setPassword(userID, expectedHash, passwordHash string) error {
 	tx, err := storage.db.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 	queries := sqlgen.New(tx.Tx)
-	affected, err := queries.SetPassword(storage.ctx, sqlgen.SetPasswordParams{ID: userID, PasswordHash: passwordHash})
+	var affected int64
+	if expectedHash == "" {
+		affected, err = queries.SetPassword(storage.ctx, sqlgen.SetPasswordParams{ID: userID, PasswordHash: passwordHash})
+	} else {
+		affected, err = queries.SetPasswordIfCurrent(storage.ctx, sqlgen.SetPasswordIfCurrentParams{ID: userID, ExpectedHash: expectedHash, PasswordHash: passwordHash})
+	}
 	if err != nil {
 		return err
 	}
 	if affected != 1 {
+		if expectedHash != "" {
+			return domain.ErrConflict
+		}
 		return domain.ErrNotFound
 	}
 	if err := queries.RevokeUserSessions(storage.ctx, userID); err != nil {
 		return err
 	}
 	return tx.Commit()
+}
+
+func (storage *postgresStore) CreateLoginDevice(user domain.User, name string, tokenHash []byte, profiles ...domain.DeviceProfile) (domain.Device, error) {
+	profile, raw, err := deviceProfile(profiles)
+	if err != nil {
+		return domain.Device{}, err
+	}
+	now := time.Now().UTC()
+	device := domain.Device{ID: newID(), AccountID: user.AccountID, Name: name, TokenHash: tokenHash, CreatedAt: now, LastSeenAt: now, Profile: profile}
+	affected, err := sqlgen.New(storage.db.DB).CreateLoginDevice(storage.ctx, sqlgen.CreateLoginDeviceParams{
+		ID: device.ID, UserID: user.ID, AccountID: user.AccountID, PasswordHash: user.PasswordHash,
+		Name: name, TokenHash: hexHash(tokenHash), CreatedAt: rfc3339(now), LastSeenAt: rfc3339(now), Profile: raw,
+	})
+	if err != nil {
+		return domain.Device{}, err
+	}
+	if affected != 1 {
+		return domain.Device{}, domain.ErrNotFound
+	}
+	return device, nil
 }
 func (storage *postgresStore) CreateSession(session domain.Session) error {
 	if session.Access == "" {

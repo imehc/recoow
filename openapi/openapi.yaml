@@ -1149,6 +1149,7 @@ paths:
     post:
       operationId: registerUser
       summary: registerUser
+      description: 注册新账号；省略用户名时自动生成。
       tags:
         - Authentication
       parameters:
@@ -1220,6 +1221,7 @@ paths:
     post:
       operationId: bindCredentials
       summary: bindCredentials
+      description: 主设备为当前账号设置密码；省略用户名时自动生成。
       tags:
         - Authentication
       responses:
@@ -1253,6 +1255,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '500':
+          description: 凭据绑定失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       security:
         - deviceToken: []
         - sessionToken: []
@@ -1262,13 +1270,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CredentialsRequest'
+              $ref: '#/components/schemas/BindCredentialsRequest'
       parameters:
         - $ref: '#/components/parameters/APIFieldCase'
   /api/sessions:
     post:
       operationId: login
       summary: login
+      description: 签发只读 Web 会话。
       tags:
         - Authentication
       parameters:
@@ -1336,6 +1345,121 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CredentialsRequest'
+  /api/device-logins:
+    post:
+      operationId: loginDevice
+      summary: 登录设备
+      description: 验证账号密码，签发可同步的非主设备凭据。
+      tags:
+        - Authentication
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/AppVersionHeader'
+        - $ref: '#/components/parameters/OSHeader'
+        - $ref: '#/components/parameters/OSVersionHeader'
+        - name: X-Recoow-Device-Id
+          in: header
+          description: 本地设备标识
+          schema:
+            type: string
+        - $ref: '#/components/parameters/APIFieldCase'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceLoginRequest'
+      responses:
+        '201':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceLoginResponse'
+        '400':
+          description: 请求不合法
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 凭据无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 来源不允许
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 请求过于频繁
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 登录失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/password-resets:
+    post:
+      operationId: resetPassword
+      summary: 找回密码
+      description: 用恢复密钥重设密码，返回原账号身份并吊销 Web 会话。
+      tags:
+        - Authentication
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/APIFieldCase'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+      responses:
+        '200':
+          description: 重设成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentityResponse'
+        '400':
+          description: 请求不合法
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 恢复密钥无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 来源不允许
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 请求过于频繁
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 重设失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/sessions/current:
     delete:
       operationId: logout
@@ -1392,6 +1516,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/IdentityResponse'
+        '404':
+          description: 尚未设置账号密码
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '400':
           description: 请求不合法
           content:
@@ -1455,6 +1585,18 @@ paths:
                 $ref: '#/components/schemas/Error'
         '409':
           description: 冲突或需要重新同步
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 请求过于频繁
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 密码变更失败
           content:
             application/json:
               schema:
@@ -9377,6 +9519,9 @@ components:
     AccountInitResponse:
       type: object
       properties:
+        username:
+          type: string
+          description: 注册时设置的用户名
         account_id:
           type: string
           x-recoow-legacy-name: accountId
@@ -10351,7 +10496,23 @@ components:
       required:
         - username
         - password
-    RegisterRequest:
+    BindCredentialsRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 64
+          description: 兼容旧客户端；省略时自动生成
+        password:
+          type: string
+          format: password
+          minLength: 12
+          maxLength: 256
+          description: 用户设置的密码（12–256 字节）
+      required:
+        - password
+    DeviceLoginRequest:
       type: object
       properties:
         username:
@@ -10359,6 +10520,74 @@ components:
           minLength: 3
           maxLength: 64
           description: 用户名
+        password:
+          type: string
+          format: password
+          maxLength: 256
+          description: 密码
+        device_name:
+          type: string
+          maxLength: 200
+          x-recoow-legacy-name: deviceName
+          description: 设备名称（最多 200 字节）
+      required:
+        - username
+        - password
+    DeviceLoginResponse:
+      type: object
+      properties:
+        user_id:
+          type: string
+          x-recoow-legacy-name: userId
+          description: 用户ID
+        username:
+          type: string
+          description: 用户名
+        account_id:
+          type: string
+          x-recoow-legacy-name: accountId
+          description: 账号ID
+        device_id:
+          type: string
+          x-recoow-legacy-name: deviceId
+          description: 设备ID
+        device_token:
+          type: string
+          x-recoow-legacy-name: deviceToken
+          description: 可同步的设备令牌
+      required:
+        - user_id
+        - username
+        - account_id
+        - device_id
+        - device_token
+    PasswordResetRequest:
+      type: object
+      properties:
+        recovery_key:
+          type: string
+          format: password
+          maxLength: 256
+          x-recoow-legacy-name: recoveryKey
+          description: 账号恢复密钥
+        new_password:
+          type: string
+          format: password
+          minLength: 12
+          maxLength: 256
+          x-recoow-legacy-name: newPassword
+          description: 新密码（12–256 字节）
+      required:
+        - recovery_key
+        - new_password
+    RegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 64
+          description: 省略时自动生成用户名
         password:
           type: string
           format: password
@@ -10370,7 +10599,6 @@ components:
           x-recoow-legacy-name: bootstrapToken
           description: 注册口令
       required:
-        - username
         - password
     LoginResponse:
       type: object

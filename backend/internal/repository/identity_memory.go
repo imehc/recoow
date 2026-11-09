@@ -71,11 +71,23 @@ func (storage *memoryStore) UserByAccount(accountID string) (domain.User, error)
 	return domain.User{}, domain.ErrNotFound
 }
 func (storage *memoryStore) SetPassword(userID, passwordHash string) error {
+	return storage.setPassword(userID, "", passwordHash)
+}
+func (storage *memoryStore) SetPasswordIfCurrent(userID, expectedHash, passwordHash string) error {
+	if expectedHash == "" {
+		return domain.ErrConflict
+	}
+	return storage.setPassword(userID, expectedHash, passwordHash)
+}
+func (storage *memoryStore) setPassword(userID, expectedHash, passwordHash string) error {
 	storage.mu.Lock()
 	defer storage.mu.Unlock()
 	user, exists := storage.users[userID]
 	if !exists {
 		return domain.ErrNotFound
+	}
+	if expectedHash != "" && (user.PasswordHash != expectedHash || user.Disabled) {
+		return domain.ErrConflict
 	}
 	user.PasswordHash = passwordHash
 	storage.users[userID] = user
@@ -86,6 +98,28 @@ func (storage *memoryStore) SetPassword(userID, passwordHash string) error {
 		}
 	}
 	return nil
+}
+
+func (storage *memoryStore) CreateLoginDevice(user domain.User, name string, tokenHash []byte, profiles ...domain.DeviceProfile) (domain.Device, error) {
+	storage.mu.Lock()
+	defer storage.mu.Unlock()
+	current, exists := storage.users[user.ID]
+	if !exists || current.Disabled || current.AccountID != user.AccountID || current.PasswordHash != user.PasswordHash {
+		return domain.Device{}, domain.ErrNotFound
+	}
+	for _, device := range storage.devices {
+		if string(device.TokenHash) == string(tokenHash) {
+			return domain.Device{}, domain.ErrDeviceExists
+		}
+	}
+	profile, _, err := deviceProfile(profiles)
+	if err != nil {
+		return domain.Device{}, err
+	}
+	now := time.Now().UTC()
+	device := domain.Device{ID: newID(), AccountID: user.AccountID, Name: name, TokenHash: tokenHash, CreatedAt: now, LastSeenAt: now, Profile: profile}
+	storage.devices[device.ID] = device
+	return cloneDevice(device), nil
 }
 func (storage *memoryStore) CreateSession(session domain.Session) error {
 	storage.mu.Lock()

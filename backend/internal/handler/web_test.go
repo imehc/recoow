@@ -128,7 +128,7 @@ func TestPasswordChangeRevokesAllWebSessions(t *testing.T) {
 
 func TestBrowserLoginRejectsUntrustedOrigin(t *testing.T) {
 	e := newEnv(t)
-	for _, path := range []string{"/api/sessions", "/api/users"} {
+	for _, path := range []string{"/api/sessions", "/api/users", "/api/device-logins", "/api/password-resets"} {
 		request := httptest.NewRequest("POST", path, bytes.NewBufferString(`{"username":"attacker","password":"a-long-password"}`))
 		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("Origin", "https://untrusted.example")

@@ -17,7 +17,7 @@ func (server *Server) handleCapabilities(writer http.ResponseWriter, request *ht
 	writeJSON(writer, http.StatusOK, map[string]any{
 		"protocol_version": 2, "account_id": device.AccountID, "dataset": state,
 		"contracts": server.schemas.Contracts(), "schema_version": server.schemas.Version(),
-		"features": []string{"revision", "receipts", "bootstrap", "media", "unknown_fields", "projections", "three_way_merge", "conflict_resolution", "clear_dataset", "manifest_bootstrap_v1", "change_history_v1", "mutation_origin_v1", "device_profiles_v1"},
+		"features": []string{"revision", "receipts", "bootstrap", "media", "unknown_fields", "projections", "three_way_merge", "conflict_resolution", "clear_dataset", "manifest_bootstrap_v1", "change_history_v1", "mutation_origin_v1", "device_profiles_v1", "account_credentials_v1"},
 		"limits":   map[string]int64{"push_items": maxPushItems, "pull_entries": maxPullEntries, "media_bytes": maxMediaBytes},
 	})
 }

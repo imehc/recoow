@@ -68,6 +68,8 @@ func (s *Server) Handler() http.Handler {
 	s.resourceRoutes(mux)
 	mux.HandleFunc("POST /api/users", s.handleRegister)
 	mux.HandleFunc("POST /api/sessions", s.handleLogin)
+	mux.HandleFunc("POST /api/device-logins", s.handleDeviceLogin)
+	mux.HandleFunc("POST /api/password-resets", s.handlePasswordReset)
 	mux.Handle("DELETE /api/sessions/current", s.authRequired(http.HandlerFunc(s.handleLogout)))
 	mux.Handle("GET /api/users/me", s.authRequired(http.HandlerFunc(s.handleIdentity)))
 	mux.Handle("POST /api/users/me/credentials", s.authRequired(s.ownerOnly(http.HandlerFunc(s.handleBindCredentials))))

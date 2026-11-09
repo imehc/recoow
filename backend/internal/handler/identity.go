@@ -48,20 +48,12 @@ func (limiter *loginLimiter) allow(key string) bool {
 	return true
 }
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
-	// 登录会设置浏览器 Cookie，携带 Origin 的请求同样要验证来源，避免登录 CSRF。
-	if r.Header.Get("Origin") != "" && !s.validCookieOrigin(r) {
-		writeError(w, http.StatusForbidden, "invalid origin")
+	if !s.allowIdentityAttempt(w, r) {
 		return
 	}
 	var input credentialsRequest
 	if err := decodeJSON(w, r, &input); err != nil {
 		writeError(w, 400, "invalid request")
-		return
-	}
-	host, _, _ := net.SplitHostPort(r.RemoteAddr)
-	if !s.loginAttempts.allow(host) {
-		w.Header().Set("Retry-After", "900")
-		writeError(w, 429, "too many login attempts")
 		return
 	}
 	profiles, ok := s.registrationProfiles(w, r, true)
@@ -79,24 +71,30 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, loginResponse{UserId: login.User.ID, Username: login.User.Username, AccountId: login.User.AccountID, DeviceId: login.DeviceID, AccessToken: login.Token, ExpiresAt: login.ExpiresAt, Access: &access})
 }
 func (s *Server) handleBindCredentials(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	device, _ := s.deviceFrom(r.Context())
-	var input credentialsRequest
+	var input generated.BindCredentialsRequest
 	if err := decodeJSON(w, r, &input); err != nil {
 		writeError(w, 400, "invalid request")
 		return
 	}
-	user, err := s.identity.Bind(device.AccountID, input.Username, input.Password)
+	user, err := s.identity.Bind(device.AccountID, input.GetUsername(), input.Password)
 	if errors.Is(err, domain.ErrConflict) {
 		writeError(w, 409, "username or account already bound")
 		return
 	}
 	if err != nil {
-		writeError(w, 400, err.Error())
+		if errors.Is(err, service.ErrInvalidPassword) || errors.Is(err, service.ErrInvalidUsername) {
+			writeError(w, http.StatusBadRequest, "invalid username or password")
+		} else {
+			writeError(w, http.StatusInternalServerError, "credentials binding failed")
+		}
 		return
 	}
 	writeJSON(w, 201, user)
 }
 func (s *Server) handleIdentity(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	device, _ := s.deviceFrom(r.Context())
 	user, err := s.st.UserByAccount(device.AccountID)
 	if err != nil {
@@ -114,22 +112,26 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }
 func (s *Server) handlePassword(w http.ResponseWriter, r *http.Request) {
-	var input struct {
-		Current string `json:"current_password"`
-		Next    string `json:"new_password"`
+	if !s.allowIdentityAttempt(w, r) {
+		return
 	}
+	var input generated.PasswordRequest
 	if err := decodeJSON(w, r, &input); err != nil {
 		writeError(w, 400, "invalid request")
 		return
 	}
 	device, _ := s.deviceFrom(r.Context())
-	err := s.identity.ChangePassword(device.AccountID, input.Current, input.Next)
+	err := s.identity.ChangePassword(device.AccountID, input.CurrentPassword, input.NewPassword)
 	if errors.Is(err, service.ErrUnauthorized) {
 		writeError(w, 401, "invalid credentials")
 		return
 	}
 	if err != nil {
-		writeError(w, 400, err.Error())
+		if errors.Is(err, service.ErrInvalidPassword) {
+			writeError(w, http.StatusBadRequest, "invalid password")
+		} else {
+			writeError(w, http.StatusInternalServerError, "password change failed")
+		}
 		return
 	}
 	writeJSON(w, 200, map[string]bool{"ok": true})
@@ -165,7 +167,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	account, _, recovery, err := s.identity.Register(input.Username, input.Password)
+	account, user, recovery, err := s.identity.Register(input.GetUsername(), input.Password)
 	if errors.Is(err, domain.ErrAccountQuota) {
 		writeError(w, 403, "account quota exceeded")
 		return
@@ -188,7 +190,83 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 500, "registration failed")
 		return
 	}
-	writeJSON(w, 201, initResponse{AccountID: account.ID, DeviceID: device.ID, DeviceToken: token, RecoveryKey: recovery})
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, 201, initResponse{AccountID: account.ID, DeviceID: device.ID, DeviceToken: token, RecoveryKey: recovery, Username: user.Username})
+}
+
+// 所有密码验证入口共用频率限制；Header 只登记环境，不决定凭据权限。
+func (s *Server) allowIdentityAttempt(w http.ResponseWriter, r *http.Request) bool {
+	w.Header().Set("Cache-Control", "no-store")
+	if r.Header.Get("Origin") != "" && !s.validCookieOrigin(r) {
+		writeError(w, http.StatusForbidden, "invalid origin")
+		return false
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	if !s.loginAttempts.allow(host) {
+		w.Header().Set("Retry-After", "900")
+		writeError(w, http.StatusTooManyRequests, "too many login attempts")
+		return false
+	}
+	return true
+}
+
+func (s *Server) handleDeviceLogin(w http.ResponseWriter, r *http.Request) {
+	if !s.allowIdentityAttempt(w, r) {
+		return
+	}
+	var input generated.DeviceLoginRequest
+	if err := decodeJSON(w, r, &input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+	if err := service.ValidateDeviceName(input.GetDeviceName()); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	profiles, ok := s.registrationProfiles(w, r, false)
+	if !ok {
+		return
+	}
+	user, device, token, err := s.identity.LoginDevice(input.Username, input.Password, input.GetDeviceName(), profiles...)
+	if errors.Is(err, service.ErrUnauthorized) {
+		writeError(w, http.StatusUnauthorized, "invalid credentials")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "device login failed")
+		return
+	}
+	writeJSON(w, http.StatusCreated, generated.DeviceLoginResponse{
+		UserId: user.ID, Username: user.Username, AccountId: user.AccountID, DeviceId: device.ID, DeviceToken: token,
+	})
+}
+
+func (s *Server) handlePasswordReset(w http.ResponseWriter, r *http.Request) {
+	if !s.allowIdentityAttempt(w, r) {
+		return
+	}
+	var input generated.PasswordResetRequest
+	if err := decodeJSON(w, r, &input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+	user, err := s.identity.ResetPassword(input.RecoveryKey, input.NewPassword)
+	if errors.Is(err, service.ErrUnauthorized) {
+		writeError(w, http.StatusUnauthorized, "invalid recovery key")
+		return
+	}
+	if err != nil {
+		if errors.Is(err, service.ErrInvalidPassword) {
+			writeError(w, http.StatusBadRequest, "invalid password")
+		} else {
+			writeError(w, http.StatusInternalServerError, "password reset failed")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, user)
 }
 func requestToken(r *http.Request) string {
 	if token := bearerToken(r); token != "" {

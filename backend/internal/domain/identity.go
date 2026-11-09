@@ -33,6 +33,9 @@ type IdentityStore interface {
 	UserByUsername(username string) (User, error)
 	UserByAccount(accountID string) (User, error)
 	SetPassword(userID, passwordHash string) error
+	SetPasswordIfCurrent(userID, expectedHash, passwordHash string) error
+	// CreateLoginDevice 在同一事务核对密码版本并创建非主设备。
+	CreateLoginDevice(user User, name string, tokenHash []byte, profiles ...DeviceProfile) (Device, error)
 	CreateSession(session Session) error
 	SessionByToken(tokenHash string) (Session, error)
 	DeleteSession(tokenHash string) error

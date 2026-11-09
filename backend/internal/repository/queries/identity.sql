@@ -12,6 +12,19 @@ SELECT id, account_id, username, password_hash, disabled FROM users WHERE accoun
 -- name: SetPassword :execrows
 UPDATE users SET password_hash = sqlc.arg(password_hash) WHERE id = sqlc.arg(id);
 
+-- name: SetPasswordIfCurrent :execrows
+UPDATE users SET password_hash = sqlc.arg(password_hash)
+WHERE id = sqlc.arg(id) AND password_hash = sqlc.arg(expected_hash) AND NOT disabled;
+
+-- name: CreateLoginDevice :execrows
+-- 与改密共用用户行锁，旧密码验证结果不能在改密后签发设备凭据。
+INSERT INTO devices (id, account_id, name, token_hash, is_owner, created_at, last_seen_at, profile)
+SELECT sqlc.arg(id)::text AS id, users.account_id, sqlc.arg(name)::text AS name, sqlc.arg(token_hash)::text AS token_hash, 0::bigint AS is_owner,
+    sqlc.arg(created_at)::text AS created_at, sqlc.arg(last_seen_at)::text AS last_seen_at, COALESCE(sqlc.narg(profile), 'null'::jsonb) AS profile
+FROM users WHERE users.id = sqlc.arg(user_id) AND users.account_id = sqlc.arg(account_id)
+    AND users.password_hash = sqlc.arg(password_hash) AND NOT users.disabled
+FOR SHARE;
+
 -- name: RevokeUserSessions :exec
 -- 删除会话设备会级联删除会话；长期设备凭据不受密码更新影响。
 DELETE FROM devices WHERE id IN (SELECT device_id FROM sessions WHERE user_id = sqlc.arg(user_id));
