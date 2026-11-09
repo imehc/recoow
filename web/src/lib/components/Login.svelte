@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { appPath } from '#lib/paths.js';
   import { Button } from '#lib/components/ui/button/index.js';
   import AppIcon from './AppIcon.svelte';
   import Preferences from './Preferences.svelte';
@@ -28,7 +29,7 @@
 
 <main class="login-shell">
   <header class="login-header">
-    <a class="brand" href="/"><AppIcon />recoow</a><Preferences />
+    <a class="brand" href={appPath('/')}><AppIcon />recoow</a><Preferences />
   </header>
   <section class="login-card">
     <h1>{t('your_records_in_the_cloud')}</h1>

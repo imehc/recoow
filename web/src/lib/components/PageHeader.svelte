@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { appPath } from '#lib/paths.js';
   import type { Snippet } from 'svelte';
   import { ArrowLeft } from '@lucide/svelte';
   import { t } from '#lib/preferences.svelte.js';
@@ -13,7 +14,7 @@
 <div class="page-heading">
   <div class="page-heading-copy">
     <div class="page-title-row">
-      {#if back}<a class="back-button" href={back} aria-label={t('back')} title={t('back')}
+      {#if back}<a class="back-button" href={appPath(back)} aria-label={t('back')} title={t('back')}
           ><ArrowLeft size={18} /></a
         >{/if}
       <h1>{title}</h1>

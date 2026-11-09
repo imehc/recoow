@@ -1,3 +1,4 @@
+import { appPath } from './paths.js';
 import { test, expect, type Page } from '@playwright/test';
 import { apiFields } from '../../src/lib/api-fields.js';
 
@@ -227,7 +228,7 @@ test('theme and language follow system, persist, and remain usable with keyboard
 }, testInfo) => {
   await cloud(page);
   await page.emulateMedia({ colorScheme: 'dark' });
-  await page.goto('/');
+  await page.goto(appPath('/'));
   await expect(page.getByRole('heading', { name: '登录 recoow' })).toBeVisible();
   await expect(page.locator('html')).toHaveClass('dark');
   await choosePreference(page, '主题', '浅色');
@@ -288,7 +289,7 @@ test('theme and language follow system, persist, and remain usable with keyboard
 
 test('reads precise amounts, historical times and source snapshots', async ({ page }, testInfo) => {
   const state = await cloud(page);
-  await page.goto('/');
+  await page.goto(appPath('/'));
   await signIn(page);
   await expect(page.getByRole('heading', { name: '记录概览' })).toBeVisible();
   await expect(page.getByText('¥90,071,992,547,409.93', { exact: true })).toBeVisible();
@@ -296,7 +297,7 @@ test('reads precise amounts, historical times and source snapshots', async ({ pa
     path: `test-results/overview-${testInfo.project.name}.png`,
     fullPage: true,
   });
-  await page.goto('/history/event-1');
+  await page.goto(appPath('/history/event-1'));
   await expect(page.getByRole('heading', { name: '一次离线修改', exact: true })).toBeVisible();
   await expect(page.getByText('iOS App · iOS · 离线 iPhone', { exact: true })).toBeVisible();
   await expect(
@@ -310,7 +311,7 @@ test('reads precise amounts, historical times and source snapshots', async ({ pa
 
 test('record history filters and missing media remain readable', async ({ page }) => {
   const state = await cloud(page);
-  await page.goto('/records/diary_entries/diary-1');
+  await page.goto(appPath('/records/diary_entries/diary-1'));
   await signIn(page);
   await page.locator('.media-grid').scrollIntoViewIfNeeded();
   await expect(page.getByText('媒体不可用，可能未上传或已删除')).toBeVisible();
@@ -326,7 +327,7 @@ test('record history filters and missing media remain readable', async ({ page }
 
 test('expired sessions and account switches clear prior records', async ({ page }) => {
   const state = await cloud(page);
-  await page.goto('/records/diary_entries');
+  await page.goto(appPath('/records/diary_entries'));
   await signIn(page);
   await expect(page.getByRole('link', { name: '一次离线修改', exact: true })).toBeVisible();
   state.expire = true;
@@ -344,7 +345,7 @@ test('expired sessions and account switches clear prior records', async ({ page 
 
 test('reset history clears previous generation and reloads the new dataset', async ({ page }) => {
   const state = await cloud(page);
-  await page.goto('/history');
+  await page.goto(appPath('/history'));
   await signIn(page);
   await expect(page.getByRole('link', { name: '一次离线修改', exact: true })).toBeVisible();
   state.reset = true;
@@ -355,7 +356,7 @@ test('reset history clears previous generation and reloads the new dataset', asy
 
 test('incorrect credentials and offline state show distinct messages', async ({ page }) => {
   await cloud(page);
-  await page.goto('/');
+  await page.goto(appPath('/'));
   await signIn(page, 'alice', 'wrong');
   await expect(page.getByText('用户名或密码错误')).toBeVisible();
   await expect(page.getByText('登录已过期，请重新登录')).toHaveCount(0);
@@ -371,7 +372,7 @@ test('media preview supports keyboard closing and dark English layout', async ({
 }, testInfo) => {
   const state = await cloud(page);
   state.mediaAvailable = true;
-  await page.goto('/records/diary_entries/diary-1');
+  await page.goto(appPath('/records/diary_entries/diary-1'));
   await signIn(page);
   await page.getByRole('button', { name: '放大图片' }).click();
   await expect(page.getByRole('dialog', { name: '图片预览' })).toBeVisible();
@@ -401,7 +402,7 @@ test('media preview supports keyboard closing and dark English layout', async ({
 test('history continuation keeps filters and the first cursor', async ({ page }) => {
   const state = await cloud(page);
   state.paginated = true;
-  await page.goto('/history');
+  await page.goto(appPath('/history'));
   await signIn(page);
   await chooseFilter(page, '修改平台', 'iOS App');
   await page.getByRole('button', { name: '查询', exact: true }).click();
@@ -418,7 +419,7 @@ test('client categories and child types preserve navigation and keyboard control
   page,
 }, testInfo) => {
   await cloud(page);
-  await page.goto('/records');
+  await page.goto(appPath('/records'));
   await signIn(page);
   const directory = page.locator('.record-directory');
   const categories = [
@@ -463,7 +464,7 @@ test('client categories and child types preserve navigation and keyboard control
 
 test('custom calendar and reset preserve date filtering and allow clearing', async ({ page }) => {
   const state = await cloud(page);
-  await page.goto('/history');
+  await page.goto(appPath('/history'));
   await signIn(page);
   await page.getByRole('button', { name: '开始日期', exact: true }).click();
   await expect(page.locator('.calendar-popover')).toBeVisible();
@@ -498,7 +499,7 @@ test('password visibility, long content and source disclosures keep their conten
   page,
 }) => {
   await cloud(page);
-  await page.goto('/records/diary_entries/diary-1');
+  await page.goto(appPath('/records/diary_entries/diary-1'));
   await page.getByLabel('密码', { exact: true }).fill('correct');
   await page.getByRole('button', { name: '显示密码' }).click();
   await expect(page.getByLabel('密码', { exact: true })).toHaveAttribute('type', 'text');
@@ -511,7 +512,7 @@ test('password visibility, long content and source disclosures keep their conten
   await expect(content.getByRole('button')).toHaveAttribute('aria-expanded', 'true');
   expect((await content.innerText()).split('长文本').length).toBe(101);
   await content.getByRole('button', { name: '收起内容' }).click();
-  await page.goto('/history/event-1');
+  await page.goto(appPath('/history/event-1'));
   await page.getByRole('button', { name: '来源详情' }).click();
   await expect(page.getByText('修改时间和编辑来源由设备提供。', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: '历史快照' }).click();
@@ -522,7 +523,7 @@ test('workspace scrolling keeps header and sidebar in place and resets on naviga
   page,
 }, testInfo) => {
   await cloud(page);
-  await page.goto('/history');
+  await page.goto(appPath('/history'));
   await signIn(page);
   await page.setViewportSize({
     width: testInfo.project.name === 'desktop' ? 1440 : 390,
@@ -539,4 +540,31 @@ test('workspace scrolling keeps header and sidebar in place and resets on naviga
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
   await main.getByRole('link', { name: '查看变化', exact: true }).first().click();
   await expect.poll(() => main.evaluate((node) => node.scrollTop)).toBe(0);
+});
+
+test('navigation and icons stay within the app deployment path', async ({ page }) => {
+  await cloud(page);
+  await page.goto(appPath('/records'));
+  await signIn(page);
+  const links = await page
+    .locator('a[href]')
+    .evaluateAll((nodes) => nodes.map((node) => node.getAttribute('href')!));
+  for (const href of links) {
+    if (href.startsWith('#')) continue;
+    expect(href.startsWith(appPath('/'))).toBe(true);
+  }
+  await page.goto(appPath('/history/event-1'));
+  await expect(page.getByRole('link', { name: '返回', exact: true })).toHaveAttribute(
+    'href',
+    appPath('/history'),
+  );
+  await page.getByRole('link', { name: '返回', exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`${appPath('/history')}$`));
+  for (const selector of ['link[rel="icon"]', 'link[rel="apple-touch-icon"]']) {
+    const href = await page.locator(selector).getAttribute('href');
+    const url = new URL(href!, page.url());
+    expect(url.origin).toBe(new URL(page.url()).origin);
+    expect(url.pathname.startsWith(appPath('/'))).toBe(true);
+    expect((await page.request.get(href!)).status()).toBe(200);
+  }
 });

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { appPath } from '#lib/paths.js';
   import { page } from '$app/state';
   import { createQuery } from '@tanstack/svelte-query';
   import { api } from '#lib/api.js';
@@ -60,8 +61,9 @@
           </dl>
           {#if session.historySupported}<a
               class="text-link"
-              href={'/history?table=' + encodeURIComponent(table) + '&id=' + encodeURIComponent(id)}
-              >{t('view_all_changes_to_this_record')}</a
+              href={appPath(
+                '/history?table=' + encodeURIComponent(table) + '&id=' + encodeURIComponent(id),
+              )}>{t('view_all_changes_to_this_record')}</a
             >{/if}
         </div>
       </section>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { appPath } from '#lib/paths.js';
   import { createQuery } from '@tanstack/svelte-query';
   import { Wallet, ArrowDownLeft, ArrowUpRight, Files } from '@lucide/svelte';
   import { api } from '#lib/api.js';
@@ -97,7 +98,7 @@
   <section class="panel">
     <div class="panel-heading">
       <h2>{t('recent_cloud_changes')}</h2>
-      <a class="text-link" href="/history">{t('view_all')}</a>
+      <a class="text-link" href={appPath('/history')}>{t('view_all')}</a>
     </div>
     {#if !session.historySupported}<div class="status">
         {t('change_history_is_unavailable_on_this_server')}
@@ -112,12 +113,12 @@
 <section class="panel">
   <div class="panel-heading">
     <h2>{t('record_categories')}</h2>
-    <a class="text-link" href="/records">{t('view_all')}</a>
+    <a class="text-link" href={appPath('/records')}>{t('view_all')}</a>
   </div>
   <div class="category-links">
     {#each recordGroups as group (group.id)}<a
         class="category-link"
-        href={'/records/' + group.tables[0]}
+        href={appPath('/records/' + group.tables[0])}
         ><span>{groupTitle(group)}</span><ChevronRight size={14} /></a
       >{/each}
   </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { appAsset, appPath } from '#lib/paths.js';
   import '../app.css';
   import { onMount, type Snippet } from 'svelte';
   import { afterNavigate } from '$app/navigation';
@@ -44,8 +45,8 @@
   const active = $derived(
     nav.find((item) =>
       item.href === '/'
-        ? page.url.pathname === '/'
-        : page.url.pathname.startsWith('/' + item.href.split('/')[1]),
+        ? page.url.pathname === appPath('/')
+        : page.url.pathname.startsWith(appPath('/' + item.href.split('/')[1])),
     ) ?? nav[0],
   );
   const selectedGroup = $derived(recordGroup(page.params.table ?? ''));
@@ -78,9 +79,9 @@
   <link
     rel="icon"
     type="image/png"
-    href={preferences.dark ? '/favicon-dark.png' : '/favicon.png'}
+    href={appAsset(preferences.dark ? 'favicon-dark.png' : 'favicon.png')}
   />
-  <link rel="apple-touch-icon" href="/app-icon.png" />
+  <link rel="apple-touch-icon" href={appAsset('app-icon.png')} />
 </svelte:head>
 <ModeWatcher
   modeStorageKey="recoow:theme"
@@ -89,13 +90,13 @@
 />
 
 {#snippet sidebarContent()}
-  <a class="brand" href="/" onclick={() => (mobileOpen = false)}
+  <a class="brand" href={appPath('/')} onclick={() => (mobileOpen = false)}
     ><AppIcon /><span class="brand-name">recoow</span></a
   >
   <nav class="nav-list" aria-label={t('main_navigation')}>
     {#each nav as item (item.href)}
       <a
-        href={item.href}
+        href={appPath(item.href)}
         class:active={active.href === item.href}
         aria-current={active.href === item.href ? 'page' : undefined}
         title={collapsed ? item.text : undefined}
@@ -105,7 +106,7 @@
       </a>
       {#if item.href === '/records' && active.href === '/records'}<div class="subnav">
           {#each recordGroups as group (group.id)}<a
-              href={'/records/' + group.tables[0]}
+              href={appPath('/records/' + group.tables[0])}
               class:active={group.id === selectedGroup?.id}
               onclick={() => (mobileOpen = false)}>{groupTitle(group)}</a
             >{/each}

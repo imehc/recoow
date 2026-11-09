@@ -8,7 +8,7 @@ export default defineConfig({
     locale: 'zh-CN',
     timezoneId: 'Asia/Shanghai',
     trace: 'retain-on-failure',
-    channel: process.env.RECOOW_BROWSER_CHANNEL,
+    channel: process.env.RECOOW_BROWSER_CHANNEL ?? 'chrome',
   },
   projects: [
     { name: 'desktop', use: { viewport: { width: 1440, height: 1000 } } },
@@ -16,7 +16,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'pnpm exec vite preview --host 127.0.0.1 --port 4174 --strictPort',
-    url: 'http://127.0.0.1:4174',
+    url: `http://127.0.0.1:4174${process.env.RECOOW_WEB_BASE ?? ''}/`,
     reuseExistingServer: !process.env.CI,
   },
 });

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { appPath } from '#lib/paths.js';
   import { page } from '$app/state';
   import { createQuery } from '@tanstack/svelte-query';
   import { api } from '#lib/api.js';
@@ -47,7 +48,9 @@
       <section class="panel">
         <div class="panel-heading">
           <h2>{t('field_changes')}</h2>
-          <a class="text-link" href={'/records/' + event.table + '/' + encodeURIComponent(event.id)}
+          <a
+            class="text-link"
+            href={appPath('/records/' + event.table + '/' + encodeURIComponent(event.id))}
             >{t('view_current_record')}</a
           >
         </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { appPath } from '#lib/paths.js';
   import { History, Plus, Trash2, ChevronRight } from '@lucide/svelte';
   import type { ChangeEvent } from '#lib/generated/api/models/ChangeEvent.js';
   import { entityTitle, operationText, source, time } from '#lib/format.js';
@@ -7,7 +8,7 @@
 </script>
 
 {#each events as event (event.eventId)}
-  <a class="timeline-item" href={'/history/' + encodeURIComponent(event.eventId)}>
+  <a class="timeline-item" href={appPath('/history/' + encodeURIComponent(event.eventId))}>
     <span class="timeline-icon"
       >{#if event.operation === 'insert'}<Plus
           size={15}

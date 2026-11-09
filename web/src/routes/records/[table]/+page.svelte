@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { appPath } from '#lib/paths.js';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { createInfiniteQuery } from '@tanstack/svelte-query';
@@ -57,7 +58,7 @@
         from = '';
         to = '';
         const target = recordGroups.find((item) => item.id === next);
-        if (target) void goto('/records/' + target.tables[0]);
+        if (target) void goto(appPath('/records/' + target.tables[0]));
       }}
     />
     <label class="form-field"
@@ -90,7 +91,7 @@
 <section class="panel">
   {#if group}<nav class="record-tabs" aria-label={t('record_type')}>
       {#each group.tables as child (child)}<a
-          href={'/records/' + child}
+          href={appPath('/records/' + child)}
           class:active={child === table}
           aria-current={child === table ? 'page' : undefined}
           onclick={() => {
@@ -125,7 +126,7 @@
                 <td
                   ><a
                     class="record-title"
-                    href={'/records/' + table + '/' + encodeURIComponent(row.id)}
+                    href={appPath('/records/' + table + '/' + encodeURIComponent(row.id))}
                     >{title(row.snapshot, row.id)}</a
                   >
                   <div class="record-subtitle"><span class="record-id">{row.id}</span></div></td
@@ -136,7 +137,7 @@
                 <td class="row-action"
                   ><a
                     class="text-link"
-                    href={'/records/' + table + '/' + encodeURIComponent(row.id)}
+                    href={appPath('/records/' + table + '/' + encodeURIComponent(row.id))}
                     >{t('view_record')}<ArrowRight size={14} /></a
                   ></td
                 >

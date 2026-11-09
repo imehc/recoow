@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { appPath } from '#lib/paths.js';
   import type { ChangeEvent } from '#lib/generated/api/models/ChangeEvent.js';
   import { entityTitle, operationText, source, time } from '#lib/format.js';
   import { t } from '#lib/preferences.svelte.js';
@@ -17,7 +18,7 @@
     ><tbody
       >{#each events as event (event.eventId)}<tr
           ><td
-            ><a class="record-title" href={'/history/' + encodeURIComponent(event.eventId)}
+            ><a class="record-title" href={appPath('/history/' + encodeURIComponent(event.eventId))}
               >{event.title || event.id}</a
             >
             <div class="record-id">
@@ -31,7 +32,7 @@
             class="time-cell">{time(event.modifiedAtMs)}</td
           ><td data-label={t('server_accepted_at')} class="time-cell">{time(event.acceptedAtMs)}</td
           ><td class="row-action"
-            ><a class="text-link" href={'/history/' + encodeURIComponent(event.eventId)}
+            ><a class="text-link" href={appPath('/history/' + encodeURIComponent(event.eventId))}
               >{t('view_change')}<ArrowRight size={14} /></a
             ></td
           ></tr

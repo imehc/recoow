@@ -1,3 +1,4 @@
+import { appPath } from './paths.js';
 import { randomUUID } from 'node:crypto';
 import { test, expect } from '@playwright/test';
 
@@ -55,7 +56,7 @@ test('cloud cookies, offline timestamps and read-only permissions work against G
   expect(created.status(), await created.text()).toBe(201);
   expect((await created.json()).status).toBe('applied');
 
-  await page.goto('/records/diary_entries');
+  await page.goto(appPath('/records/diary_entries'));
   await page.getByLabel('用户名', { exact: true }).fill(username);
   await page.getByLabel('密码', { exact: true }).fill(password);
   await page.getByRole('button', { name: '登录', exact: true }).click();

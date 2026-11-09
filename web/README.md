@@ -29,14 +29,14 @@ pnpm lint
 pnpm check
 pnpm test
 pnpm build
-pnpm exec playwright install chromium
+pnpm exec playwright install chrome
 pnpm test:browser
 pnpm verify
 ```
 
 格式化同时覆盖 Web 与公共 `openapi/openapi.yaml`，YAML 保持多行结构。实体元数据和 API 类型从公共 OpenAPI 生成，生成结果不纳入 Git。
 
-浏览器检查包含桌面和移动布局。使用已安装的 Chrome 时可设置 `RECOOW_BROWSER_CHANNEL=chrome`。与 Go 服务的集成检查使用独立测试库，开启测试账号注册后执行：
+浏览器检查默认使用已安装的 Chrome，覆盖桌面和移动视口模拟；CI 同样安装并使用 Chrome。需要其他 Chrome 通道时可设置 `RECOOW_BROWSER_CHANNEL`。与 Go 服务的集成检查使用独立测试库，开启测试账号注册后执行：
 
 ```sh
 RECOOW_TEST_BACKEND=1 RECOOW_API_URL=http://127.0.0.1:8080 pnpm test:browser
@@ -65,7 +65,14 @@ python3 scripts/version.py ci web --tag web/v0.0.1
 
 `bump` 仅更新版本文件，不提交、创建标签或发布。正式标签须与当前版本一致，静态站点与后端按兼容契约共同部署。
 
-`pnpm build` 输出 `build/`。将静态文件与 Go API 部署在同一 HTTPS 来源，站点根路径指向静态目录，`/api/` 代理到 Go，其他未匹配的页面路径回退到 `index.html`。目前支持来源根路径部署。
+`pnpm build` 输出 `build/`。将静态文件与 Go API 部署在同一 HTTPS 来源，`/api/` 代理到 Go，未匹配的应用页面路径回退到 `index.html`。默认部署在来源根路径；设置 `RECOOW_WEB_BASE=/recoow` 后，页面、导航和静态资源统一使用 `/recoow/`，API 仍访问来源根路径下的 `/api/`。
+
+子路径构建与验收使用相同环境变量：
+
+```sh
+RECOOW_WEB_BASE=/recoow pnpm build
+RECOOW_WEB_BASE=/recoow RECOOW_TEST_BACKEND=1 RECOOW_API_URL=http://127.0.0.1:8080 pnpm test:browser
+```
 
 Nginx 配置示例：
 
@@ -89,3 +96,21 @@ location / {
 ```
 
 保留 API 的 `Cache-Control: no-store`，不在代理、Service Worker 或 CDN 缓存账号接口。反向代理保留浏览器的 Host，使后端正确校验登录与退出请求的 Origin；跨源部署需另行配置，不能直接套用此示例。
+
+部署在 `/recoow/` 时，将 `build/` 的内容放入发布目录下的 `recoow/` 子目录，再将以下位置加入已有 HTTPS server。`/opt/recoow-web/current` 指向对应发布目录，其他网站路径沿用原配置：
+
+```nginx
+location = /recoow { return 308 /recoow/; }
+
+location ^~ /recoow/_app/immutable/ {
+    root /opt/recoow-web/current;
+    try_files $uri =404;
+    add_header Cache-Control "public, max-age=31536000, immutable";
+}
+
+location ^~ /recoow/ {
+    root /opt/recoow-web/current;
+    try_files $uri $uri/ /recoow/index.html;
+    add_header Cache-Control "no-cache";
+}
+```
