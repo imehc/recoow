@@ -15,7 +15,7 @@ python3 scripts/version.py bump web patch
 
 生成文件 `android/version.properties`、`ios/Version.xcconfig`、`backend/internal/buildinfo/version_generated.go` 随版本提交；Web 的版本同步到 `web/package.json`。不要直接编辑这些版本字段。手动调整 `versions.json` 后运行 `python3 scripts/version.py sync`，CI 用 `check` 拒绝漂移。iOS 主应用和 Widget 的 Debug/Release 共用同一份配置。
 
-发布标签分别为 `android/v0.6.0`、`ios/v0.1.0`、`backend/v0.0.1`、`web/v0.0.1`。标签必须与该提交的配置一致，每个已发布标签只使用一次。一个端修复问题只升该端；已有版本不替换 APK 或运行包。
+Android 更新发布使用 `android/v<version>` 标签，后端与 Web 的现有标签分别使用 `backend/v<version>`、`web/v<version>`。标签必须与该提交的配置一致，每个已发布标签只使用一次。iOS 开发签名自用安装不创建或推送标签，以版本配置和源码提交记录产物。一个端修复问题只升该端；已有版本不替换 APK 或运行包。
 
 ## 构建编号
 
@@ -33,10 +33,9 @@ Android 将结果作为 `versionCode`，通过 `RECOOW_ANDROID_VERSION_CODE` 注
 
 ## iOS 发布
 
-iOS 将序号转换为满足 `CFBundleVersion` 位数限制的三段数字：序号 1 为 `1.0.0`，100 为 `1.0.99`，101 为 `1.1.0`，10001 为 `2.0.0`；与应用的语义版本无关。未来 iOS 发布 CI 可直接使用：
+iOS 使用开发签名自用安装，提交版本配置后构建和导出安装包，不打 tag。iOS 将序号转换为满足 `CFBundleVersion` 位数限制的三段数字：序号 1 为 `1.0.0`，100 为 `1.0.99`，101 为 `1.1.0`，10001 为 `2.0.0`；与应用的语义版本无关。未来 iOS 构建 CI 可使用独立运行编号：
 
 ```sh
-python3 scripts/version.py ci ios --tag "$GITHUB_REF_NAME" --run-number "$GITHUB_RUN_NUMBER"
 ios_build=$(python3 scripts/version.py show ios --field build --run-number "$GITHUB_RUN_NUMBER")
 xcodebuild -project ios/recoow.xcodeproj -scheme recoow -configuration Release \
   CURRENT_PROJECT_VERSION="$ios_build" archive
@@ -53,7 +52,7 @@ bash scripts/package-backend.sh
 
 包名含后端版本；`build-info.json` 保存版本、标签、Git 提交和工作区是否有未提交改动，纳入 SHA256SUMS。二进制的 `--version` 和启动日志也包含版本及提交信息。源码直接 `go build` 使用生成的版本常量，并尽可能读取 Go 自带的 Git 构建信息。
 
-后端和 iOS 的 GitHub Release 应使用 `--latest=false`；仓库的 Latest 留给 Android 稳定 APK，供 Android 应用内更新查找。应用版本、同步协议版本、数据表版本及备份格式版本分别维护，升应用版本不会自动修改数据协议。
+后端的 GitHub Release 应使用 `--latest=false`；iOS 自用安装包保留本地。仓库的 Latest 留给 Android 稳定 APK，供 Android 应用内更新查找。应用版本、同步协议版本、数据表版本及备份格式版本分别维护，升应用版本不会自动修改数据协议。
 
 ## Web 发布
 
