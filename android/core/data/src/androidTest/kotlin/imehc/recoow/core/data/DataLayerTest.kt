@@ -240,11 +240,11 @@ class DataLayerTest {
         preferences.failCapture = false
         assertEquals(1L, count("decision_collections"))
         try {
-            host.guarded("invalid-result") { db, _ -> db.openHelper.writableDatabase.execSQL("PRAGMA user_version = 2") }
+            host.guarded("invalid-result") { db, _ -> db.openHelper.writableDatabase.version = DatabaseHost.VERSION + 1 }
             fail("Invalid maintenance result must be rolled back before commit")
         } catch (_: IllegalStateException) { }
         assertEquals(1L, count("decision_collections"))
-        host.access { assertEquals(1, it.openHelper.writableDatabase.version) }
+        host.access { assertEquals(DatabaseHost.VERSION, it.openHelper.writableDatabase.version) }
     }
 
     @Test fun interruptedMaintenanceRecoversBeforeReopeningAndFutureVersionIsPreserved() = runBlocking {
@@ -259,7 +259,7 @@ class DataLayerTest {
         assertEquals(1L, count("decision_collections"))
         assertEquals("original", preferences.value)
         host.close()
-        SQLiteDatabase.openDatabase(host.databaseFile.path, null, SQLiteDatabase.OPEN_READWRITE).use { it.version = 2 }
+        SQLiteDatabase.openDatabase(host.databaseFile.path, null, SQLiteDatabase.OPEN_READWRITE).use { it.version = DatabaseHost.VERSION + 1 }
         val before = host.databaseFile.readBytes()
         host = newHost()
         try { host.access { }; fail("Downgrade must fail") } catch (_: IllegalArgumentException) { }
