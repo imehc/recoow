@@ -40,6 +40,11 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        base: ['', '/recoow']
+    env:
+      RECOOW_WEB_BASE: ${{ matrix.base }}
     services:
       postgres:
         image: postgres:17-alpine
@@ -87,6 +92,18 @@ jobs:
       - name: Build static site
         working-directory: web
         run: pnpm build
+      - name: Record Web release provenance
+        run: |
+          PYTHONPATH=scripts python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          from version import commit_info, load
+          metadata = {
+              "platform": "web", "version": load()["web"]["version"],
+              "commit": commit_info()[0], "base": os.environ["RECOOW_WEB_BASE"],
+          }
+          Path("web/build/release.json").write_text(json.dumps(metadata) + "\n")
+          PY
       - name: Start isolated Go backend
         env:
           PGPASSWORD: recoow-web-migration-only
@@ -106,9 +123,9 @@ jobs:
             sleep 1
           done
           exit 1
-      - name: Install browser
+      - name: Install Chrome
         working-directory: web
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chrome
       - name: Check browser flows and Go integration
         working-directory: web
         env:
@@ -118,7 +135,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: web-build-and-browser
+          name: web-build-and-browser-${{ strategy.job-index }}
           path: |
             web/build/
             web/test-results/
