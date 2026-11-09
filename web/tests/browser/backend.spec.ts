@@ -10,7 +10,7 @@ test('cloud cookies, offline timestamps and read-only permissions work against G
     'Requires an isolated backend with account registration enabled.',
   );
   const username = `web-${randomUUID()}`;
-  const password = randomUUID();
+  const password = randomUUID().slice(0, 18);
   const deviceHeaders = {
     'X-Recoow-Field-Case': 'snake_case',
     'X-Recoow-Client': 'ios',
