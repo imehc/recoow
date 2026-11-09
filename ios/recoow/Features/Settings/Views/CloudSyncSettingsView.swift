@@ -20,6 +20,9 @@ struct CloudSyncSettingsView: View {
     @State private var isOwner = false
     @State private var clearGeneration: String?
     @State private var showingClearConfirmation = false
+    @State private var showingServerChange = false
+    @State private var showingResetConfirmation = false
+    @State private var serverError: String?
 
     private enum BusyKind: Equatable {
         case none
@@ -48,17 +51,28 @@ struct CloudSyncSettingsView: View {
                 unbindSection
             }
         }
+        .disabled(busyKind != .none || progress.isRunning)
         .appFormStyle()
         .navigationTitle(AppLocalization.string("云同步", language: language))
         .appNavigationStyle()
         .toolbar(.hidden, for: .tabBar)
         .onAppear(perform: reload)
         .task(id: config.connectionID) { await loadCloudManagement() }
+        .alert(AppLocalization.string("云端资料已重建", language: language), isPresented: $showingResetConfirmation) {
+            Button(AppLocalization.string("重新合并", language: language)) { config.confirmCloudReset(); syncEnabled = true }
+            Button(AppLocalization.string("取消", language: language), role: .cancel) {}
+        } message: { Text(AppLocalization.string("云端资料已清空或重建。重新合并会备份本机资料，并将现有资料上传到云端。", language: language)) }
         .alert(AppLocalization.string("清空服务器备份？", language: language), isPresented: $showingClearConfirmation) {
             Button(AppLocalization.string("清空服务器备份", language: language), role: .destructive) { beginClearBackup() }
             Button(AppLocalization.string("取消", language: language), role: .cancel) {}
         } message: {
             Text(AppLocalization.string("将删除当前账号的全部云端记录、媒体文件和同步历史，保留本机数据与账号绑定。本机同步会暂停；请先关闭其他设备的同步，避免旧客户端重新上传。重新启用同步会重新备份本机数据。", language: language))
+        }
+        .alert(AppLocalization.string("更换服务器？", language: language), isPresented: $showingServerChange) {
+            Button(AppLocalization.string("更换服务器", language: language)) { saveServer() }
+            Button(AppLocalization.string("取消", language: language), role: .cancel) {}
+        } message: {
+            Text(AppLocalization.string("本机数据保留，当前账号退出并停止同步。登录其他账号前，请先导出备份并重置本机数据。", language: language))
         }
         .appSheet(isPresented: .isPresent($recoveryKeyToShow)) {
             if let key = recoveryKeyToShow {
@@ -80,14 +94,19 @@ struct CloudSyncSettingsView: View {
                         serverInput = config.baseURL
                     }
                 }
-                .onChange(of: serverInput) { _, newValue in
-                    config.baseURL = newValue
-                    syncEnabled = config.isSyncEnabled
+            if serverInput.trimmingCharacters(in: .whitespacesAndNewlines) != config.baseURL {
+                Button(AppLocalization.string(config.isConfigured ? "更换服务器" : "保存服务器", language: language)) {
+                    guard (try? CloudAccountValidation.endpoint(serverInput)) != nil else {
+                        serverError = AppLocalization.string("请输入有效的 HTTPS 服务器地址", language: language)
+                        return
+                    }
+                    if config.isConfigured { showingServerChange = true } else { saveServer() }
                 }
+            }
         } header: {
             Text(AppLocalization.string("服务器", language: language))
         } footer: {
-            Text(AppLocalization.string("请输入自托管后端的 HTTPS 地址，例如 https://example.com。", language: language))
+            Text(serverError ?? AppLocalization.string("请输入自托管后端的 HTTPS 地址，例如 https://example.com。修改后先保存服务器地址。", language: language))
         }
     }
 
@@ -122,6 +141,13 @@ struct CloudSyncSettingsView: View {
     @ViewBuilder
     private var onboardingSections: some View {
         Section {
+            NavigationLink {
+                CloudAccountLoginView()
+            } label: {
+                Label(AppLocalization.string("登录账号", language: language), systemImage: "person.crop.circle")
+            }
+        }
+        Section {
             Button(action: beginInitializeAccount) {
                 HStack {
                     Label(AppLocalization.string("初始化新账号（成为主设备）", language: language), systemImage: "plus.circle")
@@ -129,7 +155,7 @@ struct CloudSyncSettingsView: View {
                     if busyKind == .initialize { ProgressView() }
                 }
             }
-            .disabled(busyKind != .none || serverInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .disabled(busyKind != .none || serverInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || serverInput.trimmingCharacters(in: .whitespacesAndNewlines) != config.baseURL)
         } header: {
             Text(AppLocalization.string("还没有账号", language: language))
         } footer: {
@@ -147,7 +173,7 @@ struct CloudSyncSettingsView: View {
                     if busyKind == .pair { ProgressView() }
                 }
             }
-            .disabled(busyKind != .none || pairCodeInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .disabled(busyKind != .none || pairCodeInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || serverInput.trimmingCharacters(in: .whitespacesAndNewlines) != config.baseURL)
         } header: {
             Text(AppLocalization.string("已有账号", language: language))
         } footer: {
@@ -165,7 +191,7 @@ struct CloudSyncSettingsView: View {
                     if busyKind == .recover { ProgressView() }
                 }
             }
-            .disabled(busyKind != .none || recoveryKeyInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .disabled(busyKind != .none || recoveryKeyInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || serverInput.trimmingCharacters(in: .whitespacesAndNewlines) != config.baseURL)
         } header: {
             Text(AppLocalization.string("配对码也丢了", language: language))
         } footer: {
@@ -202,6 +228,7 @@ struct CloudSyncSettingsView: View {
 
                 Section {
                     Button(role: .destructive) {
+                        config.discardUnconfirmedDatasetBinding()
                         config.deviceToken = nil
                         config.accountID = nil
                         config.deviceID = nil
@@ -222,6 +249,8 @@ struct CloudSyncSettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(AppLocalization.string("保存并完成", language: language)) {
                         recoveryKeyToShow = nil
+                        config.isSyncEnabled = true
+                        Task { await container.syncEngine.enqueueScan() }
                         reload()
                     }
                 }
@@ -234,8 +263,13 @@ struct CloudSyncSettingsView: View {
             Toggle(AppLocalization.string("启用全量双向同步", language: language), isOn: $syncEnabled)
                 .disabled(!config.isConfigured || busyKind != .none)
                 .onChange(of: syncEnabled) { _, enabled in
-                    if enabled && !config.isSyncEnabled { config.activeScope = nil }
-                    config.isSyncEnabled = enabled
+                    if enabled && config.needsCloudResetConfirmation {
+                        syncEnabled = false
+                        showingResetConfirmation = true
+                    } else {
+                        config.isSyncEnabled = enabled
+                        Task { if enabled { await container.syncEngine.enqueueScan() } else { await container.syncEngine.cancelScan() } }
+                    }
                 }
             Button(action: beginManualSync) {
                 HStack(spacing: 8) {
@@ -271,7 +305,7 @@ struct CloudSyncSettingsView: View {
             Text(AppLocalization.string("手动同步", language: language))
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
-                Text(AppLocalization.string("默认关闭；首次同步前自动备份，冲突保留本地内容需手动确认。全部数据与媒体一起同步，不支持按模块选择。", language: language))
+                Text(AppLocalization.string("资料与媒体一起同步。首次同步前自动备份，冲突需确认。", language: language))
                 if let banner {
                     Text(banner)
                 }
@@ -320,18 +354,14 @@ struct CloudSyncSettingsView: View {
     private var unbindSection: some View {
         Section {
             Button(role: .destructive) {
-                config.deviceToken = nil
-                config.accountID = nil
-                config.deviceID = nil
-                config.syncCursor = 0
-                config.lastSyncedAt = nil
-                config.lastSyncMessage = AppLocalization.string("已解除本机与服务器的绑定")
+                config.disconnect()
+                Task { await container.syncEngine.cancelScan(); reload() }
                 reload()
             } label: {
-                Text(AppLocalization.string("解除服务器绑定", language: language))
+                Text(AppLocalization.string("退出账号", language: language))
             }
         } footer: {
-            Text(AppLocalization.string("仅解除本机配置，不删除服务器上的数据。", language: language))
+            Text(AppLocalization.string("退出后停止云同步，本机与云端资料均保留。", language: language))
         }
     }
 
@@ -374,6 +404,7 @@ struct CloudSyncSettingsView: View {
                     throw CloudAPIError.invalidResponse(AppLocalization.string("清空确认无效，请刷新服务器状态"))
                 }
                 config.activeScope = nil
+                config.needsCloudResetConfirmation = true
                 config.syncCursor = 0
                 config.lastSyncedAt = nil
                 clearGeneration = dataset.generation
@@ -381,7 +412,7 @@ struct CloudSyncSettingsView: View {
                 banner = config.lastSyncMessage
                 reload()
             } catch {
-                banner = error.localizedDescription
+                banner = CloudAccountValidation.message(for: error)
                 await loadCloudManagement()
             }
         }
@@ -393,8 +424,14 @@ struct CloudSyncSettingsView: View {
         banner = nil
         Task {
             do {
+                guard !config.hasDatasetOwner else { throw CloudAccountMismatch() }
                 let api = RecoowAPIClient(config: config)
                 let response = try await api.initializeAccount()
+                do { try config.bindDataset(endpoint: config.baseURL, accountID: response.accountId) }
+                catch {
+                    try? await api.sessionForEndpoint(config.baseURL, token: response.deviceToken).deleteDevice(id: response.deviceId)
+                    throw error
+                }
                 // 先持久化 token，等用户确认保存恢复密钥后保持绑定。
                 config.deviceToken = response.deviceToken
                 config.accountID = response.accountId
@@ -404,10 +441,24 @@ struct CloudSyncSettingsView: View {
                 recoveryKeyToShow = response.recoveryKey
                 banner = AppLocalization.string("账号创建成功，绑定后点击“立即同步”上传本地数据")
             } catch {
-                banner = error.localizedDescription
+                banner = CloudAccountValidation.message(for: error)
             }
             busyKind = .none
         }
+    }
+
+    private func saveServer() {
+        guard busyKind == .none, !progress.isRunning,
+              let endpoint = try? CloudAccountValidation.endpoint(serverInput) else { return }
+        container.database.beginDataImport()
+        defer { container.database.endDataImport() }
+        config.disconnect()
+        config.baseURL = endpoint
+        config.isSyncEnabled = false
+        config.lastSyncMessage = AppLocalization.string("服务器已保存，请连接账号")
+        serverInput = endpoint
+        serverError = nil
+        reload()
     }
 
     private func beginPairWithCode() {
@@ -418,14 +469,18 @@ struct CloudSyncSettingsView: View {
             do {
                 let api = RecoowAPIClient(config: config)
                 let response = try await api.pair(code: pairCodeInput)
-                config.deviceToken = response.deviceToken
-                config.accountID = response.accountId
-                config.deviceID = response.deviceId
-                config.syncCursor = 0
+                do { try config.bindDataset(endpoint: config.baseURL, accountID: response.accountId) }
+                catch {
+                    try? await api.sessionForEndpoint(config.baseURL, token: response.deviceToken).deleteDevice(id: response.deviceId)
+                    throw error
+                }
+                try config.installDeviceCredentials(endpoint: config.baseURL, accountID: response.accountId,
+                    deviceID: response.deviceId, token: response.deviceToken, enableSync: true)
+                Task { await container.syncEngine.enqueueScan() }
                 pairCodeInput = ""
                 banner = AppLocalization.string("绑定成功，点击“立即同步”上传或拉取数据")
             } catch {
-                banner = error.localizedDescription
+                banner = CloudAccountValidation.message(for: error)
             }
             busyKind = .none
         }
@@ -440,16 +495,20 @@ struct CloudSyncSettingsView: View {
             do {
                 let api = RecoowAPIClient(config: config)
                 let response = try await api.recover(recoveryKey: recoveryKeyInput)
-                config.deviceToken = response.deviceToken
-                config.accountID = response.accountId
-                config.deviceID = response.deviceId
-                config.syncCursor = 0
+                do { try config.bindDataset(endpoint: config.baseURL, accountID: response.accountId) }
+                catch {
+                    try? await api.sessionForEndpoint(config.baseURL, token: response.deviceToken).deleteDevice(id: response.deviceId)
+                    throw error
+                }
+                try config.installDeviceCredentials(endpoint: config.baseURL, accountID: response.accountId,
+                    deviceID: response.deviceId, token: response.deviceToken, enableSync: true)
+                Task { await container.syncEngine.enqueueScan() }
                 recoveryKeyInput = ""
                 banner = AppLocalization.string("已用恢复密钥重新绑定，点击“立即同步”拉取云端数据")
             } catch CloudAPIError.badStatus(401, _) {
                 banner = AppLocalization.string("恢复密钥无效：服务器上没有匹配的账号，请核对大小写和字符")
             } catch {
-                banner = error.localizedDescription
+                banner = CloudAccountValidation.message(for: error)
             }
             reload()
             busyKind = .none

@@ -4,7 +4,10 @@ import OSLog
 /// 同步引擎协议。Feature 只触发 enqueueScan，不关心具体网络实现。
 protocol SyncEngine: Sendable {
     func enqueueScan() async
+    func cancelScan() async
 }
+
+extension SyncEngine { func cancelScan() async {} }
 
 /// 当前阶段不发起网络请求，只验证 outbox 扫描闭环。
 final class NoopSyncEngine: SyncEngine {

@@ -7,6 +7,7 @@ enum SettingsNavigationRoute: Hashable {
     case data
     case mediaLibrary
     case cloudSync
+    case accountSecurity
 }
 
 struct SettingsView: View {
@@ -56,12 +57,12 @@ struct SettingsView: View {
 
         Form {
             Section {
-                NavigationLink(value: SettingsNavigationRoute.cloudSync) {
+                NavigationLink(value: SettingsNavigationRoute.accountSecurity) {
                     SettingsCategoryRow(
-                        titleKey: "云同步",
-                        subtitleKey: "绑定服务器并手动备份到后台",
-                        systemImage: "icloud.and.arrow.up",
-                        tint: .purple,
+                        titleKey: "账号与云同步",
+                        subtitleKey: "账号、设备与云端同步",
+                        systemImage: "person.crop.circle.badge.checkmark",
+                        tint: .blue,
                         language: language
                     )
                 }
@@ -121,6 +122,8 @@ struct SettingsView: View {
                 MediaAssetLibraryManagementView(repository: container.mediaAssetRepository)
             case .cloudSync:
                 CloudSyncSettingsView()
+            case .accountSecurity:
+                CloudAccountSecurityView()
             }
         }
     }
@@ -346,6 +349,7 @@ struct SettingsView: View {
                     mode: $importMode,
                     selectedScopes: $selectedImportScopes,
                     isImporting: isImportingData,
+                    accountScope: container.cloudSyncConfig.backupAccountScope,
                     onCancel: clearPendingImport,
                     onImport: importData
                 )
@@ -536,7 +540,7 @@ struct SettingsView: View {
         }
     }
 
-    private func importData() {
+    private func importData(allowUnverifiedAccount: Bool = false) {
         guard let importedBackupURL else { return }
 
         let service = container.dataTransferService
@@ -547,7 +551,7 @@ struct SettingsView: View {
         Task {
             do {
                 let result = try await Task.detached {
-                    try service.importBackup(from: importedBackupURL, mode: mode, scopes: scopes)
+                    try service.importBackup(from: importedBackupURL, mode: mode, scopes: scopes, allowUnverifiedAccount: allowUnverifiedAccount)
                 }.value
                 if mode == .replaceAll {
                     applyImportedPreferences(result.metadata.preferences)
@@ -785,8 +789,18 @@ private struct AppDataImportOptionsSheet: View {
     @Binding var mode: AppDataImportMode
     @Binding var selectedScopes: Set<AppDataImportScope>
     let isImporting: Bool
+    let accountScope: String?
     let onCancel: () -> Void
-    let onImport: () -> Void
+    let onImport: (Bool) -> Void
+    @State private var allowUnverifiedAccount = false
+
+    private var mismatched: Bool {
+        if let accountScope, let source = preview.metadata.sourceAccountScope { return accountScope != source }
+        return false
+    }
+    private var needsConfirmation: Bool {
+        accountScope != nil && (!preview.metadata.hasAccountProvenance || preview.metadata.sourceAccountScope == nil)
+    }
 
     var body: some View {
         NavigationStack {
@@ -795,6 +809,15 @@ private struct AppDataImportOptionsSheet: View {
                     LabeledContent(AppLocalization.string("备份文件"), value: preview.fileName)
                     LabeledContent(AppLocalization.string("来源 App"), value: preview.appVersionDisplay)
                     LabeledContent(AppLocalization.string("数据版本"), value: "\(preview.metadata.databaseSchemaVersion)")
+                }
+
+                if mismatched {
+                    Section { Text(AppLocalization.string("备份属于其他账号，无法导入当前账号。请先备份并重置本机数据，再恢复对应账号。"))
+                        .foregroundStyle(AppPalette.red) }
+                } else if needsConfirmation {
+                    Section { Toggle(AppLocalization.string("确认将此备份数据归入当前账号"), isOn: $allowUnverifiedAccount) } footer: {
+                        Text(AppLocalization.string("此备份未记录账号，请核对来源。导入后数据会参与当前账号同步。"))
+                    }
                 }
 
                 Section {
@@ -829,8 +852,8 @@ private struct AppDataImportOptionsSheet: View {
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(AppLocalization.string("导入"), action: onImport)
-                        .disabled(isImporting || (mode == .mergeMissing && selectedScopes.isEmpty))
+                    Button(AppLocalization.string("导入")) { onImport(allowUnverifiedAccount) }
+                        .disabled(isImporting || mismatched || needsConfirmation && !allowUnverifiedAccount || (mode == .mergeMissing && selectedScopes.isEmpty))
                 }
             }
         }

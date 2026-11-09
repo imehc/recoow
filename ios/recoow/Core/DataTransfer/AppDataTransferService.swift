@@ -32,9 +32,11 @@ final class AppDataTransferService: @unchecked Sendable {
     ]
 
     private let database: AppDatabase
+    private let syncConfig: RecoowSyncConfig?
 
-    nonisolated init(database: AppDatabase) {
+    nonisolated init(database: AppDatabase, syncConfig: RecoowSyncConfig? = nil) {
         self.database = database
+        self.syncConfig = syncConfig
     }
 
     nonisolated func exportBackup(
@@ -48,7 +50,8 @@ final class AppDataTransferService: @unchecked Sendable {
         // 备份文件本质是 SQLite 快照；元数据单独写入同一个库，保证未来格式升级时可以先校验再恢复。
         let metadata = AppDataTransferMetadata.current(
             sourceDeviceID: sourceDeviceID,
-            preferences: preferences
+            preferences: preferences,
+            sourceAccountScope: syncConfig?.backupAccountScope
         )
         try writeMetadata(metadata, to: exportURL)
         try validateBackup(at: exportURL)
@@ -68,7 +71,8 @@ final class AppDataTransferService: @unchecked Sendable {
     nonisolated func importBackup(
         from sourceURL: URL,
         mode: AppDataImportMode,
-        scopes: Set<AppDataImportScope>
+        scopes: Set<AppDataImportScope>,
+        allowUnverifiedAccount: Bool = false
     ) throws -> AppDataImportResult {
         database.beginDataImport()
         defer { database.endDataImport() }
@@ -78,6 +82,7 @@ final class AppDataTransferService: @unchecked Sendable {
         }
 
         let metadata = try validateBackup(at: localURL)
+        try metadata.validateAccount(currentScope: syncConfig?.backupAccountScope, allowUnverified: allowUnverifiedAccount)
         try migrateBackupCopy(at: localURL)
         let rollbackURL = try makePersistentRollbackURL()
         // 导入会覆盖当前数据库，因此先生成持久化回滚备份；失败时会自动恢复，成功后也保留给用户手动兜底。
@@ -110,6 +115,9 @@ final class AppDataTransferService: @unchecked Sendable {
             // 备份用 inline_data 承载媒体，导入后清空这些列需要压实库文件，设置页才会显示真实占用。
             try database.settleDatabaseFilesAfterImport()
             try database.verifyIntegrity()
+            if let sourceAccountScope = metadata.sourceAccountScope {
+                try syncConfig?.adoptBackupAccountScope(sourceAccountScope)
+            }
             return AppDataImportResult(
                 metadata: metadata,
                 rollbackBackupURL: rollbackURL,
@@ -245,6 +253,21 @@ final class AppDataTransferService: @unchecked Sendable {
             .map { selectExpression(for: $0, tableName: tableName) }
             .joined(separator: ", ")
         let extraWhere = whereClause.map { " AND \($0)" } ?? ""
+        // No shared ancestor exists between two portable snapshots. Never guess an overwrite.
+        let fields = try SyncEntityCatalog.entity(tableName).fields
+        let ignored = Set(fields.filter(\.derived).map(\.name)).union(["id", "created_at", "updated_at", "device_id", "server_version", "sync_status", "storage_key"])
+        let compared = columns.filter { !ignored.contains($0) }
+        if !compared.isEmpty {
+            let different = compared.map { column in
+                let pair = "dst.\(Self.quotedIdentifier(column)) IS NOT \(selectExpression(for: column, tableName: tableName))"
+                // Portable assets embed bytes; live assets use storage_key. Checksum and length identify their content.
+                return tableName == "media_assets" && column == "inline_data"
+                    ? "(dst.\(Self.quotedIdentifier(column)) IS NOT NULL AND src.\(Self.quotedIdentifier(column)) IS NOT NULL AND \(pair))"
+                    : "(\(pair))"
+            }.joined(separator: " OR ")
+            let count = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM incoming.\(Self.quotedIdentifier(tableName)) src JOIN \(Self.quotedIdentifier(tableName)) dst ON dst.id = src.id WHERE (\(different))\(extraWhere)") ?? 0
+            if count > 0 { throw AppDataTransferError.localConflict(count) }
+        }
         if try db.tableExists("record_origins", in: Self.incomingSchemaName) {
             try db.execute(sql: """
                 INSERT OR REPLACE INTO record_origins (table_name, entity_id, device_id, updated_at, origin_json)

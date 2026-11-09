@@ -133,6 +133,14 @@ final class RecoowAPIClient: @unchecked Sendable {
         return client
     }
 
+    /// 在登录成功前使用独立地址，避免把当前设备凭据带到目标服务器。
+    func sessionForEndpoint(_ endpoint: String, token: String? = nil) -> RecoowAPIClient {
+        let client = RecoowAPIClient(config: config, session: session)
+        client.fixedBaseURL = endpoint
+        client.fixedToken = token
+        return client
+    }
+
     // MARK: - 账号/配对
 
     /// 主设备初始化账号（无账号时可调用）。

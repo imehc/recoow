@@ -17,6 +17,8 @@ final class RemoteSyncEngine: SyncEngine, @unchecked Sendable {
         private var running = false
         private var requested = false
         private var retry: Task<Void, Never>?
+        private var active: Task<Void, Never>?
+        private var runID: UUID?
 
         func claim() -> Bool {
             if running { requested = true; return false }
@@ -26,11 +28,39 @@ final class RemoteSyncEngine: SyncEngine, @unchecked Sendable {
             return true
         }
 
-        func finish(repeatRequested: Bool) -> Bool {
+        func finish(id: UUID, repeatRequested: Bool) -> Bool {
+            guard runID == id else { return false }
             if requested && repeatRequested { requested = false; return true }
             requested = false
             running = false
+            active = nil
+            runID = nil
             return false
+        }
+
+        func start(action: @escaping @Sendable () async -> TimeInterval?) async {
+            guard claim() else { return }
+            let id = UUID()
+            runID = id
+            let task = Task {
+                var again = true
+                while again && !Task.isCancelled {
+                    let delay = await action()
+                    again = self.finish(id: id, repeatRequested: delay == nil && !Task.isCancelled)
+                    if let delay, !Task.isCancelled { self.schedule(after: delay) { await self.start(action: action) } }
+                }
+                if Task.isCancelled { _ = self.finish(id: id, repeatRequested: false) }
+            }
+            active = task
+            await task.value
+        }
+
+        func cancel() async {
+            requested = false
+            retry?.cancel(); retry = nil
+            let task = active
+            task?.cancel()
+            await task?.value
         }
 
         func schedule(after delay: TimeInterval, action: @escaping @Sendable () async -> Void) {
@@ -67,25 +97,20 @@ final class RemoteSyncEngine: SyncEngine, @unchecked Sendable {
     deinit { monitor.cancel() }
 
     func enqueueScan() async {
-        guard await gate.claim() else { return }
-        var again = true
-        while again {
-            let retryDelay = await synchronize()
-            again = await gate.finish(repeatRequested: retryDelay == nil)
-            if let retryDelay {
-                await gate.schedule(after: retryDelay) { [weak self] in await self?.enqueueScan() }
-            }
-        }
+        await gate.start { [weak self] in await self?.synchronize() }
     }
+
+    func cancelScan() async { await gate.cancel() }
 
     private func synchronize() async -> TimeInterval? {
         guard config.isConfigured, config.isSyncEnabled, let accountID = config.accountID,
               let accessToken = repository.database.syncAccessToken else { return nil }
         let database = repository.database
         let connectionID = config.connectionID
+        let deviceToken = config.deviceToken
         let client = api.frozenSession()
         let isCurrent: @Sendable () -> Bool = { [config, database] in
-            config.isConfigured && config.isSyncEnabled && config.connectionID == connectionID && database.syncAccessToken == accessToken
+            config.isConfigured && config.isSyncEnabled && config.connectionID == connectionID && config.deviceToken == deviceToken && database.syncAccessToken == accessToken
         }
         let repository = FullSyncRepository(database: database, isCurrent: isCurrent)
         var scope: String?
@@ -93,11 +118,13 @@ final class RemoteSyncEngine: SyncEngine, @unchecked Sendable {
         do {
             let capabilities = try await client.capabilities()
             try capabilities.validate(accountID: accountID)
+            try config.bindDataset(endpoint: config.baseURL, accountID: accountID)
             if capabilities.features.contains("device_profiles_v1") { try await client.registerDeviceProfile() }
             guard isCurrent() else { throw CloudAPIError.syncRejected(AppLocalization.string("连接或本地数据库已改变")) }
             if let oldScope = config.activeScope, oldScope.hasPrefix(connectionID + ":"),
                oldScope != connectionID + ":" + capabilities.dataset.generation {
                 config.isSyncEnabled = false
+                config.needsCloudResetConfirmation = true
                 config.lastSyncMessage = AppLocalization.string("云端备份已清空或重建，已暂停同步。重新启用会将本机数据上传至云端。")
                 progress.finish(success: false)
                 return nil
@@ -172,6 +199,7 @@ final class RemoteSyncEngine: SyncEngine, @unchecked Sendable {
             config.syncCursor = latest.appliedCursor
             config.lastSyncedAt = Date()
             let unresolved = try repository.conflicts(scope: target.scope).count
+            config.lastSyncState = unresolved > 0 ? "conflicts" : notificationMessage.isEmpty ? "synced" : "waiting"
             let summary = unresolved == 0
                 ? AppLocalization.string("同步完成")
                 : AppLocalization.string("同步结束，存在待处理冲突")
@@ -188,6 +216,13 @@ final class RemoteSyncEngine: SyncEngine, @unchecked Sendable {
                 return nil
             }
             config.lastSyncMessage = AppLocalization.format("同步未完成：%@；数据保留，将自动重试", error.localizedDescription)
+            config.lastSyncState = error is URLError ? "offline" : "waiting"
+            if case CloudAPIError.badStatus(401, _) = error {
+                config.lastSyncState = "authentication"
+                config.isSyncEnabled = false
+                progress.finish(success: false)
+                return nil
+            }
             AppLogger.sync.error("同步失败: \(error.localizedDescription, privacy: .public)")
             progress.finish(success: false)
             if let scope {

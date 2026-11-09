@@ -242,35 +242,14 @@ struct BillDetailView: View {
 
 private struct BillUtilityAccountNumberRow: View {
     let number: String
-    @State private var didCopy = false
 
     var body: some View {
-        LabeledContent("缴费号码") {
-            Text(number)
-                .multilineTextAlignment(.trailing)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.trailing, AppDesign.touchIconSize)
-                .overlay(alignment: .trailing) {
-                    // 保留复制按钮的点击范围，不增加原生信息行的高度。
-                    FormRowIconButton(
-                        systemImage: didCopy ? "checkmark" : "doc.on.doc",
-                        tint: AppPalette.accent,
-                        accessibilityLabel: AppLocalization.string(didCopy ? "已复制缴费号码" : "复制缴费号码")
-                    ) {
-                        UIPasteboard.general.string = number
-                        didCopy = true
-                    }
-                }
-        }
-        .sensoryFeedback(.success, trigger: didCopy) { _, copied in copied }
-        .task(id: didCopy) {
-            guard didCopy else { return }
-            do {
-                try await Task.sleep(for: .seconds(2))
-                didCopy = false
-            } catch {}
-        }
+        CopyableValueRow(
+            title: AppLocalization.string("缴费号码"),
+            value: number,
+            copyLabel: AppLocalization.string("复制缴费号码"),
+            copiedLabel: AppLocalization.string("已复制缴费号码")
+        )
     }
 }
 

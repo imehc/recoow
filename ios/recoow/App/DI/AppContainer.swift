@@ -275,7 +275,7 @@ final class AppContainer {
             deviceIdentifier: deviceIdentifier
         )
         let historyRepository = HistoryRepository(database: database)
-        let dataTransferService = AppDataTransferService(database: database)
+        let dataTransferService = AppDataTransferService(database: database, syncConfig: cloudSyncConfig)
         let reminderNotificationService = ReminderNotificationService(scheduler: notificationScheduler)
         let anniversaryNotificationService = AnniversaryNotificationService(scheduler: notificationScheduler)
         let locationService = LocationService()

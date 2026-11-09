@@ -10,11 +10,14 @@ struct AppDataTransferMetadata: Sendable {
     let exportedAt: Date
     let sourceDeviceID: String
     let preferences: AppDataTransferPreferences
+    var sourceAccountScope: String? = nil
+    var hasAccountProvenance: Bool = true
 
     // App 版本用于追踪备份来源；真正决定能否导入的是格式版本和数据库 schema 版本。
     nonisolated static func current(
         sourceDeviceID: String,
         preferences: AppDataTransferPreferences,
+        sourceAccountScope: String? = nil,
         bundle: Bundle = .main
     ) -> AppDataTransferMetadata {
         AppDataTransferMetadata(
@@ -24,7 +27,8 @@ struct AppDataTransferMetadata: Sendable {
             appBuild: bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown",
             exportedAt: Date(),
             sourceDeviceID: sourceDeviceID,
-            preferences: preferences
+            preferences: preferences,
+            sourceAccountScope: sourceAccountScope
         )
     }
 }
@@ -53,6 +57,7 @@ extension AppDataTransferMetadata {
             "appBuild": appBuild,
             "exportedAt": Self.iso8601Formatter.string(from: exportedAt),
             "sourceDeviceID": sourceDeviceID,
+            "sourceAccountScope": sourceAccountScope ?? NSNull(),
             "preferences": preferencesJSON
         ]
         let data = try JSONSerialization.data(withJSONObject: json, options: [.sortedKeys])
@@ -79,6 +84,9 @@ extension AppDataTransferMetadata {
             throw AppDataTransferError.missingMetadata
         }
 
+        if let raw = json["sourceAccountScope"], !(raw is NSNull) {
+            guard let scope = raw as? String, RecoowSyncConfig.validBackupScope(scope) else { throw AppDataTransferError.missingMetadata }
+        }
         return AppDataTransferMetadata(
             formatVersion: formatVersion,
             databaseSchemaVersion: databaseSchemaVersion,
@@ -92,8 +100,19 @@ extension AppDataTransferMetadata {
                 addsPickedPhotosToMediaLibrary: preferencesJSON["addsPickedPhotosToMediaLibrary"] as? Bool ?? false,
                 savesCameraPhotosToLibrary: preferencesJSON["savesCameraPhotosToLibrary"] as? Bool ?? true,
                 hiddenToolRouteIDs: hiddenToolRouteIDs
-            )
+            ),
+            sourceAccountScope: json["sourceAccountScope"] as? String,
+            hasAccountProvenance: json.keys.contains("sourceAccountScope")
         )
+    }
+
+    nonisolated func validateAccount(currentScope: String?, allowUnverified: Bool) throws {
+        if let currentScope, let sourceAccountScope, currentScope != sourceAccountScope {
+            throw AppDataTransferError.accountMismatch
+        }
+        if currentScope != nil && (!hasAccountProvenance || sourceAccountScope == nil) && !allowUnverified {
+            throw AppDataTransferError.unverifiedAccount
+        }
     }
 
     nonisolated private static var iso8601Formatter: ISO8601DateFormatter {
