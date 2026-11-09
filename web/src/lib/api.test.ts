@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api, APIError } from './api';
+import { version } from '../../package.json';
 
 describe('authenticated transport', () => {
   let events: EventTarget;
@@ -28,6 +29,7 @@ describe('authenticated transport', () => {
       headers: {
         'X-Recoow-Client': 'web',
         'X-Recoow-OS': 'ios',
+        'X-Recoow-App-Version': version,
         'X-Recoow-Field-Case': 'snake_case',
       },
     });
@@ -39,7 +41,7 @@ describe('authenticated transport', () => {
     await api.history({ deviceId: 'device', fromMs: 1000, toMs: 2000 });
     expect(fetchMock.mock.calls[0][0].search).toBe('?device_id=device&from_ms=1000&to_ms=2000');
     await api.profile();
-    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({ app_version: '0.1.0' });
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({ app_version: version });
   });
   it('treats rejected login differently from session expiry', async () => {
     const listener = vi.fn();

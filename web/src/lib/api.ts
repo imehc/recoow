@@ -1,6 +1,7 @@
 import { t } from './preferences.svelte.js';
 import { parse, LosslessNumber } from 'lossless-json';
 import { apiFields, apiFieldName } from './api-fields.js';
+import { version as appVersion } from '../../package.json';
 import type { ChangeEventDetail } from '#lib/generated/api/models/ChangeEventDetail.js';
 import type { ChangeEventPage } from '#lib/generated/api/models/ChangeEventPage.js';
 import type { PageResponse } from '#lib/generated/api/models/PageResponse.js';
@@ -75,7 +76,7 @@ async function request<T>(
       'Content-Type': 'application/json',
       'X-Recoow-Client': 'web',
       'X-Recoow-OS': operatingSystem(),
-      'X-Recoow-App-Version': '0.1.0',
+      'X-Recoow-App-Version': appVersion,
       'X-Recoow-Field-Case': 'snake_case',
       ...options.headers,
     },
@@ -108,7 +109,7 @@ export const api = {
       {},
       {
         method: 'PUT',
-        body: JSON.stringify({ client: 'web', os: operatingSystem(), app_version: '0.1.0' }),
+        body: JSON.stringify({ client: 'web', os: operatingSystem(), app_version: appVersion }),
       },
     ),
   records: (
