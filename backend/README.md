@@ -46,7 +46,7 @@ make generate                  # 全部接口类型、sqlc 与 iOS 同步注册�
 
 ## 登录与 API
 
-设备初始化、恢复密钥、配对码和长期设备 token 保留。密码身份绑定到同一个数据账号；已有账号由主设备绑定用户名密码，新用户可单独注册。用户名归一化为小写；密码采用带随机盐的 Argon2id（64 MiB、3 次、并行度 2），长度为 12–256 字节。
+设备初始化、恢复密钥、配对码和长期设备 token 保留。密码身份绑定到同一个数据账号；已有账号由主设备绑定用户名密码，新用户可单独注册。用户名归一化为小写，省略用户名时自动生成；密码采用带随机盐的 Argon2id（64 MiB、3 次、并行度 2），长度为 6–18 个字符，仅接受 ASCII 字母、数字与常见符号，不接受空格。
 
 Web 登录使用独立的可过期会话，保存 token 哈希；默认 Cookie 为 HttpOnly、Secure、SameSite=Strict。Cookie 写请求检查 Origin。登录响应也返回 Bearer 会话凭据，退出和修改密码会吊销会话；长期设备凭据继续由设备管理单独吊销。账号禁用对会话与设备登录均生效。登录失败按直连来源地址限流。
 
@@ -60,6 +60,7 @@ Web 登录使用独立的可过期会话，保存 token 哈希；默认 Cookie �
 | `POST /api/device-pairing-codes`、`POST /api/device-pairings` | 创建、原子消费配对码 |
 | `GET /api/devices`、`DELETE /api/devices/{id}` | 管理本账号设备 |
 | `POST /api/users`、`POST /api/users/me/credentials` | 密码账号注册、原账号绑定 |
+| `POST /api/device-logins`、`POST /api/password-resets` | 密码登录设备、恢复密钥重设密码 |
 | `POST /api/sessions`、`DELETE /api/sessions/current` | 登录、退出 |
 | `GET /api/users/me`、`PUT /api/users/me/password` | 当前身份、修改密码 |
 | `GET/POST /api/{实体}`、`GET/PUT/DELETE /api/{实体}/{id}` | 本账号分页列表、详情与修订写入 |
