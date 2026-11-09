@@ -62,14 +62,19 @@ class AppNavigationTest {
         compose.waitForIdle()
     }
 
-    @Test fun syncScreenRestoresAddressAndReturnsToSettings() {
+    @Test fun syncScreenRestoresAddressAndReturnsThroughAccountSettings() {
         openSettings()
-        settingsRow("sync_settings").performClick()
+        settingsRow("account_security").performClick()
+        val enableCloud = compose.activity.getString(imehc.recoow.feature.settings.R.string.account_enable_cloud)
+        compose.onNodeWithText(enableCloud).performClick()
         compose.onNodeWithTag("sync_endpoint").performTextInput("https://example.com/recoow")
         compose.activityRule.scenario.recreate()
         compose.onNodeWithTag("sync_endpoint").assertTextContains("https://example.com/recoow")
         compose.onNodeWithTag("tab_settings").assertDoesNotExist()
         compose.onNodeWithTag("sync_back").performClick()
+        compose.onNodeWithText(enableCloud).assertIsDisplayed()
+        compose.onNodeWithTag("tab_settings").assertDoesNotExist()
+        pressBack()
         compose.onNodeWithTag("tab_settings").assertIsSelected()
     }
 
