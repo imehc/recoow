@@ -30,13 +30,15 @@ object SyncModule {
     @Provides @Singleton fun deviceIdentity(@ApplicationContext context: Context): imehc.recoow.core.domain.sync.DeviceIdentity =
         object : imehc.recoow.core.domain.sync.DeviceIdentity { override val id: String get() = CredentialVault(context).localDeviceId }
 
-    @Provides @Singleton fun repository(@ApplicationContext context: Context, host: DatabaseHost, received: ReceivedRecordStore): SyncRepository {
+    @Provides @Singleton fun engine(@ApplicationContext context: Context, host: DatabaseHost, received: ReceivedRecordStore): SyncEngine {
         val vault = CredentialVault(context)
         val store = SyncStore(host, received, vault)
         val debug = context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
         return SyncEngine(vault, SyncApiFactory(allowLocalHttp = debug, profile = host.clientSource?.profile()), store, received,
             MediaTransfer(store, File(context.cacheDir, "sync-transfer")), CredentialVault(context, "pending-sync-credentials"), StoredSyncPreferences(context))
     }
+    @Provides fun repository(engine: SyncEngine): SyncRepository = engine
+    @Provides fun accountRepository(engine: SyncEngine): imehc.recoow.core.domain.sync.AccountSecurityRepository = engine
 }
 
 @EntryPoint

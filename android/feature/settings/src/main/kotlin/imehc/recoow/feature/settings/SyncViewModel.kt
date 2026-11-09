@@ -12,8 +12,12 @@ import kotlinx.coroutines.launch
 class SyncViewModel @Inject constructor(private val repository: SyncRepository) : ViewModel() {
     val state = repository.state
     init { action { repository.refresh() } }
-    fun connect(endpoint: String, method: ConnectionMethod, secret: String, device: String, replace: Boolean) = action {
-        repository.connect(endpoint, method, secret, device, replace)
+    fun connect(endpoint: String, method: ConnectionMethod, secret: String, device: String) = action {
+        repository.connect(endpoint, method, secret, device)
+        if (repository.state.value.connection != null && repository.state.value.problem == null) repository.sync()
+    }
+    fun login(endpoint: String, username: String, password: String, device: String) = action {
+        repository.connect(endpoint, ConnectionMethod.LOGIN, password, device, username)
         if (repository.state.value.connection != null && repository.state.value.problem == null) repository.sync()
     }
     fun setEnabled(value: Boolean) = action { repository.setEnabled(value) }
@@ -21,6 +25,7 @@ class SyncViewModel @Inject constructor(private val repository: SyncRepository) 
     fun revokeDevice(id: String) = action { repository.revokeDevice(id) }
     fun synchronize() = action { repository.sync() }
     fun disconnect() = action { repository.disconnect() }
+    fun confirmReset() = action { repository.confirmCloudReset(); if (repository.state.value.problem == null) repository.sync() }
     fun acknowledgeRecoveryKey() = action { repository.acknowledgeRecoveryKey() }
     fun generatePairingCode() = action { repository.generatePairingCode() }
     fun dismissPairingCode() = action { repository.dismissPairingCode() }

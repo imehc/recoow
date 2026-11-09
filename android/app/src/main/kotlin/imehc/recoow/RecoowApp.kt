@@ -51,6 +51,8 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
     billsScreen: @Composable (() -> Unit) -> Unit = {},
     journalScreen: @Composable (ToolRoute, String?, () -> Unit, (ToolRoute, String) -> Unit) -> Unit = { _, _, _, _ -> },
     mediaScreen: @Composable (() -> Unit) -> Unit = {},
+    accountScreen: @Composable (() -> Unit, () -> Unit, () -> Unit) -> Unit = { _, _, _ -> },
+    syncLoginScreen: @Composable (() -> Unit) -> Unit = {},
     syncScreen: @Composable (() -> Unit) -> Unit = {}) {
     val controller = rememberNavController()
     val entry by controller.currentBackStackEntryAsState()
@@ -69,7 +71,7 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
         modifier = Modifier.semantics { testTagsAsResourceId = true },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            if (entry?.destination?.route?.startsWith("tool/") != true && entry?.destination?.route !in setOf("sync", "media", "history", "data", "update")) {
+            if (entry?.destination?.route?.startsWith("tool/") != true && entry?.destination?.route !in setOf("sync", "sync-login", "account", "media", "history", "data", "update")) {
                 RecoowTabBar {
                     AppTab.entries.forEach { tab ->
                         RecoowTabItem(
@@ -99,6 +101,7 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
                 controller.navigate("tool/${tool.id}?recordId=${java.net.URLEncoder.encode(id, "UTF-8")}")
             } }
             composable(AppTab.SETTINGS.route) { SettingsScreen(state, onAppearance, onLanguage, onRetry,
+                onAccount = { controller.navigate("account") { launchSingleTop = true } },
                 onSync = { controller.navigate("sync") { launchSingleTop = true } },
                 onUpdate = { controller.navigate("update") { launchSingleTop = true } },
                 onMedia = { controller.navigate("media") { launchSingleTop = true } }, onToolVisible = onToolVisible,
@@ -107,6 +110,10 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
             composable("update") { updateScreen { controller.popBackStack() } }
             composable("media") { mediaScreen { controller.popBackStack() } }
             composable("sync") { syncScreen { controller.popBackStack() } }
+            composable("sync-login") { syncLoginScreen { controller.popBackStack() } }
+            composable("account") { accountScreen({ controller.popBackStack() },
+                { controller.navigate("sync-login") { launchSingleTop = true } },
+                { controller.navigate("sync") { launchSingleTop = true } }) }
             composable("tool/{toolId}?recordId={recordId}&delivery={delivery}", arguments = listOf(androidx.navigation.navArgument("recordId") { type = androidx.navigation.NavType.StringType; nullable = true; defaultValue = null }, androidx.navigation.navArgument("delivery") { type = androidx.navigation.NavType.StringType; nullable = true; defaultValue = null })) { destination ->
                 val route = ToolRoute.entries.firstOrNull { it.id == destination.arguments?.getString("toolId") }
                 if (route == ToolRoute.BILLS) {

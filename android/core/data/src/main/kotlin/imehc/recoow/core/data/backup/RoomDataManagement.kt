@@ -40,6 +40,10 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
     private val contracts get() = EntityContracts.registry.entities
     private val tables get() = contracts.keys
 
+    private suspend fun accountScope(db: RecoowDatabase): String? = db.records().activeScope()?.let { db.records().target(it) }?.let {
+        it.connectionId.substringBefore(':') + ":" + it.accountId
+    }
+
     override suspend fun usage(): StorageUsage = host.access { db -> usage(db) }
     private suspend fun usage(db: RecoowDatabase): StorageUsage {
         val values = preferences.data.first()
@@ -114,6 +118,10 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
                 .put("sourcePlatform", "android").put("sourceSchemaVersion", DatabaseHost.VERSION)
                 .put("appVersion", info.versionName ?: "unknown").put("appBuild", build.toString())
                 .put("exportedAt", Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS).toString()).put("sourceDeviceID", identity.id).put("preferences", preferenceSnapshot)
+            val owner = output.rawQuery("SELECT t.connectionId,t.accountId FROM live.sync_targets t JOIN live.dataset_state d ON t.scope=d.activeScope LIMIT 1", null).use {
+                if (it.moveToFirst()) it.getString(0).substringBefore(':') + ":" + it.getString(1) else null
+            }
+            metadata.put("sourceAccountScope", owner ?: JSONObject.NULL)
             output.execSQL("INSERT OR REPLACE INTO _recoow_backup_metadata(key,value) VALUES ('metadata',?)", arrayOf(metadata.toString()))
             output.setTransactionSuccessful()
         } finally { output.endTransaction() }
@@ -132,7 +140,8 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
                 output.fd.sync()
             } }
             val preview = validate(file)
-            PreparedBackup(file, MediaObjects.checksum(file), preview)
+            val current = host.access { db -> accountScope(db) }
+            PreparedBackup(file, MediaObjects.checksum(file), preview, BackupAccountRules.status(preview, current))
         } catch (error: Throwable) { removeDatabase(file); throw error }
     } }
 
@@ -161,11 +170,12 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
         return preview
     }
 
-    override suspend fun import(backup: PreparedBackup, mode: ImportMode, scopes: Set<ImportScope>): Int = withContext(Dispatchers.IO) { lock.withLock {
+    override suspend fun import(backup: PreparedBackup, mode: ImportMode, scopes: Set<ImportScope>, allowUnverifiedAccount: Boolean): Int = withContext(Dispatchers.IO) { lock.withLock {
         require(mode == ImportMode.REPLACE_ALL || scopes.isNotEmpty())
         require(backup.file.parentFile?.canonicalFile == staging.canonicalFile && MediaObjects.checksum(backup.file) == backup.checksum) { "Backup changed; preview it again" }
         validate(backup.file)
         host.guarded("import-${mode.name.lowercase()}") { db, root ->
+            BackupAccountRules.validate(backup.preview, accountScope(db), allowUnverifiedAccount)
             val sql = db.openHelper.writableDatabase
             sql.execSQL("ATTACH DATABASE ? AS incoming", arrayOf(backup.file.path))
             try {
@@ -175,6 +185,42 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
                     if (mode == ImportMode.REPLACE_ALL) clear(db, keepBinding = true)
                     val selected = if (mode == ImportMode.REPLACE_ALL) ImportScope.entries.toSet() else scopes
                     val selectedTables = selected.flatMap { it.tables }.toSet()
+                    if (mode == ImportMode.MERGE_MISSING) {
+                        for (table in selectedTables) {
+                            val available = sql.query("PRAGMA incoming.table_info(\"$table\")").use { rows -> buildSet { while (rows.moveToNext()) add(rows.getString(1)) } }
+                            val fields = contracts.getValue(table).fields.filter { it.name in available && !it.derived && it.name !in setOf("id","created_at","updated_at","device_id","server_version","storage_key") && !(table == "food_entries" && it.name in setOf("bill_id", "bill_ids_json")) }
+                            val different = fields.joinToString(" OR ") {
+                                val pair = "dst.\"${it.name}\" IS NOT src.\"${it.name}\""
+                                if (table == "media_assets" && it.name == "inline_data") "(dst.\"${it.name}\" IS NOT NULL AND src.\"${it.name}\" IS NOT NULL AND $pair)" else "($pair)"
+                            }
+                            if (different.isNotEmpty()) {
+                                val count = sql.query("SELECT COUNT(*) FROM incoming.\"$table\" src JOIN \"$table\" dst ON dst.id=src.id WHERE $different").use { it.moveToFirst(); it.getInt(0) }
+                                if (count > 0) throw LocalBackupConflict(count)
+                            }
+                            if (table == "food_entries") {
+                                // Compare the references that this scoped import would actually retain.
+                                // API26 SQLite has no JSON1, so filter the ordered bill list in Kotlin.
+                                val incomingBills = if ("bills" in selectedTables) " OR EXISTS(SELECT 1 FROM incoming.bills WHERE id=?)" else ""
+                                sql.compileStatement("SELECT EXISTS(SELECT 1 FROM bills WHERE id=?)$incomingBills").use { exists ->
+                                    fun retained(id: String): Boolean {
+                                        exists.bindString(1, id)
+                                        if (incomingBills.isNotEmpty()) exists.bindString(2, id)
+                                        return exists.simpleQueryForLong() != 0L
+                                    }
+                                    sql.query("SELECT src.bill_id, src.bill_ids_json, dst.bill_id, dst.bill_ids_json FROM incoming.food_entries src JOIN food_entries dst ON dst.id=src.id").use { rows ->
+                                        while (rows.moveToNext()) {
+                                            val expected = rows.getString(0)?.takeIf(::retained)
+                                            val links = Json.parseToJsonElement(rows.getString(1)).jsonArray.filter { link ->
+                                                require(link is JsonPrimitive && link.isString) { "Invalid food bill reference" }
+                                                retained(link.content)
+                                            }
+                                            if (expected != rows.getString(2) || JsonArray(links) != Json.parseToJsonElement(rows.getString(3))) throw LocalBackupConflict(1)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     // Temporary ID sets make scope selection independent of insertion order and existing IDs.
                     for (table in tables) {
                         sql.execSQL("CREATE TEMP TABLE \"import_$table\" (id TEXT PRIMARY KEY)")
@@ -265,6 +311,13 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
                         }
                     }
                     AggregateProjection.refresh(db, selectedTables, ZoneId.systemDefault())
+                    if (db.records().activeScope() == null) backup.preview.sourceAccountScope?.let { source ->
+                        val parts = source.split(':', limit = 2)
+                        require(parts.size == 2 && parts[0].matches(Regex("[a-f0-9]{64}")) && parts[1].isNotBlank()) { "Invalid backup account provenance" }
+                        val scope = source + ":backup"
+                        db.records().put(SyncTarget(scope, parts[0] + ":backup", parts[1], "backup"))
+                        db.records().put(DatasetState(activeScope = scope))
+                    }
                     if (mode == ImportMode.REPLACE_ALL) portable.restore(JSONObject(backup.preview.metadataJson).getJSONObject("preferences"))
                     preferences.edit { it[LAST_IMPORT] = System.currentTimeMillis() }
                 }

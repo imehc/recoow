@@ -142,7 +142,9 @@ import kotlinx.coroutines.flow.catch
                     RecoowSectionHeader(stringResource(R.string.bills_detail_section))
                     RecoowGroup {
                         details.forEachIndexed { index, (label, value) ->
-                            RecoowRow(title = label, trailingText = value)
+                            if (label == stringResource(R.string.utility_number)) {
+                                RecoowCopyableValueRow(label, value, stringResource(R.string.copy_number), stringResource(R.string.copied))
+                            } else RecoowRow(title = label, trailingText = value)
                             if (index < details.lastIndex) RecoowDivider()
                         }
                     }

@@ -40,6 +40,7 @@ class MainActivity : AppCompatActivity() {
     private val items: imehc.recoow.feature.items.ItemsViewModel by viewModels()
     private val media: imehc.recoow.feature.media.MediaLibraryViewModel by viewModels()
     private val sync: SyncViewModel by viewModels()
+    private val accounts: imehc.recoow.feature.settings.AccountSecurityViewModel by viewModels()
     private val data: imehc.recoow.feature.settings.DataManagementViewModel by viewModels()
     private val updates: imehc.recoow.feature.settings.AppUpdateViewModel by viewModels()
 
@@ -94,9 +95,16 @@ class MainActivity : AppCompatActivity() {
                         imehc.recoow.core.domain.navigation.ToolRoute.ITEMS -> imehc.recoow.feature.items.ItemsScreen(items, onBack, id)
                         else -> Unit
                     } },
+                    accountScreen = { back, login, settings -> imehc.recoow.feature.settings.AccountSecurityRoute(accounts, back, login, settings) },
+                    syncLoginScreen = { back ->
+                        SyncScreen(syncState, back, sync::connect, sync::synchronize, sync::disconnect,
+                            sync::acknowledgeRecoveryKey, sync::resolve, sync::generatePairingCode, sync::dismissPairingCode,
+                            sync::setEnabled, sync::refreshDevices, sync::revokeDevice, onLogin = sync::login,
+                            initialMethod = imehc.recoow.core.domain.sync.ConnectionMethod.LOGIN, onReset = sync::confirmReset)
+                    },
                     mediaScreen = { onBack -> imehc.recoow.feature.media.MediaLibraryScreen(media, onBack) }) { onBack ->
                     SyncScreen(syncState, onBack, sync::connect, sync::synchronize, sync::disconnect,
-                        sync::acknowledgeRecoveryKey, sync::resolve, sync::generatePairingCode, sync::dismissPairingCode, sync::setEnabled, sync::refreshDevices, sync::revokeDevice)
+                        sync::acknowledgeRecoveryKey, sync::resolve, sync::generatePairingCode, sync::dismissPairingCode, sync::setEnabled, sync::refreshDevices, sync::revokeDevice, onLogin = sync::login, onReset = sync::confirmReset)
                 }
             }
         }

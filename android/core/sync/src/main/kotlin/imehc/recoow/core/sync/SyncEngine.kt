@@ -20,13 +20,16 @@ import kotlinx.serialization.json.*
 
 class SyncEngine(private val credentials: CredentialStore, private val apiProvider: SyncApiProvider,
     private val store: SyncStore, private val received: ReceivedRecordStore, private val media: MediaTransfer,
-    private val pendingCredentials: CredentialStore, private val preferences: SyncPreferences) : SyncRepository {
+    private val pendingCredentials: CredentialStore, private val preferences: SyncPreferences) : SyncRepository, AccountSecurityRepository {
     private val mutex = Mutex()
     private val toggleMutex = Mutex()
     @Volatile private var activeSync: Job? = null
     @Volatile private var disabling = false
     private val mutableState = MutableStateFlow(SyncState())
     override val state = mutableState.asStateFlow()
+    private val mutableAccountState = MutableStateFlow(AccountSecurityState())
+    override val accountState = mutableAccountState.asStateFlow()
+    private var accountConnectionId: String? = null
 
     override suspend fun <T> localMaintenance(clearCredentials: Boolean, action: suspend () -> T): T = withContext(Dispatchers.IO) {
         toggleMutex.withLock {
@@ -38,6 +41,8 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
                     if (clearCredentials) withContext(NonCancellable) {
                         preferences.clear(); credentials.save(null); pendingCredentials.save(null)
                         mutableState.value = SyncState(loaded = true)
+                        accountConnectionId = null
+                        mutableAccountState.value = AccountSecurityState(loaded = true)
                     }
                     else try { refreshState() }
                     catch (e: CancellationException) { throw e }
@@ -87,6 +92,10 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
 
     private suspend fun refreshState(session: SyncSession? = null) {
         val connection = credentials.load()
+        if (accountConnectionId != connection?.connectionId) {
+            accountConnectionId = connection?.connectionId
+            mutableAccountState.value = AccountSecurityState()
+        }
         val pending = pendingCredentials.load()
         val current = session ?: connection?.let { candidate ->
             store.host.access { db ->
@@ -106,47 +115,166 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
             recoveryKey = pending?.recoveryKey ?: connection?.recoveryKey) }
     }
 
-    override suspend fun connect(endpoint: String, method: ConnectionMethod, secret: String, deviceName: String, replaceLocal: Boolean) =
+    override suspend fun connect(endpoint: String, method: ConnectionMethod, secret: String, deviceName: String, username: String) =
         withContext(Dispatchers.IO) { mutex.withLock {
             mutableState.update { it.copy(running = true, problem = null) }
+            var issued: Credentials? = null
             try {
                 val normalized = apiProvider.endpoint(endpoint)
+                if (method == ConnectionMethod.CREATE && (credentials.load() != null || store.hasDatasetBinding())) throw AccountReplacementRequired()
                 val public = apiProvider.create(normalized)
                 // A completed registration is journaled before any dataset/backup operation.
-                val staged = pendingCredentials.load()?.takeIf { it.endpoint == normalized && (method == ConnectionMethod.CREATE || replaceLocal) }
-                val candidate = staged ?: run {
-                    val path = when (method) { ConnectionMethod.CREATE -> "api/accounts"; ConnectionMethod.PAIR -> "api/device-pairings"; ConnectionMethod.RECOVER -> "api/account-recoveries" }
+                val staged = pendingCredentials.load()?.takeIf { it.endpoint == normalized && method == ConnectionMethod.CREATE }
+                val fresh = staged ?: run {
+                    val path = when (method) { ConnectionMethod.CREATE -> "api/accounts"; ConnectionMethod.PAIR -> "api/device-pairings"; ConnectionMethod.RECOVER -> "api/account-recoveries"; ConnectionMethod.LOGIN -> "api/device-logins" }
                     val body = buildJsonObject {
                         when (method) { ConnectionMethod.CREATE -> put("bootstrapToken", secret)
                             ConnectionMethod.PAIR -> put("code", secret)
-                            ConnectionMethod.RECOVER -> put("recoveryKey", secret) }
+                            ConnectionMethod.RECOVER -> put("recoveryKey", secret)
+                            ConnectionMethod.LOGIN -> { put("username", username.trim()); put("password", secret) } }
                         if (method != ConnectionMethod.CREATE) put("deviceName", deviceName.trim().ifBlank { "Android" })
                     }
-                    val result = decodeObject(public.post(path, body))
+                    val result = if (method == ConnectionMethod.LOGIN) {
+                        val login = AccountApi(public).login(username, secret, deviceName)
+                        buildJsonObject { put("accountId", login.accountId); put("deviceId", login.deviceId); put("deviceToken", login.deviceToken) }
+                    } else decodeObject(public.post(path, body))
                     Credentials(endpointHash(normalized) + ":" + UUID.randomUUID(), normalized, result.text("accountId"),
                         result.text("deviceId"), result.text("deviceToken"),
-                        if (method == ConnectionMethod.CREATE) result.text("recoveryKey") else null, method != ConnectionMethod.PAIR).also { pendingCredentials.save(it) }
+                        if (method == ConnectionMethod.CREATE) result.text("recoveryKey") else null, method in setOf(ConnectionMethod.CREATE, ConnectionMethod.RECOVER)).also { issued = it; pendingCredentials.save(it) }
                 }
+                issued = fresh
+                val candidate = store.alignConnection(fresh)
                 val api = apiProvider.create(candidate.endpoint, candidate.token)
                 val caps = capabilities(api, candidate)
-                store.prepare(candidate, caps, replaceLocal)
+                if (method == ConnectionMethod.LOGIN && !caps.accountCredentials) throw SyncHttpException(404)
+                val resetRequired = try { store.prepare(candidate, caps); false }
+                    catch (_: CloudResetConfirmationRequired) { true }
+                preferences.setEnabled(candidate, !resetRequired && method != ConnectionMethod.CREATE)
                 credentials.save(candidate)
+                issued = null
                 pendingCredentials.save(null)
                 refreshState()
+                if (resetRequired) mutableState.update { it.copy(problem = SyncProblem.RESET) }
             } catch (cancelled: CancellationException) { throw cancelled
-            } catch (error: Exception) { mutableState.update { it.copy(problem = problem(error)) }; refreshState()
-            } finally { mutableState.update { it.copy(running = false) } }
+            } catch (error: Exception) {
+                mutableState.update { it.copy(problem = problem(error)) }; refreshState()
+            } finally {
+                if (method != ConnectionMethod.CREATE) issued?.let { rejected -> withContext(NonCancellable) {
+                    withTimeoutOrNull(3000) { runCatching { apiProvider.create(rejected.endpoint, rejected.token).delete("api/devices/" + rejected.serverDevice) } }
+                    pendingCredentials.save(null)
+                } }
+                mutableState.update { it.copy(running = false) }
+            }
         } }
 
-    override suspend fun disconnect() = withContext(Dispatchers.IO) { mutex.withLock {
-        // Retain the dataset binding and pending edits. Reconnecting to a different account asks for replacement.
-        credentials.save(null)
-        mutableState.value = SyncState(loaded = true, recoveryKey = pendingCredentials.load()?.recoveryKey)
+    override suspend fun disconnect() = withContext(Dispatchers.IO) { toggleMutex.withLock {
+        disabling = true
+        try {
+            activeSync?.cancelAndJoin()
+            mutex.withLock {
+                credentials.load()?.let { preferences.setEnabled(it, false) }
+                credentials.save(null); pendingCredentials.save(null)
+                accountConnectionId = null
+                mutableAccountState.value = AccountSecurityState(loaded = true)
+                mutableState.value = SyncState(loaded = true)
+            }
+        } finally { disabling = false }
+    } }
+
+    override suspend fun confirmCloudReset() = withContext(Dispatchers.IO) { mutex.withLock {
+        try {
+            val connection = requireNotNull(credentials.load())
+            store.prepare(connection, capabilities(apiProvider.create(connection.endpoint, connection.token), connection), allowGenerationChange = true)
+            preferences.setEnabled(connection, true)
+            mutableState.update { it.copy(problem = null) }
+            refreshState()
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (error: Exception) { mutableState.update { it.copy(problem = problem(error)) } }
+    } }
+
+    override suspend fun refreshAccount() = accountOperation { connection ->
+        if (connection == null) {
+            mutableAccountState.value = AccountSecurityState(loaded = true)
+        } else {
+            val api = apiProvider.create(connection.endpoint, connection.token)
+            val caps = capabilities(api, connection)
+            if (!caps.accountCredentials) mutableAccountState.update { it.copy(loaded = true, supported = false, username = null) }
+            else {
+                val identity = AccountApi(api).identity()
+                require(identity == null || identity.accountId == connection.account)
+                mutableAccountState.update { it.copy(loaded = true, supported = true, username = identity?.username) }
+            }
+        }
+    }
+
+    override suspend fun setAccountPassword(password: String) = accountOperation { current ->
+        require(AccountPasswordRules.valid(password))
+        val connection = requireNotNull(current)
+        if (!connection.canPair) throw SyncHttpException(403)
+        val api = apiProvider.create(connection.endpoint, connection.token)
+        if (!capabilities(api, connection).accountCredentials) throw SyncHttpException(404)
+        val identity = AccountApi(api).bind(password)
+        require(identity.accountId == connection.account)
+        mutableAccountState.update { it.copy(loaded = true, supported = true, username = identity.username, result = AccountResult.PASSWORD_SET) }
+    }
+
+    override suspend fun changeAccountPassword(current: String, next: String) = accountOperation { selected ->
+        require(AccountPasswordRules.valid(current) && AccountPasswordRules.valid(next))
+        val connection = requireNotNull(selected)
+        val api = apiProvider.create(connection.endpoint, connection.token)
+        if (!capabilities(api, connection).accountCredentials) throw SyncHttpException(404)
+        AccountApi(api).change(current, next)
+        mutableAccountState.update { it.copy(result = AccountResult.PASSWORD_CHANGED) }
+    }
+
+    override suspend fun resetAccountPassword(endpoint: String, recoveryKey: String, next: String) = accountOperation { connection ->
+        require(AccountPasswordRules.valid(next))
+        val normalized = apiProvider.endpoint(endpoint)
+        // 密钥重设不附带当前设备 token，也不切换本机账号或同步范围。
+        val identity = AccountApi(apiProvider.create(normalized)).reset(recoveryKey, next)
+        mutableAccountState.update { it.copy(resetUsername = identity.username, result = AccountResult.PASSWORD_RESET,
+            username = if (connection?.endpoint == normalized && connection.account == identity.accountId) identity.username else it.username) }
+    }
+
+    private suspend fun accountOperation(block: suspend (Credentials?) -> Unit) = withContext(Dispatchers.IO) { mutex.withLock {
+        mutableState.update { it.copy(running = true) }
+        mutableAccountState.update { it.copy(busy = true, problem = null, result = null, resetUsername = null) }
+        try {
+            val connection = credentials.load()
+            if (accountConnectionId != connection?.connectionId) {
+                accountConnectionId = connection?.connectionId
+                mutableAccountState.value = AccountSecurityState(busy = true)
+            }
+            block(connection)
+        }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (error: Exception) {
+            val failure = when (error) {
+                is SyncHttpException -> when (error.status) {
+                    400 -> AccountProblem.PASSWORD
+                    401 -> AccountProblem.AUTHENTICATION
+                    403 -> AccountProblem.PERMISSION
+                    404 -> AccountProblem.UNSUPPORTED
+                    409 -> AccountProblem.CONFLICT
+                    429 -> AccountProblem.RATE_LIMIT
+                    else -> AccountProblem.CONNECTION
+                }
+                is SyncEndpointException -> AccountProblem.CONNECTION
+                is IllegalArgumentException -> AccountProblem.PASSWORD
+                is IOException -> AccountProblem.CONNECTION
+                else -> AccountProblem.STORAGE
+            }
+            mutableAccountState.update { it.copy(loaded = true, problem = failure) }
+        } finally {
+            mutableAccountState.update { it.copy(busy = false) }
+            mutableState.update { it.copy(running = false) }
+        }
     } }
 
     override suspend fun acknowledgeRecoveryKey() = withContext(Dispatchers.IO) { mutex.withLock {
         credentials.load()?.let { credentials.save(it.copy(recoveryKey = null)) }
         pendingCredentials.load()?.let { pendingCredentials.save(it.copy(recoveryKey = null)) }
+        credentials.load()?.let { preferences.setEnabled(it, true) }
         refreshState()
     } }
 
@@ -218,7 +346,7 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
         } catch (cancelled: CancellationException) { throw cancelled
         } catch (error: Exception) {
             mutableState.update { it.copy(problem = problem(error)) }
-            if (error is SyncHttpException && error.status == 401) {
+            if (error is CloudResetConfirmationRequired || error is SyncHttpException && error.status == 401) {
                 credentials.load()?.let { preferences.setEnabled(it, false) }
                 mutableState.update { it.copy(enabled = false) }
             }
@@ -229,7 +357,11 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
                         session = store.restart(session, capabilities(api, session.connection))
                     }
                     store.retry(session, true); refreshState(session)
-                } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* The session was replaced. */ }
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: CloudResetConfirmationRequired) {
+                    credentials.load()?.let { preferences.setEnabled(it, false) }
+                    mutableState.update { it.copy(enabled = false, problem = SyncProblem.RESET) }
+                } catch (_: Exception) { /* The session was replaced. */ }
             }
             false
         } finally {
@@ -314,8 +446,15 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
 
     private fun problem(error: Exception): SyncProblem = when (error) {
         is AccountReplacementRequired -> SyncProblem.ACCOUNT_REPLACEMENT
+        is CloudResetConfirmationRequired -> SyncProblem.RESET
         is SyncEndpointException -> SyncProblem.SERVER_ADDRESS
-        is SyncHttpException -> when { error.resetRequired -> SyncProblem.RESET; error.status in setOf(401, 403) -> SyncProblem.AUTHENTICATION; else -> SyncProblem.CONNECTION }
+        is SyncHttpException -> when {
+            error.resetRequired -> SyncProblem.RESET
+            error.status in setOf(401, 403) -> SyncProblem.AUTHENTICATION
+            error.status == 429 -> SyncProblem.RATE_LIMIT
+            error.status == 404 -> SyncProblem.INCOMPATIBLE
+            else -> SyncProblem.CONNECTION
+        }
         is IOException -> SyncProblem.CONNECTION
         is IllegalArgumentException -> SyncProblem.INCOMPATIBLE
         else -> SyncProblem.STORAGE

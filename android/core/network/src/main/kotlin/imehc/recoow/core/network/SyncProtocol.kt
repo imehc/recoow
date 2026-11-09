@@ -16,7 +16,8 @@ fun decodeObject(bytes: ByteArray): JsonObject = APIFields.rename(
     Json.parseToJsonElement(bytes.decodeToString(throwOnInvalidSequence = true)), true).jsonObject
 
 data class Capabilities(val account: String, val generation: String, val head: Long, val minCursor: Long,
-    val pushLimit: Int, val pullLimit: Int, val mediaLimit: Long, val manifestBootstrap: Boolean = false, val mutationOrigin: Boolean = false, val deviceProfiles: Boolean = false) {
+    val pushLimit: Int, val pullLimit: Int, val mediaLimit: Long, val manifestBootstrap: Boolean = false, val mutationOrigin: Boolean = false, val deviceProfiles: Boolean = false,
+    val accountCredentials: Boolean = false) {
     companion object {
         fun decode(raw: JsonObject, account: String, contracts: Map<String, Int>): Capabilities {
             require(raw.integer("protocolVersion") == 2L && raw.text("accountId") == account)
@@ -31,7 +32,7 @@ data class Capabilities(val account: String, val generation: String, val head: L
             val push = limits.integer("pushItems"); val pull = limits.integer("pullEntries"); val media = limits.integer("mediaBytes")
             require(push in 1..1000 && pull in 1..2000 && media in 1..200L * 1024 * 1024)
             return Capabilities(account, dataset.text("generation"), head, min, push.toInt(), pull.toInt(), media,
-                "manifest_bootstrap_v1" in features, "mutation_origin_v1" in features, "device_profiles_v1" in features)
+                "manifest_bootstrap_v1" in features, "mutation_origin_v1" in features, "device_profiles_v1" in features, "account_credentials_v1" in features)
         }
     }
 }

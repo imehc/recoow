@@ -47,7 +47,7 @@ import imehc.recoow.core.domain.preferences.Appearance
 fun SettingsScreen(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLanguage: (AppLanguage) -> Unit,
     onRetry: () -> Unit, onSync: () -> Unit = {}, onMedia: () -> Unit = {}, onData: () -> Unit = {},
     onPickedPhotos: (Boolean) -> Unit = {}, onCameraPhotos: (Boolean) -> Unit = {},
-    onToolVisible: (String, Boolean) -> Unit = { _, _ -> }, onUpdate: () -> Unit = {}) {
+    onToolVisible: (String, Boolean) -> Unit = { _, _ -> }, onUpdate: () -> Unit = {}, onAccount: () -> Unit = {}) {
     var selection by rememberSaveable { mutableStateOf<String?>(null) }
     val appearanceLabels = listOf(stringResource(R.string.follow_system), stringResource(R.string.appearance_light), stringResource(R.string.appearance_dark))
     val languageLabels = listOf(stringResource(R.string.follow_system), stringResource(R.string.language_chinese), stringResource(R.string.language_english))
@@ -58,7 +58,7 @@ fun SettingsScreen(state: SettingsUiState, onAppearance: (Appearance) -> Unit, o
             Column {
                 RecoowSectionHeader(stringResource(R.string.data_section))
                 RecoowGroup {
-                    SettingRow(DesignR.drawable.ic_setting_sync, stringResource(R.string.sync_title), "sync_settings", onClick = onSync)
+                    SettingRow(R.drawable.ic_account_security, stringResource(R.string.account_security), "account_security", onClick = onAccount)
                     RecoowDivider(RecoowLayout.dividerInset)
                     SettingRow(DesignR.drawable.ic_setting_media, stringResource(R.string.media_library), "media_settings", onClick = onMedia)
                     RecoowDivider(RecoowLayout.dividerInset)

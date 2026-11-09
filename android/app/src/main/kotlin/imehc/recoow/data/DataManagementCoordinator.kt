@@ -31,10 +31,10 @@ class DataManagementCoordinator @Inject constructor(private val data: RoomDataMa
         withContext(NonCancellable) { tracks.databaseChanged() }
         reclaimed
     }
-    override suspend fun import(backup: PreparedBackup, mode: ImportMode, scopes: Set<ImportScope>): Int =
+    override suspend fun import(backup: PreparedBackup, mode: ImportMode, scopes: Set<ImportScope>, allowUnverifiedAccount: Boolean): Int =
         sync.localMaintenance {
             tracks.prepareMaintenance()
-            val count = data.import(backup, mode, scopes)
+            val count = data.import(backup, mode, scopes, allowUnverifiedAccount)
             withContext(NonCancellable) { tracks.databaseChanged(); reminders.requestReconcile() }
             count
         }

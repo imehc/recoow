@@ -391,20 +391,131 @@ class SyncIntegrationTest {
         } finally { vault.save(null) }
     }
 
-    @Test fun accountReplacementBacksUpAndDoesNotUploadPreviousAccountsRecords() = runBlocking {
+    @Test fun anotherAccountCannotReplaceOrUploadLocalRecordsThroughConnect() = runBlocking {
         requireBackend()
         val a = client(); create(a)
         a.records.save(listOf(RecordChange("diary_tags", "private-old", """{"name":"old account"}""", timestamp, a.vault.localDeviceId)))
         assertSynced(a, a.engine.sync()); a.engine.disconnect()
-        a.engine.connect(base, ConnectionMethod.CREATE, "", "new account", false)
+        a.engine.connect(base, ConnectionMethod.CREATE, "", "new account")
         assertEquals(SyncProblem.ACCOUNT_REPLACEMENT, a.engine.state.value.problem)
-        a.engine.connect(base, ConnectionMethod.CREATE, "", "new account", true)
-        a.engine.setEnabled(true)
-        assertNull(a.engine.state.value.problem); assertNull(a.records.find("diary_tags", "private-old"))
-        assertSynced(a, a.engine.sync())
-        val c = a.vault.load()!!
+        assertNull(a.vault.load())
+        assertNotNull(a.records.find("diary_tags", "private-old"))
+        val b = client(); create(b)
+        a.engine.connect(base, ConnectionMethod.RECOVER, requireNotNull(b.vault.load()?.recoveryKey), "wrong account")
+        assertEquals(SyncProblem.ACCOUNT_REPLACEMENT, a.engine.state.value.problem)
+        assertNull(a.vault.load())
+        assertNotNull(a.records.find("diary_tags", "private-old"))
+        val c = b.vault.load()!!
         val rows = decodeObject(factory.create(c.endpoint, c.token).get("api/diary-tags")).getValue("rows").jsonArray
         assertTrue(rows.isEmpty())
+    }
+
+    @Test fun allConnectionMethodsRejectAnotherAccountAndRevokeIssuedDevices() = runBlocking {
+        requireBackend()
+        val a = client(); create(a)
+        a.records.save(listOf(RecordChange("diary_tags", "private-local", """{"name":"private local"}""", timestamp, a.vault.localDeviceId)))
+        assertSynced(a, a.engine.sync())
+        a.engine.disconnect()
+        val b = client(); create(b)
+        b.engine.setAccountPassword("OtherPass-123")
+        assertNull(b.engine.accountState.value.problem)
+        val username = requireNotNull(b.engine.accountState.value.username)
+        a.engine.connect(base, ConnectionMethod.LOGIN, "OtherPass-123", "wrong password target", username)
+        assertEquals(SyncProblem.ACCOUNT_REPLACEMENT, a.engine.state.value.problem)
+        a.engine.connect(base, ConnectionMethod.RECOVER, requireNotNull(b.vault.load()?.recoveryKey), "wrong recovery target")
+        assertEquals(SyncProblem.ACCOUNT_REPLACEMENT, a.engine.state.value.problem)
+        b.engine.generatePairingCode()
+        a.engine.connect(base, ConnectionMethod.PAIR, requireNotNull(b.engine.state.value.pairingCode), "wrong pairing target")
+        assertEquals(SyncProblem.ACCOUNT_REPLACEMENT, a.engine.state.value.problem)
+        assertNull(a.vault.load())
+        assertNotNull(a.records.find("diary_tags", "private-local"))
+        b.engine.refreshDevices()
+        assertEquals(1, b.engine.state.value.devices.size)
+        val rows = decodeObject(factory.create(b.vault.load()!!.endpoint, b.vault.load()!!.token).get("api/diary-tags")).getValue("rows").jsonArray
+        assertTrue(rows.isEmpty())
+    }
+
+    @Test fun sameAccountLoginPreservesCursorAndMergesOfflineAndCloudChanges() = runBlocking {
+        requireBackend()
+        val phone = client(); create(phone)
+        phone.engine.setAccountPassword("OfflinePass-123")
+        val username = requireNotNull(phone.engine.accountState.value.username)
+        val peer = client(); recover(peer, phone)
+        phone.records.save(listOf(RecordChange("diary_tags", "baseline", """{"name":"baseline"}""", timestamp, phone.vault.localDeviceId)))
+        assertSynced(phone, phone.engine.sync()); assertSynced(peer, peer.engine.sync())
+        val original = requireNotNull(phone.vault.load())
+        val before = phone.host.access { db -> requireNotNull(db.records().target(requireNotNull(db.records().activeScope()))) }
+        phone.engine.disconnect()
+        phone.records.save(listOf(RecordChange("diary_tags", "offline-only", """{"name":"offline"}""", timestamp + 1, phone.vault.localDeviceId)))
+        peer.records.save(listOf(RecordChange("diary_tags", "cloud-only", """{"name":"cloud"}""", timestamp + 2, peer.vault.localDeviceId)))
+        assertSynced(peer, peer.engine.sync())
+        phone.engine.connect(base, ConnectionMethod.LOGIN, "OfflinePass-123", "returning phone", username)
+        assertNull(phone.engine.state.value.problem)
+        assertEquals(original.connectionId, phone.vault.load()!!.connectionId)
+        val afterLogin = phone.host.access { db -> requireNotNull(db.records().target(requireNotNull(db.records().activeScope()))) }
+        assertEquals(before.scope, afterLogin.scope)
+        assertEquals(before.appliedCursor, afterLogin.appliedCursor)
+        assertTrue(afterLogin.bootstrapComplete)
+        assertTrue(phone.engine.state.value.enabled)
+        assertSynced(phone, phone.engine.sync()); assertSynced(peer, peer.engine.sync())
+        for (id in listOf("baseline", "offline-only", "cloud-only")) {
+            assertNotNull(phone.records.find("diary_tags", id)); assertNotNull(peer.records.find("diary_tags", id))
+        }
+    }
+
+    @Test fun cloudResetPausesReconnectUntilAnExplicitMergeIsConfirmed() = runBlocking {
+        requireBackend()
+        val phone = client(); create(phone)
+        phone.records.save(listOf(RecordChange("diary_tags", "kept-local", """{"name":"kept locally"}""", timestamp, phone.vault.localDeviceId)))
+        assertSynced(phone, phone.engine.sync())
+        val original = requireNotNull(phone.vault.load())
+        val api = factory.create(original.endpoint, original.token)
+        val caps = Capabilities.decode(decodeObject(api.get("api/sync/capabilities")), original.account, phone.store.contracts)
+        api.delete("api/sync/dataset?generation=" + caps.generation)
+        phone.engine.disconnect()
+        phone.engine.connect(base, ConnectionMethod.RECOVER, requireNotNull(original.recoveryKey), "returning phone")
+        assertEquals(SyncProblem.RESET, phone.engine.state.value.problem)
+        assertFalse(phone.engine.state.value.enabled)
+        assertNotNull(phone.records.find("diary_tags", "kept-local"))
+        assertTrue(decodeObject(api.get("api/diary-tags")).getValue("rows").jsonArray.isEmpty())
+        phone.engine.confirmCloudReset()
+        assertNull(phone.engine.state.value.problem)
+        assertTrue(phone.engine.state.value.enabled)
+        assertSynced(phone, phone.engine.sync())
+        assertNotNull(phone.records.find("diary_tags", "kept-local"))
+    }
+
+    @Test fun accountPasswordBindingLoginAndRecoveryKeepDataAndDevicePermissions() = runBlocking {
+        requireBackend()
+        val owner = client(); create(owner)
+        owner.records.save(listOf(RecordChange("diary_tags", "account-existing", """{"name":"existing data"}""", timestamp, owner.vault.localDeviceId)))
+        assertSynced(owner, owner.engine.sync())
+        val original = requireNotNull(owner.vault.load())
+        owner.engine.setAccountPassword("original-password")
+        assertNull(owner.engine.accountState.value.problem)
+        val username = requireNotNull(owner.engine.accountState.value.username)
+        assertEquals(original, owner.vault.load())
+        assertNotNull(owner.records.find("diary_tags", "account-existing"))
+        val phone = client()
+        phone.engine.connect(base, ConnectionMethod.LOGIN, "original-password", "password phone", username = username)
+        assertNull(phone.engine.state.value.problem)
+        assertTrue(phone.engine.state.value.enabled)
+        assertFalse(requireNotNull(phone.vault.load()).canPair)
+        assertEquals(original.account, phone.vault.load()!!.account)
+        phone.engine.setEnabled(true)
+        assertSynced(phone, phone.engine.sync())
+        assertNotNull(phone.records.find("diary_tags", "account-existing"))
+        owner.engine.resetAccountPassword(base, requireNotNull(original.recoveryKey), "updated-password")
+        assertNull(owner.engine.accountState.value.problem)
+        assertEquals(username, owner.engine.accountState.value.resetUsername)
+        assertEquals(original, owner.vault.load())
+        assertSynced(phone, phone.engine.sync())
+        phone.engine.disconnect()
+        phone.engine.connect(base, ConnectionMethod.LOGIN, "original-password", "stale password", username = username)
+        assertEquals(SyncProblem.AUTHENTICATION, phone.engine.state.value.problem)
+        phone.engine.connect(base, ConnectionMethod.LOGIN, "updated-password", "current password", username = username)
+        assertNull(phone.engine.state.value.problem)
+        assertNotNull(phone.records.find("diary_tags", "account-existing"))
     }
 
     @Test fun fixedWatermarkBootstrapResumesAfterInterruptionAndThenReceivesNewerRows() = runBlocking {
@@ -418,7 +529,7 @@ class SyncIntegrationTest {
                 val api = factory.create(endpoint, token)
                 return object : SyncApi by api {
                     override suspend fun get(path: String, query: Map<String, String>): ByteArray {
-                        if (path == "api/sync/snapshots" && query["after"] != "0" && !interrupted) {
+                        if (path in setOf("api/sync/snapshots", "api/sync/manifests") && query["after"] != "0" && !interrupted) {
                             interrupted = true; throw IOException("Interrupted bootstrap")
                         }
                         return api.get(path, query)
@@ -427,7 +538,7 @@ class SyncIntegrationTest {
             }
         }
         val b = client(provider); recover(b, a); assertFalse(b.engine.sync())
-        assertTrue("The paged snapshot request must trigger the simulated interruption", interrupted)
+        assertTrue("The paged inventory request must trigger the simulated interruption", interrupted)
         val target = b.host.access { it.records().target(it.records().activeScope()!!)!! }
         assertEquals(500L, target.bootstrapAfter); assertEquals(505L, target.bootstrapWatermark); assertFalse(target.bootstrapComplete)
         a.records.save(listOf(RecordChange("diary_tags", "later", """{"name":"after watermark"}""", timestamp + 1, a.vault.localDeviceId)))
@@ -577,7 +688,7 @@ class SyncIntegrationTest {
             val prepared = importer.preview { file.inputStream() }
             val binding = destination.vault.load()
             destination.engine.localMaintenance {
-                assertEquals(21, importer.import(prepared, imehc.recoow.core.domain.backup.ImportMode.REPLACE_ALL, emptySet()))
+                assertEquals(21, importer.import(prepared, imehc.recoow.core.domain.backup.ImportMode.REPLACE_ALL, emptySet(), allowUnverifiedAccount = true))
             }
             importer.discard(prepared)
             assertEquals(binding, destination.vault.load())
@@ -665,6 +776,40 @@ class SyncIntegrationTest {
         assertNotNull(client.engine.state.value.lastSuccessAt)
     }
 
+    @Test fun disconnectCancelsInflightSyncAndKeepsLocalOutboxForReconnect() = runBlocking {
+        requireBackend()
+        val entered = CompletableDeferred<Unit>()
+        var blocked = false
+        val provider = object : SyncApiProvider by factory {
+            override fun create(endpoint: String, token: String?): SyncApi {
+                val api = factory.create(endpoint, token)
+                return object : SyncApi by api {
+                    override suspend fun get(path: String, query: Map<String, String>): ByteArray {
+                        if (blocked) { entered.complete(Unit); awaitCancellation() }
+                        return api.get(path, query)
+                    }
+                }
+            }
+        }
+        val phone = client(provider)
+        phone.records.save(listOf(RecordChange("diary_tags", "kept-pending", """{"name":"pending offline"}""", timestamp, phone.vault.localDeviceId)))
+        create(phone)
+        val original = requireNotNull(phone.vault.load())
+        blocked = true
+        val running = launch { phone.engine.sync() }
+        withTimeout(5_000) { entered.await(); phone.engine.disconnect(); running.join() }
+        assertTrue(running.isCancelled)
+        assertNull(phone.vault.load())
+        assertFalse(phone.engine.state.value.running)
+        assertNotNull(phone.records.find("diary_tags", "kept-pending"))
+        val pending = phone.host.access { db -> db.records().outbox(requireNotNull(db.records().activeScope())).count { it.status == "pending" } }
+        assertTrue(pending > 0)
+        blocked = false
+        phone.engine.connect(base, ConnectionMethod.RECOVER, requireNotNull(original.recoveryKey), "returning phone")
+        assertEquals(original.connectionId, phone.vault.load()!!.connectionId)
+        assertSynced(phone, phone.engine.sync())
+    }
+
     @Test fun deviceListingAndOwnerRevocationInvalidatePairedCredentials() = runBlocking {
         requireBackend()
         val owner = client(); create(owner)
@@ -680,18 +825,20 @@ class SyncIntegrationTest {
         assertFalse(paired.engine.state.value.enabled)
     }
 
-    @Test fun syncChoiceIsScopedToAccountAndSurvivesReconnect() = runBlocking {
+    @Test fun reconnectEnablesSyncAndKeepsDatasetConnection() = runBlocking {
         requireBackend()
         val a = client(); create(a)
         val recovery = a.vault.load()!!.recoveryKey!!
+        val originalConnection = a.vault.load()!!.connectionId
         a.engine.setEnabled(false); a.engine.disconnect()
         a.engine.connect(base, ConnectionMethod.RECOVER, recovery, "same account")
-        assertFalse(a.engine.state.value.enabled)
+        assertTrue(a.engine.state.value.enabled)
+        assertEquals(originalConnection, a.vault.load()!!.connectionId)
         a.engine.setEnabled(true); a.engine.disconnect()
         a.engine.connect(base, ConnectionMethod.RECOVER, recovery, "same account again")
         assertTrue(a.engine.state.value.enabled)
         a.engine.disconnect()
-        a.engine.connect(base, ConnectionMethod.CREATE, "", "different account", true)
+        a.engine.connect(base, ConnectionMethod.CREATE, "", "different account")
         assertFalse(a.engine.state.value.enabled)
     }
 

@@ -2,9 +2,9 @@ package imehc.recoow.core.domain.sync
 
 import kotlinx.coroutines.flow.StateFlow
 
-enum class ConnectionMethod { CREATE, PAIR, RECOVER }
+enum class ConnectionMethod { CREATE, PAIR, RECOVER, LOGIN }
 interface DeviceIdentity { val id: String }
-enum class SyncProblem { SERVER_ADDRESS, CONNECTION, AUTHENTICATION, INCOMPATIBLE, STORAGE, RESET, ACCOUNT_REPLACEMENT, MEDIA, PENDING }
+enum class SyncProblem { SERVER_ADDRESS, CONNECTION, AUTHENTICATION, INCOMPATIBLE, STORAGE, RESET, ACCOUNT_REPLACEMENT, MEDIA, PENDING, RATE_LIMIT }
 data class SyncConnection(val endpoint: String, val accountId: String, val serverDeviceId: String, val canPair: Boolean = false)
 data class ConflictValue(val chineseLabel: String, val englishLabel: String, val local: String, val remote: String)
 data class RecordConflict(val table: String, val id: String, val localSnapshot: String, val remoteSnapshot: String, val remoteVersion: Long,
@@ -26,7 +26,8 @@ interface SyncRepository {
     suspend fun refreshDevices()
     suspend fun revokeDevice(id: String)
     suspend fun refresh()
-    suspend fun connect(endpoint: String, method: ConnectionMethod, secret: String, deviceName: String, replaceLocal: Boolean = false)
+    suspend fun connect(endpoint: String, method: ConnectionMethod, secret: String, deviceName: String, username: String = "")
+    suspend fun confirmCloudReset()
     suspend fun disconnect()
     suspend fun sync(manual: Boolean = true): Boolean
     suspend fun resolve(table: String, id: String, remoteVersion: Long, keepLocal: Boolean)

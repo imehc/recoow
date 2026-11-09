@@ -11,7 +11,8 @@ import imehc.recoow.core.network.*
 import java.util.UUID
 import kotlinx.serialization.json.*
 
-class AccountReplacementRequired : IllegalStateException("Account replacement requires a local backup and explicit selection")
+class AccountReplacementRequired : IllegalStateException("Back up and reset local data before connecting another account")
+class CloudResetConfirmationRequired : IllegalStateException("Cloud dataset changed; explicit confirmation is required")
 data class SyncSession(val connection: Credentials, val scope: String, val databaseToken: Long, val supportsOrigin: Boolean = false)
 data class PreparedMutation(val row: SyncOutbox, val request: JsonObject)
 
@@ -26,13 +27,27 @@ class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStor
         }
     }
 
-    suspend fun prepare(connection: Credentials, capabilities: Capabilities, replaceLocal: Boolean = false): SyncSession {
+    suspend fun hasDatasetBinding(): Boolean = host.access { it.records().activeScope() != null }
+
+    /** Renewing device credentials must not create another sync history for the same local dataset. */
+    suspend fun alignConnection(connection: Credentials): Credentials = host.access { db ->
+        val active = db.records().activeScope()?.let { db.records().target(it) } ?: return@access connection
+        if (active.accountId != connection.account || active.connectionId.substringBefore(':') != connection.connectionId.substringBefore(':')) {
+            throw AccountReplacementRequired()
+        }
+        connection.copy(connectionId = active.connectionId)
+    }
+
+    suspend fun prepare(connection: Credentials, capabilities: Capabilities, allowGenerationChange: Boolean = false): SyncSession {
         val scope = connection.connectionId + ":" + capabilities.generation
         val needsBackup = host.access { db ->
             val active = db.records().activeScope()?.let { db.records().target(it) }
             val sameAccount = active == null || active.accountId == connection.account &&
                 active.connectionId.substringBefore(':') == connection.connectionId.substringBefore(':')
-            if (!sameAccount && !replaceLocal) throw AccountReplacementRequired()
+            if (!sameAccount) throw AccountReplacementRequired()
+            if (active != null && active.generation != "backup" && active.generation != capabilities.generation && !allowGenerationChange) {
+                throw CloudResetConfirmationRequired()
+            }
             val target = db.records().target(scope)
             target == null || !target.seeded || active?.scope != scope || invalidCursor(target, capabilities)
         }
@@ -42,13 +57,9 @@ class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStor
                 val active = dao.activeScope()?.let { dao.target(it) }
                 val sameAccount = active == null || active.accountId == connection.account &&
                     active.connectionId.substringBefore(':') == connection.connectionId.substringBefore(':')
-                if (!sameAccount) {
-                    if (!replaceLocal) throw AccountReplacementRequired()
-                    // Deferred FKs permit clearing a complete dataset atomically, including self references.
-                    for (table in orderedTables.asReversed()) db.openHelper.writableDatabase.execSQL("DELETE FROM \"$table\"")
-                    for (table in listOf("entity_snapshots", "local_changes", "notification_jobs", "dataset_state", "sync_targets")) {
-                        db.openHelper.writableDatabase.execSQL("DELETE FROM $table")
-                    }
+                if (!sameAccount) throw AccountReplacementRequired()
+                if (active != null && active.generation != "backup" && active.generation != capabilities.generation && !allowGenerationChange) {
+                    throw CloudResetConfirmationRequired()
                 }
                 var target = dao.target(scope)
                 if (target == null) target = SyncTarget(scope, connection.connectionId, connection.account, capabilities.generation,

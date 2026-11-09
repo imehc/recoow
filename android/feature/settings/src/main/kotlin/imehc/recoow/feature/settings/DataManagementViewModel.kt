@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class DataResult { EXPORTED, IMPORTED, OPTIMIZED, RESET, FAILED, INVALID_BACKUP, LEGACY_BACKUP }
+enum class DataResult { EXPORTED, IMPORTED, OPTIMIZED, RESET, FAILED, INVALID_BACKUP, LEGACY_BACKUP, ACCOUNT_MISMATCH, ACCOUNT_UNVERIFIED, LOCAL_CONFLICT }
 data class DataManagementState(val usage: StorageUsage? = null, val preview: PreparedBackup? = null,
     val busy: Boolean = false, val result: DataResult? = null, val count: Long = 0)
 
@@ -33,9 +33,9 @@ class DataManagementViewModel @Inject constructor(private val data: DataManageme
         mutable.update { it.copy(preview = preview) }
     }
     fun dismissPreview() { if (!mutable.value.busy) { mutable.value.preview?.let(data::discard); mutable.update { it.copy(preview = null) } } }
-    fun import(mode: ImportMode, scopes: Set<ImportScope>) = run {
+    fun import(mode: ImportMode, scopes: Set<ImportScope>, allowUnverified: Boolean = false) = run {
         val backup = requireNotNull(mutable.value.preview)
-        val count = data.import(backup, mode, scopes)
+        val count = data.import(backup, mode, scopes, allowUnverified)
         data.discard(backup)
         mutable.update { it.copy(preview = null, result = DataResult.IMPORTED, count = count.toLong(), usage = data.usage()) }
     }
@@ -50,6 +50,9 @@ class DataManagementViewModel @Inject constructor(private val data: DataManageme
         viewModelScope.launch {
             try { action() }
             catch (e: CancellationException) { throw e }
+            catch (_: BackupAccountMismatch) { mutable.update { it.copy(result = DataResult.ACCOUNT_MISMATCH) } }
+            catch (_: BackupAccountUnverified) { mutable.update { it.copy(result = DataResult.ACCOUNT_UNVERIFIED) } }
+            catch (error: LocalBackupConflict) { mutable.update { it.copy(result = DataResult.LOCAL_CONFLICT, count = error.count.toLong()) } }
             catch (_: LegacyBackupException) { mutable.update { it.copy(result = DataResult.LEGACY_BACKUP) } }
             catch (_: InvalidBackupException) { mutable.update { it.copy(result = DataResult.INVALID_BACKUP) } }
             catch (_: Exception) { mutable.update { it.copy(result = DataResult.FAILED) } }

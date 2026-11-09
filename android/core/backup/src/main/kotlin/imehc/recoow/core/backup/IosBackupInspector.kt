@@ -52,6 +52,12 @@ class IosBackupInspector(private val temporaryDirectory: File) {
                         it.getString(0)
                     }
                     val metadata = JSONObject(json)
+                    if (metadata.has("sourceAccountScope") && !metadata.isNull("sourceAccountScope")) {
+                        val value = metadata.get("sourceAccountScope")
+                        if (value !is String || !imehc.recoow.core.domain.backup.BackupAccountRules.validScope(value)) {
+                            throw InvalidBackupException("Invalid backup account provenance")
+                        }
+                    }
                     val format = metadata.getInt("formatVersion")
                     val schema = metadata.getInt("databaseSchemaVersion")
                     if (format != 1) throw InvalidBackupException("Unsupported backup format: $format")
@@ -67,7 +73,9 @@ class IosBackupInspector(private val temporaryDirectory: File) {
                     } else 0L
                     BackupPreview(format, schema, metadata.getString("appVersion"), metadata.getString("appBuild"),
                         Instant.parse(metadata.getString("exportedAt")), metadata.getString("sourceDeviceID"), json, counts, mediaBytes, metadata.optString("sourcePlatform", "iOS"),
-                        if (metadata.has("sourceSchemaVersion")) metadata.getInt("sourceSchemaVersion") else schema)
+                        if (metadata.has("sourceSchemaVersion")) metadata.getInt("sourceSchemaVersion") else schema,
+                        if (metadata.has("sourceAccountScope") && !metadata.isNull("sourceAccountScope")) metadata.getString("sourceAccountScope") else null,
+                        metadata.has("sourceAccountScope"))
                 }
             } catch (error: CancellationException) {
                 throw error

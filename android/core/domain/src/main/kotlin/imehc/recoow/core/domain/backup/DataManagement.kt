@@ -16,7 +16,7 @@ enum class ImportScope(val toolId: String, val tables: Set<String>) {
     LOCATION("locationTracker", setOf("tracks", "track_points", "track_segments")),
 }
 enum class ImportMode { MERGE_MISSING, REPLACE_ALL }
-data class PreparedBackup(val file: File, val checksum: String, val preview: BackupPreview)
+data class PreparedBackup(val file: File, val checksum: String, val preview: BackupPreview, val accountStatus: BackupAccountStatus = BackupAccountStatus.UNBOUND)
 data class StorageUsage(val database: Long, val media: Long, val backups: Long, val cache: Long, val embedded: Long,
     val lastExport: Long?, val lastImport: Long?, val schemaVersion: Int) {
     val total: Long get() = database + media + backups + cache
@@ -25,7 +25,7 @@ interface DataManagement {
     suspend fun usage(): StorageUsage
     suspend fun export(openDestination: () -> OutputStream)
     suspend fun preview(openSource: () -> InputStream): PreparedBackup
-    suspend fun import(backup: PreparedBackup, mode: ImportMode, scopes: Set<ImportScope>): Int
+    suspend fun import(backup: PreparedBackup, mode: ImportMode, scopes: Set<ImportScope>, allowUnverifiedAccount: Boolean = false): Int
     suspend fun optimize(): Long
     suspend fun reset()
     fun discard(backup: PreparedBackup)

@@ -37,6 +37,8 @@ import java.time.format.FormatStyle
 @Composable
 fun DataManagementScreen(viewModel: DataManagementViewModel, onBack: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var allowUnverifiedAccount by remember(state.preview) { mutableStateOf(false) }
+    val accountBlocked = state.preview?.accountStatus == BackupAccountStatus.MISMATCH || state.preview?.accountStatus == BackupAccountStatus.UNVERIFIED && !allowUnverifiedAccount
     val context = LocalContext.current
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) viewModel.preview { requireNotNull(context.contentResolver.openInputStream(uri)) }
@@ -67,7 +69,7 @@ fun DataManagementScreen(viewModel: DataManagementViewModel, onBack: () -> Unit)
 
         state.result?.let { result ->
             item("result") {
-                val error = result in setOf(DataResult.FAILED, DataResult.INVALID_BACKUP, DataResult.LEGACY_BACKUP)
+                val error = result in setOf(DataResult.FAILED, DataResult.INVALID_BACKUP, DataResult.LEGACY_BACKUP, DataResult.ACCOUNT_MISMATCH, DataResult.ACCOUNT_UNVERIFIED, DataResult.LOCAL_CONFLICT)
                 SettingsBanner(
                     when (result) {
                         DataResult.EXPORTED -> stringResource(R.string.backup_exported)
@@ -76,6 +78,9 @@ fun DataManagementScreen(viewModel: DataManagementViewModel, onBack: () -> Unit)
                         DataResult.RESET -> stringResource(R.string.data_reset_done)
                         DataResult.INVALID_BACKUP -> stringResource(R.string.backup_invalid)
                         DataResult.LEGACY_BACKUP -> stringResource(R.string.backup_legacy)
+                        DataResult.ACCOUNT_MISMATCH -> stringResource(R.string.backup_account_mismatch)
+                        DataResult.ACCOUNT_UNVERIFIED -> stringResource(R.string.backup_account_unknown)
+                        DataResult.LOCAL_CONFLICT -> stringResource(R.string.backup_local_conflict, state.count)
                         DataResult.FAILED -> stringResource(R.string.data_failed)
                     },
                     error = error,
@@ -100,6 +105,13 @@ fun DataManagementScreen(viewModel: DataManagementViewModel, onBack: () -> Unit)
                             subtitle = stringResource(R.string.backup_schema, source.formatVersion, source.databaseSchemaVersion),
                         )
                     }
+                }
+            }
+            if (preview.accountStatus == BackupAccountStatus.MISMATCH) item("account") {
+                SettingsBanner(stringResource(R.string.backup_account_mismatch), error = true)
+            } else if (preview.accountStatus == BackupAccountStatus.UNVERIFIED) item("account") {
+                RecoowGroup {
+                    imehc.recoow.core.designsystem.RecoowSwitchRow(stringResource(R.string.backup_account_confirm), allowUnverifiedAccount, { allowUnverifiedAccount = it }, enabled = !state.busy)
                 }
             }
             item("scope") {
@@ -131,16 +143,16 @@ fun DataManagementScreen(viewModel: DataManagementViewModel, onBack: () -> Unit)
             item("merge") {
                 SettingsPrimaryButton(
                     stringResource(R.string.backup_merge),
-                    enabled = !state.busy && selected.isNotEmpty(),
+                    enabled = !state.busy && !accountBlocked && selected.isNotEmpty(),
                     modifier = Modifier.testTag("backup_merge"),
-                ) { viewModel.import(ImportMode.MERGE_MISSING, selected.map(ImportScope::valueOf).toSet()) }
+                ) { viewModel.import(ImportMode.MERGE_MISSING, selected.map(ImportScope::valueOf).toSet(), allowUnverifiedAccount) }
             }
             item("replace") {
                 RecoowGroup {
                     RecoowRow(
                         stringResource(R.string.backup_replace),
                         titleColor = MaterialTheme.colorScheme.error,
-                        onClick = { confirmation = "replace" },
+                        onClick = { if (!accountBlocked) confirmation = "replace" },
                     )
                 }
             }
@@ -225,7 +237,7 @@ fun DataManagementScreen(viewModel: DataManagementViewModel, onBack: () -> Unit)
             confirmButton = {
                 TextButton(onClick = {
                     confirmation = null
-                    if (action == "reset") viewModel.reset() else viewModel.import(ImportMode.REPLACE_ALL, ImportScope.entries.toSet())
+                    if (action == "reset") viewModel.reset() else viewModel.import(ImportMode.REPLACE_ALL, ImportScope.entries.toSet(), allowUnverifiedAccount)
                 }) { Text(stringResource(if (action == "reset") R.string.data_reset else R.string.backup_replace)) }
             },
             dismissButton = { TextButton(onClick = { confirmation = null }) { Text(stringResource(R.string.cancel)) } },

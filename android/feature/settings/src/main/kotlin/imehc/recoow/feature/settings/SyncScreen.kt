@@ -28,27 +28,42 @@ import imehc.recoow.core.domain.sync.*
 
 @Composable
 fun SyncScreen(state: SyncState, onBack: () -> Unit,
-    onConnect: (String, ConnectionMethod, String, String, Boolean) -> Unit, onSync: () -> Unit,
+    onConnect: (String, ConnectionMethod, String, String) -> Unit, onSync: () -> Unit,
     onDisconnect: () -> Unit, onRecoverySaved: () -> Unit, onResolve: (RecordConflict, Boolean) -> Unit,
     onPairingCode: () -> Unit, onDismissPairingCode: () -> Unit, onEnabled: (Boolean) -> Unit = {},
-    onDevices: () -> Unit = {}, onRevoke: (String) -> Unit = {}) {
+    onDevices: () -> Unit = {}, onRevoke: (String) -> Unit = {},
+    onLogin: (String, String, String, String) -> Unit = { _, _, _, _ -> },
+    initialMethod: ConnectionMethod = ConnectionMethod.PAIR, onReset: () -> Unit = {}) {
     var endpoint by rememberSaveable { mutableStateOf("") }
-    var method by rememberSaveable { mutableStateOf(ConnectionMethod.PAIR) }
+    var method by rememberSaveable { mutableStateOf(initialMethod) }
     var device by rememberSaveable { mutableStateOf("Android") }
     // Credentials must not enter savedInstanceState or screenshot-backed navigation state.
     var secret by remember { mutableStateOf("") }
     var disconnect by remember { mutableStateOf(false) }
     var revoke by rememberSaveable { mutableStateOf<String?>(null) }
-    var replace by remember { mutableStateOf(false) }
+    var username by remember { mutableStateOf("") }
+    var confirmingLogin by remember { mutableStateOf(false) }
+    var confirmingReset by remember { mutableStateOf(false) }
+    var attempted by remember { mutableStateOf(false) }
+    var submittedLogin by remember { mutableStateOf(false) }
+    var previousConnection by remember { mutableStateOf<SyncConnection?>(null) }
+    LaunchedEffect(state.running, state.connection, state.problem) {
+        if (submittedLogin && !state.running && (state.problem == null || state.problem == SyncProblem.RESET) && state.connection != null) {
+            method = ConnectionMethod.PAIR
+            secret = ""
+            submittedLogin = false
+        }
+    }
     val chinese = LocalConfiguration.current.locales[0].language == "zh"
 
+    Box(Modifier.fillMaxSize().imePadding()) {
     RecoowPage(stringResource(R.string.sync_title), navigationIcon = {
         IconButton(onClick = onBack, modifier = Modifier.testTag("sync_back")) {
             Icon(painterResource(DesignR.drawable.ic_record_back), contentDescription = stringResource(R.string.sync_back))
         }
     }) {
         val connection = state.connection
-        if (connection != null) {
+        if (connection != null && method != ConnectionMethod.LOGIN) {
             item("account") {
                 SettingsSection(stringResource(R.string.sync_section_server)) {
                     RecoowGroup {
@@ -65,7 +80,7 @@ fun SyncScreen(state: SyncState, onBack: () -> Unit,
                         RecoowSwitchRow(
                             title = stringResource(R.string.sync_enabled),
                             checked = state.enabled,
-                            onChange = onEnabled,
+                            onChange = { enabled -> if (enabled && state.problem == SyncProblem.RESET) confirmingReset = true else onEnabled(enabled) },
                             enabled = !state.running,
                             modifier = Modifier.testTag("sync_enabled"),
                         )
@@ -103,13 +118,13 @@ fun SyncScreen(state: SyncState, onBack: () -> Unit,
                             SyncProblem.MEDIA -> R.string.sync_error_media
                             SyncProblem.PENDING -> R.string.sync_error_pending
                             SyncProblem.CONNECTION -> R.string.sync_error_connection
+                            SyncProblem.RATE_LIMIT -> R.string.account_error_rate
                         }),
                         error = true,
-                        actionLabel = if (problem == SyncProblem.ACCOUNT_REPLACEMENT) stringResource(R.string.sync_replace) else null,
-                        onAction = { replace = true },
                     )
                 }
             }
+            if (state.problem == SyncProblem.RESET) item("reset") { SettingsPrimaryButton(stringResource(R.string.sync_remerge), enabled = !state.running) { confirmingReset = true } }
             if (!state.enabled) item("disabled") { RecoowNotice(stringResource(R.string.sync_disabled_hint)) }
             if (state.conflicts.isNotEmpty()) {
                 item("conflicts") {
@@ -177,6 +192,7 @@ fun SyncScreen(state: SyncState, onBack: () -> Unit,
             }
         } else {
             item("intro") { RecoowNotice(stringResource(R.string.sync_intro)) }
+            if (method == ConnectionMethod.LOGIN) item("login_hint") { RecoowNotice(stringResource(R.string.account_login_merge_hint)) }
             item("server") {
                 SettingsSection(stringResource(R.string.sync_section_server)) {
                     OutlinedTextField(
@@ -201,12 +217,18 @@ fun SyncScreen(state: SyncState, onBack: () -> Unit,
                                     ConnectionMethod.CREATE to stringResource(R.string.sync_create),
                                     ConnectionMethod.PAIR to stringResource(R.string.sync_pair),
                                     ConnectionMethod.RECOVER to stringResource(R.string.sync_recover),
+                                    ConnectionMethod.LOGIN to stringResource(R.string.account_login),
                                 ),
                                 onChange = { method = it; secret = "" },
                                 enabled = !state.running,
                                 bordered = false,
                             )
                         }
+                        if (method == ConnectionMethod.LOGIN) OutlinedTextField(
+                            username, { username = it }, Modifier.fillMaxWidth().testTag("account_login_username"),
+                            label = { Text(stringResource(R.string.account_username)) },
+                            shape = MaterialTheme.shapes.medium, singleLine = true, enabled = !state.running,
+                        )
                         OutlinedTextField(
                             secret, { secret = it },
                             Modifier.fillMaxWidth().testTag("sync_secret"),
@@ -214,8 +236,12 @@ fun SyncScreen(state: SyncState, onBack: () -> Unit,
                                 ConnectionMethod.CREATE -> R.string.sync_bootstrap_token
                                 ConnectionMethod.PAIR -> R.string.sync_pairing_code
                                 ConnectionMethod.RECOVER -> R.string.sync_recovery_key
+                                ConnectionMethod.LOGIN -> R.string.account_password
                             })) },
-                            supportingText = if (method == ConnectionMethod.CREATE) {
+                            isError = attempted && method == ConnectionMethod.LOGIN && !AccountPasswordRules.valid(secret),
+                            supportingText = if (attempted && method == ConnectionMethod.LOGIN && !AccountPasswordRules.valid(secret)) {
+                                { Text(stringResource(if (AccountPasswordRules.charactersValid(secret)) R.string.account_password_length else R.string.account_password_characters)) }
+                            } else if (method == ConnectionMethod.CREATE) {
                                 { Text(stringResource(R.string.sync_bootstrap_detail)) }
                             } else null,
                             visualTransformation = PasswordVisualTransformation(),
@@ -236,16 +262,19 @@ fun SyncScreen(state: SyncState, onBack: () -> Unit,
             }
             item("connect") {
                 SettingsPrimaryButton(
-                    stringResource(R.string.sync_connect),
-                    enabled = !state.running && endpoint.isNotBlank() && (method == ConnectionMethod.CREATE || secret.isNotBlank()),
+                    stringResource(if (method == ConnectionMethod.LOGIN) R.string.account_login else R.string.sync_connect),
+                    enabled = !state.running && endpoint.isNotBlank() && (method == ConnectionMethod.CREATE || secret.isNotBlank()) && (method != ConnectionMethod.LOGIN || username.isNotBlank()),
                     modifier = Modifier.testTag("sync_connect"),
-                ) { onConnect(endpoint, method, secret, device, false); secret = "" }
+                ) {
+                    attempted = true
+                    if (method != ConnectionMethod.LOGIN || AccountPasswordRules.valid(secret)) confirmingLogin = true
+                }
             }
             state.problem?.let { problem ->
                 item("problem") {
                     SettingsBanner(stringResource(when (problem) {
                         SyncProblem.SERVER_ADDRESS -> R.string.sync_error_endpoint
-                        SyncProblem.AUTHENTICATION -> R.string.sync_error_auth
+                        SyncProblem.AUTHENTICATION -> if (method == ConnectionMethod.LOGIN) R.string.account_error_auth else R.string.sync_error_auth
                         SyncProblem.INCOMPATIBLE -> R.string.sync_error_contract
                         SyncProblem.STORAGE -> R.string.sync_error_storage
                         SyncProblem.RESET -> R.string.sync_error_reset
@@ -253,6 +282,7 @@ fun SyncScreen(state: SyncState, onBack: () -> Unit,
                         SyncProblem.MEDIA -> R.string.sync_error_media
                         SyncProblem.PENDING -> R.string.sync_error_pending
                         SyncProblem.CONNECTION -> R.string.sync_error_connection
+                        SyncProblem.RATE_LIMIT -> R.string.account_error_rate
                     }), error = true)
                 }
             }
@@ -268,6 +298,22 @@ fun SyncScreen(state: SyncState, onBack: () -> Unit,
         }
     }
 
+    }
+    if (confirmingLogin) AlertDialog(onDismissRequest = { confirmingLogin = false },
+        title = { Text(stringResource(R.string.account_login_confirm)) },
+        text = { Text(stringResource(R.string.account_login_merge_hint)) },
+        confirmButton = { TextButton(onClick = {
+            confirmingLogin = false
+            previousConnection = state.connection
+            submittedLogin = true
+            if (method == ConnectionMethod.LOGIN) onLogin(endpoint, username, secret, device)
+            else { submittedLogin = false; onConnect(endpoint, method, secret, device); secret = "" }
+        }) { Text(stringResource(R.string.account_login)) } },
+        dismissButton = { TextButton(onClick = { confirmingLogin = false }) { Text(stringResource(R.string.cancel)) } })
+    if (confirmingReset) AlertDialog(onDismissRequest = { confirmingReset = false },
+        title = { Text(stringResource(R.string.sync_remerge)) }, text = { Text(stringResource(R.string.sync_remerge_detail)) },
+        confirmButton = { TextButton(onClick = { confirmingReset = false; onReset() }) { Text(stringResource(R.string.sync_remerge)) } },
+        dismissButton = { TextButton(onClick = { confirmingReset = false }) { Text(stringResource(R.string.cancel)) } })
     revoke?.let { id -> AlertDialog(onDismissRequest = { revoke = null }, title = { Text(stringResource(R.string.sync_revoke)) },
         text = { Text(stringResource(R.string.sync_revoke_hint)) }, confirmButton = { TextButton(onClick = { revoke = null; onRevoke(id) }) { Text(stringResource(R.string.sync_revoke)) } },
         dismissButton = { TextButton(onClick = { revoke = null }) { Text(stringResource(R.string.cancel)) } }) }
@@ -275,10 +321,6 @@ fun SyncScreen(state: SyncState, onBack: () -> Unit,
         title = { Text(stringResource(R.string.sync_disconnect)) }, text = { Text(stringResource(R.string.sync_disconnect_detail)) },
         confirmButton = { TextButton(onClick = { disconnect = false; onDisconnect() }) { Text(stringResource(R.string.sync_disconnect)) } },
         dismissButton = { TextButton(onClick = { disconnect = false }) { Text(stringResource(R.string.cancel)) } })
-    if (replace) AlertDialog(onDismissRequest = { replace = false }, title = { Text(stringResource(R.string.sync_replace)) },
-        text = { Text(stringResource(R.string.sync_replace_detail)) },
-        confirmButton = { TextButton(onClick = { replace = false; onConnect(endpoint, method, secret, device, true) }) { Text(stringResource(R.string.sync_replace)) } },
-        dismissButton = { TextButton(onClick = { replace = false }) { Text(stringResource(R.string.cancel)) } })
     state.recoveryKey?.let { key -> AlertDialog(onDismissRequest = {}, title = { Text(stringResource(R.string.sync_recovery_key)) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(stringResource(R.string.sync_recovery_detail)); SelectionContainer { Text(key) }

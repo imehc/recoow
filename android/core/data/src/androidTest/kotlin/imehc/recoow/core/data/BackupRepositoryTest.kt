@@ -95,7 +95,7 @@ class BackupRepositoryTest {
         val token = host.sessionToken()
         val prepared = preview(exported)
         assertEquals(21, prepared.preview.tableCounts.size)
-        assertEquals(36, prepared.preview.databaseSchemaVersion)
+        assertEquals(37, prepared.preview.databaseSchemaVersion)
         assertEquals("android", prepared.preview.sourcePlatform)
         records.save(listOf(RecordChange("diary_entries", "diary_entries", "{\"content\":\"changed locally\"}", 1_798_000_000_001L, "local-device")))
         assertEquals(21, data.import(prepared, ImportMode.REPLACE_ALL, emptySet()))
@@ -137,23 +137,55 @@ class BackupRepositoryTest {
         records.save(listOf(RecordChange("food_entries", "food_entries", local.toString(), 1_798_000_000_001L, "local-device")))
         val before = records.find("food_entries", "food_entries")
         val prepared = preview(exported)
-        assertEquals(1, data.import(prepared, ImportMode.MERGE_MISSING, setOf(ImportScope.FOOD)))
+        try {
+            data.import(prepared, ImportMode.MERGE_MISSING, setOf(ImportScope.FOOD))
+            fail("Different local content must not be silently skipped")
+        } catch (_: LocalBackupConflict) { }
         assertEquals(before, records.find("food_entries", "food_entries"))
-        assertEquals(0, data.import(prepared, ImportMode.MERGE_MISSING, setOf(ImportScope.FOOD)))
+        assertEquals(0, count("food_day_records"))
         assertEquals(0, count("bills")); assertEquals(0, count("diary_entries"))
         assertNull(store.data.first()[stringPreferencesKey("appearance")])
+        data.reset()
+        assertTrue(data.import(prepared, ImportMode.MERGE_MISSING, setOf(ImportScope.FOOD)) > 0)
+        assertEquals(0, data.import(prepared, ImportMode.MERGE_MISSING, setOf(ImportScope.FOOD)))
         data.discard(prepared)
+    }
+
+    @Test fun backupAccountProvenanceBlocksAnotherAccountAndSurvivesOfflineRestore() = runBlocking {
+        val server = "a".repeat(64)
+        host.access { db -> db.withTransaction {
+            db.records().put(SyncTarget("source", server + ":device", "account-a", "generation"))
+            db.records().put(DatasetState(activeScope = "source"))
+        } }
+        records.save(listOf(RecordChange("diary_tags","account-tag","{\"name\":\"original\"}",1_798_000_000_000L,"device")))
+        val exported = backup()
+        host.access { db -> db.withTransaction {
+            db.records().put(SyncTarget("other", server + ":device", "account-b", "generation"))
+            db.records().put(DatasetState(activeScope = "other"))
+        } }
+        val wrong = preview(exported)
+        assertEquals(BackupAccountStatus.MISMATCH, wrong.accountStatus)
+        try { data.import(wrong,ImportMode.REPLACE_ALL,emptySet(),true); fail("Account mismatch accepted") }
+        catch (_: BackupAccountMismatch) { }
+        assertNotNull(records.find("diary_tags","account-tag"))
+        data.reset()
+        val restore = preview(exported)
+        assertEquals(server + ":account-a", restore.preview.sourceAccountScope)
+        data.import(restore,ImportMode.REPLACE_ALL,emptySet())
+        assertEquals("account-a",host.access { db -> db.records().target(requireNotNull(db.records().activeScope()))?.accountId })
+        assertNotNull(records.find("diary_tags","account-tag"))
+        data.discard(wrong); data.discard(restore)
     }
 
     @Test fun selectedFoodDropsMissingBillLinksAndQueuesBoundUploads() = runBlocking {
         seed(); val exported = backup(); data.reset()
         host.access { db -> db.withTransaction { db.records().put(SyncTarget("scope", "connection", "account", "generation")); db.records().put(DatasetState(activeScope = "scope")) } }
         val prepared = preview(exported)
-        data.import(prepared, ImportMode.MERGE_MISSING, setOf(ImportScope.FOOD))
+        data.import(prepared, ImportMode.MERGE_MISSING, setOf(ImportScope.FOOD), true)
         val food = Json.parseToJsonElement(records.find("food_entries", "food_entries")!!.snapshotJson).jsonObject
         assertEquals(JsonNull, food["bill_id"]); assertEquals(JsonPrimitive("[]"), food["bill_ids_json"])
         assertEquals(2, count("sync_outbox"))
-        data.import(prepared, ImportMode.REPLACE_ALL, emptySet())
+        data.import(prepared, ImportMode.REPLACE_ALL, emptySet(), true)
         assertEquals(21, count("sync_outbox")); assertEquals(1, count("sync_targets"))
         assertEquals("scope", host.access { it.records().activeScope() })
         data.discard(prepared)
