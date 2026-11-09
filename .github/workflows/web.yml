@@ -8,6 +8,8 @@ on:
         'backend/**',
         'openapi/**',
         'scripts/**',
+        'tests/test_version.py',
+        'versions.json',
         'Makefile',
         '.github/actions/setup-contract-tooling/**',
         '.github/workflows/web.yml',
@@ -20,6 +22,8 @@ on:
         'backend/**',
         'openapi/**',
         'scripts/**',
+        'tests/test_version.py',
+        'versions.json',
         'Makefile',
         '.github/actions/setup-contract-tooling/**',
         '.github/workflows/web.yml',
@@ -49,6 +53,10 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 12
     steps:
       - uses: actions/checkout@v4
+      - name: Check independent release versions
+        run: |
+          python3 scripts/version.py check
+          PYTHONPATH=scripts python3 -m unittest discover -s tests -p test_version.py
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

@@ -1,6 +1,6 @@
 # 版本与发布
 
-`versions.json` 是应用发布版本的唯一来源。Android、iOS、后端分别发布，互不要求版本号相同。接入时 Android 为 `0.6.0`，iOS 为 `0.1.0`，后端从 `0.0.1` 开始。
+`versions.json` 是应用发布版本的唯一来源。Android、iOS、后端和 Web 分别发布，互不要求版本号相同。接入时 Android 为 `0.6.0`，iOS 为 `0.1.0`，后端与 Web 从 `0.0.1` 开始。
 
 ```sh
 python3 scripts/version.py show
@@ -8,13 +8,14 @@ python3 scripts/version.py check
 python3 scripts/version.py bump android patch
 python3 scripts/version.py bump ios minor
 python3 scripts/version.py bump backend patch
+python3 scripts/version.py bump web patch
 ```
 
 `bump` 只修改所选端的版本及其生成文件，不提交、不打标签、不推送。日常构建和 `check` 不修改版本。新增功能升 minor，修复升 patch，不兼容的应用发布升 major；是否升版由发布者决定，不根据提交信息自动猜测。
 
-生成文件 `android/version.properties`、`ios/Version.xcconfig`、`backend/internal/buildinfo/version_generated.go` 随版本提交；不要直接编辑。手动调整 `versions.json` 后运行 `python3 scripts/version.py sync`，CI 用 `check` 拒绝漂移。iOS 主应用和 Widget 的 Debug/Release 共用同一份配置。
+生成文件 `android/version.properties`、`ios/Version.xcconfig`、`backend/internal/buildinfo/version_generated.go` 随版本提交；Web 的版本同步到 `web/package.json`。不要直接编辑这些版本字段。手动调整 `versions.json` 后运行 `python3 scripts/version.py sync`，CI 用 `check` 拒绝漂移。iOS 主应用和 Widget 的 Debug/Release 共用同一份配置。
 
-发布标签分别为 `android/v0.6.0`、`ios/v0.1.0`、`backend/v0.0.1`。标签必须与该提交的配置一致，每个已发布标签只使用一次。一个端修复问题只升该端；已有版本不替换 APK 或运行包。
+发布标签分别为 `android/v0.6.0`、`ios/v0.1.0`、`backend/v0.0.1`、`web/v0.0.1`。标签必须与该提交的配置一致，每个已发布标签只使用一次。一个端修复问题只升该端；已有版本不替换 APK 或运行包。
 
 ## 构建编号
 
@@ -53,3 +54,7 @@ bash scripts/package-backend.sh
 包名含后端版本；`build-info.json` 保存版本、标签、Git 提交和工作区是否有未提交改动，纳入 SHA256SUMS。二进制的 `--version` 和启动日志也包含版本及提交信息。源码直接 `go build` 使用生成的版本常量，并尽可能读取 Go 自带的 Git 构建信息。
 
 后端和 iOS 的 GitHub Release 应使用 `--latest=false`；仓库的 Latest 留给 Android 稳定 APK，供 Android 应用内更新查找。应用版本、同步协议版本、数据表版本及备份格式版本分别维护，升应用版本不会自动修改数据协议。
+
+## Web 发布
+
+Web 使用独立语义版本，不使用移动端构建编号。发布前提交版本配置与 `web/package.json`，静态产物由 `pnpm build` 生成到 `web/build/`，不纳入 Git。标签使用 `web/v<version>`，通过 `python3 scripts/version.py ci web --tag web/v<version>` 校验。Web 与后端按兼容契约部署，仓库 Latest 继续留给 Android。

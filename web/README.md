@@ -52,6 +52,19 @@ Web 只显示服务端已收到的数据，不保存本地业务数据库或离�
 
 ## 静态部署
 
+Web 的独立版本从 `0.0.1` 开始，以根目录 `versions.json` 为来源，`package.json` 的版本由公共脚本同步。升级 Web 不改变 Android、iOS 或后端版本；标签使用 `web/v<版本>`。
+
+在仓库根目录运行：
+
+```sh
+python3 scripts/version.py show web
+python3 scripts/version.py bump web patch
+python3 scripts/version.py check
+python3 scripts/version.py ci web --tag web/v0.0.1
+```
+
+`bump` 仅更新版本文件，不提交、创建标签或发布。正式标签须与当前版本一致，静态站点与后端按兼容契约共同部署。
+
 `pnpm build` 输出 `build/`。将静态文件与 Go API 部署在同一 HTTPS 来源，站点根路径指向静态目录，`/api/` 代理到 Go，其他未匹配的页面路径回退到 `index.html`。目前支持来源根路径部署。
 
 Nginx 配置示例：

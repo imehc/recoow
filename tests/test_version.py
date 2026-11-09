@@ -25,7 +25,7 @@ class VersionTests(unittest.TestCase):
                 for other in version.PLATFORMS:
                     if other != platform:
                         self.assertEqual(result[other], source[other])
-                if platform != "backend":
+                if platform in version.LIMITS:
                     self.assertEqual(result[platform]["buildBase"], source[platform]["buildBase"])
 
     def test_ci_reruns_stable_and_next_run_increases(self):
@@ -63,7 +63,7 @@ class VersionTests(unittest.TestCase):
     def test_cli_bump_check_and_ci_are_safe_in_checkout(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            for name in ("scripts/version.py", "versions.json", "ios/recoow.xcodeproj/project.pbxproj", *version.snapshots(self.data)):
+            for name in ("scripts/version.py", "versions.json", "web/package.json", "ios/recoow.xcodeproj/project.pbxproj", *version.snapshots(self.data)):
                 (root / name).parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(version.ROOT / name, root / name)
 
@@ -89,6 +89,21 @@ class VersionTests(unittest.TestCase):
             run("check", success=False)
             run("sync")
             run("check")
+            output = run("ci", "web", "--tag", f"web/v{self.data['web']['version']}")
+            self.assertNotIn("build=", output)
+            run("ci", "web", "--tag", "web/v999.0.0", success=False)
+            package = root / "web/package.json"
+            manifest = json.loads(package.read_text())
+            manifest["version"] = "999.0.0"
+            package.write_text(json.dumps(manifest))
+            run("check", success=False)
+            run("sync")
+            run("check")
+            manifest["version"] = self.data["web"]["version"]
+            self.assertEqual(json.loads(package.read_text()), manifest)
+            run("bump", "web", "patch")
+            run("check")
+            self.assertEqual(version.read(root), version.bump(after, "web", "patch"))
 
     def test_widget_override_is_detected(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -96,6 +111,9 @@ class VersionTests(unittest.TestCase):
             project = root / "ios/recoow.xcodeproj/project.pbxproj"
             project.parent.mkdir(parents=True)
             project.write_text((version.ROOT / "ios/recoow.xcodeproj/project.pbxproj").read_text().replace("baseConfigurationReference", "CURRENT_PROJECT_VERSION = 7;\nbaseConfigurationReference", 1))
+            package = root / "web/package.json"
+            package.parent.mkdir(parents=True)
+            package.write_text(json.dumps({"version": self.data["web"]["version"]}))
             version.sync(self.data, root)
             with self.assertRaisesRegex(ValueError, "overrides shared"):
                 version.check(self.data, root)

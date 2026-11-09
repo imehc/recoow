@@ -9,7 +9,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-PLATFORMS = ("android", "ios", "backend")
+PLATFORMS = ("android", "ios", "backend", "web")
 SEMVER = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\Z")
 LIMITS = {"android": 2_100_000_000, "ios": 99_990_000}
 IOS_CONFIG = "A83700000000000000000001"
@@ -20,12 +20,12 @@ def validate(data):
         raise ValueError("versions.json: unsupported schema")
     for platform in PLATFORMS:
         entry = data[platform]
-        expected = {"version"} if platform == "backend" else {"version", "buildBase"}
+        expected = {"version", "buildBase"} if platform in LIMITS else {"version"}
         if not isinstance(entry, dict) or set(entry) != expected:
             raise ValueError(f"{platform}: invalid fields")
         if not isinstance(entry["version"], str) or not SEMVER.fullmatch(entry["version"]):
             raise ValueError(f"{platform}: version must be major.minor.patch, without leading zeroes")
-        if platform != "backend" and (type(entry["buildBase"]) is not int or not 1 <= entry["buildBase"] <= LIMITS[platform]):
+        if platform in LIMITS and (type(entry["buildBase"]) is not int or not 1 <= entry["buildBase"] <= LIMITS[platform]):
             raise ValueError(f"{platform}: invalid buildBase")
     return data
 
@@ -35,8 +35,8 @@ def read(root=ROOT):
 
 
 def build_number(data, platform, run_number=None):
-    if platform == "backend":
-        raise ValueError("backend uses version + commit, not a mobile build number")
+    if platform not in LIMITS:
+        raise ValueError(f"{platform} uses version + commit, not a mobile build number")
     sequence = data[platform]["buildBase"]
     if run_number is not None:
         if not re.fullmatch(r"[1-9][0-9]*", str(run_number)):
@@ -76,10 +76,17 @@ def sync(data, root=ROOT):
             continue
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content)
+    package = root / "web/package.json"
+    manifest = json.loads(package.read_text())
+    if manifest.get("version") != data["web"]["version"]:
+        manifest["version"] = data["web"]["version"]
+        package.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
 
 
 def check(data, root=ROOT):
     errors = []
+    if json.loads((root / "web/package.json").read_text()).get("version") != data["web"]["version"]:
+        errors.append("web/package.json: out of sync; run python3 scripts/version.py sync")
     for name, content in snapshots(data).items():
         path = root / name
         if not path.is_file() or path.read_text() != content:
@@ -107,7 +114,7 @@ def bump(data, platform, part):
 
 def describe(data, platform, run_number=None):
     item = {"platform": platform, "version": data[platform]["version"], "tag": f"{platform}/v{data[platform]['version']}"}
-    if platform != "backend":
+    if platform in LIMITS:
         item["build"] = build_number(data, platform, run_number)
     return item
 
@@ -164,7 +171,7 @@ def main():
                 print(json.dumps(items[0] if args.platform else items, indent=2))
         elif args.command == "ci":
             check(data)
-            if args.platform != "backend" and args.run_number is None:
+            if args.platform in LIMITS and args.run_number is None:
                 raise ValueError("CI requires GITHUB_RUN_NUMBER or --run-number")
             item = describe(data, args.platform, args.run_number)
             if args.tag != item["tag"]:
