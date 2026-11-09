@@ -37,18 +37,19 @@ class SyncIntegrationTest {
         override val localDeviceId = UUID.randomUUID().toString()
     }
     private class TestSyncPreferences : SyncPreferences {
+        var failWrite = false
         private val values = mutableMapOf<String, Boolean>()
         private val success = mutableMapOf<String, Long>()
         override fun clear() { values.clear(); success.clear() }
         private fun key(c: Credentials) = c.endpoint + "|" + c.account
         override fun enabled(connection: Credentials) = values[key(connection)] ?: false
-        override fun setEnabled(connection: Credentials, value: Boolean) { values[key(connection)] = value }
+        override fun setEnabled(connection: Credentials, value: Boolean) { check(!failWrite); values[key(connection)] = value }
         override fun lastSuccess(connection: Credentials) = success[key(connection)]
         override fun setLastSuccess(connection: Credentials, value: Long) { success[key(connection)] = value }
     }
     private data class Client(val host: DatabaseHost, val records: RoomRecordRepository, val vault: MemoryVault,
         val engine: SyncEngine, val store: SyncStore, val received: ReceivedRecordStore)
-    private fun client(provider: SyncApiProvider = factory, withSource: Boolean = false): Client {
+    private fun client(provider: SyncApiProvider = factory, withSource: Boolean = false, preferences: SyncPreferences = TestSyncPreferences()): Client {
         val root = File(context.cacheDir, "sync-test-${UUID.randomUUID()}").apply { mkdirs() }; roots += root
         val directory = File(root, "live")
         val backup = LocalRollbackFiles(directory, File(root, "backups"), object : BackupPreferences {
@@ -59,7 +60,7 @@ class SyncIntegrationTest {
         val host = DatabaseHost(context, directory, backup, clientSource = if (withSource) LocalClientSource(vault.localDeviceId, "Android phone", "original-version", "16") else null); hosts += host
         val received = ReceivedRecordStore(host); val store = SyncStore(host, received, vault)
         return Client(host, RoomRecordRepository(host), vault,
-            SyncEngine(vault, provider, store, received, MediaTransfer(store, File(root, "transfer")), MemoryVault(), TestSyncPreferences()), store, received)
+            SyncEngine(vault, provider, store, received, MediaTransfer(store, File(root, "transfer")), MemoryVault(), preferences), store, received)
     }
     @After fun cleanup() = runBlocking { hosts.forEach { it.close() }; roots.forEach { it.deleteRecursively() }; Unit }
     @Test fun invalidServerAddressIsReportedBeforePairingMakesAnyRequest() = runBlocking {
@@ -743,6 +744,28 @@ class SyncIntegrationTest {
         client.vault.value = credentials; client.engine.refresh(); assertFalse(client.engine.state.value.enabled)
     }
 
+    @Test fun failedPauseDoesNotBlockLaterSyncWithTheRetainedPreference() = runBlocking {
+        var requests = 0
+        val provider = object : SyncApiProvider by factory {
+            override fun create(endpoint: String, token: String?): SyncApi {
+                requests++
+                throw IOException("simulated unavailable server")
+            }
+        }
+        val preferences = TestSyncPreferences()
+        val phone = client(provider, preferences = preferences)
+        phone.vault.save(Credentials("connection", "http://127.0.0.1/", "account", "device", "token"))
+        phone.engine.setEnabled(true)
+        assertTrue(phone.engine.state.value.enabled)
+        preferences.failWrite = true
+        phone.engine.setEnabled(false)
+        assertEquals(SyncProblem.STORAGE, phone.engine.state.value.problem)
+        preferences.failWrite = false
+        assertFalse(phone.engine.sync())
+        assertEquals(1, requests)
+        assertEquals(SyncProblem.CONNECTION, phone.engine.state.value.problem)
+    }
+
     @Test fun disabledSyncMakesNoRequestsAndCancelsAnInFlightRequest() = runBlocking {
         requireBackend()
         val entered = CompletableDeferred<Unit>()
@@ -808,6 +831,42 @@ class SyncIntegrationTest {
         phone.engine.connect(base, ConnectionMethod.RECOVER, requireNotNull(original.recoveryKey), "returning phone")
         assertEquals(original.connectionId, phone.vault.load()!!.connectionId)
         assertSynced(phone, phone.engine.sync())
+    }
+
+    @Test fun selfRevocationClearsAccountStateAndRetainsOfflineEditsForLogin() = runBlocking {
+        requireBackend()
+        val owner = client(); create(owner)
+        owner.engine.setAccountPassword("TestPass9!")
+        val username = requireNotNull(owner.engine.accountState.value.username)
+        owner.engine.generatePairingCode()
+        val phone = client()
+        phone.engine.connect(base, ConnectionMethod.PAIR, owner.engine.state.value.pairingCode!!, "self-revoking peer")
+        phone.engine.refreshAccount()
+        assertEquals(username, phone.engine.accountState.value.username)
+        val original = requireNotNull(phone.vault.load())
+        phone.records.save(listOf(RecordChange("diary_tags", "retained-on-revoke", """{"name":"offline edit"}""", timestamp, phone.vault.localDeviceId)))
+        val scope = phone.host.access { requireNotNull(it.records().activeScope()) }
+        val pending = phone.host.access { it.records().outbox(scope) }
+        assertTrue(pending.isNotEmpty())
+
+        phone.engine.revokeDevice(original.serverDevice)
+        assertNull(phone.engine.state.value.problem)
+        assertNull(phone.vault.load())
+        assertNull(phone.engine.state.value.connection)
+        assertFalse(phone.engine.state.value.enabled)
+        assertNull(phone.engine.accountState.value.username)
+        assertNull(phone.engine.accountState.value.result)
+        assertNotNull(phone.records.find("diary_tags", "retained-on-revoke"))
+        phone.host.access { db ->
+            assertEquals(scope, db.records().activeScope())
+            assertEquals(pending, db.records().outbox(scope))
+        }
+
+        phone.engine.connect(base, ConnectionMethod.LOGIN, "TestPass9!", "returning peer", username)
+        assertEquals(original.connectionId, phone.vault.load()!!.connectionId)
+        assertSynced(phone, phone.engine.sync())
+        assertSynced(owner, owner.engine.sync())
+        assertNotNull(owner.records.find("diary_tags", "retained-on-revoke"))
     }
 
     @Test fun deviceListingAndOwnerRevocationInvalidatePairedCredentials() = runBlocking {

@@ -54,15 +54,16 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
     }
 
     override suspend fun setEnabled(enabled: Boolean) = withContext(Dispatchers.IO) { toggleMutex.withLock {
-        if (!enabled) { disabling = true; activeSync?.cancelAndJoin() }
-        mutex.withLock {
-            try {
-                val connection = requireNotNull(credentials.load())
-                preferences.setEnabled(connection, enabled)
-                disabling = false
-                refreshState()
-            } catch (e: CancellationException) { throw e } catch (e: Exception) { mutableState.update { it.copy(problem = problem(e)) } }
-        }
+        try {
+            if (!enabled) { disabling = true; activeSync?.cancelAndJoin() }
+            mutex.withLock {
+                try {
+                    val connection = requireNotNull(credentials.load())
+                    preferences.setEnabled(connection, enabled)
+                    refreshState()
+                } catch (e: CancellationException) { throw e } catch (e: Exception) { mutableState.update { it.copy(problem = problem(e)) } }
+            }
+        } finally { disabling = false }
     } }
 
     override suspend fun refreshDevices() = deviceOperation { connection, api ->
@@ -75,7 +76,7 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
         require(id.isNotBlank())
         require(if (connection.canPair) id != connection.serverDevice else id == connection.serverDevice)
         api.delete("api/devices/" + java.net.URLEncoder.encode(id, "UTF-8"))
-        if (id == connection.serverDevice) { credentials.save(null); mutableState.value = SyncState(loaded = true) }
+        if (id == connection.serverDevice) clearConnection()
         else mutableState.update { it.copy(devices = it.devices.filterNot { device -> device.id == id }) }
     }
     private suspend fun deviceOperation(block: suspend (Credentials, SyncApi) -> Unit) = withContext(Dispatchers.IO) { mutex.withLock {
@@ -172,14 +173,19 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
         try {
             activeSync?.cancelAndJoin()
             mutex.withLock {
-                credentials.load()?.let { preferences.setEnabled(it, false) }
-                credentials.save(null); pendingCredentials.save(null)
-                accountConnectionId = null
-                mutableAccountState.value = AccountSecurityState(loaded = true)
-                mutableState.value = SyncState(loaded = true)
+                clearConnection()
             }
         } finally { disabling = false }
     } }
+
+    /** Local sign-out keeps the dataset binding and pending edits for the same account. */
+    private fun clearConnection() {
+        credentials.load()?.let { preferences.setEnabled(it, false) }
+        credentials.save(null); pendingCredentials.save(null)
+        accountConnectionId = null
+        mutableAccountState.value = AccountSecurityState(loaded = true)
+        mutableState.value = SyncState(loaded = true)
+    }
 
     override suspend fun confirmCloudReset() = withContext(Dispatchers.IO) { mutex.withLock {
         try {
