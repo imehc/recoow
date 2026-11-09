@@ -121,7 +121,7 @@ struct SettingsView: View {
             case .mediaLibrary:
                 MediaAssetLibraryManagementView(repository: container.mediaAssetRepository)
             case .cloudSync:
-                CloudSyncSettingsView()
+                CloudAccountSecurityView()
             case .accountSecurity:
                 CloudAccountSecurityView()
             }

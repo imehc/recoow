@@ -7,6 +7,10 @@ struct CloudAccountSecurityView: View {
     @State private var supported = false
     @State private var isOwner = false
     @State private var loading = true
+    @State private var configured = false
+    @State private var loadedConnectionID: String?
+    @State private var loadedDeviceToken: String?
+    @State private var pendingCount = 0
     @State private var error: String?
     @State private var result: String?
     @State private var editor: AccountPasswordMode?
@@ -21,28 +25,38 @@ struct CloudAccountSecurityView: View {
     var body: some View {
         Form {
             Section {
-                if config.isConfigured {
+                if configured {
                     if let identity {
                         CopyableValueRow(
                             title: text("用户名"), value: identity.username,
                             copyLabel: text("复制用户名"), copiedLabel: text("已复制到剪贴板")
                         )
-                    } else if loading {
-                        ProgressView(text("正在读取账号"))
-                    } else if supported && error == nil {
-                        LabeledContent(text("用户名"), value: text("设置密码后生成"))
+                    } else {
+                        LabeledContent(text("用户名"), value: text(supported ? "设置密码后生成" : loading ? "正在读取账号" : "暂未读取"))
                     }
                 } else {
                     NavigationLink(text("启用云同步")) { CloudAccountLoginView() }
                 }
-                if config.isConfigured {
+                if configured {
                     LabeledContent(text("服务器"), value: config.baseURL)
                 }
-            } header: { Text(text("账号")) }
+            } header: { Text(text("账号")) } footer: {
+                if let error {
+                    FormFeedbackView(message: error, systemImage: "exclamationmark.circle", color: AppPalette.red,
+                                     actionTitle: text("重试"), action: {
+                        Task { await reload() }
+                    }, isWorking: loading)
+                } else if let result {
+                    FormFeedbackView(message: result, systemImage: "checkmark.circle")
+                } else if configured && !loading && !supported {
+                    FormFeedbackView(message: text("服务器尚不支持账号密码，请先升级后端"),
+                                     systemImage: "info.circle")
+                }
+            }
 
-            if config.isConfigured {
+            if configured {
                 Section {
-                    LabeledContent(text("同步状态"), value: syncStatus)
+                    syncStatusRow
                     Toggle(text("自动同步"), isOn: Binding(get: { config.isSyncEnabled }, set: { enabled in
                         if enabled && config.needsCloudResetConfirmation { showingReset = true }
                         else {
@@ -54,17 +68,26 @@ struct CloudAccountSecurityView: View {
                             }
                         }
                     }))
-                    Button(text("立即同步")) {
-                        Task { await container.syncEngine.enqueueScan(); await reload() }
-                    }
-                    .disabled(!config.isSyncEnabled || container.syncProgress.isRunning)
                     if config.lastSyncState == "authentication" { NavigationLink(text("登录账号")) { CloudAccountLoginView() } }
                     NavigationLink(text("设备管理")) { CloudDeviceManagementView() }
                     NavigationLink(text("处理同步冲突")) { SyncConflictsView() }
+                    DisclosureGroup(text("同步详情")) {
+                        if container.syncProgress.isRunning {
+                            if let fraction = container.syncProgress.fraction { ProgressView(value: fraction) }
+                            Text(container.syncProgress.headline).foregroundStyle(AppPalette.secondaryInk)
+                        }
+                        if !config.lastSyncMessage.isEmpty {
+                            Text(config.lastSyncMessage).foregroundStyle(AppPalette.secondaryInk)
+                        }
+                        if let date = config.lastSyncedAt {
+                            LabeledContent(text("上次同步"), value: date.formatted(date: .abbreviated, time: .shortened))
+                        }
+                        Text(AppLocalization.format("本地待同步记录：%d 条", pendingCount))
+                    }
                 } header: { Text(text("同步与设备")) }
             }
 
-            if config.isConfigured && !loading && supported && error == nil {
+            if configured && supported {
                 Section {
                     if identity == nil {
                         if isOwner {
@@ -81,7 +104,7 @@ struct CloudAccountSecurityView: View {
                 }
             }
 
-            if !config.isConfigured {
+            if !configured {
                 Section {
                     NavigationLink(text("其他连接方式")) { CloudSyncSettingsView() }
                     if !config.baseURL.isEmpty { passwordAction("找回密码", mode: .reset) }
@@ -91,22 +114,11 @@ struct CloudAccountSecurityView: View {
                     }
                 }
             }
-            if config.isConfigured {
+            if configured {
                 Section {
                     NavigationLink(text("连接设置")) { CloudSyncSettingsView() }
                     Button(text("退出账号"), role: .destructive) { showingLogout = true }
                 }
-            }
-            if let result {
-                Section { Text(result).accessibilityAddTraits(.updatesFrequently) }
-            }
-            if let error {
-                Section {
-                    Text(error).foregroundStyle(AppPalette.red)
-                    Button(text("重试")) { Task { await reload() } }
-                }
-            } else if config.isConfigured && !loading && !supported {
-                Section { Text(text("服务器尚不支持账号密码，请先升级后端")) }
             }
         }
         .appFormStyle()
@@ -150,6 +162,46 @@ struct CloudAccountSecurityView: View {
         return text("等待同步")
     }
 
+    private var syncStatusRow: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: AppDesign.metadataGroupSpacing) {
+                syncStatusLabel.fixedSize(horizontal: true, vertical: false)
+                Spacer(minLength: 0)
+                syncNowButton.fixedSize(horizontal: true, vertical: false)
+            }
+            VStack(alignment: .leading, spacing: AppDesign.metadataItemSpacing) {
+                syncStatusLabel
+                syncNowButton
+            }
+        }
+    }
+
+    private var syncStatusLabel: some View {
+        HStack(spacing: AppDesign.metadataItemSpacing) {
+            Text(syncStatus)
+                .foregroundStyle(AppPalette.secondaryInk)
+                .fixedSize(horizontal: false, vertical: true)
+            if container.syncProgress.isRunning { ProgressView().controlSize(.mini) }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(text("同步状态"))
+        .accessibilityValue(syncStatus)
+    }
+
+    private var syncNowButton: some View {
+        Text(text("立即同步"))
+            .hidden()
+            .accessibilityHidden(true)
+            .overlay {
+                Button(text("立即同步")) {
+                    Task { await container.syncEngine.enqueueScan(); await reload() }
+                }
+                .buttonStyle(.borderless)
+                .frame(minHeight: AppDesign.touchIconSize)
+                .disabled(!config.isSyncEnabled || container.syncProgress.isRunning)
+            }
+    }
+
     private func passwordAction(_ title: String, mode: AccountPasswordMode, status: String? = nil) -> some View {
         Button { editor = mode } label: {
             HStack {
@@ -165,22 +217,34 @@ struct CloudAccountSecurityView: View {
     }
 
     private func reload() async {
-        loading = true
-        identity = nil
-        supported = false
-        isOwner = false
-        error = nil
-        guard config.isConfigured else { loading = false; return }
+        // UserDefaults 配置不参与 Observation；返回连接页后显式刷新页面分支。
         let connection = config.connectionID
         let token = config.deviceToken
+        if configured != config.isConfigured || loadedConnectionID != connection || loadedDeviceToken != token {
+            identity = nil
+            supported = false
+            isOwner = false
+            error = nil
+            result = nil
+        }
+        configured = config.isConfigured
+        loadedConnectionID = connection
+        loadedDeviceToken = token
+        loading = true
+        if let scope = config.activeScope {
+            pendingCount = (try? FullSyncRepository(database: container.database).pendingCount(scope: scope)) ?? 0
+        } else {
+            pendingCount = (try? container.changeLogRepository.countPending(tables: RecoowSyncConfig.enabledUploadTables)) ?? 0
+        }
+        guard configured else { loading = false; return }
         let accountID = config.accountID ?? ""
         let client = RecoowAPIClient(config: config).frozenSession()
         do {
             let capabilities = try await client.capabilities()
             try capabilities.validate(accountID: accountID)
             guard connection == config.connectionID, token == config.deviceToken, !Task.isCancelled else { return }
-            supported = capabilities.features.contains("account_credentials_v1")
-            if supported {
+            let supportsCredentials = capabilities.features.contains("account_credentials_v1")
+            if supportsCredentials {
                 let user = try await client.accountIdentity()
                 let devices = try await client.listDevices()
                 guard connection == config.connectionID, token == config.deviceToken, !Task.isCancelled else { return }
@@ -188,8 +252,13 @@ struct CloudAccountSecurityView: View {
                 identity = user
                 isOwner = devices.first { $0.id == config.deviceID }?.isOwner == true
             }
+            supported = supportsCredentials
+            error = nil
         } catch is CancellationError { return
-        } catch { self.error = CloudAccountValidation.message(for: error) }
+        } catch {
+            guard connection == config.connectionID, token == config.deviceToken, !Task.isCancelled else { return }
+            self.error = CloudAccountValidation.message(for: error)
+        }
         loading = false
     }
 
