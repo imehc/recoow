@@ -97,9 +97,9 @@ jobs:
           PYTHONPATH=scripts python3 - <<'PY'
           import json, os
           from pathlib import Path
-          from version import commit_info, load
+          from version import commit_info, read
           metadata = {
-              "platform": "web", "version": load()["web"]["version"],
+              "platform": "web", "version": read()["web"]["version"],
               "commit": commit_info()[0], "base": os.environ["RECOOW_WEB_BASE"],
           }
           Path("web/build/release.json").write_text(json.dumps(metadata) + "\n")
