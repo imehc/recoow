@@ -112,14 +112,9 @@ final class CloudSyncIntegrationTests: XCTestCase {
         XCTAssertTrue(code.allSatisfy(\.isNumber), "配对码应全为数字")
 
         // 7) 用恢复密钥找回：返回同一账号，且签发新令牌。
-        let body = try JSONSerialization.data(withJSONObject: [
-            "recoveryKey": created.recoveryKey,
-            "deviceName": "联调恢复设备",
-        ])
-        let recoveredData = try await client.send(
-            path: "/api/account-recoveries", method: "POST", body: body, auth: false
+        let recovered = try await client.recover(
+            recoveryKey: created.recoveryKey, deviceName: "联调恢复设备"
         )
-        let recovered = try JSONDecoder().decode(CloudPairResponse.self, from: recoveredData)
         XCTAssertEqual(recovered.accountId, created.accountId, "恢复密钥找回的账号不一致")
         XCTAssertNotEqual(recovered.deviceToken, created.deviceToken, "恢复应签发新设备令牌")
     }
