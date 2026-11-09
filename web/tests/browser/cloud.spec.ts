@@ -542,10 +542,38 @@ test('workspace scrolling keeps header and sidebar in place and resets on naviga
   await expect.poll(() => main.evaluate((node) => node.scrollTop)).toBe(0);
 });
 
-test('navigation and icons stay within the app deployment path', async ({ page }) => {
+test('navigation and icons stay within the app deployment path', async ({ page, isMobile }) => {
   await cloud(page);
   await page.goto(appPath('/records'));
+  const checkIcons = async (dark: boolean) => {
+    const icon = page.locator('.app-icon:visible').first();
+    const name = dark ? 'app-icon-dark.png' : 'app-icon.png';
+    await expect(icon).toHaveAttribute('src', appPath('/' + name));
+    await expect
+      .poll(() => icon.evaluate((node: HTMLImageElement) => node.complete && node.naturalWidth > 0))
+      .toBe(true);
+    const url = new URL((await icon.getAttribute('src'))!, page.url());
+    expect(url.origin).toBe(new URL(page.url()).origin);
+    for (const selector of ['link[rel="icon"]', 'link[rel="apple-touch-icon"]']) {
+      const href = await page.locator(selector).getAttribute('href');
+      const url = new URL(href!, page.url());
+      expect(url.origin).toBe(new URL(page.url()).origin);
+      expect(url.pathname.startsWith(appPath('/'))).toBe(true);
+      const response = await page.request.get(url.href);
+      expect(response.status()).toBe(200);
+      expect(response.headers()['content-type']).toContain('image/png');
+    }
+  };
+  await page.getByRole('button', { name: '主题', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '浅色', exact: true }).click();
+  await checkIcons(false);
+  await page.getByRole('button', { name: '主题', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '深色', exact: true }).click();
+  await checkIcons(true);
   await signIn(page);
+  if (isMobile) await page.getByRole('button', { name: '打开导航', exact: true }).click();
+  await checkIcons(true);
+  if (isMobile) await page.getByRole('button', { name: '关闭', exact: true }).click();
   const links = await page
     .locator('a[href]')
     .evaluateAll((nodes) => nodes.map((node) => node.getAttribute('href')!));
@@ -560,11 +588,6 @@ test('navigation and icons stay within the app deployment path', async ({ page }
   );
   await page.getByRole('link', { name: '返回', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${appPath('/history')}$`));
-  for (const selector of ['link[rel="icon"]', 'link[rel="apple-touch-icon"]']) {
-    const href = await page.locator(selector).getAttribute('href');
-    const url = new URL(href!, page.url());
-    expect(url.origin).toBe(new URL(page.url()).origin);
-    expect(url.pathname.startsWith(appPath('/'))).toBe(true);
-    expect((await page.request.get(href!)).status()).toBe(200);
-  }
+  if (isMobile) await page.getByRole('button', { name: '打开导航', exact: true }).click();
+  await checkIcons(true);
 });
