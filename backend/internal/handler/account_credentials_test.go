@@ -27,7 +27,7 @@ func (store failingPasswordStore) SetPasswordIfCurrent(string, string, string) e
 func TestPasswordFailureDoesNotExposeStorageDetails(t *testing.T) {
 	e := newEnv(t)
 	owner, _ := e.initAccount(t)
-	response, body := e.request(t, "POST", "/api/users/me/credentials", owner, map[string]any{"password": "original-long-password"})
+	response, body := e.request(t, "POST", "/api/users/me/credentials", owner, map[string]any{"password": "original-password"})
 	if response.Code != http.StatusCreated {
 		t.Fatalf("bind: %d %s", response.Code, body)
 	}
@@ -46,9 +46,9 @@ func TestPasswordFailureDoesNotExposeStorageDetails(t *testing.T) {
 		message  string
 	}{
 		{"short", http.StatusBadRequest, "invalid password"},
-		{"replacement-long-password", http.StatusInternalServerError, "password change failed"},
+		{"updated-password", http.StatusInternalServerError, "password change failed"},
 	} {
-		response, body := e.request(t, "PUT", "/api/users/me/password", owner, map[string]any{"current_password": "original-long-password", "new_password": test.password})
+		response, body := e.request(t, "PUT", "/api/users/me/password", owner, map[string]any{"current_password": "original-password", "new_password": test.password})
 		if response.Code != test.status || decode[map[string]string](t, body)["error"] != test.message || response.Header().Get("Cache-Control") != "no-store" {
 			t.Fatalf("password failure: %d %s", response.Code, body)
 		}
@@ -79,7 +79,7 @@ func TestGeneratedCredentialsKeepExistingAccountAndRecords(t *testing.T) {
 	if response.Code != 400 {
 		t.Fatal("short password accepted")
 	}
-	response, body = e.request(t, "POST", "/api/users/me/credentials", owner, map[string]any{"password": "user-selected-password"})
+	response, body = e.request(t, "POST", "/api/users/me/credentials", owner, map[string]any{"password": "chosen-password"})
 	identity := decode[domain.User](t, body)
 	if response.Code != 201 || identity.AccountID != e.accountID || !regexp.MustCompile(`^[a-z0-9]{3,64}$`).MatchString(identity.Username) {
 		t.Fatalf("automatic bind: %d %s", response.Code, body)
@@ -91,7 +91,7 @@ func TestGeneratedCredentialsKeepExistingAccountAndRecords(t *testing.T) {
 	if response.Code != 200 || decode[domain.User](t, body).Username != identity.Username {
 		t.Fatal("generated username must remain stable")
 	}
-	response, _ = e.request(t, "POST", "/api/users/me/credentials", owner, map[string]any{"password": "another-long-password"})
+	response, _ = e.request(t, "POST", "/api/users/me/credentials", owner, map[string]any{"password": "another-password"})
 	if response.Code != 409 {
 		t.Fatal("rebind must not overwrite the existing identity")
 	}
@@ -104,7 +104,7 @@ func TestGeneratedCredentialsKeepExistingAccountAndRecords(t *testing.T) {
 	if response.Code != 200 {
 		t.Fatal("binding lost existing records")
 	}
-	response, _ = e.request(t, "POST", "/api/sessions", "", map[string]any{"username": identity.Username, "password": "user-selected-password"})
+	response, _ = e.request(t, "POST", "/api/sessions", "", map[string]any{"username": identity.Username, "password": "chosen-password"})
 	if response.Code != 200 {
 		t.Fatal("chosen password cannot log in")
 	}
@@ -116,12 +116,12 @@ func TestDevicePasswordLoginIssuesSyncCredentialWithoutOwnerAccess(t *testing.T)
 		t.Fatal(err)
 	}
 	e, owner, _ := fullSyncEnvironment(t, registry)
-	credentials := map[string]any{"username": "mobile.owner", "password": "mobile-long-password"}
+	credentials := map[string]any{"username": "mobile.owner", "password": "mobile-password"}
 	response, _ := e.request(t, "POST", "/api/users/me/credentials", owner, credentials)
 	if response.Code != 201 {
 		t.Fatal("bind failed")
 	}
-	request := httptest.NewRequest("POST", "/api/device-logins", bytes.NewBufferString(`{"username":"mobile.owner","password":"mobile-long-password","device_name":"My iPhone"}`))
+	request := httptest.NewRequest("POST", "/api/device-logins", bytes.NewBufferString(`{"username":"mobile.owner","password":"mobile-password","device_name":"My iPhone"}`))
 	request.Header.Set("X-Recoow-Client", "ios")
 	request.Header.Set("X-Recoow-OS", "ios")
 	request.Header.Set("X-Recoow-Device-Id", "phone-install")
@@ -165,12 +165,12 @@ func TestDevicePasswordLoginIssuesSyncCredentialWithoutOwnerAccess(t *testing.T)
 func TestPasswordRecoveryKeepsIdentityDataAndDeviceCredentials(t *testing.T) {
 	e := newEnv(t)
 	owner, recovery := e.initAccount(t)
-	response, body := e.request(t, "POST", "/api/users/me/credentials", owner, map[string]any{"password": "original-long-password"})
+	response, body := e.request(t, "POST", "/api/users/me/credentials", owner, map[string]any{"password": "original-password"})
 	identity := decode[domain.User](t, body)
 	if response.Code != 201 {
 		t.Fatal("bind failed")
 	}
-	credentials := map[string]any{"username": identity.Username, "password": "original-long-password"}
+	credentials := map[string]any{"username": identity.Username, "password": "original-password"}
 	response, body = e.request(t, "POST", "/api/sessions", "", credentials)
 	web := decode[loginResponse](t, body)
 	if response.Code != 200 {
@@ -183,7 +183,7 @@ func TestPasswordRecoveryKeepsIdentityDataAndDeviceCredentials(t *testing.T) {
 	}
 	before, _ := e.st.SyncState(e.accountID)
 	for _, key := range []string{"", "invalid-key"} {
-		response, _ = e.request(t, "POST", "/api/password-resets", "", map[string]any{"recovery_key": key, "new_password": "replacement-long-password"})
+		response, _ = e.request(t, "POST", "/api/password-resets", "", map[string]any{"recovery_key": key, "new_password": "updated-password"})
 		if response.Code != 401 {
 			t.Fatal("invalid recovery key accepted")
 		}
@@ -196,7 +196,7 @@ func TestPasswordRecoveryKeepsIdentityDataAndDeviceCredentials(t *testing.T) {
 	if response.Code != 200 {
 		t.Fatal("failed reset revoked sessions")
 	}
-	response, body = e.request(t, "POST", "/api/password-resets", "", map[string]any{"recovery_key": recovery, "new_password": "replacement-long-password"})
+	response, body = e.request(t, "POST", "/api/password-resets", "", map[string]any{"recovery_key": recovery, "new_password": "updated-password"})
 	reset := decode[domain.User](t, body)
 	if response.Code != 200 || reset.ID != identity.ID || reset.Username != identity.Username || reset.AccountID != e.accountID || bytes.Contains(body, []byte("password")) || bytes.Contains(body, []byte(recovery)) {
 		t.Fatalf("reset changed identity or leaked secrets: %d %s", response.Code, body)
@@ -215,7 +215,7 @@ func TestPasswordRecoveryKeepsIdentityDataAndDeviceCredentials(t *testing.T) {
 	if response.Code != 401 {
 		t.Fatal("old password still works")
 	}
-	credentials["password"] = "replacement-long-password"
+	credentials["password"] = "updated-password"
 	response, _ = e.request(t, "POST", "/api/device-logins", "", credentials)
 	if response.Code != 201 {
 		t.Fatal("new password cannot log in")
@@ -229,7 +229,7 @@ func TestPasswordRecoveryKeepsIdentityDataAndDeviceCredentials(t *testing.T) {
 
 func TestRegistrationCanGenerateUsername(t *testing.T) {
 	e := newEnv(t)
-	response, body := e.request(t, "POST", "/api/users", "", map[string]any{"password": "registration-password", "bootstrap_token": "bootstrap-secret"})
+	response, body := e.request(t, "POST", "/api/users", "", map[string]any{"password": "register-password", "bootstrap_token": "bootstrap-secret"})
 	registered := decode[initResponse](t, body)
 	if response.Code != 201 || registered.Username == "" {
 		t.Fatalf("registration: %d %s", response.Code, body)

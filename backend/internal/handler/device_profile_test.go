@@ -33,7 +33,7 @@ func TestRegistrationHeadersAndAuthenticatedProfileUpdates(t *testing.T) {
 	if device.Name != "My phone" || device.Profile.AppVersion != "1.1" {
 		t.Fatal("profile not refreshed")
 	}
-	credentials := map[string]any{"username": "profile.user", "password": "long-enough-password"}
+	credentials := map[string]any{"username": "profile.user", "password": "test-password"}
 	w, _ = e.request(t, "POST", "/api/users/me/credentials", account.DeviceToken, credentials)
 	if w.Code != 201 {
 		t.Fatal(w.Body.String())

@@ -103,7 +103,7 @@ func TestReadOnlySessionRejectsWritesRegardlessOfTransportAndHeaders(t *testing.
 		t.Fatal(err)
 	}
 	e, owner, state := fullSyncEnvironment(t, registry)
-	credentials := map[string]any{"username": "read.only", "password": "long-enough-password"}
+	credentials := map[string]any{"username": "read.only", "password": "test-password"}
 	response, data := e.request(t, "POST", "/api/users/me/credentials", owner, credentials)
 	if response.Code != 201 {
 		t.Fatalf("bind: %s", data)

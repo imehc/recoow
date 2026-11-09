@@ -24,7 +24,7 @@ func NewIdentity(store domain.Store, ttl time.Duration) (*Identity, error) {
 	if ttl <= 0 {
 		ttl = 24 * time.Hour
 	}
-	dummy, err := HashPassword("unusable-dummy-password-for-timing")
+	dummy, err := HashPassword("dummy-password-1")
 	if err != nil {
 		return nil, err
 	}

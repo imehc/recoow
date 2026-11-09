@@ -16,7 +16,7 @@ func TestDeviceWritesRemainVisibleToReadOnlyWeb(t *testing.T) {
 		t.Fatal(err)
 	}
 	e, owner, _ := fullSyncEnvironment(t, registry)
-	credentials := map[string]any{"username": "Web.Owner", "password": "a-long-password-for-web"}
+	credentials := map[string]any{"username": "Web.Owner", "password": "web-password"}
 	response, body := e.request(t, "POST", "/api/users/me/credentials", owner, credentials)
 	if response.Code != 201 || bytes.Contains(body, []byte("password")) {
 		t.Fatalf("bind: %d %s", response.Code, body)
@@ -98,7 +98,7 @@ func TestDeviceWritesRemainVisibleToReadOnlyWeb(t *testing.T) {
 func TestPasswordChangeRevokesAllWebSessions(t *testing.T) {
 	e := newEnv(t)
 	owner, _ := e.initAccount(t)
-	credentials := map[string]any{"username": "password.owner", "password": "original-long-password"}
+	credentials := map[string]any{"username": "password.owner", "password": "original-password"}
 	response, body := e.request(t, "POST", "/api/users/me/credentials", owner, credentials)
 	if response.Code != 201 {
 		t.Fatalf("bind: %s", body)
@@ -108,7 +108,7 @@ func TestPasswordChangeRevokesAllWebSessions(t *testing.T) {
 		t.Fatalf("login: %s", body)
 	}
 	login := decode[loginResponse](t, body)
-	response, body = e.request(t, "PUT", "/api/users/me/password", owner, map[string]any{"current_password": credentials["password"], "new_password": "replacement-long-password"})
+	response, body = e.request(t, "PUT", "/api/users/me/password", owner, map[string]any{"current_password": credentials["password"], "new_password": "updated-password"})
 	if response.Code != 200 {
 		t.Fatalf("password: %s", body)
 	}

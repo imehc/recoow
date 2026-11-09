@@ -38,8 +38,13 @@ func NormalizeUsername(username string) (string, error) {
 	return username, nil
 }
 func HashPassword(password string) (string, error) {
-	if len(password) < 12 || len(password) > 256 {
-		return "", fmt.Errorf("%w: 密码须为 12 至 256 字节", ErrInvalidPassword)
+	if len(password) < 6 || len(password) > 18 {
+		return "", fmt.Errorf("%w: 密码须为 6 至 18 个字符", ErrInvalidPassword)
+	}
+	for _, char := range password {
+		if char < '!' || char > '~' {
+			return "", fmt.Errorf("%w: 密码仅支持英文字母、数字和常用符号", ErrInvalidPassword)
+		}
 	}
 	salt := make([]byte, 16)
 	if _, err := rand.Read(salt); err != nil {
@@ -49,8 +54,13 @@ func HashPassword(password string) (string, error) {
 	return "$argon2id$v=19$m=65536,t=3,p=2$" + base64.RawStdEncoding.EncodeToString(salt) + "$" + base64.RawStdEncoding.EncodeToString(digest), nil
 }
 func VerifyPassword(encoded, password string) bool {
-	if len(password) > 256 {
+	if len(password) < 6 || len(password) > 18 {
 		return false
+	}
+	for _, char := range password {
+		if char < '!' || char > '~' {
+			return false
+		}
 	}
 	parts := strings.Split(encoded, "$")
 	if len(parts) != 6 || parts[1] != "argon2id" || parts[2] != "v=19" || parts[3] != "m=65536,t=3,p=2" {

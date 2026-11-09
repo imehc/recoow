@@ -10490,8 +10490,9 @@ components:
         password:
           type: string
           format: password
-          minLength: 12
-          maxLength: 256
+          minLength: 6
+          maxLength: 18
+          pattern: '^[!-~]{6,18}$'
           description: 密码
       required:
         - username
@@ -10507,9 +10508,10 @@ components:
         password:
           type: string
           format: password
-          minLength: 12
-          maxLength: 256
-          description: 用户设置的密码（12–256 字节）
+          minLength: 6
+          maxLength: 18
+          pattern: '^[!-~]{6,18}$'
+          description: 用户设置的密码（6–18 个字符）
       required:
         - password
     DeviceLoginRequest:
@@ -10523,7 +10525,9 @@ components:
         password:
           type: string
           format: password
-          maxLength: 256
+          minLength: 6
+          maxLength: 18
+          pattern: '^[!-~]{6,18}$'
           description: 密码
         device_name:
           type: string
@@ -10573,10 +10577,11 @@ components:
         new_password:
           type: string
           format: password
-          minLength: 12
-          maxLength: 256
+          minLength: 6
+          maxLength: 18
+          pattern: '^[!-~]{6,18}$'
           x-recoow-legacy-name: newPassword
-          description: 新密码（12–256 字节）
+          description: 新密码（6–18 个字符）
       required:
         - recovery_key
         - new_password
@@ -10591,8 +10596,9 @@ components:
         password:
           type: string
           format: password
-          minLength: 12
-          maxLength: 256
+          minLength: 6
+          maxLength: 18
+          pattern: '^[!-~]{6,18}$'
           description: 密码
         bootstrap_token:
           type: string
@@ -10661,15 +10667,19 @@ components:
         current_password:
           type: string
           format: password
+          minLength: 6
+          maxLength: 18
+          pattern: '^[!-~]{6,18}$'
           x-recoow-legacy-name: currentPassword
           description: 当前密码
         new_password:
           type: string
           format: password
-          minLength: 12
-          maxLength: 256
+          minLength: 6
+          maxLength: 18
+          pattern: '^[!-~]{6,18}$'
           x-recoow-legacy-name: newPassword
-          description: 新密码
+          description: 新密码（6–18 个字符）
       required:
         - current_password
         - new_password
