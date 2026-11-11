@@ -2,8 +2,8 @@ import OSLog
 import RealityKit
 import SwiftUI
 
-/// A non-AR RealityKit scene. Native controls sit on the projected model, so Dynamic Type,
-/// VoiceOver and Switch Control do not depend on 3D hit testing.
+/// 非 AR 的 RealityKit 场景。原生控件叠在投影后的模型上，
+/// 因此动态字体、VoiceOver 与切换控制都不依赖 3D 命中测试。
 @MainActor
 final class DecisionSceneSurface: UIView, UIGestureRecognizerDelegate {
     var onDraw: (DecisionSpinInput) -> Void
@@ -157,7 +157,7 @@ final class DecisionSceneSurface: UIView, UIGestureRecognizerDelegate {
             guard let fallback = catalog.assets.first(where: { $0.key == catalog.fallback }) else {
                 throw CocoaError(.fileReadCorruptFile)
             }
-            // Import the three small structural assets concurrently. Food models never gate the first frame.
+            // 三个小型结构资源并发导入；食物模型不会阻塞首帧。
             async let stageLoad = load(catalog.stage.usdz)
             async let padLoad = load(catalog.pad.usdz)
             async let cardLoad = load(fallback.usdz)
@@ -167,7 +167,7 @@ final class DecisionSceneSurface: UIView, UIGestureRecognizerDelegate {
             guard !disposed else { return }
             self.stage = stage
             world.addChild(stage)
-            // Keep USD axis conversions intact; these native pivots rotate in world Y.
+            // 保持 USD 轴向转换不变，这些原生支点绕世界 Y 轴旋转。
             stage.findEntity(named: "DrawButton")?.setParent(actionPivot, preservingWorldTransform: true)
             stage.findEntity(named: "Turntable")?.setParent(deckPivot, preservingWorldTransform: true)
             actionCap = actionPivot.findEntity(named: "ActionCap")
@@ -264,7 +264,7 @@ final class DecisionSceneSurface: UIView, UIGestureRecognizerDelegate {
         lens.near = 0.1
         lens.far = 100
         lens.scaleDirection = .vertical
-        // RealityKit's orthographic scale is the half-height of the visible world.
+        // RealityKit 的正交缩放即可见世界高度的一半。
         lens.scale = Float(max(3.6, 4.96 * bounds.height / bounds.width) / 2)
         camera.components.set(lens)
         positionSlots()

@@ -17,7 +17,7 @@ final class MediaAssetTitleTests: XCTestCase {
         try fixture.database.writer.write { db in
             try db.execute(sql: "UPDATE media_assets SET storage_key = ? WHERE id = ?", arguments: [key, asset.id])
         }
-        // Remove the old ID-derived path, as on a new device importing a backup.
+        // 按导入备份的新设备行为，移除旧的按 ID 推导路径。
         try MediaAssetObjectStore.shared.remove(storageKey: asset.storageKey)
         XCTAssertEqual(reference.resolvedData, bytes)
         let backupURL = try AppDataTransferService(database: fixture.database).exportBackup(sourceDeviceID: "test", preferences: AppDataTransferPreferences(languageRawValue: nil, appearanceRawValue: nil, addsPickedPhotosToMediaLibrary: false, savesCameraPhotosToLibrary: false, hiddenToolRouteIDs: []))

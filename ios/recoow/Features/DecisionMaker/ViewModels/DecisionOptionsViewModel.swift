@@ -167,7 +167,7 @@ final class DecisionOptionsViewModel {
         do {
             selectedChoiceRecord = try repository.insertChoiceRecord(record)
             errorMessage = nil
-            // Present the locally committed outcome immediately; cloud sync may take longer than the animation.
+            // 本地落定结果立即呈现，云同步可能比动画更慢。
             onSelection(option)
             await syncEngine.enqueueScan()
         } catch {

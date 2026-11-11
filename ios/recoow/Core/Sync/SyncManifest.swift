@@ -32,8 +32,8 @@ extension FullSyncRepository {
                 let entity = try SyncEntityCatalog.entity(table)
                 guard dataVersion == entity.version else { continue }
                 var snapshot = try Self.object(row["payload_json"])
-                // Keep derived values for comparison too; equality must describe the
-                // complete cloud snapshot, not merely the client's writable fields.
+                // 派生值也一并保留以便比较：相等性必须描述完整的云端快照，
+                // 而不只是客户端可写的字段。
                 for field in entity.fields where field.binary { snapshot.removeValue(forKey: field.name) }
                 snapshot.removeValue(forKey: "server_version")
                 snapshot.removeValue(forKey: "sync_status")

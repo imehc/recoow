@@ -1,6 +1,6 @@
 import Foundation
 
-/// The cursor addresses the entire candidate pool; visible slots are only a rendering budget.
+/// 游标指向整个候选池，可见槽位只是渲染预算。
 nonisolated enum DecisionTurntableLayout {
     struct Placement {
         let slot: Int

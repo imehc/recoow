@@ -212,7 +212,7 @@ struct BillDetailView: View {
         }
     }
 
-    // MARK: - Helpers
+    // MARK: - 辅助方法
 
     private func duplicateBill(_ bill: BillRecord) {
         let draft = viewModel.makeDuplicateDraft(from: bill)
@@ -253,7 +253,7 @@ private struct BillUtilityAccountNumberRow: View {
     }
 }
 
-// MARK: - Refund Reason Sheet
+// MARK: - 退款原因弹层
 
 struct RefundReasonSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -295,7 +295,7 @@ struct RefundReasonSheet: View {
     }
 }
 
-// MARK: - Status Badge
+// MARK: - 状态标记
 
 private struct BillStatusBadge: View {
     let title: LocalizedStringKey

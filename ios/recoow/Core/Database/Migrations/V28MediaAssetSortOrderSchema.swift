@@ -1,6 +1,6 @@
 import GRDB
 
-/// V28: add library-level manual ordering for reusable media assets.
+/// V28：为可复用的媒体资源增加库级手动排序。
 enum V28MediaAssetSortOrderSchema {
     nonisolated static func register(in migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v28_media_asset_sort_order_schema") { db in

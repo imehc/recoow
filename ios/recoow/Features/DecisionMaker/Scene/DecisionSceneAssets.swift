@@ -1,8 +1,8 @@
 import Foundation
 import RealityKit
 
-/// Keep imported, unparented prototypes across collection visits. Each renderer receives its own
-/// clone, so appearance and animation changes never mutate another scene or the cached prototype.
+/// 跨多次集合页访问保留已导入但未挂父级的预制件。每个渲染器拿到各自的克隆，
+/// 因此外观与动画改动不会影响其他场景或缓存的预制件。
 @MainActor
 final class DecisionSceneAssets {
     static let shared = DecisionSceneAssets()
@@ -35,8 +35,8 @@ final class DecisionSceneAssets {
         }
     }
 
-    /// Start on the collection page, without waiting for a user to open a particular turntable.
-    /// Optional food models are requested only when their titles appear in a collection.
+    /// 从集合页开始准备，不必等用户打开某个转盘。
+    /// 可选食物模型只在其名称出现在集合中时才请求。
     func prewarmStage() {
         guard warmup == nil else { return }
         warmup = Task(priority: .utility) { [weak self] in

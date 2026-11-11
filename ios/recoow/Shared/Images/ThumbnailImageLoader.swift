@@ -1,10 +1,9 @@
 import ImageIO
 import UIKit
 
-/// Decodes JPEG/PNG/HEIC image data at most once per unique payload and caches
-/// the result, downsampled so small list thumbnails never decode full-resolution
-/// bitmaps. The cache is keyed by content + target pixel size, so callers do not
-/// need a stable identifier and no stale entry survives an actual data change.
+/// 同一份数据最多解码一次 JPEG/PNG/HEIC 并缓存结果，且做降采样，
+/// 使列表小缩略图无需解码全分辨率位图。缓存以内容加目标像素尺寸为键，
+/// 调用方不必提供稳定标识，数据真正变化后也不会留下过期条目。
 enum ThumbnailImageLoader {
     private static let cache: NSCache<NSString, UIImage> = {
         let cache = NSCache<NSString, UIImage>()

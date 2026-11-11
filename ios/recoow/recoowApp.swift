@@ -2,7 +2,7 @@
 //  recoowApp.swift
 //  recoow
 //
-//  Created by imehc on 2026/6/16.
+// 由 imehc 创建于 2026/6/16。
 //
 
 import SwiftUI

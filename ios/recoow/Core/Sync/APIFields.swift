@@ -1,6 +1,6 @@
 import Foundation
 
-/// HTTP naming is independent of the durable local sync envelope format.
+/// HTTP 命名与本地持久化的同步信封格式相互独立。
 nonisolated enum APIFields {
     private static let legacyNames = Dictionary(uniqueKeysWithValues: APIFieldNames.aliases.map { ($0.value, $0.key) })
     private static let opaque: Set<String> = ["snapshot", "metadata", "before_value", "after_value", "contracts", "record_counts"]

@@ -46,7 +46,7 @@ final class DecisionSceneController {
         surface?.setOptions(options, focusedIndex: index)
     }
 
-    /// Lock synchronously, before the asynchronous save task can yield, to coalesce repeated taps.
+    /// 在异步保存任务让出执行权之前同步加锁，以合并重复点击。
     func prepareDraw() -> Bool {
         guard !isBusy, !options.isEmpty, !isLoading else { return false }
         phase = .preparing
@@ -57,7 +57,7 @@ final class DecisionSceneController {
 
     func animateSelection(_ option: DecisionOption, input: DecisionSpinInput) {
         guard phase == .preparing else { return }
-        // A remote edit may have arrived just before the save task began. Always land on its actual result.
+        // 远端编辑可能在保存任务开始前刚好到达，必须以实际结果为准。
         if !options.contains(where: { $0.id == option.id }) {
             options.append(option)
             surface?.setOptions(options, focusedIndex: 0)

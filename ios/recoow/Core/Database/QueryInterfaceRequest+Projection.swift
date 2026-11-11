@@ -1,11 +1,9 @@
 import GRDB
 
 extension QueryInterfaceRequest {
-    /// Projects every column except the named ones. Used to keep large binary
-    /// payloads (embedded `image_data` blobs) out of in-memory aggregates such as
-    /// the statistics screen, while leaving every other column untouched. The
-    /// record is still decoded as `RowDecoder`; omitted columns map to `nil` for
-    /// optional properties.
+    /// 投影除指定列之外的所有列。用于把大体积二进制载荷（内嵌的 `image_data`
+    /// 数据块）排除在统计页这类内存聚合之外，其余列保持原样。记录仍按
+    /// `RowDecoder` 解码，被省略的列在可选属性上映射为 `nil`。
     func selectingAllColumns(except excluded: Set<String>, db: Database)
         throws -> QueryInterfaceRequest<RowDecoder>
     where RowDecoder: TableRecord {

@@ -210,8 +210,8 @@ struct FoodEntryFormView: View {
         .overlay {
             MediaAttachmentDragLayer(coordinator: attachmentDragCoordinator)
         }
-        // Use Form's native scroll dismissal here. The shared window-level tap
-        // recognizer can interfere with the first marked-text event of Pinyin.
+        // 这里使用 Form 自带的滚动收起键盘；共享的窗口级点击手势
+        // 会干扰拼音输入的首个标记文本事件。
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle(AppLocalization.string(navigationTitleKey))
         .appNavigationStyle()

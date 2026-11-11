@@ -41,7 +41,7 @@ nonisolated final class RecoowSyncConfig: @unchecked Sendable {
 
     var backupAccountScope: String? {
         if let saved = defaults.string(forKey: keyPrefix + "backupAccountScope") {
-            // Normalize the earlier local implementation only when its stored connection proves the server and account.
+            // 只有当已存的连接能确认服务器与账户时，才归一化早期的本地实现。
             let originalAccount = saved.split(separator: ":", maxSplits: 1).last.map(String.init) ?? ""
             if let normalized = try? CloudAccountValidation.endpoint(baseURL),
                defaults.string(forKey: keyPrefix + "datasetConnectionID") == Self.connectionID(endpoint: baseURL, accountID: originalAccount) {
@@ -99,7 +99,7 @@ nonisolated final class RecoowSyncConfig: @unchecked Sendable {
 
     func retainDatasetBinding() { _ = datasetConnectionID; _ = backupAccountScope }
 
-    /// Device credentials are replaceable; dataset ownership and its sync checkpoint are not.
+    /// 设备凭据可以替换，数据集归属及其同步检查点不行。
     func installDeviceCredentials(endpoint: String, accountID: String, deviceID: String, token: String, enableSync: Bool) throws {
         try bindDataset(endpoint: endpoint, accountID: accountID)
         isSyncEnabled = false

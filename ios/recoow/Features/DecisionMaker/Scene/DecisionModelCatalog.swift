@@ -1,6 +1,6 @@
 import Foundation
 
-/// Model matching is presentation-only. New prefabs and aliases need no database migration.
+/// 模型匹配只涉及呈现层，新增预制件与别名无需数据库迁移。
 nonisolated struct DecisionModelCatalog: Decodable {
     struct Asset: Decodable {
         let key: String

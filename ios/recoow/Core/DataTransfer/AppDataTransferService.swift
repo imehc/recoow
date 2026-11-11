@@ -253,14 +253,14 @@ final class AppDataTransferService: @unchecked Sendable {
             .map { selectExpression(for: $0, tableName: tableName) }
             .joined(separator: ", ")
         let extraWhere = whereClause.map { " AND \($0)" } ?? ""
-        // No shared ancestor exists between two portable snapshots. Never guess an overwrite.
+        // 两个可移植快照之间没有共同祖先，绝不猜测覆盖关系。
         let fields = try SyncEntityCatalog.entity(tableName).fields
         let ignored = Set(fields.filter(\.derived).map(\.name)).union(["id", "created_at", "updated_at", "device_id", "server_version", "sync_status", "storage_key"])
         let compared = columns.filter { !ignored.contains($0) }
         if !compared.isEmpty {
             let different = compared.map { column in
                 let pair = "dst.\(Self.quotedIdentifier(column)) IS NOT \(selectExpression(for: column, tableName: tableName))"
-                // Portable assets embed bytes; live assets use storage_key. Checksum and length identify their content.
+                // 可移植资源内嵌字节，在线资源用 storage_key；内容由校验和与长度共同确定。
                 return tableName == "media_assets" && column == "inline_data"
                     ? "(dst.\(Self.quotedIdentifier(column)) IS NOT NULL AND src.\(Self.quotedIdentifier(column)) IS NOT NULL AND \(pair))"
                     : "(\(pair))"

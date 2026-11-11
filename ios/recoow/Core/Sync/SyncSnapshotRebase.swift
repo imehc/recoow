@@ -1,8 +1,8 @@
 import Foundation
 import GRDB
 
-/// Carry only subsequent local edits onto an acknowledged server snapshot.
-/// Prepared requests remain immutable; original edits remain in change_log.
+/// 只把之后产生的本地编辑叠加到已确认的服务器快照上。
+/// 已准备的请求保持不可变，原始编辑仍留在 change_log 中。
 nonisolated enum SyncSnapshotRebase {
     private static func localStorageFields(_ table: String) -> Set<String> {
         table == "media_assets" ? ["storage_key", "storage_backend"] : []
@@ -15,7 +15,7 @@ nonisolated enum SyncSnapshotRebase {
 
     static func equal(_ first: Any?, _ second: Any?) throws -> Bool {
         guard let first, let second else { return first == nil && second == nil }
-        // Foundation's numeric comparison can round large integers through Double.
+        // Foundation 的数值比较可能经 Double 对大整数产生舍入。
         let options: JSONSerialization.WritingOptions = [.sortedKeys, .fragmentsAllowed]
         return try JSONSerialization.data(withJSONObject: first, options: options) == JSONSerialization.data(withJSONObject: second, options: options)
     }
@@ -52,7 +52,7 @@ nonisolated enum SyncSnapshotRebase {
         }
         if table == "bills", !changed.isDisjoint(with: settlementFields) { changed.formUnion(settlementFields) }
         for key in changed { result[key] = local[key] }
-        // Timestamps identify the queued edit even when it only repeats a business value.
+        // 即使只是重复某个业务值，排队编辑也靠时间戳区分。
         for key in ["updated_at", "device_id", "deleted_at"] { result[key] = local[key] }
         if table == "bills" {
             var effects = try StoredValueBalanceEffects.decode(remote["stored_value_effects"] as? String)
@@ -98,16 +98,16 @@ nonisolated enum SyncSnapshotRebase {
         let originalVersion = try Int64.fetchOne(db, sql: "SELECT base_version FROM sync_outbox WHERE id = ?", arguments: [acknowledgedID]) ?? 0
         for row in queued {
             guard row["predecessor_id"] as Int64? == predecessorID else { return }
-            // Never alter a request that could already have reached the server.
+            // 绝不修改可能已经送达服务器的请求。
             guard row["prepared_json"] as String? == nil else { throw CloudAPIError.syncRejected(AppLocalization.string("待同步请求状态已改变")) }
             if row["capture_pending"] as Bool {
-                // Keep uncaptured bytes and references intact until media capture can succeed.
+                // 在媒体采集成功之前，保持未采集的字节与引用不变。
                 try db.execute(sql: "UPDATE sync_outbox SET predecessor_id = NULL, base_version = ? WHERE id = ?", arguments: [originalVersion, row["id"] as Int64])
                 return
             }
             let next = try FullSyncRepository.object(row["payload_json"])
             if try conflicts(table: update.table, base: base, local: next, remote: rebased) {
-                // Preserve the original ancestor so the backend can report an in-flight conflict.
+                // 保留原始祖先，使后端能报告进行中的冲突。
                 try db.execute(sql: "UPDATE sync_outbox SET predecessor_id = NULL, base_version = ? WHERE id = ?", arguments: [originalVersion, row["id"] as Int64])
                 return
             }
@@ -117,7 +117,7 @@ nonisolated enum SyncSnapshotRebase {
             predecessorID = row["id"]
         }
         guard !queued.isEmpty else { return }
-        // Keep subsequent editing based on the rebased visible record as well.
+        // 之后的编辑同样基于重基后的可见记录进行。
         let entity = try SyncEntityCatalog.entity(update.table)
         let fields = entity.fields.filter { !$0.binary && !$0.derived && !["id", "server_version"].contains($0.name) && rebased[$0.name] != nil }
         let values = try fields.map { field -> DatabaseValue in
