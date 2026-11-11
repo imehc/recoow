@@ -102,7 +102,7 @@ class BillsFlowTest {
         compose.waitUntil(10_000) { viewModel.state.value.accounts.any { it.id == id && it.balance == 15_000L } }
         back(); compose.onNodeWithTag("bill_add").performClick(); text("bill_title", title)
         choose("bill_type", BillsR.string.stored_value_use); text("amount_final", "20")
-        // The account chooser is below the date. Select the account created by the first bill.
+        // 账户选择器位于日期下方，选中由第一笔账单创建的账户。
         compose.onNodeWithTag("bill_form").performScrollToNode(hasText(label(BillsR.string.select_account)))
         compose.onNode(hasText(label(BillsR.string.select_account)) and hasClickAction())
             .performScrollTo().assertIsDisplayed().performClick()

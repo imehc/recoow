@@ -36,7 +36,7 @@ internal fun List<EntitySnapshot>.attachments(): List<MediaAttachment> = filter 
         f.long("width")?.toInt(), f.long("height")?.toInt(), f.double("duration_seconds")) }
 internal fun EntitySnapshot.named() = NamedRecord(entityId, revision(listOf(this)), fields().text("name")!!, fields().text("note"))
 
-/** Shared transaction helpers; feature repositories still define their own save/delete rules. */
+/** 共用的事务工具；各功能仓库仍自行定义保存与删除规则。 */
 internal class JournalStorage(val host: DatabaseHost, val deviceId: String, val now: () -> Long) {
     val writer = RoomRecordRepository(host)
     fun change(table: String, id: String, fields: JsonObject = buildJsonObject {}, deleted: Boolean = false,

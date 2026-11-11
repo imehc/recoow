@@ -4,7 +4,7 @@ import java.math.BigDecimal
 import java.security.MessageDigest
 import kotlinx.serialization.json.*
 
-/** v1 includes all business/unknown fields and excludes only transport bookkeeping. */
+/** v1 计入全部业务字段与未知字段，仅排除传输层的记账信息。 */
 object SyncSnapshotDigest {
     const val VERSION = 1
     val metadataFields = setOf("updated_at", "device_id", "server_version", "sync_status")

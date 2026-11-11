@@ -4,7 +4,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import imehc.recoow.core.database.contract.EntityContract
 import kotlinx.serialization.json.*
 
-/** All calls run inside Room's transaction, so raw SQL and DAO invalidations share one connection. */
+/** 所有调用都在 Room 事务内执行，原生 SQL 与 DAO 的失效通知共用同一连接。 */
 object PhysicalRecords {
     fun copyBinary(db: SupportSQLiteDatabase, table: String, id: String, field: String, output: java.io.File): Long? {
         val contract = imehc.recoow.core.database.generated.EntityContracts.registry.entity(table)

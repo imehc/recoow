@@ -44,7 +44,7 @@ class AndroidLocationSourceTest {
             FileInputStream(it.fileDescriptor).use { input -> input.readBytes().toString(Charsets.UTF_8).trim() }
         }
         fun setMockMode(mode: String) { shell("appops set ${context.packageName} android:mock_location $mode") }
-        // Mock providers still respect the device-wide location switch on physical devices.
+        // 在真机上，模拟定位提供方仍受整机定位开关约束。
         val modernLocationCommand = Build.VERSION.SDK_INT >= 30
         val previousLocationState = if (modernLocationCommand) shell("cmd location is-location-enabled")
             else shell("settings get secure location_mode")

@@ -10,7 +10,7 @@ data class GeoCoordinate(val latitude: Double, val longitude: Double) {
         require(longitude.isFinite() && longitude in -180.0..180.0)
     }
 
-    /** Only transforms a display copy. Stored coordinates always remain WGS84. */
+    /** 只转换用于显示的副本，存储坐标始终保持 WGS84。 */
     fun forDisplay(system: MapCoordinateSystem): GeoCoordinate {
         if (system == MapCoordinateSystem.WGS84 || longitude !in 72.004..137.8347 || latitude !in 0.8293..55.8271) return this
         val x = longitude - 105.0

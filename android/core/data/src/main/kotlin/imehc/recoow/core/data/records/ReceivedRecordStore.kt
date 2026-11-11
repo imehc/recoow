@@ -9,7 +9,7 @@ import java.time.ZoneId
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.*
 
-/** Durable receive/apply primitives. HTTP, bootstrap paging and conflict resolution live in sync. */
+/** 持久化接收与落库的底层能力；HTTP、引导分页和冲突处理属于 sync 模块。 */
 class ReceivedRecordStore(private val host: DatabaseHost, private val zone: () -> ZoneId = ZoneId::systemDefault) {
     suspend fun rebaseLocal(db: RecoowDatabase, table: String, id: String, fields: JsonObject, version: Long) {
         check(db.inTransaction())
@@ -52,7 +52,7 @@ class ReceivedRecordStore(private val host: DatabaseHost, private val zone: () -
                 require(previous == hash)
                 if (db.records().pageReceived(scope, key) == true) return@access
             } else db.records().receive(SyncReceivedPage(scope, key, body, hash))
-            // Raw bytes survive even if envelope parsing/validation fails below.
+            // 即使后续信封解析或校验失败，原始字节仍会保留。
             db.withTransaction {
             beforeReceive(db)
             require(nextCursor >= target.receivedCursor)
@@ -109,7 +109,7 @@ class ReceivedRecordStore(private val host: DatabaseHost, private val zone: () -
         val old = db.records().snapshot(row.tableName, row.entityId)
         val raw = envelope["snapshot"]?.takeIf { it != JsonNull }?.jsonObject
         require(raw != null || deleted != null) { "Missing row snapshot" }
-        // Existing-row tombstones may omit the business snapshot. iOS only replays bill effects.
+        // 既有行的墓碑可能不带业务快照，此时与 iOS 一样只重放账单影响。
         val materialized = if (deleted != null && old != null) {
             Json.parseToJsonElement(old.json).jsonObject.toMutableMap().apply {
                 if (row.tableName == "bills") raw?.get("stored_value_effects")?.let { put("stored_value_effects", it) }
@@ -130,7 +130,7 @@ class ReceivedRecordStore(private val host: DatabaseHost, private val zone: () -
                     incoming["byte_count"]?.jsonPrimitive?.long == reference.size)
             }
         }
-        // Local edits remain visible; the remote snapshot is retained for explicit reconciliation.
+        // 本地编辑保持可见；远端快照留待显式对账处理。
         if (db.records().pending(row.scope, row.tableName, row.entityId) == null) {
             val fields = old?.json?.let { Json.parseToJsonElement(it).jsonObject }.orEmpty().toMutableMap()
             incoming?.let {

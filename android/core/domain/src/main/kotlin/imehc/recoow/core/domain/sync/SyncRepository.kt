@@ -19,7 +19,7 @@ data class SyncState(val loaded: Boolean = false, val connection: SyncConnection
     val devices: List<SyncDevice> = emptyList())
 
 interface SyncRepository {
-    /** Excludes network writes while an atomic local dataset operation runs. */
+    /** 本地数据集原子操作期间，禁止网络写入。 */
     suspend fun <T> localMaintenance(clearCredentials: Boolean = false, action: suspend () -> T): T = action()
     val state: StateFlow<SyncState>
     suspend fun setEnabled(enabled: Boolean)

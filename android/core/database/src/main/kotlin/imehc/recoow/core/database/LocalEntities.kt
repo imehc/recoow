@@ -6,7 +6,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.ColumnInfo
 
-// These tables are local persistence policy, never part of an entity's wire payload.
+// 这些表属于本地持久化策略，永远不进入实体的传输载荷。
 @Entity(tableName = "entity_snapshots", primaryKeys = ["tableName", "entityId"])
 data class EntitySnapshot(val tableName: String, val entityId: String, val dataVersion: Int, val json: String)
 

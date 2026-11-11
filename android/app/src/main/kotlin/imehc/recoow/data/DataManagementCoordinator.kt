@@ -42,7 +42,7 @@ class DataManagementCoordinator @Inject constructor(private val data: RoomDataMa
         sync.localMaintenance(clearCredentials = true) { tracks.prepareMaintenance(); data.reset() }
         withContext(NonCancellable) { finishReset() }
     }
-    /** A successful reset journals credential cleanup before publishing the empty dataset. */
+    /** 重置成功时先记录凭据清理日志，再发布空数据集。 */
     suspend fun recover() {
         if (data.resetPending()) {
             sync.localMaintenance(clearCredentials = true) { }

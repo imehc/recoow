@@ -24,7 +24,7 @@ import imehc.recoow.core.domain.navigation.ToolRoute
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ToolDestination(route: ToolRoute, onBack: () -> Unit, onHome: () -> Unit) {
-    // Each feature replaces this unavailable destination when it is ready to accept deep links.
+    // 各功能在具备接收深链能力后，替换这个占位目的地。
     val title = when (route) {
         ToolRoute.BILLS -> R.string.tool_bills
         ToolRoute.REMINDERS -> R.string.tool_reminders

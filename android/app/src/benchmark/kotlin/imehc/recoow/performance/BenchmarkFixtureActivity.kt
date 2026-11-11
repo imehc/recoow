@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
 
-/** Only packaged in the isolated baseline/benchmark application, never debug or release. */
+/** 只在隔离的 baseline/benchmark 应用中打包，绝不进入 debug 或 release。 */
 @AndroidEntryPoint
 class BenchmarkFixtureActivity : ComponentActivity() {
     private val fixture: BenchmarkFixtureViewModel by viewModels()
@@ -76,7 +76,7 @@ class BenchmarkFixtureViewModel @Inject constructor(
     private suspend fun seed() {
         val marker = getApplication<Application>().getSharedPreferences("benchmark_fixture", Application.MODE_PRIVATE)
         if (marker.getBoolean("ready_v1", false)) return
-        // A failed/interrupted seed must be cleared by the harness, never silently reused.
+        // 失败或中断的种子数据必须由测试装置清除，不能被悄悄复用。
         check(records.find("bills", "perf-bill-0") == null) { "Clear benchmark application data before retrying" }
         preferences.setLanguage(AppLanguage.ENGLISH)
         preferences.setAppearance(Appearance.LIGHT)

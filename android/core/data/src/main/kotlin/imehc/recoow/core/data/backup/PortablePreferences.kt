@@ -13,7 +13,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Call only under DatabaseHost's gate, so preference changes share its rollback boundary. */
+/** 只在 DatabaseHost 门禁内调用，使偏好改动与回滚边界一致。 */
 internal class PortablePreferences(private val context: Context, private val store: DataStore<Preferences>) {
     suspend fun capture(): JSONObject {
         val values = store.data.first()

@@ -4,7 +4,7 @@ import imehc.recoow.core.database.DatabaseHost
 import imehc.recoow.core.database.NotificationJob
 import kotlinx.coroutines.CancellationException
 
-/** Feature schedulers register idempotent handlers; unsupported jobs remain durable until available. */
+/** 各功能注册幂等处理器；暂不支持的任务保持持久化，直到可执行为止。 */
 fun interface NotificationHandler { suspend fun deliver(job: NotificationJob): Boolean }
 
 class NotificationDelivery(private val host: DatabaseHost, private val handler: NotificationHandler) {

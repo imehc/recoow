@@ -15,7 +15,7 @@ enum class DiarySource(val wire: String, val table: String, val icon: String) {
     REMINDER("reminder", "reminders", "checkmark.circle.fill"), ANNIVERSARY("anniversary", "anniversaries", "calendar"),
     ITEM("storedItem", "stored_items", "shippingbox.fill"), CHOICE("decisionChoice", "decision_choice_records", "shuffle")
 }
-/** Human-readable snapshots survive source deletion; selecting a link never changes its source. */
+/** 可读快照在来源被删除后仍然保留；选中某个链接不会改变它的来源。 */
 data class DiaryLink(val sourceType: String, val sourceId: String, val title: String, val subtitle: String? = null,
     val icon: String, val occurredAt: Long? = null, val snapshot: String? = null) : Serializable {
     val key get() = "$sourceType:$sourceId"

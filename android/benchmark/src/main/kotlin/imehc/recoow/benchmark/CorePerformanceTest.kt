@@ -66,7 +66,7 @@ private fun MacrobenchmarkScope.allJourneys() {
     device.pressBack(); tap("tab_settings")
     for (preference in listOf("appearance", "language")) {
         tap(preference)
-        // Dialogs use a separate semantics root; activity test resource IDs do not propagate.
+        // 对话框使用独立的语义树根；Activity 测试的资源 ID 不会传递进去。
         val cancel = By.text("Cancel")
         check(device.wait(Until.hasObject(cancel), 10_000)) { "Preference dialog did not open: $preference" }
         device.pressBack()
@@ -98,7 +98,7 @@ private fun MacrobenchmarkScope.decisionJourney() {
     tapText("View saved result"); waitTag("decision_detail"); device.pressBack()
 }
 
-/** Fixture setup is outside collection; only measured application journeys are retained. */
+/** 测试夹具的搭建不计入采样，只保留被测的应用内路径。 */
 class CoreBaselineProfile {
     companion object { @JvmStatic @BeforeClass fun setup() = prepareFixture() }
     @get:Rule val rule = BaselineProfileRule()
@@ -109,7 +109,7 @@ class CoreBaselineProfile {
     @Test fun coreJourneys() = rule.collect(PACKAGE, maxIterations = 5, filterPredicate = appCode) { allJourneys() }
 }
 
-/** Emulator runs validate the harness. Physical-device results establish regression budgets. */
+/** 模拟器运行用于验证测试装置本身，回归基线取自真机结果。 */
 class CoreStartupBenchmark {
     companion object { @JvmStatic @BeforeClass fun setup() = prepareFixture() }
     @get:Rule val rule = MacrobenchmarkRule()

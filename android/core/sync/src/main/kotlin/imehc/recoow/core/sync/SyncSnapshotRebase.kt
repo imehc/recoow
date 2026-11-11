@@ -3,7 +3,7 @@ package imehc.recoow.core.sync
 import imehc.recoow.core.database.generated.EntityContracts
 import kotlinx.serialization.json.*
 
-/** Applies only later local edits to the acknowledged snapshot; int64 values stay JSON numbers. */
+/** 只把之后产生的本地编辑叠加到已确认快照上；int64 数值保持为 JSON 数字。 */
 internal object SyncSnapshotRebase {
     internal fun equal(first: JsonElement?, second: JsonElement?): Boolean = when {
         first == null || second == null -> first == null && second == null

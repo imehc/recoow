@@ -109,7 +109,7 @@ class RoomRemindersRepository(private val host: DatabaseHost, private val device
     private fun completion(id: String, c: CheckIn, deleted: Boolean = false) = change("reminder_completions", "$id:${c.date}", buildJsonObject {
         put("reminder_id", id); put("date_key", c.date.toString()); put("completed_at", c.completedAt); put("kind", c.kind.wire); put("note", c.note.json())
     }, deleted)
-    // Legacy parent JSON must be materialized before the first detail mutation; existing tombstones always win.
+    // 旧版父级 JSON 必须在首次改动明细之前物化；既有墓碑始终优先。
     private suspend fun legacyDetails(db: RecoowDatabase, r: Reminder): List<RecordChange> = r.completions.filter {
         db.records().snapshot("reminder_completions", "${r.id}:${it.date}") == null
     }.map { completion(r.id, it) }

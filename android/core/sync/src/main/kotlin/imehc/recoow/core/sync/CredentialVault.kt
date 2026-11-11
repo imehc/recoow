@@ -26,7 +26,7 @@ interface CredentialStore {
     val localDeviceId: String
 }
 
-/** Keystore key and ciphertext stay outside database/preference rollback bundles and Android backup. */
+/** 密钥库密钥与密文不进入数据库、偏好的回滚包，也不进 Android 备份。 */
 class CredentialVault(context: Context, filename: String = "sync-credentials") : CredentialStore {
     private val file = AtomicFile(File(context.noBackupFilesDir, filename))
     private val alias = "${context.packageName}.sync.credentials.v1"

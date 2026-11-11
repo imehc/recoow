@@ -29,7 +29,7 @@ import kotlinx.serialization.json.*
 import org.json.JSONObject
 import kotlin.coroutines.CoroutineContext
 
-/** Converts a portable SQLite snapshot; the live Room schema is never replaced by an iOS file. */
+/** 转换可移植的 SQLite 快照；在线 Room schema 不会被 iOS 文件替换。 */
 @Singleton
 class RoomDataManagement @Inject constructor(@param:ApplicationContext private val context: Context,
     private val host: DatabaseHost, private val preferences: DataStore<Preferences>, private val identity: DeviceIdentity) : DataManagement {
@@ -60,7 +60,7 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
         val file = File.createTempFile("export-", ".recoowbackup", staging)
         try {
             host.access {
-                // Read DataStore before opening the thread-bound SQLite transaction.
+                // 先读取 DataStore，再开启绑定线程的 SQLite 事务。
                 val preferenceSnapshot = portable.capture()
                 val cancellation = currentCoroutineContext()
                 SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READWRITE or SQLiteDatabase.CREATE_IF_NECESSARY or SQLiteDatabase.NO_LOCALIZED_COLLATORS).use { output ->
@@ -80,7 +80,7 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
         } finally { removeDatabase(file) }
     } }
 
-    // Deliberately non-suspending: SQLiteDatabase transactions belong to their starting thread.
+    // 刻意声明为非挂起函数：SQLiteDatabase 事务只能在其开启线程上使用。
     private fun writeExport(output: SQLiteDatabase, preferenceSnapshot: JSONObject, cancellation: CoroutineContext) {
         output.beginTransaction()
         try {
@@ -90,7 +90,7 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
                 output.execSQL("INSERT INTO \"$table\" ($columns) SELECT $columns FROM live.\"$table\"")
             }
             output.execSQL("INSERT INTO record_origins SELECT * FROM live.record_origins")
-            // Read immutable objects only. Export must never fill inline_data in the online database.
+            // 只读取不可变对象；导出绝不能往在线数据库的 inline_data 里写数据。
             for (contract in contracts.values) output.rawQuery(
                 "SELECT entityId, json FROM live.entity_snapshots WHERE tableName=? ORDER BY entityId", arrayOf(contract.table)
             ).use { rows -> while (rows.moveToNext()) {
@@ -147,7 +147,7 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
 
     private suspend fun validate(file: File): BackupPreview {
         val preview = IosBackupInspector(staging).inspect({ file.inputStream() })
-        // Pre-sync development backups need the iOS migrator's historical business backfills first.
+        // 同步前的开发期备份，需先执行 iOS 迁移器所用的历史业务回填。
         if (preview.databaseSchemaVersion < 34) throw LegacyBackupException()
         SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY or SQLiteDatabase.NO_LOCALIZED_COLLATORS).use { source ->
             require(tables.all { it in preview.tableCounts }) { "Incomplete backup" }
@@ -198,8 +198,8 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
                                 if (count > 0) throw LocalBackupConflict(count)
                             }
                             if (table == "food_entries") {
-                                // Compare the references that this scoped import would actually retain.
-                                // API26 SQLite has no JSON1, so filter the ordered bill list in Kotlin.
+                                // 按本次范围导入实际会保留的引用来比较。
+                                // API26 的 SQLite 没有 JSON1，因此在 Kotlin 侧过滤已排序的账单列表。
                                 val incomingBills = if ("bills" in selectedTables) " OR EXISTS(SELECT 1 FROM incoming.bills WHERE id=?)" else ""
                                 sql.compileStatement("SELECT EXISTS(SELECT 1 FROM bills WHERE id=?)$incomingBills").use { exists ->
                                     fun retained(id: String): Boolean {
@@ -221,7 +221,7 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
                             }
                         }
                     }
-                    // Temporary ID sets make scope selection independent of insertion order and existing IDs.
+                    // 借助临时 ID 集合，让范围选择不受插入顺序与既有 ID 影响。
                     for (table in tables) {
                         sql.execSQL("CREATE TEMP TABLE \"import_$table\" (id TEXT PRIMARY KEY)")
                         val predicate = if (mode == ImportMode.REPLACE_ALL) "1" else selection(table, selected, selectedTables)
@@ -239,8 +239,8 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
                         } }
                         sql.execSQL("INSERT INTO \"$table\" (${fields.joinToString { "\"$it\"" }}) SELECT ${expressions.joinToString()} FROM incoming.\"$table\" src JOIN \"import_$table\" chosen ON src.id=chosen.id")
                     }
-                    // API26's system SQLite has no JSON1 extension. Filter after every selected
-                    // table is inserted, so both existing and newly imported bills are available.
+                    // API26 的系统 SQLite 没有 JSON1 扩展，因此在所有选中表
+                    // 插入完成后再过滤，这样既有账单与新导入账单都可参与。
                     sql.compileStatement("SELECT EXISTS(SELECT 1 FROM bills WHERE id=?)").use { billExists ->
                         sql.query("SELECT r.id, r.bill_ids_json FROM food_entries r JOIN import_food_entries chosen ON r.id=chosen.id").use { rows ->
                             while (rows.moveToNext()) {
@@ -355,7 +355,7 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
     override suspend fun optimize(): Long = withContext(Dispatchers.IO) { lock.withLock {
         val before = usage().total
         host.guarded("optimize-storage") { db, media ->
-            // Retain every historical/sync reference, including tombstones, pending uploads and conflicts.
+            // 保留全部历史与同步引用，包括墓碑、待上传和冲突记录。
             val keep = mutableSetOf<String>()
             fun collect(value: JsonElement) { when (value) {
                 is JsonObject -> { value["key"]?.jsonPrimitive?.contentOrNull?.takeIf { it.startsWith("sync/") }?.let(keep::add); value.values.forEach { collect(it) } }
@@ -366,7 +366,7 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
                 db.openHelper.writableDatabase.query("SELECT \"$column\" FROM $table WHERE \"$column\" IS NOT NULL").use { rows -> while (rows.moveToNext()) collect(Json.parseToJsonElement(rows.getString(0))) }
             }
             db.openHelper.writableDatabase.query("SELECT storage_key FROM media_assets UNION SELECT objectKey FROM sync_media_jobs").use { rows -> while (rows.moveToNext()) if (!rows.isNull(0)) keep += rows.getString(0) }
-            // An unparsed received page can refer to an object not applied yet; conservatively keep sync objects.
+            // 尚未解析的下行分页可能引用还没落库的对象，因此保守保留同步对象。
             val pendingPages = db.openHelper.writableDatabase.query("SELECT 1 FROM sync_received_pages LIMIT 1").use { it.moveToFirst() }
             media.walkTopDown().filter { it.isFile }.forEach { file ->
                 val key = file.relativeTo(media).invariantSeparatorsPath
@@ -374,7 +374,7 @@ class RoomDataManagement @Inject constructor(@param:ApplicationContext private v
             }
             db.openHelper.writableDatabase.execSQL("VACUUM")
         }
-        // Cache entries can still be held by an editor; only prune old resolved copies and completed transfers.
+        // 编辑中的页面可能仍持有缓存条目，只清理旧的已解析副本与已完成传输。
         for (name in listOf("resolved-media", "sync-transfer", "backup-transfer")) File(context.cacheDir, name).walkTopDown().filter { it.isFile && it.lastModified() < System.currentTimeMillis() - 86_400_000 }.forEach { it.delete() }
         pruneRollbacks()
         (before - usage().total).coerceAtLeast(0)

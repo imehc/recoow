@@ -22,7 +22,7 @@ import java.util.Locale
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 
-/** One independently configured launcher shortcut per widget; no periodic data polling. */
+/** 每个小组件对应一个独立配置的桌面快捷方式，不做周期性数据轮询。 */
 class QuickToolWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) = updateAsync(context, ids)
     override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager, id: Int, options: Bundle) = updateAsync(context, intArrayOf(id))

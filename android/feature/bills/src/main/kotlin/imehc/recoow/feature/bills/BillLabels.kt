@@ -50,7 +50,7 @@ internal fun searchable(resources: Resources, bill: BillRecord, accounts: List<S
     accounts.firstOrNull { it.id == bill.accountId }?.name, bill.startLocation, bill.endLocation, bill.transportLines, bill.note).joinToString(" ")
 internal fun money(cents: Long, locale: Locale) = money(BigInteger.valueOf(cents), locale)
 internal fun money(cents: BigInteger, locale: Locale): String = NumberFormat.getCurrencyInstance(locale).apply {
-    // App language controls formatting; the device region controls currency, as on iOS.
+    // 格式随应用语言，货币随设备地区，与 iOS 一致。
     currency = runCatching { Currency.getInstance(Resources.getSystem().configuration.locales[0]) }.getOrNull() ?: Currency.getInstance("CNY")
     minimumFractionDigits = 2; maximumFractionDigits = 2
 }.format(BigDecimal(cents, 2))

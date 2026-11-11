@@ -25,7 +25,7 @@ data class MediaReference(val key: String, val checksum: String, val size: Long,
     }
 }
 
-/** Files are content-addressed and never modified after publication. Call under DatabaseHost's gate. */
+/** 文件按内容寻址，发布后不再修改；调用时须处于 DatabaseHost 的门禁内。 */
 class MediaObjects(private val directory: File) {
     fun file(reference: MediaReference): File = File(directory, reference.key)
     fun available(reference: MediaReference): Boolean = file(reference).let {

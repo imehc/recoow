@@ -136,7 +136,7 @@ class RoomTracksRepository(private val host: DatabaseHost, private val deviceId:
             }
             is SegmentEdit.Merge -> {
                 val neighbor = segments.getOrNull(index + if (edit.previous) -1 else 1); requireNotNull(neighbor)
-                // An explicit recording gap is not silently filled by a merge.
+                // 记录时显式留下的空档，不会被合并悄悄填平。
                 require(if (edit.previous) neighbor.end == selected.start else selected.end == neighbor.start)
                 update(selected, minOf(selected.start, neighbor.start), maxOf(selected.end, neighbor.end))
                 changes += storage.change("track_segments", neighbor.id, deleted = true)

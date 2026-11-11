@@ -11,7 +11,7 @@ import android.os.SystemClock
 import imehc.recoow.core.domain.media.PreparedMedia
 import java.io.File
 
-/** Foreground-only, composition-owned recorder. Every stop, failure, focus loss and disposal releases it. */
+/** 仅前台使用、由 Composable 持有生命周期的录音器；停止、失败、失焦和销毁时都会释放。 */
 class AudioRecorder(private val context: Context, private val onInterrupted: () -> Unit) {
     private var recorder: MediaRecorder? = null
     private var file: File? = null

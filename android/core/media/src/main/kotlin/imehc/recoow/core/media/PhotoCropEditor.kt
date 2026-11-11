@@ -43,7 +43,7 @@ fun PhotoCropEditor(source: PreparedMedia, processor: ImageProcessor, onCancel: 
         try { bitmap = processor.bitmap(source.file) }
         catch (e: CancellationException) { throw e } catch (_: Exception) { error = true }
     }
-    // Compose may still use the bitmap during a frame; allow GC to release this small bounded preview.
+    // Compose 可能在本帧内仍在使用该位图，因此交给 GC 释放这块有上限的小预览。
     Dialog(onDismissRequest = { if (!busy) onCancel() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Scaffold(Modifier.fillMaxSize(), topBar = {
             TopAppBar(title = { Text(stringResource(R.string.crop)) }, navigationIcon = {

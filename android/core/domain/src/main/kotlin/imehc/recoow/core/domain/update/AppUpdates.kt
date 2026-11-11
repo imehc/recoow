@@ -22,6 +22,6 @@ interface AppUpdates {
     val installed: InstalledAppVersion
     suspend fun check(): AppRelease?
     suspend fun download(release: AppRelease, progress: (Long, Long) -> Unit): PreparedAppUpdate
-    /** Revalidates the private APK before granting the system installer read access. */
+    /** 在授予系统安装器读取权限之前，先重新校验私有 APK。 */
     suspend fun installationUri(update: PreparedAppUpdate): String
 }

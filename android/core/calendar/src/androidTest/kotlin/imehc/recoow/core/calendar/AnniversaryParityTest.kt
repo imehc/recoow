@@ -64,8 +64,8 @@ class AnniversaryParityTest {
         val yearly: Boolean = true,
     )
 
-    // Expected values evaluated with AnniversaryRecord.swift / AnniversaryDateCalendar.swift
-    // and Foundation at iOS commit e0a02fc141fe4b511b3fef11a9bd270ef45e8ef1.
+    // 期望值由 AnniversaryRecord.swift / AnniversaryDateCalendar.swift
+    // 与 Foundation 在 iOS 提交 e0a02fc141fe4b511b3fef11a9bd270ef45e8ef1 上计算得出。
     private val cases = listOf(
         Case("leap day constructed in non-leap year", "2024-02-29T01:00:00Z", "2025-01-01T00:00:00Z",
             "2025-03-01T01:00:00Z", CalendarDate(1, 2024, 2, 29, false)),
@@ -105,10 +105,10 @@ class AnniversaryParityTest {
         val at0900: String,
     )
 
-    // Fixed Foundation results from AnniversaryRecord.swift / AnniversaryDateCalendar.swift
-    // at the same iOS baseline as the cases above. Six schedules share each input:
-    // 01:30 / 02:30 / 09:00, once / yearly; all once-only dates are before reference.
-    // 16 inputs cover 96 schedules without repeating the same fields in a JSON asset.
+    // Foundation 的固定结果取自 AnniversaryRecord.swift / AnniversaryDateCalendar.swift，
+    // 与上面的用例使用同一条 iOS 基线。每个输入对应六种日程：
+    // 01:30 / 02:30 / 09:00 各配一次性与每年，所有一次性日期都早于参考时间。
+    // 16 个输入覆盖 96 种日程，无需在 JSON 资源里重复相同的字段。
     private val timezoneCases = listOf(
         TimezoneCase("America/New_York", "2024-03-09T07:00:00Z", "2025-03-09T05:00:00Z",
             DateCalendar.GREGORIAN, CalendarDate(1, 2024, 3, 9, false),

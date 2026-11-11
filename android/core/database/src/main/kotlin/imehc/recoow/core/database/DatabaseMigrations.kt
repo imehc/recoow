@@ -2,7 +2,7 @@ package imehc.recoow.core.database
 
 import androidx.room.migration.Migration
 
-/** Version 1 is the first Android database. Add explicit migrations with each schema version. */
+/** 版本 1 是 Android 的首个数据库，此后每提升一次 schema 版本都要补写显式迁移。 */
 object DatabaseMigrations {
     val all: List<Migration> = listOf(object : Migration(1, 2) {
         override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {

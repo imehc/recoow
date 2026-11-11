@@ -25,7 +25,7 @@ object SyncManifest {
         return entries
     }
 
-    /** Return a normal bootstrap page so durable inbox/apply semantics remain shared. */
+    /** 返回普通引导分页，使收件箱与落库的持久化语义保持统一。 */
     fun hydrate(page: JsonObject, entries: List<JsonObject>, local: Map<Long, JsonObject>,
         mutations: Map<Long, String>, fetched: JsonObject?): JsonObject {
         val missing = entries.filter { it.integer("version") !in local }

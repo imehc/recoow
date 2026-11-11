@@ -11,7 +11,7 @@ data class UsageDay(val day: LocalDate, val count: Int)
 data class UsageOverview(val total: Int = 0, val today: Int = 0, val activeDays: Int = 0, val latest: Long? = null,
     val tools: List<ToolUsage> = emptyList(), val recent: List<UsageDay> = emptyList())
 
-/** Food is one entry per local day. Reminder dates represent tasks, never completion rows. */
+/** 食物按本地日期每天一条；提醒日期只为任务服务，从不代表打卡记录。 */
 fun usageOverview(sources: Map<ToolRoute, List<Long>>, now: Long, zone: ZoneId): UsageOverview {
     val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
     val normalized = ToolRoute.entries.associateWith { route ->

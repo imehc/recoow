@@ -22,7 +22,7 @@ import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 
-/** Opt-in real backend tests: pass syncBaseUrl via instrumentation arguments. No checked-in fixtures. */
+/** 需显式开启的真实后端测试：通过 instrumentation 参数传入 syncBaseUrl，不提交任何测试夹具。 */
 class SyncIntegrationTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val base get() = requireNotNull(InstrumentationRegistry.getArguments().getString("syncBaseUrl"))
@@ -124,7 +124,7 @@ class SyncIntegrationTest {
         }
         val seeds = client.store.manifestSeeds(session,listOf(entry))
         assertEquals(1,seeds.size)
-        // A subsequent edit occurs after the original inventory snapshot was compared.
+        // 这次编辑发生在原始清单快照比对完成之后。
         client.records.save(listOf(RecordChange("diary_tags","same","""{"name":"later","note":null}""",timestamp+2,client.vault.localDeviceId)))
         val hydrated = SyncManifest.hydrate(manifest,listOf(entry),seeds.mapValues {it.value.second},seeds.mapValues {it.value.first.mutationId},null)
         val bytes = hydrated.toString().encodeToByteArray()
@@ -137,7 +137,7 @@ class SyncIntegrationTest {
         assertEquals("later",pending.single().request.getValue("snapshot").jsonObject.text("name"))
         assertEquals(1L,pending.single().request.integer("baseVersion"))
         assertEquals(1L,client.store.target(session).appliedCursor)
-        // Replaying a committed page does not run matching twice or alter the queued edit.
+        // 重放已提交的分页不会重复匹配，也不会改动已排队的编辑。
         client.received.receivePage(session.scope,session.databaseToken,"manifest-test",bytes,page.entries.map {it.toString()},1,1,true,
             beforeReceive={error("Committed page must not run its transaction again")})
         assertEquals(1,client.store.pending(session,40).size)

@@ -27,7 +27,7 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 data class CropTransform(val zoom: Float = 1f, val panX: Float = 0f, val panY: Float = 0f, val rotation: Float = 0f) {
-    /** Shared by the preview and the exporter; translations are fractions of the crop square. */
+    /** 预览与导出共用；平移量按裁剪正方形的比例表示。 */
     fun matrix(width: Int, height: Int, side: Float): Matrix = Matrix().apply {
         postTranslate(-width / 2f, -height / 2f)
         val scale = max(side / width, side / height) * zoom.coerceIn(1f, 4f)
@@ -68,7 +68,7 @@ class ImageProcessor @Inject constructor(@param:ApplicationContext private val c
         BitmapFactory.decodeFile(file.path, options)
         require(options.outWidth > 0 && options.outHeight > 0 && options.outWidth.toLong() * options.outHeight <= 1_000_000_000L)
         var sample = 1
-        // Bound the original allocation as well as the output, including on low-memory API 26 devices.
+        // 原始采样与输出都要限制内存，在低内存的 API 26 设备上尤其如此。
         while (max(options.outWidth, options.outHeight) / sample > 2048) sample *= 2
         options.inJustDecodeBounds = false; options.inSampleSize = sample; options.inPreferredConfig = Bitmap.Config.ARGB_8888
         val decoded = requireNotNull(BitmapFactory.decodeFile(file.path, options)) { "Unsupported image" }
@@ -82,7 +82,7 @@ class ImageProcessor @Inject constructor(@param:ApplicationContext private val c
             try {
                 val ratio = minOf(1f, 2048f / max(oriented.width, oriented.height))
                 val result = createBitmap(max(1, (oriented.width * ratio).roundToInt()), max(1, (oriented.height * ratio).roundToInt()))
-                // Keep exported pixels independent of OEM Canvas dark-mode recoloring.
+                // 保证导出像素不受厂商 Canvas 深色模式重染的影响。
                 result.eraseColor(Color.WHITE)
                 Canvas(result).apply {
                     drawBitmap(oriented, null, android.graphics.Rect(0, 0, result.width, result.height), Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
@@ -113,7 +113,7 @@ class ImageProcessor @Inject constructor(@param:ApplicationContext private val c
         } catch (error: Throwable) { output.delete(); throw error }
     }
 
-    /** A failure here is independent of saving the private draft. No broad gallery read permission is used. */
+    /** 此处失败不影响私有草稿的保存；整个过程不需要申请相册读取权限。 */
     suspend fun saveToGallery(content: PreparedMedia) = withContext(Dispatchers.IO) {
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, "Recoow-${UUID.randomUUID()}.jpg")

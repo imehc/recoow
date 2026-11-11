@@ -15,7 +15,7 @@ class IosBackupInspectorTest {
     @get:Rule val temporary = TemporaryFolder(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir)
 
     @Test fun readsIOSMetadataWithoutCopyingIdentityAndWithoutMaterializingLargeBlobs() = runTest {
-        // Synthetic values in the format emitted by iOS DatabaseBackupMetadata (schema 36).
+        // 按 iOS DatabaseBackupMetadata（schema 36）的输出格式构造的合成数据。
         val metadata = """{
             "formatVersion":1,"databaseSchemaVersion":36,"appVersion":"1.0","appBuild":"1",
             "exportedAt":"2026-10-29T00:00:00Z","sourceDeviceID":"fixture-device",

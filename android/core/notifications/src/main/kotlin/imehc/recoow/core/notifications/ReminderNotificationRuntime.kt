@@ -79,7 +79,7 @@ class ReminderNotificationRuntime @Inject constructor(@param:ApplicationContext 
         val records = repository.reminders.first()
         val clock = System.currentTimeMillis(); val zone = ZoneId.systemDefault()
         val desired = if (state.value.allowed) records.filter { it.enabled }.flatMap { r ->
-            // One next occurrence per task; delivery/check-in/periodic recovery replenishes it.
+            // 每个任务只排一次下次发生；投递、打卡和周期恢复都会补排。
             r.upcoming(clock, zone, 1).flatMap { occurrence ->
                 val day = Instant.ofEpochMilli(occurrence).atZone(zone).toLocalDate().toString()
                 listOf(AlarmKey(r.id, day, "main", occurrence), AlarmKey(r.id, day, "lead", occurrence - r.lead * 60_000L))
@@ -88,7 +88,7 @@ class ReminderNotificationRuntime @Inject constructor(@param:ApplicationContext 
         }.associateBy { it.key } else emptyMap()
         val old = ledger.getStringSet("scheduled", emptySet()).orEmpty()
         for (key in old - desired.keys) alarms.cancel(pending(key))
-        // Keep delivered reminders visible until the task/date is no longer actionable.
+        // 已投递的提醒保持可见，直到对应任务或日期不再可操作。
         manager.activeNotifications.filter { it.notification.channelId == CHANNEL }.forEach { notification ->
             val parts = notification.tag?.let(Uri::parse)?.pathSegments.orEmpty()
             val record = records.firstOrNull { it.id == parts.getOrNull(0) }
@@ -107,7 +107,7 @@ class ReminderNotificationRuntime @Inject constructor(@param:ApplicationContext 
                 scheduled += key
             } catch (_: Exception) { success = false }
         }
-        // Recovery retries desired schedules from current records; business data is unchanged.
+        // 恢复时按当前记录重试期望的日程，业务数据本身不变。
         check(ledger.edit().putStringSet("scheduled", scheduled).commit())
         if (success && state.value.allowed) host.access(token) { db -> jobs.forEach { db.records().delivered(it.tableName, it.entityId, it.version) } }
         mutable.update { it.copy(failed = !success) }
@@ -140,10 +140,10 @@ class ReminderNotificationRuntime @Inject constructor(@param:ApplicationContext 
                 BitmapFactory.decodeFile(it.path, options)?.let { bitmap -> content.setLargeIcon(bitmap).setStyle(Notification.BigPictureStyle().bigPicture(bitmap).setSummaryText(r.note)) }
             }
         } catch (e: CancellationException) { if (e !is TimeoutCancellationException) throw e } catch (_: Exception) { /* Text remains deliverable. */ }
-        // Stable occurrence receipt prevents a reboot/replayed PendingIntent from alerting twice.
+        // 稳定的事件回执可避免重启或 PendingIntent 重放导致重复提醒。
         check(ledger.edit().putLong("sent:$key", scheduled).commit())
         manager.notify(key, 0, content.build())
-        // Bound old receipts while retaining a generous replay window.
+        // 限制旧回执的留存数量，同时保留足够宽的重放窗口。
         val cutoff = clock - TimeUnit.DAYS.toMillis(400)
         val edit = ledger.edit(); ledger.all.filter { it.key.startsWith("sent:") && (it.value as? Long ?: clock) < cutoff }.keys.forEach(edit::remove); edit.apply()
     }

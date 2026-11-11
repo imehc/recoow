@@ -41,7 +41,7 @@ data class SyncPage(val entries: List<JsonObject>, val cursor: Long, val more: B
 data class Receipt(val mutation: String, val status: String, val version: Long, val current: JsonObject?)
 
 object SyncProtocol {
-    /** Normalize zero deletion timestamps before the persistence layer sees an envelope. */
+    /** 在持久化层看到信封之前，先把为 0 的删除时间归一化。 */
     fun row(raw: JsonObject): JsonObject {
         val table = raw.text("table"); val id = raw.text("id"); val device = raw.text("deviceId")
         val version = raw.integer("version"); val updated = raw.integer("updatedAtMs")

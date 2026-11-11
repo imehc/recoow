@@ -4,7 +4,7 @@ import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 
-/** Stable tool IDs are shared with iOS, deep links and home visibility preferences. */
+/** 工具 ID 需保持稳定，与 iOS、深链以及首页可见性偏好共用。 */
 enum class ImportScope(val toolId: String, val tables: Set<String>) {
     BILLS("bills", setOf("stored_value_accounts", "stored_value_adjustments", "bills")),
     REMINDERS("reminders", setOf("reminders", "reminder_completions")),

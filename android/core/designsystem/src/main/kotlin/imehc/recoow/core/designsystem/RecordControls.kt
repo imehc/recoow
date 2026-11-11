@@ -17,7 +17,7 @@ import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 
-/** The existing clickable container owns the action; expose its value on the same node. */
+/** 动作由既有的可点击容器承载，数值挂在同一语义节点上。 */
 fun Modifier.recordToggleState(checked: Boolean, controlRole: Role = Role.Checkbox): Modifier = semantics {
     role = controlRole
     toggleableState = ToggleableState(checked)

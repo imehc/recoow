@@ -6,7 +6,7 @@ import java.math.RoundingMode
 
 enum class AmountField { ORIGINAL, FINAL, DISCOUNT, RATE }
 
-/** Decimal throughout: ordinary amounts round half-up to cents; discount multiplication truncates. */
+/** 全程使用十进制：普通金额四舍五入到分，折扣乘法直接截断。 */
 object BillMoney {
     fun cents(text: String): Long? = parse(text.replace(",", "").replace("¥", ""))?.let {
         runCatching { it.movePointRight(2).setScale(0, RoundingMode.HALF_UP).longValueExact() }.getOrNull()

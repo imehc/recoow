@@ -59,7 +59,7 @@ class RoomMediaRepository(private val host: DatabaseHost, private val cache: Fil
         if (refJson != null && refJson != JsonNull) {
             val ref = MediaReference.parse(refJson)
             if (objects.available(ref)) return ready(objects.file(ref), ref, title)
-            // An existing corrupt object must never be returned or decoded as a valid image.
+            // 已存在的损坏对象既不能返回，也不能当作有效图片解码。
             if (objects.file(ref).exists()) return ResolvedMedia(MediaAvailability.DAMAGED, title = title)
             return ResolvedMedia(MediaAvailability.PENDING, title = title)
         }
@@ -72,7 +72,7 @@ class RoomMediaRepository(private val host: DatabaseHost, private val cache: Fil
                 return ready(source, objects.capture(source, row.text("mime_type")!!), title)
             }
         }
-        // Stream legacy BLOBs through a private file; thumbnails never materialize the original in a CursorWindow.
+        // 把旧版 BLOB 经私有文件中转；缩略图绝不在 CursorWindow 里展开原图。
         cache.mkdirs()
         val temporary = File.createTempFile("legacy-", ".tmp", cache)
         try {
@@ -109,7 +109,7 @@ class RoomMediaRepository(private val host: DatabaseHost, private val cache: Fil
                         put("kind", JsonPrimitive("image")); put("title", titleJson(title)); put("sort_order", JsonPrimitive(order - 1))
                     }
                     writer.saveInTransaction(db, listOf(change("media_assets", id, JsonObject(fields), mapOf("inline_data" to bytes))))
-                    // The immutable object is authoritative; avoid retaining a second full copy in SQLite.
+                    // 以不可变对象为准，避免在 SQLite 里再留一份完整副本。
                     db.openHelper.writableDatabase.execSQL("UPDATE media_assets SET inline_data = NULL WHERE id = ?", arrayOf(id))
                 }
         }
@@ -154,7 +154,7 @@ class RoomMediaRepository(private val host: DatabaseHost, private val cache: Fil
         saveAttachmentsInTransaction(db, owner, attachments, ownerChange)
     }
 
-    /** Feature repositories own the host gate so owner, links and media commit or roll back together. */
+    /** 宿主门禁由功能仓库持有，使属主、关联与媒体一起提交或回滚。 */
     internal suspend fun saveAttachmentsInTransaction(db: RecoowDatabase, owner: AttachmentOwner,
         attachments: List<MediaAttachment>, ownerChange: RecordChange? = null) {
         check(db.inTransaction())
@@ -171,7 +171,7 @@ class RoomMediaRepository(private val host: DatabaseHost, private val cache: Fil
             require(prior == null || (prior.live && prior.text("owner_type") == owner.type.wire && prior.text("owner_id") == owner.id))
             val asset = attachment.assetId?.let {
                 require(attachment.kind == AttachmentKind.PHOTO)
-                // Keep a pre-existing unresolved reference when only editing the owner or attachment order.
+                // 仅修改属主或附件顺序时，保留原有的未解析引用。
                 if (prior?.text("asset_id") == it) snapshot(db, "media_assets", it)?.takeIf { row -> row.live }
                 else liveAsset(db, it)
             }
@@ -199,7 +199,7 @@ class RoomMediaRepository(private val host: DatabaseHost, private val cache: Fil
                 put("height", (asset?.int("height") ?: content?.height ?: attachment.height)?.let(::JsonPrimitive) ?: JsonNull)
                 put("duration_seconds", (content?.durationSeconds ?: attachment.durationSeconds)?.let(::JsonPrimitive) ?: JsonNull)
             }
-            // Write one attachment at a time to bound memory for arbitrarily long photo/audio lists.
+            // 逐条写入附件，为任意长度的图片或音频列表限定内存占用。
             writer.saveInTransaction(db, listOf(change("media_attachments", attachment.id, fields, binary)))
         }
         val deleted = existing.filter { row -> attachments.none { it.id == row.text("id") } }
@@ -208,8 +208,8 @@ class RoomMediaRepository(private val host: DatabaseHost, private val cache: Fil
     }
 
     override suspend fun collectOrphans(): Int = host.access { db ->
-        // Retain all durable histories, even acknowledged mutations and tombstones. Their bytes can be
-        // needed by conflict resolution, frozen retries and generation reseeding. Rollback owns separate copies.
+        // 保留所有持久化历史，包括已确认的变更和墓碑；其字节可能被
+        // 冲突处理、冻结重试和代际重播种用到，回滚另存独立副本。
         val retained = mutableSetOf<String>()
         val hash = Regex("(?:sync/)?[a-f0-9]{64}")
         val columns = mapOf("entity_snapshots" to listOf("json"), "local_changes" to listOf("payloadJson"),

@@ -18,7 +18,7 @@ android {
     }
 }
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
-// The Room plugin declares schema inputs/outputs and restores exports on KSP cache hits.
+// Room 插件声明了 schema 的输入与输出，KSP 命中缓存时也能恢复导出的 schema。
 room { schemaDirectory(layout.buildDirectory.dir("roomSchemas").get().asFile.path) }
 
 val generatedDatabase = layout.buildDirectory.dir("generated/database")

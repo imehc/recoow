@@ -51,7 +51,7 @@ class AndroidAppUpdates @Inject constructor(@ApplicationContext private val cont
     override suspend fun check(): AppRelease? = withContext(Dispatchers.IO) {
         try {
             response(UpdatePolicy.MANIFEST_URL).use { response ->
-                // A repository without its first release has nothing to update to.
+                // 仓库还没有首个发布版本时，没有可更新的目标。
                 if (response.code == 404) return@withContext null
                 if (!response.isSuccessful) throw AppUpdateException(AppUpdateProblem.CONNECTION)
                 val bytes = response.body.byteStream().use { input ->

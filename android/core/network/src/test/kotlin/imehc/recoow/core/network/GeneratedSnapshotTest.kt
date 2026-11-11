@@ -10,7 +10,7 @@ import org.junit.Test
 
 @OptIn(ExperimentalSerializationApi::class)
 class GeneratedSnapshotTest {
-    // The serializer must preserve wire presence even with common application JSON settings.
+    // 即使采用应用常见的 JSON 配置，序列化器也必须保留字段在传输中的存在性。
     private val json = Json { explicitNulls = false; encodeDefaults = false }
     private val source = Json.parseToJsonElement("""{
         "id":"bill", "created_at":1000, "updated_at":1000, "device_id":"device",

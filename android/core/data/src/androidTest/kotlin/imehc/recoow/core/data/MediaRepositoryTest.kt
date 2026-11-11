@@ -117,7 +117,7 @@ class MediaRepositoryTest {
         val owner = AttachmentOwner(AttachmentOwnerType.FOOD_ENTRY, "food")
         records.save(listOf(change("food_day_records", "day")))
         val ownerFields = fixture("food_entries")
-        // Metadata-only existing audio represents received, not-yet-downloaded content.
+        // 只有元数据的既有音频，表示已接收但尚未下载完成的内容。
         val audioId = "audio"
         records.save(listOf(change("food_entries", owner.id, ownerFields), change("media_attachments", audioId,
             JsonObject(fixture("media_attachments").toMutableMap().apply {

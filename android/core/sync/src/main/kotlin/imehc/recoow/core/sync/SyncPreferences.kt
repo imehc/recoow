@@ -2,7 +2,7 @@ package imehc.recoow.core.sync
 
 import android.content.Context
 
-/** Connection preferences are installation-local and keyed by normalized server plus account. */
+/** 连接偏好只属于本机安装，键为归一化服务器地址加账户。 */
 interface SyncPreferences {
     fun clear() {}
     fun enabled(connection: Credentials): Boolean

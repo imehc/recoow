@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-/** Uses the common recovery worker and alarm receiver; receipts and channel remain feature-specific. */
+/** 复用公共的恢复 Worker 与闹钟接收器；回执与通知渠道仍由各功能自己定义。 */
 @Singleton
 class AnniversaryNotificationRuntime @Inject constructor(@param:ApplicationContext private val context: Context,
     private val repository: AnniversariesRepository, private val calendar: AnniversaryCalendar, private val host: DatabaseHost) : AnniversaryNotifications {
@@ -108,7 +108,7 @@ object AnniversaryNotificationModule {
     @Provides fun notifications(runtime: AnniversaryNotificationRuntime): AnniversaryNotifications = runtime
 }
 
-// Sync acknowledgement changes storage revisions without changing the scheduled reminder.
+// 同步确认只改变存储修订号，不影响已排定的提醒。
 internal fun anniversaryAlarmRevision(record: Anniversary): String {
     val values = listOf(record.id, record.title, record.note, record.category.wire, record.occurredAt.toString(),
         record.calendar.name, record.yearly.toString(), record.minutes.toString(), record.lead.toString(), record.enabled.toString())

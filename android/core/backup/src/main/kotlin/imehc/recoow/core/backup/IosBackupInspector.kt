@@ -13,7 +13,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
-/** Reads a private copy. Inspection never opens or replaces the application's live database. */
+/** 只读取私有副本；检查过程不会打开或替换应用正在使用的数据库。 */
 class IosBackupInspector(private val temporaryDirectory: File) {
     suspend fun inspect(openSource: () -> InputStream, maximumBytes: Long = 2L * 1024 * 1024 * 1024): BackupPreview =
         withContext(Dispatchers.IO) {
@@ -68,7 +68,7 @@ class IosBackupInspector(private val temporaryDirectory: File) {
                         db.rawQuery("SELECT count(*) FROM \"$table\"", null).use { it.moveToFirst(); it.getLong(0) }
                     }
                     val mediaBytes = if ("media_assets" in tables && hasColumn(db, "media_assets", "inline_data")) {
-                        // Do not load BLOBs through CursorWindow: a photo can exceed its row limit.
+                        // 不要经 CursorWindow 读取 BLOB：单张照片就可能超出其行大小上限。
                         db.rawQuery("SELECT coalesce(sum(length(inline_data)), 0) FROM media_assets", null).use { it.moveToFirst(); it.getLong(0) }
                     } else 0L
                     BackupPreview(format, schema, metadata.getString("appVersion"), metadata.getString("appBuild"),

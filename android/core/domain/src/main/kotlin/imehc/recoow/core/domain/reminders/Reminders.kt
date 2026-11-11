@@ -61,7 +61,7 @@ data class Reminder(val id: String, val revision: String, val title: String, val
         val range = missedWindow(now, zone) ?: return null
         val completed = dates
         var day = range.start
-        // No calendar scan through decades: at most the number of existing completions + 1.
+        // 不逐日扫描几十年日历：迭代次数最多为已有打卡数加一。
         while (day <= range.endInclusive && day in completed) day = day.plusDays(1)
         return day.takeIf { it <= range.endInclusive }
     }
@@ -87,7 +87,7 @@ data class Reminder(val id: String, val revision: String, val title: String, val
         val first = maxOf(start(zone), Instant.ofEpochMilli(now).atZone(zone).toLocalDate())
         val completed = dates
         val result = mutableListOf<Long>()
-        // The iOS search horizon is 370 days inclusive.
+        // iOS 的搜索范围含边界共 370 天。
         for (offset in 0L..370L) {
             val day = first.plusDays(offset)
             if (kind == ScheduleKind.CONTINUOUS) {
@@ -128,7 +128,7 @@ data class Reminder(val id: String, val revision: String, val title: String, val
     }
 }
 
-/** Calendar.nextTime resolves a DST gap at its end, rather than adding the gap to the requested minute. */
+/** Calendar.nextTime 把夏令时空档解析到空档结束处，而不是把空档长度加到指定分钟上。 */
 fun localTime(day: LocalDate, minutes: Int, zone: ZoneId): Long {
     val local = day.atTime((minutes / 60).coerceIn(0, 23), (minutes % 60).coerceIn(0, 59))
     val transition = zone.rules.getTransition(local)

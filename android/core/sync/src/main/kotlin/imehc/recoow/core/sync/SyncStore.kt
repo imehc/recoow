@@ -29,7 +29,7 @@ class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStor
 
     suspend fun hasDatasetBinding(): Boolean = host.access { it.records().activeScope() != null }
 
-    /** Renewing device credentials must not create another sync history for the same local dataset. */
+    /** 续期设备凭据不能为同一本地数据集再建一条同步历史。 */
     suspend fun alignConnection(connection: Credentials): Credentials = host.access { db ->
         val active = db.records().activeScope()?.let { db.records().target(it) } ?: return@access connection
         if (active.accountId != connection.account || active.connectionId.substringBefore(':') != connection.connectionId.substringBefore(':')) {
@@ -105,7 +105,7 @@ class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStor
             val snapshot = Json.parseToJsonElement(record.json).jsonObject
             val binary = mutableMapOf<String, ByteArray?>()
             for (field in contract.fields.filter { it.binary }) {
-                // Preserve incoming references when the bytes have not downloaded yet.
+                // 字节尚未下载完成时，保留下行引用。
                 if (snapshot["_media"]?.jsonObject?.containsKey(field.name) == true || table == "media_assets" && snapshot["_media"]?.jsonObject?.containsKey("object") == true) continue
                 binary[field.name] = PhysicalRecords.binary(db.openHelper.writableDatabase, table, record.entityId, field.name)
             }
@@ -118,7 +118,7 @@ class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStor
         val mutation = UUID.randomUUID().toString()
         val operation = if (payload["deleted_at"] != null && payload["deleted_at"] != JsonNull) "delete" else "update"
         val version = contracts.getValue(table)
-        // Initial inventory is not a new local edit. Zero identifies an unsent seed.
+        // 初始清单不算新的本地编辑；为 0 表示尚未发送的种子。
         val local = if (seed) 0L else db.records().log(LocalChange(mutationId = mutation, tableName = table, entityId = id, operation = operation,
             dataVersion = version, payloadJson = payload.toString(), changedAt = payload.integer("updated_at")))
         val origin = db.records().origin(table, id, payload.text("device_id"), payload.integer("updated_at"))
@@ -148,7 +148,7 @@ class SyncStore(val host: DatabaseHost, private val received: ReceivedRecordStor
         }
     }
 
-    // Runs in the same transaction as inbox insertion and bootstrap progress.
+    // 与收件箱写入、引导进度在同一事务内执行。
     suspend fun matchManifestSeeds(db: RecoowDatabase, scope: String, page: JsonObject) {
         check(db.inTransaction())
         val entries = page.getValue("entries").jsonArray.map { it.jsonObject }.associateBy { it.integer("version") }

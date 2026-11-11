@@ -18,7 +18,7 @@ internal fun diarySource(source: DiarySource, row: EntitySnapshot, categories: M
         DiarySource.ITEM -> listOfNotNull(f.text("location"), categories[f.text("category_id")])
         DiarySource.CHOICE -> listOfNotNull(f.text("collection_title"), f.text("option_detail"))
     }.filter { it.isNotBlank() }.joinToString(" · ").takeIf { it.isNotEmpty() }
-    // Snapshot field names follow the iOS Codable snapshots, independently of database snake_case names.
+    // 快照字段名跟随 iOS 的 Codable 快照，与数据库里的 snake_case 命名无关。
     val names = when (source) {
         DiarySource.TRACK -> mapOf("name" to "name", "startedAt" to "started_at", "endedAt" to "ended_at", "distanceMeters" to "distance_m", "durationSeconds" to "duration_s", "note" to "note")
         DiarySource.BILL -> mapOf("title" to "title", "finalAmountCents" to "final_amount_cents", "transactionType" to "transaction_type", "category" to "category", "paymentMethod" to "payment_method", "startLocation" to "start_location", "endLocation" to "end_location", "occurredAt" to "occurred_at", "note" to "note")

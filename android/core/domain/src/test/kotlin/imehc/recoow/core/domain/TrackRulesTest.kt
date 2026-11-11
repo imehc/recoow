@@ -7,8 +7,8 @@ import org.junit.Test
 
 class TrackRulesTest {
     private data class Expected(val start: Long, val end: Long, val distance: Double, val duration: Long, val average: Double, val maximum: Double, val motion: MotionType, val confidence: Double)
-    // Generated once with the repository's actual Swift TrackSegmentAnalyzer and CoreLocation.
-    // WGS84 implementations may differ by <= 5 cm per segment and 0.001 m/s.
+    // 用仓库中真实的 Swift TrackSegmentAnalyzer 与 CoreLocation 生成一次。
+    // 不同 WGS84 实现的差异可控制在每段 5 厘米、速度 0.001 米/秒以内。
     @Test fun segmentationMatchesSwiftForSmoothingFilteringGapsAndThresholds() {
         val expected = listOf(
             listOf(

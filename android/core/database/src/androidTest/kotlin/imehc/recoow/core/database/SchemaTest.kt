@@ -24,7 +24,7 @@ class SchemaTest {
                 db.execSQL("INSERT INTO decision_collections(id,created_at,updated_at,device_id,title,sync_status) VALUES('id',1,2,'device','title',0)")
                 db.execSQL("INSERT INTO sync_targets(scope,connectionId,accountId,generation,receivedCursor,appliedCursor,bootstrapWatermark,bootstrapAfter,bootstrapComplete,seeded,failureCount,nextAttemptAt) VALUES('scope','c','a','g',42,40,42,0,1,1,0,0)")
             }
-            // No room_master_table is seeded: Room must validate the historical SQL before accepting it.
+            // 不预置 room_master_table，必须让 Room 自行校验历史 SQL 后才接受该数据库。
             val db = room.openHelper.writableDatabase
             assertEquals(DatabaseHost.VERSION, db.version)
             db.query("SELECT title FROM decision_collections WHERE id='id'").use { it.moveToFirst(); assertEquals("title", it.getString(0)) }

@@ -22,7 +22,7 @@ import retrofit2.http.*
 class SyncHttpException(val status: Int, val resetRequired: Boolean = false) : IOException("HTTP $status")
 class SyncEndpointException : IllegalArgumentException("Invalid server address")
 
-/** No ambient credentials or mutable interceptor: one API instance belongs to one connection. */
+/** 不使用全局凭据或可变拦截器：一个 API 实例只属于一条连接。 */
 interface SyncApi {
     suspend fun get(path: String, query: Map<String, String> = emptyMap()): ByteArray
     suspend fun delete(path: String): ByteArray
@@ -59,7 +59,7 @@ class SyncApiFactory(private val allowLocalHttp: Boolean = false, private val pr
             require(url.isHttps || allowLocalHttp && local)
             return url.newBuilder().encodedPath(url.encodedPath.trimEnd('/') + "/").build().toString()
         } catch (_: IllegalArgumentException) {
-            // URL parser errors can contain credentials from the supplied address.
+            // URL 解析错误信息可能带出地址中的凭据。
             throw SyncEndpointException()
         }
     }
@@ -100,7 +100,7 @@ class SyncApiFactory(private val allowLocalHttp: Boolean = false, private val pr
                 withContext(Dispatchers.IO) {
                     body.use {
                         require(it.contentLength() <= limit) { "Media exceeds declared size" }
-                        // v2 may reuse identical bytes with different MIME metadata. Identity is SHA-256 + size.
+                        // v2 允许相同字节配不同 MIME 元数据复用，因此身份由 SHA-256 加大小确定。
                         require(it.contentType() != null) { "Invalid media content type" }
                         it.byteStream().use { input -> file.outputStream().use { output ->
                             val buffer = ByteArray(64 * 1024); var count = 0L
@@ -120,7 +120,7 @@ class SyncApiFactory(private val allowLocalHttp: Boolean = false, private val pr
 
     private suspend fun read(response: Response<ResponseBody>): ByteArray = withContext(Dispatchers.IO) {
         checked(response).use { body ->
-            // Large pages contain full snapshots. Bound allocation without truncating accepted data.
+            // 大分页包含完整快照，需限制内存分配，但不能截断已接受的数据。
             val max = 64L * 1024 * 1024
             require(body.contentLength() <= max) { "Sync response too large" }
             body.byteStream().use { stream ->
@@ -143,7 +143,7 @@ class SyncApiFactory(private val allowLocalHttp: Boolean = false, private val pr
     }
 
     private fun failure(response: Response<*>): Nothing {
-        // Never surface response bodies (which may contain credentials or user records) to logs/UI.
+        // 响应体可能含凭据或用户记录，绝不能输出到日志或界面。
         val error = response.errorBody()?.use { it.byteStream().readBytesLimited(4096).decodeToString() }
         throw SyncHttpException(response.code(), response.code() == 409 && error?.contains("reset_required") == true)
     }

@@ -124,7 +124,7 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
                 val normalized = apiProvider.endpoint(endpoint)
                 if (method == ConnectionMethod.CREATE && (credentials.load() != null || store.hasDatasetBinding())) throw AccountReplacementRequired()
                 val public = apiProvider.create(normalized)
-                // A completed registration is journaled before any dataset/backup operation.
+                // 注册完成后先记入日志，再执行任何数据集或备份操作。
                 val staged = pendingCredentials.load()?.takeIf { it.endpoint == normalized && method == ConnectionMethod.CREATE }
                 val fresh = staged ?: run {
                     val path = when (method) { ConnectionMethod.CREATE -> "api/accounts"; ConnectionMethod.PAIR -> "api/device-pairings"; ConnectionMethod.RECOVER -> "api/account-recoveries"; ConnectionMethod.LOGIN -> "api/device-logins" }
@@ -178,7 +178,7 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
         } finally { disabling = false }
     } }
 
-    /** Local sign-out keeps the dataset binding and pending edits for the same account. */
+    /** 本地退出登录会保留同一账户的数据集绑定与待提交编辑。 */
     private fun clearConnection() {
         credentials.load()?.let { preferences.setEnabled(it, false) }
         credentials.save(null); pendingCredentials.save(null)
@@ -315,7 +315,7 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
             if (manual) store.access(session) { db -> db.withTransaction {
                 db.openHelper.writableDatabase.execSQL("UPDATE sync_media_jobs SET nextAttemptAt = 0 WHERE scope = ? AND state = 'pending'", arrayOf(activeScope))
             } }
-            // A resumed raw page is replayed before requesting the same position again.
+            // 续传的原始分页会先重放，再重新请求相同的位置。
             receivePages(session, api, caps, bootstrapOnly = true)
             received.applyPending(session.scope, session.databaseToken)
             mutableState.update { it.copy(stage = SyncStage.UPLOADING) }
@@ -332,12 +332,12 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
                     })
                     val receipts = SyncProtocol.receipts(decodeObject(response), ready.map { it.request })
                     store.acknowledge(session, ready, receipts)
-                    // Rejected dependency rows can retry after the remaining batch and inbound pull.
+                    // 被拒绝的依赖行可在剩余批次与下行拉取完成后重试。
                     if (receipts.none { it.status in setOf("applied", "duplicate", "conflict") }) break
                 }
             } catch (cancelled: CancellationException) { throw cancelled
             } catch (error: Exception) { outboundProblem = error }
-            // Conflicts, bad outbound data and upload failures never starve incoming changes.
+            // 冲突、非法的上行数据和上传失败都不能阻塞下行变更。
             mutableState.update { it.copy(stage = SyncStage.DOWNLOADING) }
             receivePages(session, api, caps, bootstrapOnly = false)
             received.applyPending(session.scope, session.databaseToken)
@@ -404,7 +404,7 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
                 SyncManifest.hydrate(manifest, entries, seeds.mapValues { it.value.second },
                     seeds.mapValues { it.value.first.mutationId }, snapshots).toString().encodeToByteArray()
             } else api.get(if (target.bootstrapComplete) "api/sync/changes" else "api/sync/snapshots", query(target, caps.pullLimit))
-            // Store bytes before decoding JSON, row contracts, or cursors.
+            // 先落盘字节，再解析 JSON、行契约或游标。
             store.access(session) { }
             received.persistRaw(session.scope, session.databaseToken, key, bytes)
             val page = SyncProtocol.page(decodeObject(bytes), target.generation,

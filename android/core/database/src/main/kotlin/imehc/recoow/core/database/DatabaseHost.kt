@@ -13,7 +13,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-/** Called only while every database/media/preference writer is excluded and Room is closed. */
+/** 仅在排除数据库、媒体、偏好等全部写入方且 Room 已关闭时才调用。 */
 interface DatabaseRecovery {
     suspend fun beforeOpen(version: Int)
     suspend fun opened()
@@ -53,7 +53,7 @@ class DatabaseHost(
         emitAll(current.flatMapLatest { database -> if (database == null) emptyFlow() else query(database) })
     }
 
-    /** Internal maintenance boundary; the action may only use the supplied database and media root. */
+    /** 内部维护边界：传入的动作只能使用给定的数据库与媒体根目录。 */
     suspend fun <T> guarded(reason: String, action: suspend (RecoowDatabase, File) -> T): T = withContext(Dispatchers.IO) {
         gate.withLock {
             open()
@@ -63,7 +63,7 @@ class DatabaseHost(
                 val database = build()
                 val result = action(database, mediaDirectory)
                 closeCurrent()
-                // Validate the result before removing the recovery marker or publishing it to readers.
+                // 先校验结果，再清除恢复标记或将其发布给读取方。
                 val validated = build()
                 validated.openHelper.writableDatabase.query("PRAGMA integrity_check(1)").use {
                     check(it.moveToFirst() && it.getString(0) == "ok") { "Invalid database after maintenance" }
@@ -75,7 +75,7 @@ class DatabaseHost(
                 current.value = validated
                 result
             } catch (error: Throwable) {
-                // Cancellation cannot interrupt rollback and expose half-restored data.
+                // 回滚不响应取消，避免中断后暴露只恢复了一半的数据。
                 withContext(kotlinx.coroutines.NonCancellable) {
                     closeCurrent()
                     try { recovery.failed(); open() } catch (rollback: Throwable) { error.addSuppressed(rollback) }

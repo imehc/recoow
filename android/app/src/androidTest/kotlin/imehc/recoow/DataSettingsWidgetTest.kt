@@ -27,11 +27,11 @@ class DataSettingsWidgetTest {
             instrumentation.uiAutomation.adoptShellPermissionIdentity("android.permission.BIND_APPWIDGET")
             try { block() } finally { instrumentation.uiAutomation.dropShellPermissionIdentity() }
         } else {
-            // API26–28 have no shell-identity API. Scope the legacy grant to this test package.
+            // API26–28 没有 shell 身份接口，因此把旧版授权范围限定在本测试包内。
             fun shell(command: String) = ParcelFileDescriptor.AutoCloseInputStream(
                 instrumentation.uiAutomation.executeShellCommand(command)
             ).bufferedReader().use { it.readText().trim() }
-            // API26's appwidget command does not resolve the symbolic "current" user.
+            // API26 的 appwidget 命令无法解析符号用户「current」。
             val user = shell("am get-current-user").toInt()
             fun permission(command: String) {
                 assertEquals("", shell("appwidget $command --package ${context.packageName} --user $user"))

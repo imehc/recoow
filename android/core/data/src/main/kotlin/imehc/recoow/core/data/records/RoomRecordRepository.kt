@@ -27,7 +27,7 @@ class RoomRecordRepository(private val host: DatabaseHost, private val zone: () 
         database.withTransaction { saveInTransaction(database, changes) }
     }
 
-    /** The caller owns DatabaseHost and the Room transaction; never reenter the host gate here. */
+    /** DatabaseHost 与 Room 事务由调用方持有，此处不得重入宿主门禁。 */
     internal suspend fun saveInTransaction(database: RecoowDatabase, changes: List<RecordChange>, inheritedMedia: Map<String, JsonObject> = emptyMap()) {
         check(database.inTransaction())
         val dao = database.records()

@@ -6,7 +6,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 
-/** Refresh immediately on return and across midnight/time-zone changes while visible. */
+/** 返回时立即刷新，页面可见期间跨越零点或时区变化时同样刷新。 */
 @Composable
 fun RecordRefreshEffect(intervalMillis: Long = 30_000, refresh: () -> Unit) {
     val current by rememberUpdatedState(refresh)

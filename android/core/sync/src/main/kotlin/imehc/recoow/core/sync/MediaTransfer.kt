@@ -29,7 +29,7 @@ class MediaTransfer(private val store: SyncStore, private val temporaryDirectory
                             require(MediaReference.parse(response) == ref) { "Invalid media receipt" }
                         }
                     } else {
-                        // An untouched remote reference may be queued before its download finishes.
+                        // 尚未处理的远端引用，可能在下载完成前就已入队。
                         api.download(ref.key, temporary, ref.size)
                         require(temporary.length() == ref.size && MediaObjects.checksum(temporary) == ref.checksum)
                     }

@@ -65,7 +65,7 @@ class ReminderNavigationTest {
         compose.activityRule.scenario.recreate()
         compose.onNodeWithTag("tool_reminders").assertIsDisplayed()
 
-        // A fresh delivery of the same external link must still reopen the detail.
+        // 同一外部链接再次送达时，仍须重新打开详情页。
         open(record.id)
         compose.onNodeWithTag("reminder_detail").assertIsDisplayed()
     }

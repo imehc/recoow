@@ -4,7 +4,7 @@ import androidx.compose.runtime.saveable.Saver
 import imehc.recoow.core.domain.media.PreparedMedia
 import java.io.File
 
-/** Save only a private draft's path and metadata, never image/audio bytes in an Activity Bundle. */
+/** 只保存私有草稿的路径与元数据，绝不把图片或音频字节放进 Activity Bundle。 */
 val PreparedMediaSaver: Saver<PreparedMedia?, Any> = Saver(
     save = { value -> value?.let { listOf(it.file.path, it.mimeType, it.width ?: 0, it.height ?: 0, it.durationSeconds ?: -1.0) } ?: "" },
     restore = { saved ->

@@ -23,7 +23,7 @@ class BillStatistics(bills: List<BillRecord>, private val period: BillPeriod, pr
         BillMetric.DISCOUNT -> it.type == BillType.EXPENSE && it.amounts.discount > 0
         BillMetric.STORED_USE -> it.type == BillType.STORED_VALUE_USE
     } }
-    // iOS discount metric reports the recorded discount; cash totals use settlement/expiry rules.
+    // iOS 的折扣指标上报实际记录的折扣；现金合计按结算与过期规则计算。
     fun total(metric: BillMetric): BigInteger = if (metric == BillMetric.COUNT) BigInteger.valueOf(records.size.toLong())
         else rows(metric).fold(BigInteger.ZERO) { sum, r -> sum + BigInteger.valueOf(if (metric == BillMetric.DISCOUNT) r.amounts.discount else r.countedAmount(now)) }
     fun amount(record: BillRecord, metric: BillMetric) = if (metric == BillMetric.DISCOUNT) record.amounts.discount else record.countedAmount(now)

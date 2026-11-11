@@ -32,7 +32,7 @@ sealed interface SegmentEdit {
     data class Bounds(val start: Long, val end: Long) : SegmentEdit
     data class Merge(val previous: Boolean) : SegmentEdit
 }
-/** A recording lease is invalidated by database replacement, remote completion or deletion. */
+/** 记录租约在数据库被替换、远端已完成或记录被删除时失效。 */
 data class TrackSession(val track: Track, val token: Long, val start: Long)
 class TrackSessionExpiredException : IllegalStateException("Recording dataset or track changed")
 interface TracksRepository {

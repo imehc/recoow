@@ -28,7 +28,7 @@ internal fun RecoowDatabase.sourcePage(source: HistorySource, query: HistoryQuer
         args.addAll(listOf(it.timestamp, it.timestamp, "${source.route.id}:", it.key)) }
     val search = query.search.trim()
     if (search.isNotEmpty()) {
-        // Treat user percent/underscore literally, and bind every value rather than interpolating it.
+        // 用户输入的 % 与 _ 按字面处理，所有值一律参数绑定，不做字符串拼接。
         clauses += source.search.joinToString(" OR ", "(", ")") { "COALESCE($it, '') LIKE ? ESCAPE '\\'" }
         val pattern = "%" + search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
         repeat(source.search.size) { args += pattern }
@@ -49,7 +49,7 @@ internal suspend fun RecoowDatabase.reminderHistory(): List<HistoryEntry> {
     }
 }
 
-/** Only text and timestamps are projected: no image, attachment, or full entity payload is read. */
+/** 只投影文本与时间戳，不读取图片、附件或完整实体数据。 */
 internal fun RecoowDatabase.foodHistory(zone: ZoneId): List<HistoryEntry> {
     data class Day(var updated: Long, var count: Int = 0, val search: StringBuilder = StringBuilder())
     val days = linkedMapOf<LocalDate, Day>()
@@ -64,7 +64,7 @@ internal fun RecoowDatabase.foodHistory(zone: ZoneId): List<HistoryEntry> {
     openHelper.readableDatabase.query("SELECT day_start_at, title, updated_at FROM food_day_records WHERE deleted_at IS NULL").use { c ->
         while (c.moveToNext()) {
             val date = Instant.ofEpochMilli(c.getLong(0)).atZone(zone).toLocalDate()
-            // Match the feature repository's exact local day boundary, including DST and zone changes.
+            // 与功能仓库的本地日界保持一致，包括夏令时与时区变化的情形。
             if (date.atStartOfDay(zone).toInstant().toEpochMilli() == c.getLong(0)) {
                 titles[date] = c.getString(1); days[date]?.let { it.updated = maxOf(it.updated, c.getLong(2)) }
             }

@@ -55,7 +55,7 @@ class RoomFoodRepository(private val host: DatabaseHost, private val media: Room
     } }
     override suspend fun saveDayTitle(dayStartAt: Long, title: String, revision: String?) = host.access { db -> db.withTransaction {
         val id = foodDayId(dayStartAt); val row = db.records().snapshot("food_day_records", id)
-        // Recreating a deleted day keeps the cross-platform stable ID.
+        // 重建已删除的某一天时，沿用跨端稳定的 ID。
         if (row?.fields()?.live == true || revision != null) storage.check(row, revision)
         if (title.isBlank() && row?.fields()?.live != true) return@withTransaction
         storage.writer.saveInTransaction(db, listOf(storage.change("food_day_records", id, buildJsonObject { put("title", title.trim()); put("day_start_at", dayStartAt) })))

@@ -6,7 +6,7 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import kotlinx.serialization.json.*
 
-/** Projections mirror SyncAggregateProjection.swift; they do not create another local mutation. */
+/** 投影与 SyncAggregateProjection.swift 保持一致，不会产生新的本地变更。 */
 internal object AggregateProjection {
     suspend fun refresh(db: RecoowDatabase, changed: Set<String>, zone: ZoneId, scope: String? = null) {
         if (changed.any { it in setOf("bills", "stored_value_accounts", "stored_value_adjustments") }) balances(db, scope)
@@ -24,7 +24,7 @@ internal object AggregateProjection {
             if (fields["deleted_at"] == JsonNull || fields["deleted_at"] == null)
                 add(fields.getValue("account_id").jsonPrimitive.content, fields.getValue("amount_cents").jsonPrimitive.long)
         }
-        // Historical bill effects intentionally also participate for tombstones, as on iOS.
+        // 墓碑记录也照旧参与历史账单影响计算，与 iOS 行为一致。
         for (row in db.records().snapshots("bills")) {
             val fields = Json.parseToJsonElement(row.json).jsonObject
             val encoded = fields["stored_value_effects"]?.takeIf { it != JsonNull }?.jsonPrimitive?.content ?: continue

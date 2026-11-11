@@ -13,7 +13,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Invoked under DatabaseHost's exclusive gate; credentials never enter this preference store. */
+/** 在 DatabaseHost 的独占门禁内调用；凭据永远不会写入该偏好存储。 */
 class PreferenceBackupAdapter(private val context: Context, private val store: DataStore<Preferences>) : BackupPreferences {
     override suspend fun capture(): String {
         val values = JSONObject()

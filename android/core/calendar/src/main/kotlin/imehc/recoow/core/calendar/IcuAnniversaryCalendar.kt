@@ -12,7 +12,7 @@ import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
 
-/** Mirrors the occurrence construction and year-addition order in AnniversaryRecord.swift. */
+/** 对齐 AnniversaryRecord.swift 中的发生实例构造方式与逐年相加顺序。 */
 class IcuAnniversaryCalendar : AnniversaryCalendar {
     private fun calendar(kind: DateCalendar, zone: ZoneId): Calendar {
         val timeZone = TimeZone.getTimeZone(zone.id)
@@ -39,7 +39,7 @@ class IcuAnniversaryCalendar : AnniversaryCalendar {
     override fun nextOccurrence(schedule: AnniversarySchedule, reference: Instant, zone: ZoneId): Instant? {
         val localTime = LocalTime.of(schedule.reminderTimeMinutes / 60, schedule.reminderTimeMinutes % 60)
         val localDateTime = schedule.occurredAt.atZone(zone).toLocalDate().atTime(localTime)
-        // Foundation's bySettingHour uses nextTime for a DST gap, i.e. the first valid clock time.
+        // Foundation 的 bySettingHour 在夏令时空档处取 nextTime，即空档后的第一个有效时刻。
         val base = if (zone.rules.getValidOffsets(localDateTime).isEmpty()) {
             requireNotNull(zone.rules.getTransition(localDateTime)).dateTimeAfter.atZone(zone).toInstant()
         } else localDateTime.atZone(zone).toInstant()

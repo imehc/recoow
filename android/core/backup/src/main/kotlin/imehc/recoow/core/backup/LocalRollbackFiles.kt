@@ -17,7 +17,7 @@ interface BackupPreferences {
     suspend fun restore(json: String)
 }
 
-/** Private, same-installation rollback bundles. These are not the iOS interchange format. */
+/** 同一安装内的私有回滚包，不是与 iOS 交换数据用的格式。 */
 class LocalRollbackFiles(
     private val dataDirectory: File,
     private val backupDirectory: File,
@@ -69,7 +69,7 @@ class LocalRollbackFiles(
             check(staging.renameTo(bundle)) { "Cannot publish backup" }
             syncDirectory(backupDirectory)
             verify(bundle)
-            // The marker is published last; an incomplete backup never authorizes a write.
+            // 标记最后发布，未完成的备份绝不会授权写入。
             val temporaryMarker = File(backupDirectory, ".pending-restore")
             durableWrite(temporaryMarker, name)
             check(temporaryMarker.renameTo(marker))
@@ -94,7 +94,7 @@ class LocalRollbackFiles(
         val bundle = File(backupDirectory, name)
         val manifest = verify(bundle)
         check(dataDirectory.isDirectory || dataDirectory.mkdirs())
-        // No database may be open here. The marker remains until every file and preference is restored.
+        // 此处不允许任何数据库处于打开状态；标记要保留到所有文件与偏好恢复完毕。
         for (suffix in listOf("", "-wal", "-shm", "-journal")) {
             val target = File(dataDirectory, "records.sqlite$suffix")
             val source = File(bundle, target.name)
@@ -137,7 +137,7 @@ class LocalRollbackFiles(
         val actual = bundle.walkTopDown().filter { it.isFile && it != File(bundle, "manifest.json") }
             .map { it.relativeTo(bundle).invariantSeparatorsPath }.toSet()
         require(actual == paths) { "Unexpected backup files" }
-        // Even a read-only Android SQLite open can create WAL/SHM files. Keep the bundle immutable.
+        // 即使以只读方式打开 Android SQLite 也可能生成 WAL/SHM 文件，因此回滚包须保持不可变。
         if (File(bundle, "records.sqlite").exists()) {
             val scratch = File(backupDirectory, ".verify-${UUID.randomUUID()}")
             check(scratch.mkdir())

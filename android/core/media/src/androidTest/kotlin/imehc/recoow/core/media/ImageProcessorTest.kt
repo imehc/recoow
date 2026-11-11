@@ -21,8 +21,8 @@ class ImageProcessorTest {
     private fun quadrants(width: Int = 1200, height: Int = 800): File {
         val file = File(context.cacheDir, "quadrants-${UUID.randomUUID()}.jpg").also { files += it }
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        // Some OEM dark-mode implementations recolor Canvas primitives, even off screen.
-        // Write known source pixels directly; keep only two scanlines in memory.
+        // 部分厂商的深色模式会重染 Canvas 绘制的基本图形，离屏也不例外。
+        // 直接写入已知的源像素，内存中只保留两条扫描线。
         val top = IntArray(width) { if (it < width / 2) Color.RED else Color.GREEN }
         val bottom = IntArray(width) { if (it < width / 2) Color.BLUE else Color.YELLOW }
         for (y in 0 until height) bitmap.setPixels(if (y < height / 2) top else bottom, 0, width, 0, y, width, 1)

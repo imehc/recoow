@@ -16,7 +16,7 @@ data class DecisionOption(val id: String, val revision: String, val collectionId
 data class OptionDraft(val id: String = UUID.randomUUID().toString(), val revision: String? = null, val collectionId: String,
     val title: String = "", val detail: String = "", val customInfo: String = "", val weight: String = "1", val enabled: Boolean = true,
     val imageAssetId: String? = null, val hasImage: Boolean = false, val imageChanged: Boolean = false, val imageContent: PreparedMedia? = null) : Serializable {
-    // An imported weight above the form range is preserved until explicitly edited.
+    // 导入的权重若超出表单范围，会原样保留，直到被显式修改。
     val valid get() = title.isNotBlank() && (weight.toLongOrNull()?.let { it >= 1 } == true)
     val image get() = if (hasImage) MediaLocator(imageAssetId, "decision_options", id, draft = imageContent?.file) else null
     companion object { fun from(o: DecisionOption) = OptionDraft(o.id, o.revision, o.collectionId, o.title, o.detail.orEmpty(), o.customInfo.orEmpty(), o.weight.toString(), o.enabled, o.imageAssetId, o.hasImage) }
@@ -26,7 +26,7 @@ data class DecisionChoice(val id: String, val revision: String, val collectionId
     val image get() = MediaLocator(imageAssetId, "decision_choice_records", id, "option_image_data")
 }
 data class DecisionSnapshot(val collections: List<DecisionCollection> = emptyList(), val options: List<DecisionOption> = emptyList(), val history: List<DecisionChoice> = emptyList())
-/** The random ticket is drawn once; animation cannot change the saved outcome. BigInteger avoids imported-weight overflow. */
+/** 随机结果只抽一次，动画不会改变已保存的结果；用 BigInteger 避免导入权重溢出。 */
 fun weightedChoice(options: List<DecisionOption>, ticket: (java.math.BigInteger) -> java.math.BigInteger): DecisionOption {
     val candidates = options.filter { it.enabled }; require(candidates.isNotEmpty())
     val weights = candidates.map { java.math.BigInteger.valueOf(it.weight.coerceAtLeast(1)) }

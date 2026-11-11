@@ -29,7 +29,7 @@ data class FoodDraft(val id: String = UUID.randomUUID().toString(), val revision
 fun copiedFoodTime(timestamp: Long, day: LocalDate, zone: ZoneId): Long {
     val time = Instant.ofEpochMilli(timestamp).atZone(zone).toLocalTime().withNano(0)
     val local = day.atTime(time)
-    // Foundation resolves nonexistent wall times to the first valid instant after the gap.
+    // Foundation 会把不存在的墙上时间解析为空档之后的第一个有效时刻。
     return (zone.rules.getTransition(local)?.takeIf { it.isGap }?.dateTimeAfter ?: local).atZone(zone).toInstant().toEpochMilli()
 }
 fun foodDayId(dayStartAt: Long) = "food-day:$dayStartAt"

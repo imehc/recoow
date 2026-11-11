@@ -14,11 +14,11 @@ import kotlinx.serialization.json.jsonObject
 
 interface ExtensibleSnapshot {
     val additionalProperties: Map<String, JsonElement>
-    /** Null for newly constructed snapshots; decoded snapshots remember missing fields. */
+    /** 新建的快照为 null；解码得到的快照会记住缺失的字段。 */
     val presentFields: Set<String>?
 }
 
-/** Keeps unknown values and the difference between absent fields and explicit nulls. */
+/** 保留未知取值，并区分字段缺失与显式 null。 */
 @OptIn(ExperimentalSerializationApi::class)
 open class SnapshotSerializer<T : ExtensibleSnapshot>(
     private val delegate: KSerializer<T>,
@@ -40,7 +40,7 @@ open class SnapshotSerializer<T : ExtensibleSnapshot>(
         val completeJson = Json(output.json) { encodeDefaults = true; explicitNulls = true }
         val complete = completeJson.encodeToJsonElement(delegate, value).jsonObject
         val fields = value.presentFields?.let { present ->
-            // Include newly changed optional values even if they were absent in the decoded snapshot.
+            // 即使可选字段在解码快照中缺失，本次新变更的取值仍要写入。
             val nonDefaults = Json(completeJson) { encodeDefaults = false }.encodeToJsonElement(delegate, value).jsonObject
             complete.filterKeys { it in present || it in nonDefaults }
         } ?: complete

@@ -23,7 +23,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** Renders a packaged GLB; selection logic and an accessible alternative belong to the caller. */
+/** 只负责渲染打包的 GLB；选择逻辑与无障碍替代方案由调用方提供。 */
 @Composable
 fun GlbScene(
     assetPath: String,
@@ -64,7 +64,7 @@ fun GlbScene(
         } catch (error: CancellationException) { throw error
         } catch (error: Exception) { failed.value(error) }
     }
-    // ModelViewer destroys its native engine on detach. Do not also destroy it in onRelease.
+    // ModelViewer 在分离时自行销毁原生引擎，不要在 onRelease 里重复销毁。
     AndroidView(factory = { surface }, modifier = modifier, onReset = null, onRelease = { it.release() })
 }
 

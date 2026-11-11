@@ -46,7 +46,7 @@ class RoomHistoryRepository(private val host: DatabaseHost, private val bills: B
                 buildList { while (c.moveToNext()) add(c.getLong(0)) }
             } }.toMutableList()
         times += db.reminderHistory().map { it.timestamp }.filter { it >= start && it < end }
-        // Food badges count meal dates even when a day's title was edited later.
+        // 即使某天的标题后来被改过，食物角标仍按就餐日期计数。
         times += db.foodHistory(zone).mapNotNull { it.day }.filter { it >= weekStart && it < weekStart.plusDays(7) }
             .map { it.atStartOfDay(zone).toInstant().toEpochMilli() }
         times.groupingBy { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }.eachCount()
@@ -90,7 +90,7 @@ class RoomHistoryRepository(private val host: DatabaseHost, private val bills: B
 
     override suspend fun delete(plan: HistoryDeletionPlan): HistoryDeletionResult {
         val deleted = mutableSetOf<String>(); val failed = mutableSetOf<String>()
-        // Each business operation is atomic. A partial batch is reported explicitly and can be retried.
+        // 每个业务操作都是原子的；批次部分失败会明确报错并可重试。
         for (target in plan.targets) {
             val e = target.entry
             try {

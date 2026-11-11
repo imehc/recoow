@@ -88,8 +88,8 @@ class RoomBillsRepository(private val host: DatabaseHost, private val deviceId: 
     private suspend fun persist(db: RecoowDatabase, previous: BillRecord?, record: BillRecord,
         binary: Map<String, ByteArray?> = emptyMap(), inherited: Map<String, JsonObject> = emptyMap()) {
         val timestamp = now()
-        // Match iOS's cumulative ledger: add only this operation's delta to the stored historical map.
-        // In particular, an already-expired purchase has zero current delta but retains its past effect.
+        // 对齐 iOS 的累计台账：只把本次操作的增量叠加到已存的历史映射上。
+        // 尤其是已过期的购买，当前增量为零，但历史影响仍需保留。
         val effects = previous?.effects.orEmpty().toMutableMap()
         val deltas = mutableMapOf<String, Long>()
         fun add(map: MutableMap<String, Long>, id: String, value: Long) {

@@ -4,7 +4,7 @@ import imehc.recoow.core.network.generated.models.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
 
-/** Generated account DTOs share the same source headers and field mapping as sync. */
+/** 生成的账户 DTO 与同步接口共用同一套请求头来源和字段映射。 */
 class AccountApi(private val api: SyncApi) {
     private val json = Json { ignoreUnknownKeys = true }
 

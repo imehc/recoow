@@ -20,7 +20,7 @@ data class RecordingState(val current: Track? = null, val latest: TrackPoint? = 
     val running: Boolean = false, val busy: Boolean = false, val problem: RecordingProblem? = null, val finishedId: String? = null,
     val pointCount: Int = 0)
 
-/** The service owns sampling; neither a Compose screen nor its ViewModel owns the recording lifetime. */
+/** 采样由服务持有，Compose 页面及其 ViewModel 都不负责记录生命周期。 */
 @Singleton
 class TrackRecordingRuntime @Inject constructor(@param:ApplicationContext private val context: Context, private val repository: TracksRepository) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -100,7 +100,7 @@ class TrackRecordingRuntime @Inject constructor(@param:ApplicationContext privat
     private suspend fun flushSafely() {
         try { flush() } catch (e: CancellationException) { throw e } catch (_: TrackSessionExpiredException) { expired() } catch (_: Exception) {
             frozenElapsed = SystemClock.elapsedRealtime(); samples?.cancel(); ticker?.cancel(); mutable.update { it.copy(problem = RecordingProblem.SAVE) }
-            // Keep the lease and pending samples so Pause/Finish can retry the failed transaction.
+            // 保留租约与待提交采样，让暂停、结束操作可以重试失败的事务。
         }
     }
     private fun expired() {
@@ -122,7 +122,7 @@ class TrackRecordingRuntime @Inject constructor(@param:ApplicationContext privat
         if (frozenElapsed == null) frozenElapsed = SystemClock.elapsedRealtime()
         mutable.update { it.copy(busy = true) }
         try {
-            // A callback may be stopping its own collection job; committing must finish atomically.
+            // 回调可能正在停止自身的采集任务，因此提交必须一次性完成。
             withContext(NonCancellable) {
                 val saved = flush(if (finish) TrackStatus.FINISHED else TrackStatus.PAUSED)
                 session = null

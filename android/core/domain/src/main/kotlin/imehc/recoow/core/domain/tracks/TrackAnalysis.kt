@@ -3,7 +3,7 @@ package imehc.recoow.core.domain.tracks
 import imehc.recoow.core.domain.location.GeoCoordinate
 import kotlin.math.*
 
-/** WGS84 Vincenty inverse; the spherical fallback only covers non-convergent antipodal pairs. */
+/** WGS84 的 Vincenty 反算；球面兜底仅在近似对跖点不收敛时使用。 */
 fun trackDistance(a: GeoCoordinate, b: GeoCoordinate): Double {
     if (a == b) return 0.0
     val f = 1 / 298.257223563; val minor = 6356752.314245; val major = 6378137.0
@@ -35,7 +35,7 @@ fun trackDistance(a: GeoCoordinate, b: GeoCoordinate): Double {
 
 object TrackAnalysis {
     private data class Leg(val start: Long, val end: Long, val distance: Double, val speed: Double)
-    /** Matches the iOS analyzer. Recording sessions are analyzed separately to preserve explicit pauses. */
+    /** 与 iOS 分析器一致；各记录会话单独分析，以保留显式暂停。 */
     fun segments(points: List<TrackPoint>): List<TrackSegment> {
         val legs = points.filter { (it.accuracy ?: 0.0) <= 100 }.sortedBy { it.time }.zipWithNext().mapNotNull { (a, b) ->
             val seconds = (b.time - a.time) / 1000.0

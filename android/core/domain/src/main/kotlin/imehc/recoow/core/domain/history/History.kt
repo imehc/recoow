@@ -14,7 +14,7 @@ data class HistoryPage(val entries: List<HistoryEntry>, val next: HistoryCursor?
 val historyOrder = compareByDescending<HistoryEntry> { it.timestamp }.thenByDescending { it.key }
 fun HistoryEntry.after(cursor: HistoryCursor?) = cursor == null || timestamp < cursor.timestamp || timestamp == cursor.timestamp && key < cursor.key
 
-/** A confirmation captures revisions and children; subsequent edits must not broaden its scope. */
+/** 确认动作会固定当时的修订号与子项，之后的编辑不得扩大其范围。 */
 data class HistoryDeletion(val entry: HistoryEntry, val revision: String, val children: Map<String, String> = emptyMap(),
     val childRevision: String? = null, val completion: imehc.recoow.core.domain.reminders.CheckIn? = null)
 data class HistoryDeletionPlan(val session: Long, val zone: ZoneId, val targets: List<HistoryDeletion>)

@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.withContext
 
-/** Android 13+ owns app locales, including changes made outside the app. */
+/** Android 13 及以上由系统管理应用语言，包括在应用外做出的更改。 */
 class AndroidPreferencesRepository @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val stored: DataStorePreferencesRepository,
@@ -36,7 +36,7 @@ class AndroidPreferencesRepository @Inject constructor(
         stored.preferences
     }
 
-    // Suspend preference delivery while a guarded restore is in progress, just like record flows.
+    // 受保护的恢复进行期间暂停偏好投递，与记录类流程一致。
     override val preferences = database.observe { observedPreferences }
 
     override suspend fun setToolVisible(id: String, visible: Boolean) = database.access { stored.setToolVisible(id, visible) }
