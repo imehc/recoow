@@ -36,9 +36,15 @@ class BillsFlowTest {
         if (tag == "bill_search" && compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isEmpty()) {
             compose.onNodeWithTag("bill_search_toggle").performClick(); compose.waitForIdle()
         }
-        if (!tag.startsWith("account_")) compose.onNodeWithTag(if (tag == "bill_search") "bills_list" else "bill_form").performScrollToNode(hasTestTag(tag))
+        // 搜索输入已在固定顶栏中，不属于下方可滚动列表。
+        if (tag != "bill_search" && !tag.startsWith("account_")) compose.onNodeWithTag("bill_form").performScrollToNode(hasTestTag(tag))
     }
-    private fun text(tag: String, value: String) { scroll(tag); compose.onNodeWithTag(tag).performScrollTo().performTextReplacement(value) }
+    private fun text(tag: String, value: String) {
+        scroll(tag)
+        val field = compose.onNodeWithTag(tag)
+        if (tag != "bill_search") field.performScrollTo()
+        field.performTextReplacement(value)
+    }
     private fun clickText(id: Int) { compose.onNodeWithText(label(id)).performScrollTo().performClick(); compose.waitForIdle() }
     private fun choose(tag: String, id: Int) {
         compose.onNodeWithTag("bill_form").performScrollToNode(hasTestTag(tag))
@@ -93,6 +99,8 @@ class BillsFlowTest {
         compose.onNodeWithTag("bill_recharge").performClick()
         compose.onNodeWithTag("bill_add_account").performScrollTo().performClick()
         text("account_name", title); text("account_balance", "50")
+        compose.onNodeWithTag("account_balance").assertTextContains("50")
+        compose.runOnIdle { assertEquals("50", viewModel.accountDraft.value!!.balance) }
         compose.activityRule.scenario.recreate()
         compose.onNodeWithTag("account_balance").assertTextContains("50")
         compose.onNodeWithTag("account_save").performClick(); ready()

@@ -139,4 +139,5 @@ dependencies {
     androidTestImplementation(project(":core:media"))
     androidTestImplementation(libs.androidx.test)
     androidTestImplementation(libs.test.runner)
+    androidTestImplementation(libs.test.rules)
 }

@@ -10,12 +10,16 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.rule.GrantPermissionRule
 import imehc.recoow.core.domain.navigation.ToolRoute
 import org.junit.Rule
 import org.junit.Test
 
 class ToolDeepLinkTest {
-    @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+    // 深链遍历会进入轨迹预览，预授权避免系统弹窗遮挡导航断言。
+    @get:Rule(order = 0) val location = GrantPermissionRule.grant(
+        android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION)
+    @get:Rule(order = 1) val compose = createAndroidComposeRule<MainActivity>()
 
     private fun open(uri: String) {
         val context = InstrumentationRegistry.getInstrumentation().targetContext

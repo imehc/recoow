@@ -7,6 +7,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.rule.GrantPermissionRule
 import imehc.recoow.core.domain.bills.*
 import imehc.recoow.core.domain.diary.*
 import imehc.recoow.core.domain.food.*
@@ -23,7 +24,10 @@ import org.junit.*
 import org.junit.Assert.*
 
 class OverviewNavigationTest {
-    @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+    // 来源导航包含轨迹页；当前位置预览的系统授权由定位专项验证。
+    @get:Rule(order = 0) val location = GrantPermissionRule.grant(
+        android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION)
+    @get:Rule(order = 1) val compose = createAndroidComposeRule<MainActivity>()
     private val prefix = "overview-${UUID.randomUUID()}"
     private lateinit var bills: BillsViewModel; private lateinit var food: FoodViewModel; private lateinit var diary: DiaryViewModel
     private lateinit var settings: SettingsViewModel; private var hidden = emptySet<String>()
@@ -53,7 +57,8 @@ class OverviewNavigationTest {
         }
     }
     private fun back() { InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK); compose.waitForIdle() }
-    private fun waitTag(tag: String) { compose.waitUntil(10_000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() } }
+    // 深链和语言重建期间根视图会短暂不存在，等待目标页面而非提前抛错。
+    private fun waitTag(tag: String) { compose.waitUntil(10_000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty() } }
     private fun clickRow(tag: String) {
         compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasTestTag(tag))
         compose.onNodeWithTag(tag).performClick()
@@ -111,7 +116,7 @@ class OverviewNavigationTest {
             compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Source ${source.wire}"))
             compose.onNodeWithText("Source ${source.wire}").performClick()
             if (source == DiarySource.BILL) {
-                compose.waitUntil(10_000) { compose.onAllNodesWithText(compose.activity.getString(imehc.recoow.feature.bills.R.string.missing_bill)).fetchSemanticsNodes().isNotEmpty() }
+                compose.waitUntil(10_000) { compose.onAllNodesWithText(compose.activity.getString(imehc.recoow.feature.bills.R.string.missing_bill)).fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty() }
             } else waitTag(tags.getValue(source))
             back(); waitTag("diary_detail")
             compose.onNodeWithText("Overview links").assertIsDisplayed()

@@ -52,6 +52,8 @@ class ReminderNavigationTest {
         compose.waitUntil(10_000) { viewModel.state.value.records.any { it.title == title } }
         val record = viewModel.state.value.records.single { it.title == title }
         open(record.id)
+        // 编辑操作已收进详情页更多菜单，仍通过实际入口验证草稿恢复。
+        compose.onNodeWithTag("reminder_detail_more").performClick()
         compose.onNodeWithText(compose.activity.getString(ReminderR.string.reminder_edit)).performClick()
         compose.onNodeWithTag("reminder_title").performTextReplacement("Unsaved draft")
         compose.activityRule.scenario.recreate()
