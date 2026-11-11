@@ -22,7 +22,7 @@ export default ts.config(
     files: ['**/*.svelte', '**/*.svelte.ts'],
     languageOptions: { parserOptions: { parser: ts.parser } },
   },
-  // Static deployment is supported at the origin root; media API links stay root-relative.
+  // 静态部署挂在源站根路径；媒体 API 链接保持根相对路径。
   { rules: { 'svelte/no-navigation-without-resolve': 'off' } },
   prettier,
 );

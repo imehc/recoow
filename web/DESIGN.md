@@ -102,6 +102,8 @@ components:
 
 # Design System: recoow Web
 
+跨端共同原则见 [DESGIN.MD](../DESGIN.MD)。本文件定义 Web 工作台的具体布局、字号与间距，不套用移动端的 pt / dp 规格。
+
 ## Overview
 
 **Creative North Star: "清晰的工作台"**

@@ -13,7 +13,7 @@ const opaque = new Set([
 
 export const apiFieldName = (name: string) => apiFieldNames[name] ?? name;
 
-// Keep language-level model names while the HTTP contract uses snake_case.
+// 语言层模型保持原有命名，HTTP 契约使用 snake_case。
 export function apiFields(value: unknown, legacy = true): unknown {
   if (Array.isArray(value)) return value.map((item) => apiFields(item, legacy));
   if (!value || typeof value !== 'object' || isLosslessNumber(value)) return value;

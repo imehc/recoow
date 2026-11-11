@@ -2,6 +2,8 @@
 
 基于 Svelte 5、SvelteKit、TypeScript、shadcn-svelte 与 ECharts 的云端只读入口。提供登录、21 类实体查询、基础统计、变更历史、媒体预览和设备查看。
 
+协作遵循 [AGENTS.md](../AGENTS.md)，界面遵循 [DESIGN.md](DESIGN.md)；与移动端共享信息含义和颜色角色，布局、字号与间距使用 Web 自身的变量和组件。
+
 ## 本地开发
 
 需要 Node.js 22.12 或更新版本、pnpm，以及仓库公共契约工具：Java 17、Make、OpenAPI Generator（版本见根 Makefile）和安装了 `scripts/requirements.txt` 的 Python。生成脚本优先使用根 `.venv`，也可通过 `PYTHON` 指定解释器。

@@ -260,7 +260,7 @@ test('theme and language follow system, persist, and remain usable with keyboard
     path: `test-results/login-light-en-${testInfo.project.name}.png`,
     fullPage: true,
   });
-  // The menu captures outside pointer events before they reach page elements.
+  // 菜单会在指针事件到达页面元素之前先截获外部点击。
   await page.mouse.click(8, 8);
   await expect(page.getByRole('menu')).toHaveCount(0);
   await choosePreference(page, 'Theme', 'System');

@@ -1,7 +1,7 @@
 import { preferences } from './preferences.svelte.js';
 
 type Labels = Record<string, readonly [string, string]>;
-// Values and Chinese copy follow the corresponding iOS model enums and Android resources.
+// 取值与中文文案对应 iOS 的模型枚举和 Android 的资源文件。
 const payment: Labels = {
   wechat: ['微信', 'WeChat'],
   alipay: ['支付宝', 'Alipay'],

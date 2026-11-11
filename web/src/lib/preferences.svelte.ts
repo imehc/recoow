@@ -39,7 +39,7 @@ class Preferences {
     try {
       localStorage.setItem('recoow:preferences', JSON.stringify({ language: this.language }));
     } catch {
-      /* Storage can be disabled. */
+      // 存储可能被禁用。
     }
     this.applyLanguage();
   }
@@ -49,10 +49,10 @@ class Preferences {
     try {
       const saved = JSON.parse(localStorage.getItem('recoow:preferences') ?? '{}');
       if (['system', 'zh', 'en'].includes(saved.language)) this.language = saved.language;
-      // Preserve preferences saved before adopting mode-watcher.
+      // 保留在改用 mode-watcher 之前已保存的偏好。
       if (['system', 'light', 'dark'].includes(saved.theme)) setMode(saved.theme);
     } catch {
-      /* Ignore invalid or unavailable preferences. */
+      // 忽略无效或不可用的偏好。
     }
     this.persist();
     const languageChanged = () => {

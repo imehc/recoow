@@ -1,6 +1,6 @@
 import { preferences } from './preferences.svelte.js';
 
-// Match ToolRoute.title on iOS and tool_* on Android. Media is shared across tools.
+// 与 iOS 的 ToolRoute.title 和 Android 的 tool_* 保持一致；媒体在各工具间共享。
 export const recordGroups = [
   {
     id: 'tracks',
