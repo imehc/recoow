@@ -2,12 +2,14 @@
 
 使用 Kotlin、Jetpack Compose Material 3 Expressive 与 MVVM/UDF/Clean 架构的 Android 客户端。
 
+协作遵循 [AGENTS.md](../AGENTS.md)，UI 遵循 [DESGIN.MD](../DESGIN.MD)。布局与间距使用 Android 共享组件和 `RecoowLayout`，不照搬 iOS 的 pt、原生分组边距或手势。
+
 ## 构建
 
 - Kotlin 2.3.20，AGP 9.2.0（内置 Kotlin），KSP 2.3.12，Hilt 2.60.1。
 - Gradle Wrapper 9.4.1，发行包带 SHA-256 校验。JDK 17 是最低版本，支持使用更高的兼容版本；Java/Kotlin 字节码目标统一为 17。
 - `compileSdk 37`、`targetSdk 36`、`minSdk 26`、Build Tools 37.0.0。
-- Compose BOM 2026.09.00、Material 3 1.5.0-beta02。该版本公开 Expressive 主题入口并要求 compileSdk 37；采用默认颜色，不启用动态配色或另设品牌主题。
+- Compose BOM 2026.09.00、Material 3 1.5.0-beta02。该版本公开 Expressive 主题入口并要求 compileSdk 37；`RecoowTheme` 注入共享品牌色板、语义字号与形状，不启用动态配色。
 
 安装 Android SDK 和 Python 3 后，在本机 `local.properties` 设置 `sdk.dir`，或设置 `ANDROID_HOME`。从本目录运行：
 
@@ -64,6 +66,8 @@ Feature 不互相依赖，不直接访问存储。Domain 不依赖 Android、Hil
 账单、日记、饮食、物品、纪念日、抽选历史和轨迹也接受 `recoow://tool/{工具标识}/{recordId}` 详情链接。页面间通过应用导航层打开关联记录，Feature 之间不直接依赖。
 
 3D 使用 [Filament](https://github.com/google/filament)（Apache-2.0），地图使用 [MapLibre Native](https://github.com/maplibre/maplibre-native)（BSD-2-Clause）的 Vulkan/OpenGL 双后端包：有 Vulkan 能力时优先使用 Vulkan，其余设备回退到 OpenGL ES。地图组件接收样式及坐标系，轨迹页面使用 [OpenFreeMap](https://openfreemap.org/) Liberty 底图并保留来源署名；存储坐标使用 WGS84，仅按地图源要求转换显示副本。
+
+地图无需商业地图 Key。`core:location/MapNetwork` 为地图提供独立的 OkHttp 缓存与域名解析回退：OpenFreeMap 域名的系统解析失败时使用 HTTPS DNS，回退仅作用于地图请求，不修改模拟器 / 手机的 DNS 设置或业务 API 网络客户端。在线底图加载完成以瓦片解析和完整帧渲染为准；纯路线回退仍明确显示底图不可用。
 
 ## 图片与附件
 

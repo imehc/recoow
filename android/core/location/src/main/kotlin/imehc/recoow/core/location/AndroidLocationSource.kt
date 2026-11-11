@@ -16,9 +16,26 @@ import imehc.recoow.core.domain.location.LocationSource
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 
-/** Uses Android providers; callers own permission UX and foreground-service lifetime. */
+/** 使用 Android 系统定位提供方；权限交互与前台服务生命周期由调用方负责。 */
 class AndroidLocationSource(context: Context) : LocationSource {
     private val context = context.applicationContext
+
+    /** 仅作为近期位置提示；记录轨迹从不使用缓存位置。 */
+    @SuppressLint("MissingPermission")
+    fun lastKnownFix(maximumAgeMillis: Long = 120_000): LocationFix? {
+        val fine = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val coarse = context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (!fine && !coarse) return null
+        val manager = context.getSystemService(LocationManager::class.java)
+        return try {
+            val now = System.currentTimeMillis()
+            listOfNotNull(if (fine) LocationManager.GPS_PROVIDER else null, LocationManager.NETWORK_PROVIDER)
+                .filter { it in manager.allProviders && manager.isProviderEnabled(it) }
+                .mapNotNull { manager.getLastKnownLocation(it) }
+                .filter { now - it.time in 0..maximumAgeMillis }
+                .mapNotNull { it.toFix() }.maxByOrNull { it.timestamp }
+        } catch (_: SecurityException) { null }
+    }
     @SuppressLint("MissingPermission") // Both permissions are checked immediately before registration.
     override fun observe(intervalMillis: Long, minimumDistanceMeters: Float) = callbackFlow {
         require(intervalMillis >= 0 && minimumDistanceMeters.isFinite() && minimumDistanceMeters >= 0)
@@ -39,14 +56,7 @@ class AndroidLocationSource(context: Context) : LocationSource {
         }
         val listener = object : LocationListener {
             override fun onLocationChanged(location: Location) {
-                if (!location.latitude.isFinite() || location.latitude !in -90.0..90.0 ||
-                    !location.longitude.isFinite() || location.longitude !in -180.0..180.0) return
-                trySend(LocationObservation.Fix(LocationFix(GeoCoordinate(location.latitude, location.longitude),
-                    location.time, if (location.hasAccuracy()) location.accuracy else -1f,
-                    location.altitude.takeIf { location.hasAltitude() },
-                    location.verticalAccuracyMeters.toDouble().takeIf { location.hasVerticalAccuracy() && it >= 0 },
-                    location.speed.toDouble().takeIf { location.hasSpeed() && it >= 0 },
-                    location.bearing.toDouble().takeIf { location.hasBearing() && it >= 0 })))
+                location.toFix()?.let { trySend(LocationObservation.Fix(it)) }
             }
             override fun onProviderDisabled(provider: String) {
                 if (providers.none { manager.isProviderEnabled(it) }) trySend(LocationObservation.ProviderUnavailable)
@@ -65,4 +75,11 @@ class AndroidLocationSource(context: Context) : LocationSource {
         }
         awaitClose { manager.removeUpdates(listener) }
     }
+}
+
+private fun Location.toFix(): LocationFix? {
+    if (!latitude.isFinite() || latitude !in -90.0..90.0 || !longitude.isFinite() || longitude !in -180.0..180.0) return null
+    return LocationFix(GeoCoordinate(latitude, longitude), time, if (hasAccuracy()) accuracy else -1f,
+        altitude.takeIf { hasAltitude() }, verticalAccuracyMeters.toDouble().takeIf { hasVerticalAccuracy() && it >= 0 },
+        speed.toDouble().takeIf { hasSpeed() && it >= 0 }, bearing.toDouble().takeIf { hasBearing() && it >= 0 })
 }

@@ -19,6 +19,7 @@ import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapLibreMapOptions
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.layers.LineLayer
@@ -32,8 +33,9 @@ import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
+import org.maplibre.android.tile.TileOperation
 
-/** A provider supplies its own licensed style and coordinate system. No map server is hard-coded. */
+/** 地图提供方自带已授权的样式与坐标系，代码中不写死任何地图服务器。 */
 data class MapStyle(val json: String, val coordinates: MapCoordinateSystem = MapCoordinateSystem.WGS84)
 data class MapLine(val points: List<GeoCoordinate>, val color: Int)
 data class MapMarker(val coordinate: GeoCoordinate, val color: Int)
@@ -51,6 +53,9 @@ fun TrackMap(
     lines: List<MapLine>? = null,
     markers: List<MapMarker> = emptyList(),
     focus: MapFocus? = null,
+    backgroundArgb: Int = android.graphics.Color.LTGRAY,
+    onFirstFrame: () -> Unit = {},
+    requireBasemapTiles: Boolean = false,
 ) {
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
@@ -62,26 +67,50 @@ fun TrackMap(
     val currentLines = rememberUpdatedState(lines)
     val currentMarkers = rememberUpdatedState(markers)
     val currentFocus = rememberUpdatedState(focus)
-    // A style replacement gets its own view so late callbacks cannot overwrite the current style.
-    androidx.compose.runtime.key(style) {
+    val firstFrame = rememberUpdatedState(onFirstFrame)
+    // 替换样式使用独立视图，避免迟到的回调覆盖当前样式。
+    androidx.compose.runtime.key(style, backgroundArgb) {
         val controller = remember { mutableStateOf<MapLibreMap?>(null) }
         val focused = remember { mutableStateOf<MapFocus?>(null) }
+        val lifetime = remember { MapViewLifetime() }
         val view = remember(context) {
+            var revealed = false
+            var basemapTileReady = false
             MapLibre.getInstance(context)
-            MapView(context).apply {
+            MapNetwork.install(context)
+            MapView(context, MapLibreMapOptions().textureMode(true).foregroundLoadColor(backgroundArgb).logoEnabled(false)
+                .localIdeographFontFamily("sans-serif").camera(CameraPosition.Builder().zoom(1.0).build())).apply {
+                alpha = 0f
                 onCreate(null)
-                addOnDidFailLoadingMapListener { failure.value(it) }
-                addOnDidFinishRenderingMapListener { fully -> if (fully && controller.value != null) rendered.value() }
+                addOnDidFailLoadingMapListener { if (!lifetime.disposed && !isDestroyed) failure.value(it) }
+                addOnDidFinishRenderingFrameListener(MapView.OnDidFinishRenderingFrameListener { _, _, _ ->
+                    if (!lifetime.disposed && !isDestroyed && controller.value != null && !revealed) {
+                        revealed = true
+                        post { if (!lifetime.disposed && !isDestroyed) { alpha = 1f; firstFrame.value() } }
+                    }
+                })
+                addOnTileActionListener { operation, _, _, _, _, _, source ->
+                    if (!lifetime.disposed && !isDestroyed && source != TRACK_SOURCE && source != MARKER_SOURCE) {
+                        if (operation == TileOperation.EndParse) basemapTileReady = true
+                        else if (operation == TileOperation.Error && !basemapTileReady) failure.value("Map tile request failed")
+                    }
+                }
+                addOnDidFinishRenderingMapListener { fully ->
+                    if (!lifetime.disposed && !isDestroyed && fully && controller.value != null && (!requireBasemapTiles || basemapTileReady)) rendered.value()
+                }
                 getMapAsync { map ->
+                    if (lifetime.disposed || isDestroyed) return@getMapAsync
                     val builder = Style.Builder().let { if (style.json.startsWith("https://")) it.fromUri(style.json) else it.fromJson(style.json) }
                     map.setStyle(builder) { loadedStyle ->
+                        if (lifetime.disposed || isDestroyed) return@setStyle
                         loadedStyle.addSource(GeoJsonSource(TRACK_SOURCE))
                         loadedStyle.addLayer(LineLayer(TRACK_LAYER, TRACK_SOURCE)
-                            .withProperties(lineColor(Expression.get("color")), lineWidth(4f)))
+                            .withProperties(lineColor(Expression.get("color")), lineWidth(4f), lineCap("round"), lineJoin("round")))
                         loadedStyle.addSource(GeoJsonSource(MARKER_SOURCE))
                         loadedStyle.addLayer(CircleLayer(MARKER_LAYER, MARKER_SOURCE).withProperties(circleRadius(7f), circleColor(Expression.get("color")), circleStrokeWidth(2f), circleStrokeColor(android.graphics.Color.WHITE)))
                         controller.value = map
                         updateTrack(map, currentPoints.value, style.coordinates, color.value, currentLines.value, currentMarkers.value)
+                        lifetime.overlay = MapOverlay(currentPoints.value, color.value, currentLines.value, currentMarkers.value)
                         if (currentFocus.value != null) { focusMap(map, currentFocus.value!!, style.coordinates); focused.value = currentFocus.value }
                         else currentPoints.value.firstOrNull()?.forDisplay(style.coordinates)?.let {
                             map.cameraPosition = CameraPosition.Builder().target(LatLng(it.latitude, it.longitude)).zoom(15.0).build()
@@ -100,6 +129,7 @@ fun TrackMap(
             }
             owner.lifecycle.addObserver(observer)
             onDispose {
+                lifetime.disposed = true
                 owner.lifecycle.removeObserver(observer)
                 view.onPause()
                 view.onStop()
@@ -108,12 +138,19 @@ fun TrackMap(
         }
         AndroidView(factory = { view }, modifier = modifier, update = {
             controller.value?.let { map ->
-                updateTrack(map, points, style.coordinates, lineColorArgb, lines, markers)
+                val nextOverlay = MapOverlay(points, lineColorArgb, lines, markers)
+                if (lifetime.overlay != nextOverlay) {
+                    updateTrack(map, points, style.coordinates, lineColorArgb, lines, markers)
+                    lifetime.overlay = nextOverlay
+                }
                 if (focus != null && focused.value != focus) { focusMap(map, focus, style.coordinates); focused.value = focus }
             }
         })
     }
 }
+
+private data class MapOverlay(val points: List<GeoCoordinate>, val color: Int, val lines: List<MapLine>?, val markers: List<MapMarker>)
+private class MapViewLifetime { var disposed = false; var overlay: MapOverlay? = null }
 
 private const val TRACK_SOURCE = "recoow-track"
 private const val TRACK_LAYER = "recoow-track-line"

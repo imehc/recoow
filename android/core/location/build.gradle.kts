@@ -22,6 +22,8 @@ kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarg
 dependencies {
     implementation(project(":core:domain"))
     implementation(libs.coroutines.android)
+    testImplementation(libs.junit)
+    testImplementation(libs.coroutines.test)
     androidTestImplementation(libs.androidx.test)
     androidTestImplementation(libs.test.runner)
     androidTestImplementation(libs.test.rules)
@@ -34,6 +36,8 @@ dependencies {
     androidTestImplementation(libs.compose.test)
     debugImplementation(libs.compose.test.manifest)
     implementation(libs.maplibre)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.doh)
     implementation(libs.hilt)
     ksp(libs.hilt.compiler)
 }

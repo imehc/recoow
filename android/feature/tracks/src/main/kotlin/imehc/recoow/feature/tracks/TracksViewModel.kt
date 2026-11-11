@@ -22,6 +22,8 @@ class TracksViewModel @Inject constructor(private val repository: TracksReposito
     val history = saved.getStateFlow("trackHistory", false)
     val draft = saved.getStateFlow<TrackDraft?>("trackDraft", null)
     val accuracy = saved.getStateFlow("trackAccuracy", 10)
+    val query = saved.getStateFlow("trackHistoryQuery", "")
+    fun query(value: String) { saved["trackHistoryQuery"] = value }
     val activeDetail = recorder.state.map { it.current?.id }.distinctUntilChanged().flatMapLatest { id ->
         if (id == null) flowOf(TrackDetail()) else repository.detail(id).catch { emit(TrackDetail()) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TrackDetail())
