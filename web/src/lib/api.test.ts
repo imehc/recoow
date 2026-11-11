@@ -30,10 +30,10 @@ describe('authenticated transport', () => {
         'X-Recoow-Client': 'web',
         'X-Recoow-OS': 'ios',
         'X-Recoow-App-Version': version,
-        'X-Recoow-Field-Case': 'snake_case',
       },
     });
     expect(options.headers.Authorization).toBeUndefined();
+    expect(options.headers['X-Recoow-Field-Case']).toBeUndefined();
   });
   it('sends canonical query and profile fields', async () => {
     const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response('{}')));

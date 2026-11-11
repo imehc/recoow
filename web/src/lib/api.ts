@@ -77,7 +77,6 @@ async function request<T>(
       'X-Recoow-Client': 'web',
       'X-Recoow-OS': operatingSystem(),
       'X-Recoow-App-Version': appVersion,
-      'X-Recoow-Field-Case': 'snake_case',
       ...options.headers,
     },
   });
