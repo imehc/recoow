@@ -36,7 +36,7 @@ func opaque(name string) bool {
 
 // Rename 只改声明过的信封键；原始 JSON 数字、null 与快照
 // 键保持原样，包括恰好与 API 字段同名的未知字段。
-func Rename(data []byte, legacy bool) ([]byte, error) {
+func Rename(data []byte) ([]byte, error) {
 	data = bytes.TrimSpace(data)
 	if len(data) == 0 {
 		return nil, fmt.Errorf("empty body")
@@ -49,15 +49,12 @@ func Rename(data []byte, legacy bool) ([]byte, error) {
 		out := make(map[string]json.RawMessage, len(object))
 		for name, value := range object {
 			key := CanonicalName(name)
-			if legacy {
-				key = legacyName(key)
-			}
 			if _, exists := out[key]; exists {
 				return nil, fmt.Errorf("duplicate field %s", key)
 			}
 			if !opaque(name) {
 				var err error
-				value, err = Rename(value, legacy)
+				value, err = Rename(value)
 				if err != nil {
 					return nil, err
 				}
@@ -73,7 +70,7 @@ func Rename(data []byte, legacy bool) ([]byte, error) {
 		}
 		for i, value := range array {
 			var err error
-			array[i], err = Rename(value, legacy)
+			array[i], err = Rename(value)
 			if err != nil {
 				return nil, err
 			}

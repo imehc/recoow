@@ -26,8 +26,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BackendVersion'
-      parameters:
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/change-events:
     get:
       operationId: listChangeEvents
@@ -101,7 +99,6 @@ paths:
             minimum: 0
           description: 结束时间（毫秒时间戳，不含）
           x-recoow-legacy-name: toMs
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '200':
           description: 按云端修订顺序倒序分页，列表只包含事件摘要。
@@ -133,7 +130,6 @@ paths:
             type: string
           x-recoow-legacy-name: eventId
           description: 变更事件ID
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '200':
           description: 对比提交前的云端版本与最终提交版本，不使用当前记录替代历史快照。
@@ -176,8 +172,6 @@ paths:
           description: 无效资料
         '401':
           description: 未鉴权
-      parameters:
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/devices:
     get:
       operationId: listDevices
@@ -219,8 +213,6 @@ paths:
         - deviceToken: []
         - sessionToken: []
         - sessionCookie: []
-      parameters:
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/devices/{id}:
     delete:
       operationId: revokeDevice
@@ -269,7 +261,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/sync/dataset:
     delete:
       operationId: clearSyncDataset
@@ -284,7 +275,6 @@ paths:
           schema:
             type: string
           description: 数据集世代
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '200':
           description: 清空后的数据集状态
@@ -339,8 +329,6 @@ paths:
         - deviceToken: []
         - sessionToken: []
         - sessionCookie: []
-      parameters:
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/media/objects/{key}:
     put:
       operationId: putMediaObject
@@ -389,7 +377,6 @@ paths:
           schema:
             type: string
           description: 媒体对象键
-        - $ref: '#/components/parameters/APIFieldCase'
       requestBody:
         required: true
         content:
@@ -445,7 +432,6 @@ paths:
           schema:
             type: string
           description: 媒体对象键
-        - $ref: '#/components/parameters/APIFieldCase'
     head:
       operationId: headMediaObject
       summary: headMediaObject
@@ -489,7 +475,6 @@ paths:
           schema:
             type: string
           description: 媒体对象键
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteMediaObject
       summary: deleteMediaObject
@@ -537,7 +522,6 @@ paths:
           schema:
             type: string
           description: 媒体对象键
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/accounts:
     post:
       operationId: initAccount
@@ -570,7 +554,6 @@ paths:
           description: 当前安装的本地来源标识，不是服务端设备 ID
           schema:
             type: string
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '201':
           description: 成功
@@ -641,7 +624,6 @@ paths:
           description: 当前安装的本地来源标识，不是服务端设备 ID
           schema:
             type: string
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '201':
           description: 成功
@@ -712,7 +694,6 @@ paths:
           description: 当前安装的本地来源标识，不是服务端设备 ID
           schema:
             type: string
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '201':
           description: 成功
@@ -792,8 +773,6 @@ paths:
         - deviceToken: []
         - sessionToken: []
         - sessionCookie: []
-      parameters:
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/sync/mutations:
     post:
       operationId: pushSync
@@ -805,7 +784,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '200':
           description: 成功
@@ -907,7 +885,6 @@ paths:
           schema:
             type: integer
           description: 单页数量上限
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/sync/snapshots:
     get:
       operationId: bootstrapSync
@@ -974,7 +951,6 @@ paths:
           schema:
             type: integer
           description: 单页数量上限
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/sync/manifests:
     get:
       operationId: getSyncManifest
@@ -1014,7 +990,6 @@ paths:
             minimum: 1
             maximum: 500
           description: 单页数量上限
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '200':
           description: 固定水位清单，包含墓碑
@@ -1057,8 +1032,6 @@ paths:
           description: 未认证
         '409':
           description: 世代或水位失效，需要重建基线
-      parameters:
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/exports:
     get:
       operationId: exportAccount
@@ -1100,8 +1073,6 @@ paths:
         - deviceToken: []
         - sessionToken: []
         - sessionCookie: []
-      parameters:
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/exports/sql:
     get:
       operationId: exportAccountSQL
@@ -1143,8 +1114,6 @@ paths:
         - deviceToken: []
         - sessionToken: []
         - sessionCookie: []
-      parameters:
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/users:
     post:
       operationId: registerUser
@@ -1178,7 +1147,6 @@ paths:
           description: 当前安装的本地来源标识，不是服务端设备 ID
           schema:
             type: string
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '201':
           description: 成功
@@ -1271,8 +1239,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/BindCredentialsRequest'
-      parameters:
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/sessions:
     post:
       operationId: login
@@ -1306,7 +1272,6 @@ paths:
           description: 当前安装的本地来源标识，不是服务端设备 ID
           schema:
             type: string
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '200':
           description: 成功
@@ -1363,7 +1328,6 @@ paths:
           description: 本地设备标识
           schema:
             type: string
-        - $ref: '#/components/parameters/APIFieldCase'
       requestBody:
         required: true
         content:
@@ -1415,8 +1379,6 @@ paths:
       tags:
         - Authentication
       security: []
-      parameters:
-        - $ref: '#/components/parameters/APIFieldCase'
       requestBody:
         required: true
         content:
@@ -1501,8 +1463,6 @@ paths:
         - deviceToken: []
         - sessionToken: []
         - sessionCookie: []
-      parameters:
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/users/me:
     get:
       operationId: getIdentity
@@ -1550,8 +1510,6 @@ paths:
         - deviceToken: []
         - sessionToken: []
         - sessionCookie: []
-      parameters:
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/users/me/password:
     put:
       operationId: changePassword
@@ -1611,8 +1569,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/PasswordRequest'
-      parameters:
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/statistics:
     get:
       operationId: getStatistics
@@ -1669,7 +1625,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/openapi.yaml:
     get:
       operationId: getOpenAPI
@@ -1708,8 +1663,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security: []
-      parameters:
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/anniversaries:
     get:
       operationId: listAnniversariesRecord
@@ -1762,7 +1715,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createAnniversariesRecord
       tags:
@@ -1773,7 +1725,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -1823,7 +1774,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateAnniversariesRecordById
       tags:
@@ -1861,7 +1811,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteAnniversariesRecordById
       tags:
@@ -1899,7 +1848,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/bills:
     get:
       operationId: listBillsRecord
@@ -1952,7 +1900,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createBillsRecord
       tags:
@@ -1963,7 +1910,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -2013,7 +1959,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateBillsRecordById
       tags:
@@ -2051,7 +1996,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteBillsRecordById
       tags:
@@ -2089,7 +2033,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/decision-choice-records:
     get:
       operationId: listDecisionChoiceRecordsRecord
@@ -2142,7 +2085,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createDecisionChoiceRecordsRecord
       tags:
@@ -2153,7 +2095,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -2203,7 +2144,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateDecisionChoiceRecordsRecordById
       tags:
@@ -2241,7 +2181,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteDecisionChoiceRecordsRecordById
       tags:
@@ -2279,7 +2218,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/decision-collections:
     get:
       operationId: listDecisionCollectionsRecord
@@ -2332,7 +2270,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createDecisionCollectionsRecord
       tags:
@@ -2343,7 +2280,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -2393,7 +2329,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateDecisionCollectionsRecordById
       tags:
@@ -2431,7 +2366,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteDecisionCollectionsRecordById
       tags:
@@ -2469,7 +2403,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/decision-options:
     get:
       operationId: listDecisionOptionsRecord
@@ -2522,7 +2455,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createDecisionOptionsRecord
       tags:
@@ -2533,7 +2465,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -2583,7 +2514,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateDecisionOptionsRecordById
       tags:
@@ -2621,7 +2551,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteDecisionOptionsRecordById
       tags:
@@ -2659,7 +2588,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/diary-entries:
     get:
       operationId: listDiaryEntriesRecord
@@ -2712,7 +2640,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createDiaryEntriesRecord
       tags:
@@ -2723,7 +2650,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -2773,7 +2699,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateDiaryEntriesRecordById
       tags:
@@ -2811,7 +2736,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteDiaryEntriesRecordById
       tags:
@@ -2849,7 +2773,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/diary-links:
     get:
       operationId: listDiaryLinksRecord
@@ -2902,7 +2825,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createDiaryLinksRecord
       tags:
@@ -2913,7 +2835,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -2963,7 +2884,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateDiaryLinksRecordById
       tags:
@@ -3001,7 +2921,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteDiaryLinksRecordById
       tags:
@@ -3039,7 +2958,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/diary-tags:
     get:
       operationId: listDiaryTagsRecord
@@ -3092,7 +3010,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createDiaryTagsRecord
       tags:
@@ -3103,7 +3020,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -3153,7 +3069,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateDiaryTagsRecordById
       tags:
@@ -3191,7 +3106,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteDiaryTagsRecordById
       tags:
@@ -3229,7 +3143,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/food-day-records:
     get:
       operationId: listFoodDayRecordsRecord
@@ -3282,7 +3195,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createFoodDayRecordsRecord
       tags:
@@ -3293,7 +3205,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -3343,7 +3254,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateFoodDayRecordsRecordById
       tags:
@@ -3381,7 +3291,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteFoodDayRecordsRecordById
       tags:
@@ -3419,7 +3328,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/food-entries:
     get:
       operationId: listFoodEntriesRecord
@@ -3472,7 +3380,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createFoodEntriesRecord
       tags:
@@ -3483,7 +3390,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -3533,7 +3439,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateFoodEntriesRecordById
       tags:
@@ -3571,7 +3476,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteFoodEntriesRecordById
       tags:
@@ -3609,7 +3513,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/item-categories:
     get:
       operationId: listItemCategoriesRecord
@@ -3662,7 +3565,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createItemCategoriesRecord
       tags:
@@ -3673,7 +3575,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -3723,7 +3624,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateItemCategoriesRecordById
       tags:
@@ -3761,7 +3661,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteItemCategoriesRecordById
       tags:
@@ -3799,7 +3698,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/media-assets:
     get:
       operationId: listMediaAssetsRecord
@@ -3852,7 +3750,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createMediaAssetsRecord
       tags:
@@ -3863,7 +3760,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -3913,7 +3809,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateMediaAssetsRecordById
       tags:
@@ -3951,7 +3846,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteMediaAssetsRecordById
       tags:
@@ -3989,7 +3883,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/media-attachments:
     get:
       operationId: listMediaAttachmentsRecord
@@ -4042,7 +3935,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createMediaAttachmentsRecord
       tags:
@@ -4053,7 +3945,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -4103,7 +3994,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateMediaAttachmentsRecordById
       tags:
@@ -4141,7 +4031,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteMediaAttachmentsRecordById
       tags:
@@ -4179,7 +4068,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/reminder-completions:
     get:
       operationId: listReminderCompletionsRecord
@@ -4232,7 +4120,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createReminderCompletionsRecord
       tags:
@@ -4243,7 +4130,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -4293,7 +4179,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateReminderCompletionsRecordById
       tags:
@@ -4331,7 +4216,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteReminderCompletionsRecordById
       tags:
@@ -4369,7 +4253,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/reminders:
     get:
       operationId: listRemindersRecord
@@ -4422,7 +4305,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createRemindersRecord
       tags:
@@ -4433,7 +4315,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -4483,7 +4364,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateRemindersRecordById
       tags:
@@ -4521,7 +4401,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteRemindersRecordById
       tags:
@@ -4559,7 +4438,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/stored-items:
     get:
       operationId: listStoredItemsRecord
@@ -4612,7 +4490,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createStoredItemsRecord
       tags:
@@ -4623,7 +4500,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -4673,7 +4549,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateStoredItemsRecordById
       tags:
@@ -4711,7 +4586,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteStoredItemsRecordById
       tags:
@@ -4749,7 +4623,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/stored-value-accounts:
     get:
       operationId: listStoredValueAccountsRecord
@@ -4802,7 +4675,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createStoredValueAccountsRecord
       tags:
@@ -4813,7 +4685,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -4863,7 +4734,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateStoredValueAccountsRecordById
       tags:
@@ -4901,7 +4771,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteStoredValueAccountsRecordById
       tags:
@@ -4939,7 +4808,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/stored-value-adjustments:
     get:
       operationId: listStoredValueAdjustmentsRecord
@@ -4992,7 +4860,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createStoredValueAdjustmentsRecord
       tags:
@@ -5003,7 +4870,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -5053,7 +4919,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateStoredValueAdjustmentsRecordById
       tags:
@@ -5091,7 +4956,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteStoredValueAdjustmentsRecordById
       tags:
@@ -5129,7 +4993,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/track-points:
     get:
       operationId: listTrackPointsRecord
@@ -5182,7 +5045,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createTrackPointsRecord
       tags:
@@ -5193,7 +5055,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -5243,7 +5104,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateTrackPointsRecordById
       tags:
@@ -5281,7 +5141,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteTrackPointsRecordById
       tags:
@@ -5319,7 +5178,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/track-segments:
     get:
       operationId: listTrackSegmentsRecord
@@ -5372,7 +5230,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createTrackSegmentsRecord
       tags:
@@ -5383,7 +5240,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -5433,7 +5289,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateTrackSegmentsRecordById
       tags:
@@ -5471,7 +5326,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteTrackSegmentsRecordById
       tags:
@@ -5509,7 +5363,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
   /api/tracks:
     get:
       operationId: listTracksRecord
@@ -5562,7 +5415,6 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
-        - $ref: '#/components/parameters/APIFieldCase'
     post:
       operationId: createTracksRecord
       tags:
@@ -5573,7 +5425,6 @@ paths:
         - $ref: '#/components/parameters/AppVersionHeader'
         - $ref: '#/components/parameters/OSHeader'
         - $ref: '#/components/parameters/OSVersionHeader'
-        - $ref: '#/components/parameters/APIFieldCase'
       responses:
         '400':
           description: 请求不合法
@@ -5623,7 +5474,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     put:
       operationId: updateTracksRecordById
       tags:
@@ -5661,7 +5511,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
     delete:
       operationId: deleteTracksRecordById
       tags:
@@ -5699,7 +5548,6 @@ paths:
           schema:
             type: string
           description: 记录ID
-        - $ref: '#/components/parameters/APIFieldCase'
 components:
   parameters:
     ClientHeader:
@@ -5725,15 +5573,6 @@ components:
       schema:
         type: string
         maxLength: 80
-    APIFieldCase:
-      name: X-Recoow-Field-Case
-      in: header
-      required: false
-      description: 新版发送 snake_case；未声明的旧客户端保留驼峰响应。
-      schema:
-        type: string
-        enum:
-          - snake_case
   securitySchemes:
     deviceToken:
       type: http

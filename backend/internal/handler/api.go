@@ -104,7 +104,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/media/objects/{key...}", s.authRequired(http.HandlerFunc(s.handleMediaGet)))
 	mux.Handle("DELETE /api/media/objects/{key...}", s.authRequired(http.HandlerFunc(s.handleMediaDelete)))
 
-	return requestLogger(s.log, s.cors(apiFieldCase(mux)))
+	return requestLogger(s.log, s.cors(apiQueryParameters(mux)))
 }
 
 // ---- 中间件 ----
@@ -217,7 +217,7 @@ func (s *Server) cors(next http.Handler) http.Handler {
 			w.Header().Add("Vary", "Origin")
 		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, HEAD, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Recoow-Client, X-Recoow-App-Version, X-Recoow-OS, X-Recoow-OS-Version, X-Recoow-Device-Id, X-Recoow-Field-Case")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Recoow-Client, X-Recoow-App-Version, X-Recoow-OS, X-Recoow-OS-Version, X-Recoow-Device-Id")
 		w.Header().Set("Access-Control-Expose-Headers", "Content-Length, ETag, X-Request-Id")
 
 		if r.Method == http.MethodOptions {
@@ -235,12 +235,8 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	if v != nil {
 		var err error
 		encoded, err = json.Marshal(v)
-		legacy := false
-		if writer, ok := w.(*fieldCaseWriter); ok {
-			legacy = writer.legacy
-		}
 		if err == nil {
-			encoded, err = wire.Rename(encoded, legacy)
+			encoded, err = wire.Rename(encoded)
 		}
 		if err != nil {
 			status = http.StatusInternalServerError

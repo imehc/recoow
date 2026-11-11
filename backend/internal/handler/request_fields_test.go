@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestFieldCaseDefaultAndLegacyClientNegotiation(t *testing.T) {
+func TestHTTPResponsesUseCanonicalFieldsForAllClients(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("from_ms") != "1000" || r.URL.Query().Get("device_id") != "device" {
 			t.Fatal("query not normalized")
@@ -16,30 +16,31 @@ func TestFieldCaseDefaultAndLegacyClientNegotiation(t *testing.T) {
 		writeJSON(w, 200, map[string]any{"accountId": "account", "origin": map[string]string{"appVersion": "1"}})
 	})
 	for _, client := range []string{"", "ios", "android", "web"} {
-		for _, mode := range []string{"", "snake_case"} {
+		for _, mode := range []string{"", "snake_case", "camelCase"} {
 			request := httptest.NewRequest("GET", "/api/example?fromMs=1000&device_id=device", nil)
 			request.Header.Set("X-Recoow-Client", client)
 			request.Header.Set("X-Recoow-Field-Case", mode)
 			response := httptest.NewRecorder()
-			apiFieldCase(next).ServeHTTP(response, request)
-			legacy := client != "" && mode == ""
-			key := "account_id"
-			if legacy {
-				key = "accountId"
-			}
+			apiQueryParameters(next).ServeHTTP(response, request)
 			var object map[string]json.RawMessage
 			if err := json.Unmarshal(response.Body.Bytes(), &object); err != nil {
 				t.Fatal(err)
 			}
-			if response.Code != 200 || string(object[key]) != `"account"` {
+			if response.Code != 200 || string(object["account_id"]) != `"account"` || string(object["origin"]) != `{"app_version":"1"}` {
 				t.Fatalf("%s %s: %s", client, mode, response.Body.String())
+			}
+			if _, exists := object["accountId"]; exists {
+				t.Fatal("响应仍包含旧版信封字段")
+			}
+			if response.Header().Get("X-Recoow-Field-Case") != "" || response.Header().Get("Vary") != "" {
+				t.Fatal("响应不应再协商字段名")
 			}
 		}
 	}
 }
 
 func TestCanonicalAndLegacyRequestAliasesDecodeAndCollisionsFail(t *testing.T) {
-	handler := apiFieldCase(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := apiQueryParameters(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var request struct {
 			DeviceID string `json:"device_id"`
 		}

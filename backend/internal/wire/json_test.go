@@ -19,7 +19,7 @@ func TestCanonicalMutationKeepsExistingReceiptHash(t *testing.T) {
 		t.Fatal(err)
 	}
 	frozen, _ := json.Marshal(original)
-	canonical, err := wire.Rename(frozen, false)
+	canonical, err := wire.Rename(frozen)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestCanonicalMutationKeepsExistingReceiptHash(t *testing.T) {
 
 func TestEnvelopeRenamingPreservesBusinessValuesAndDictionaryKeys(t *testing.T) {
 	source := []byte(`{"originalSource":{"deviceId":"device"},"beforeValue":{"deviceId":"business","amount":9007199254740993,"decimal":1e20},"metadata":{"deviceId":"future"},"recordCounts":{"diary_entries":3,"deviceId":1},"snapshot":{"updatedAtMs":null}}`)
-	renamed, err := wire.Rename(source, false)
+	renamed, err := wire.Rename(source)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestAliasCollisionsUnknownFieldsAndTrailingBodiesAreRejected(t *testing.T) 
 			t.Fatalf("accepted %s", input)
 		}
 	}
-	if _, err := wire.Rename([]byte(`{"deviceId":"old","device_id":"new"}`), false); err == nil {
+	if _, err := wire.Rename([]byte(`{"deviceId":"old","device_id":"new"}`)); err == nil {
 		t.Fatal("accepted collision")
 	}
 }
