@@ -45,6 +45,12 @@ class MediaLibraryViewModel @Inject constructor(val repository: MediaRepository,
     fun clearError() { mutable.update { it.copy(error = null) } }
     fun rename(id: String, title: String) = action { repository.rename(id, title) }
     fun delete(id: String) = action { repository.delete(id) }
+    fun deleteSelected(ids: Set<String>) = action {
+        val assets = repository.assets.first()
+        assets.firstOrNull { it.id in ids && it.references > 0 }?.let { throw AssetInUseException(it.references) }
+        ids.forEach { repository.delete(it) }
+    }
+    fun reorder(ids: List<String>) = action { repository.reorder(ids) }
     fun saveImage(replacing: String?, content: PreparedMedia) = action {
         if (replacing == null) repository.createImage(content) else repository.replaceImage(replacing, content)
         content.file.delete()

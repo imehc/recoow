@@ -1,0 +1,4 @@
+<resources>
+    <!-- 与 RecoowPalette.darkScheme() 的背景色一致。 -->
+    <color name="recoow_launch_background">#111214</color>
+</resources>

@@ -5,6 +5,11 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.luminance
+import imehc.recoow.core.designsystem.RecoowPalette
+import imehc.recoow.core.designsystem.RecordSkeleton
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,8 +27,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import imehc.recoow.core.designsystem.RecoowDivider
 import imehc.recoow.core.designsystem.RecoowGroup
 import imehc.recoow.core.designsystem.RecoowLayout
-import imehc.recoow.core.designsystem.RecoowMetric
-import imehc.recoow.core.designsystem.RecoowMetricGrid
 import imehc.recoow.core.designsystem.RecoowNotice
 import imehc.recoow.core.designsystem.RecoowPage
 import imehc.recoow.core.designsystem.RecoowRow
@@ -35,10 +38,9 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
 @Composable
-fun DataManagementScreen(viewModel: DataManagementViewModel, onBack: () -> Unit) {
+fun DataManagementScreen(viewModel: DataManagementViewModel, onBack: () -> Unit,
+    onMedia: () -> Unit = {}, onPhotos: () -> Unit = {}) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var allowUnverifiedAccount by remember(state.preview) { mutableStateOf(false) }
-    val accountBlocked = state.preview?.accountStatus == BackupAccountStatus.MISMATCH || state.preview?.accountStatus == BackupAccountStatus.UNVERIFIED && !allowUnverifiedAccount
     val context = LocalContext.current
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) viewModel.preview { requireNotNull(context.contentResolver.openInputStream(uri)) }
@@ -46,24 +48,39 @@ fun DataManagementScreen(viewModel: DataManagementViewModel, onBack: () -> Unit)
     val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
         if (uri != null) viewModel.export { requireNotNull(context.contentResolver.openOutputStream(uri, "wt")) }
     }
+    DataManagementContent(state, onBack, onMedia, onPhotos,
+        onExport = { exporter.launch("Recoow-${java.time.LocalDate.now()}.recoowbackup") },
+        onPickBackup = { picker.launch(arrayOf("*/*")) }, onDismissPreview = viewModel::dismissPreview,
+        onRefresh = viewModel::refresh, onImport = viewModel::import, onOptimize = viewModel::optimize, onReset = viewModel::reset)
+}
+
+@Composable
+fun DataManagementContent(state: DataManagementState, onBack: () -> Unit, onMedia: () -> Unit, onPhotos: () -> Unit,
+    onExport: () -> Unit, onPickBackup: () -> Unit, onDismissPreview: () -> Unit, onRefresh: () -> Unit,
+    onImport: (ImportMode, Set<ImportScope>, Boolean) -> Unit, onOptimize: () -> Unit, onReset: () -> Unit) {
+    var allowUnverifiedAccount by remember(state.preview) { mutableStateOf(false) }
+    val accountBlocked = state.preview?.accountStatus == BackupAccountStatus.MISMATCH || state.preview?.accountStatus == BackupAccountStatus.UNVERIFIED && !allowUnverifiedAccount
+    val context = LocalContext.current
     var confirmation by rememberSaveable { mutableStateOf<String?>(null) }
     var selected by rememberSaveable { mutableStateOf(ImportScope.entries.map { it.name }) }
+    var storage by rememberSaveable { mutableStateOf(false) }
     val preview = state.preview
-    BackHandler(state.busy || preview != null) { if (!state.busy) viewModel.dismissPreview() }
+    val back = { if (!state.busy) { if (preview != null) onDismissPreview() else if (storage) storage = false else onBack() } }
+    BackHandler(state.busy || preview != null || storage) { back() }
     val names = LocalResources.current.getStringArray(R.array.home_tool_names)
     fun size(value: Long) = Formatter.formatFileSize(context, value)
     fun date(value: Long?) = value?.let { DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(it)) }
 
     RecoowPage(
-        stringResource(if (preview == null) R.string.data_title else R.string.backup_preview),
+        stringResource(if (preview != null) R.string.backup_preview else if (storage) R.string.settings_storage_maintenance else R.string.data_title),
         navigationIcon = {
             IconButton(
-                onClick = { if (preview != null) viewModel.dismissPreview() else onBack() },
+                onClick = back,
                 enabled = !state.busy,
             ) {
                 Icon(painterResource(DesignR.drawable.ic_record_back), stringResource(R.string.sync_back))
             }
-        },
+        }, contentSpacing = RecoowLayout.compactSectionGap,
     ) {
         if (state.busy) item("busy") { SettingsProgress(stringResource(R.string.data_working)) }
 
@@ -85,7 +102,7 @@ fun DataManagementScreen(viewModel: DataManagementViewModel, onBack: () -> Unit)
                     },
                     error = error,
                     actionLabel = if (state.usage == null && !state.busy) stringResource(R.string.retry) else null,
-                    onAction = viewModel::refresh,
+                    onAction = onRefresh,
                 )
             }
         }
@@ -145,85 +162,89 @@ fun DataManagementScreen(viewModel: DataManagementViewModel, onBack: () -> Unit)
                     stringResource(R.string.backup_merge),
                     enabled = !state.busy && !accountBlocked && selected.isNotEmpty(),
                     modifier = Modifier.testTag("backup_merge"),
-                ) { viewModel.import(ImportMode.MERGE_MISSING, selected.map(ImportScope::valueOf).toSet(), allowUnverifiedAccount) }
+                ) { onImport(ImportMode.MERGE_MISSING, selected.map(ImportScope::valueOf).toSet(), allowUnverifiedAccount) }
             }
             item("replace") {
                 RecoowGroup {
                     RecoowRow(
                         stringResource(R.string.backup_replace),
                         titleColor = MaterialTheme.colorScheme.error,
-                        onClick = { if (!accountBlocked) confirmation = "replace" },
+                        onClick = if (!state.busy && !accountBlocked) ({ confirmation = "replace" }) else null,
                     )
                 }
             }
-        } else {
+        } else if (!storage) {
             item("backup") {
                 SettingsSection(stringResource(R.string.data_section_backup)) {
                     RecoowGroup {
                         RecoowRow(
                             stringResource(R.string.backup_export),
-                            subtitle = stringResource(R.string.backup_export_detail),
-                            onClick = { exporter.launch("Recoow-${java.time.LocalDate.now()}.recoowbackup") },
+                            onClick = if (!state.busy) onExport else null,
                             modifier = Modifier.testTag("backup_export"),
                         )
                         RecoowDivider()
                         RecoowRow(
                             stringResource(R.string.backup_import),
-                            subtitle = stringResource(R.string.backup_import_detail),
-                            onClick = { picker.launch(arrayOf("*/*")) },
+                            onClick = if (!state.busy) onPickBackup else null,
                             modifier = Modifier.testTag("backup_import"),
                         )
                     }
                 }
             }
-            state.usage?.let { usage ->
-                item("storage") {
-                    SettingsSection(stringResource(R.string.storage_title), trailing = size(usage.total)) {
-                        RecoowGroup {
-                            RecoowMetricGrid(
-                                listOf(
-                                    RecoowMetric(stringResource(R.string.storage_database), size(usage.database)),
-                                    RecoowMetric(stringResource(R.string.storage_media), size(usage.media)),
-                                    RecoowMetric(stringResource(R.string.storage_backups), size(usage.backups)),
-                                    RecoowMetric(stringResource(R.string.storage_cache), size(usage.cache)),
-                                ),
-                            )
-                            RecoowDivider()
-                            Column(
-                                Modifier.padding(horizontal = RecoowLayout.rowHorizontal, vertical = 11.dp),
-                                verticalArrangement = Arrangement.spacedBy(3.dp),
-                            ) {
-                                listOfNotNull(
-                                    stringResource(R.string.storage_embedded, size(usage.embedded)),
-                                    stringResource(R.string.storage_schema, usage.schemaVersion),
-                                    date(usage.lastExport)?.let { stringResource(R.string.backup_last_export, it) },
-                                    date(usage.lastImport)?.let { stringResource(R.string.backup_last_import, it) },
-                                ).forEach {
-                                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
-                    }
+            state.usage?.takeIf { it.lastExport != null || it.lastImport != null }?.let { usage -> item("backup_dates") {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    date(usage.lastExport)?.let { SettingsFooter(stringResource(R.string.backup_last_export, it)) }
+                    date(usage.lastImport)?.let { SettingsFooter(stringResource(R.string.backup_last_import, it)) }
                 }
-            }
+            } }
+            item("resources") { SettingsSection(stringResource(R.string.settings_photos_assets)) { RecoowGroup {
+                SettingsNavigationRow(DesignR.drawable.ic_setting_media, stringResource(R.string.media_library), "media_settings",
+                    onClick = { if (!state.busy) onMedia() })
+                RecoowDivider(RecoowLayout.dividerInset)
+                SettingsNavigationRow(DesignR.drawable.ic_photo, stringResource(R.string.photos_section), "photo_settings",
+                    onClick = { if (!state.busy) onPhotos() })
+            } } }
+            item("storage_entry") { RecoowGroup {
+                SettingsNavigationRow(DesignR.drawable.ic_setting_data, stringResource(R.string.settings_storage_maintenance), "storage_settings",
+                    value = state.usage?.let { size(it.total) }, onClick = { if (!state.busy) storage = true })
+            } }
+        } else {
+            state.usage?.let { usage -> item("storage") { SettingsSection(stringResource(R.string.storage_title), trailing = size(usage.total)) {
+                RecoowGroup {
+                    val colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary,
+                        RecoowPalette.warningColor(MaterialTheme.colorScheme.background.luminance() < 0.5f), MaterialTheme.colorScheme.onSurfaceVariant)
+                    val parts = listOf(usage.database, usage.media, usage.backups, usage.cache)
+                    imehc.recoow.core.designsystem.RecordDistributionBar(parts.mapIndexed { index, bytes ->
+                        imehc.recoow.core.designsystem.RecordChartSlice(if (usage.total > 0) bytes.toFloat() / usage.total else 0f, colors[index])
+                    }, stringResource(R.string.storage_title), Modifier.padding(RecoowLayout.rowHorizontal))
+                    listOf(R.string.storage_database, R.string.storage_media, R.string.storage_backups, R.string.storage_cache)
+                        .forEachIndexed { index, label ->
+                            RecoowRow(stringResource(label), trailingText = size(parts[index]), icon = {
+                                Box(Modifier.size(10.dp).clip(androidx.compose.foundation.shape.CircleShape).background(colors[index]))
+                            })
+                            if (index < 3) RecoowDivider(RecoowLayout.dividerInset)
+                        }
+                }
+                SettingsFooter(stringResource(R.string.storage_embedded, size(usage.embedded)) + "\n" + stringResource(R.string.storage_schema, usage.schemaVersion),
+                    Modifier.padding(top = 6.dp))
+            } } } ?: item("storage_loading") { RecordSkeleton(rows = 4) }
             item("maintenance") {
                 SettingsSection(stringResource(R.string.data_section_maintenance)) {
                     RecoowGroup {
                         RecoowRow(
                             stringResource(R.string.data_optimize),
                             subtitle = stringResource(R.string.data_optimize_detail),
-                            onClick = viewModel::optimize,
+                            onClick = if (!state.busy) onOptimize else null,
                             modifier = Modifier.testTag("data_optimize"),
                         )
-                        RecoowDivider()
-                        RecoowRow(
-                            stringResource(R.string.data_reset),
-                            subtitle = stringResource(R.string.data_reset_detail),
-                            titleColor = MaterialTheme.colorScheme.error,
-                            onClick = { confirmation = "reset" },
-                            modifier = Modifier.testTag("data_reset"),
-                        )
                     }
+                }
+            }
+            item("reset") {
+                RecoowGroup {
+                    RecoowRow(stringResource(R.string.data_reset), subtitle = stringResource(R.string.data_reset_detail),
+                        titleColor = MaterialTheme.colorScheme.error, onClick = if (!state.busy) ({ confirmation = "reset" }) else null,
+                        modifier = Modifier.testTag("data_reset"))
                 }
             }
         }
@@ -235,10 +256,10 @@ fun DataManagementScreen(viewModel: DataManagementViewModel, onBack: () -> Unit)
             title = { Text(stringResource(if (action == "reset") R.string.data_reset else R.string.backup_replace)) },
             text = { Text(stringResource(if (action == "reset") R.string.data_reset_detail else R.string.backup_replace_detail)) },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(enabled = !state.busy && (action == "reset" || !accountBlocked), onClick = {
                     confirmation = null
-                    if (action == "reset") viewModel.reset() else viewModel.import(ImportMode.REPLACE_ALL, ImportScope.entries.toSet(), allowUnverifiedAccount)
-                }) { Text(stringResource(if (action == "reset") R.string.data_reset else R.string.backup_replace)) }
+                    if (action == "reset") onReset() else onImport(ImportMode.REPLACE_ALL, ImportScope.entries.toSet(), allowUnverifiedAccount)
+                }) { Text(stringResource(if (action == "reset") R.string.data_reset else R.string.backup_replace), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { confirmation = null }) { Text(stringResource(R.string.cancel)) } },
         )

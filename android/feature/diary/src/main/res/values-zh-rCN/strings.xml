@@ -16,13 +16,13 @@
     <string name="diary_source">记录来源</string>
     <string name="diary_filter_date">按日期筛选</string>
     <string name="diary_clear_date">清除日期筛选</string>
-    <string name="diary_photos">照片</string>
+    <string name="diary_photos">图片</string>
     <string name="diary_audio">录音</string>
     <string name="diary_metric_total">累计篇数</string>
     <string name="diary_metric_today">今天</string>
     <string name="diary_metric_days">记录天数</string>
     <string name="diary_metric_streak">连续天数</string>
-    <string name="diary_summary">共 %1$d 篇 · 今日 %2$d 篇\n记录 %3$d 天 · 连续 %4$d 天</string>
+    <string name="diary_summary">共 %1$d 篇 · 今日 %2$d 篇 · 记录 %3$d 天 · 连续 %4$d 天</string>
     <string name="diary_relations_count">关联 %1$d 条 · 附件 %2$d 个</string>
     <string name="diary_delete_tag_note">删除此标签？已有日记保留历史标签引用。</string>
     <string name="diary_delete_note">删除此日记及其关联和附件？来源记录会保留。</string>
@@ -48,4 +48,13 @@
     </string-array>
     <string name="diary_empty_hint">记下当天发生了什么，可以带照片、位置和心情。</string>
     <string name="diary_need_content">先写个标题或正文再保存。</string>
+    <string name="diary_filter">筛选</string>
+    <string name="diary_filter_title">筛选日记</string>
+    <string name="diary_filter_date_label">日期</string>
+    <string name="diary_any_date">不限日期</string>
+    <string name="diary_apply_filters">应用筛选</string>
+    <string name="diary_entries_count">日记 · %1$d 篇</string>
+    <string name="diary_record_info">记录信息</string>
+    <string name="diary_selected_count">已选 %1$d 条</string>
+    <string name="diary_no_link_records">暂无可关联记录</string>
 </resources>

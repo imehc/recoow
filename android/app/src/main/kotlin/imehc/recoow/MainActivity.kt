@@ -75,9 +75,9 @@ class MainActivity : AppCompatActivity() {
             RecoowTheme(darkTheme = dark) {
                 RecoowApp(state, preferences::setAppearance, preferences::setLanguage, preferences::retry,
                     pendingRoute, toolLinks::consumed,
-                    onBill = bills::show, onToolVisible = preferences::setToolVisible,
+                    onToolVisible = preferences::setToolVisible,
                     onPickedPhotos = preferences::setPickedPhotos, onCameraPhotos = preferences::setCameraPhotos,
-                    dataScreen = { back -> imehc.recoow.feature.settings.DataManagementScreen(data, back) },
+                    dataScreen = { back, mediaLibrary, photos -> imehc.recoow.feature.settings.DataManagementScreen(data, back, mediaLibrary, photos) },
                     updateScreen = { back -> imehc.recoow.feature.settings.AppUpdateScreen(updates, back, ::installUpdate) },
                     homeScreen = { settings, tool -> imehc.recoow.feature.home.HomeRoute(home, state.preferences,
                         recordingState.current?.copy(duration = recordingState.duration, pointCount = recordingState.pointCount), settings,
@@ -85,7 +85,7 @@ class MainActivity : AppCompatActivity() {
                     statisticsScreen = { history, tool -> imehc.recoow.feature.statistics.StatisticsRoute(statistics, history, tool) },
                     historyScreen = { back, record -> imehc.recoow.feature.history.HistoryScreen(history, back, record) },
                     remindersScreen = { recordId, onBack -> imehc.recoow.feature.reminders.RemindersScreen(reminders, onBack, recordId) },
-                    billsScreen = { onBack -> imehc.recoow.feature.bills.BillsScreen(bills, onBack) },
+                    billsScreen = { id, onBack -> imehc.recoow.feature.bills.BillsScreen(bills, onBack, recordId = id) },
                     journalScreen = { route, id, onBack, onSource -> when (route) {
                         imehc.recoow.core.domain.navigation.ToolRoute.LOCATION -> imehc.recoow.feature.tracks.TracksScreen(tracks, onBack, id, onSource)
                         imehc.recoow.core.domain.navigation.ToolRoute.ANNIVERSARIES -> imehc.recoow.feature.anniversaries.AnniversariesScreen(anniversaries, onBack, id)
@@ -95,7 +95,8 @@ class MainActivity : AppCompatActivity() {
                         imehc.recoow.core.domain.navigation.ToolRoute.ITEMS -> imehc.recoow.feature.items.ItemsScreen(items, onBack, id)
                         else -> Unit
                     } },
-                    accountScreen = { back, login, settings -> imehc.recoow.feature.settings.AccountSecurityRoute(accounts, back, login, settings) },
+                    accountScreen = { back, login, settings -> imehc.recoow.feature.settings.AccountSecurityRoute(accounts, back, login, settings, sync::refreshDevices, sync::revokeDevice,
+                        sync::resolve, sync::generatePairingCode, sync::dismissPairingCode, sync::acknowledgeRecoveryKey) },
                     syncLoginScreen = { back ->
                         SyncScreen(syncState, back, sync::connect, sync::synchronize, sync::disconnect,
                             sync::acknowledgeRecoveryKey, sync::resolve, sync::generatePairingCode, sync::dismissPairingCode,
@@ -112,7 +113,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        // A link is a one-shot event. SavedStateHandle owns pending delivery across recreation.
+        // 链接是一次性事件；重建之间的待投递状态由 SavedStateHandle 持有。
         handleToolLink(intent)
     }
 

@@ -9,14 +9,20 @@ import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
+import java.time.Instant
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -27,17 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.*
 import androidx.lifecycle.repeatOnLifecycle
-import imehc.recoow.core.designsystem.RecoowAction
-import imehc.recoow.core.designsystem.RecoowAddAction
-import imehc.recoow.core.designsystem.RecoowCompactTopBar
-import imehc.recoow.core.designsystem.RecoowDivider
-import imehc.recoow.core.designsystem.RecoowEmptyState
-import imehc.recoow.core.designsystem.RecoowGroup
-import imehc.recoow.core.designsystem.RecoowLayout
-import imehc.recoow.core.designsystem.RecordListFooter
-import imehc.recoow.core.designsystem.RecordSkeleton
-import imehc.recoow.core.designsystem.RecoowNotice
-import imehc.recoow.core.designsystem.RecoowRow
+import imehc.recoow.core.designsystem.*
+import imehc.recoow.core.designsystem.R as CommonR
 import imehc.recoow.core.domain.reminders.*
 import kotlinx.coroutines.delay
 
@@ -69,7 +66,8 @@ internal fun statusLabel(status: ReminderStatus) = when (status) {
     LaunchedEffect(state.feedback) { if (state.feedback > 0) haptic.performHapticFeedback(HapticFeedbackType.Confirm) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refreshNotifications() }
     LaunchedEffect(lifecycle) { lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { while (true) { viewModel.refreshTime(); delay(30_000) } } }
-    val back: () -> Unit = { if (!state.busy) { if (draft != null || detail != null || makeup != null) viewModel.back() else onBack() } }
+    val back = recordBackAction(state.busy, draft != null || detail != null || makeup != null,
+        entryDetail = draft == null && makeup == null && detail != null, onNestedBack = viewModel::back, onBack = onBack)
     BackHandler(draft != null || detail != null || makeup != null || state.busy, back)
     when {
         makeup != null -> CheckInCalendar(state.records.firstOrNull { it.id == makeup }, state, viewModel, back)
@@ -82,61 +80,98 @@ internal fun statusLabel(status: ReminderStatus) = when (status) {
 }
 @Composable private fun ReminderList(state: RemindersState, tab: Int, notifications: ReminderNotificationState, vm: RemindersViewModel, onBack: () -> Unit) {
     LaunchedEffect(Unit) { vm.settle() }
+    val query by vm.query.collectAsStateWithLifecycle()
+    val resources = LocalResources.current
+    var searching by rememberSaveable { mutableStateOf(false) }
+    val focus = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val closeSearch: () -> Unit = { searching = false; vm.query(""); focus.clearFocus(); keyboard?.hide() }
+    BackHandler(searching) { closeSearch() }
+    val source = vm.rows(state, tab)
+    val rows = remember(source, query, state.now, state.zone, resources) { source.filter { r ->
+        listOf(r.title, r.note.orEmpty(), resources.getString(scheduleLabel(r.kind)),
+            resources.getString(statusLabel(r.status(state.now, state.zone)))).joinToString(" ").contains(query.trim(), ignoreCase = true)
+    } }
+    val today = Instant.ofEpochMilli(state.now).atZone(state.zone).toLocalDate()
     Scaffold(Modifier.testTag("tool_reminders"), containerColor = MaterialTheme.colorScheme.background,
         topBar = { RecoowCompactTopBar(stringResource(R.string.reminder_reminders), navigationIcon = { BackButton(onBack) },
-            action = { if (!state.failed) RecoowAddAction(stringResource(R.string.reminder_add), onClick = { vm.edit() }, tag = "reminder_add") }) }) { padding ->
+            titleContent = { RecordSearchTitle(stringResource(R.string.reminder_reminders), searching, query, vm::query, "reminder_search") },
+            action = { RecoowSearchToggle(searching, { if (searching) closeSearch() else searching = true }, tag = "reminder_search_toggle") }) },
+        floatingActionButton = { if (!state.failed) RecoowFloatingAddAction(stringResource(R.string.reminder_add), onClick = { vm.edit() }, enabled = !state.busy, tag = "reminder_add") }) { padding ->
         LazyColumn(
-            Modifier.fillMaxSize().padding(padding).testTag("reminder_list"),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(RecoowLayout.sectionGap),
+            Modifier.fillMaxSize().padding(padding).imePadding().testTag("reminder_list"),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(RecoowLayout.compactSectionGap),
         ) {
-            item(key = "notifications") { NotificationControls(notifications, vm) }
-            item(key = "tabs") {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf(R.string.reminder_active, R.string.reminder_paused, R.string.reminder_history).forEachIndexed { index, label ->
-                    FilterChip(tab == index, { vm.tab(index) }, label = { Text(stringResource(label)) })
-                } }
-            }
-            if (state.loading) item(key = "loading") {
-                if (vm.rows(state, tab).isEmpty()) RecordSkeleton(rows = 4) else LinearProgressIndicator(Modifier.fillMaxWidth())
-            }
-            else if (state.failed) item(key = "failed") { RecordListFooter(failed = true, onRetry = vm::retry) }
-            else if (vm.rows(state, tab).isEmpty()) item(key = "empty") {
-                RecoowGroup {
-                    RecoowEmptyState(
-                        title = stringResource(when (tab) { 1 -> R.string.reminder_empty_paused; 2 -> R.string.reminder_empty_history; else -> R.string.reminder_empty_active }),
-                    )
-                }
-            }
-            else item(key = "rows") {
-                RecoowGroup {
-                    val rows = vm.rows(state, tab)
-                    rows.forEachIndexed { index, r ->
-                        Column(Modifier.testTag("reminder_${r.id}")) {
-                            RecoowRow(
-                                title = "${r.icon} ${r.title}",
-                                subtitle = listOf(
-                                    stringResource(scheduleLabel(r.kind)),
-                                    stringResource(statusLabel(r.status(state.now, state.zone))),
-                                    dateTime(r.scheduledAt, state.zone),
-                                    stringResource(R.string.reminder_total_checkins, r.totalCheckIns),
-                                ).joinToString(" · "),
-                                showChevron = true,
-                                onClick = { vm.show(r.id) },
-                            )
-                            if (r.canCheckIn(state.now, state.zone)) {
-                                RecoowDivider()
-                                FilledTonalButton(
-                                    onClick = { vm.act(r, ReminderAction.CHECK_IN) },
-                                    enabled = !state.busy,
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-                                ) { Text(stringResource(R.string.reminder_check_in)) }
-                            }
-                        }
-                        if (index < rows.lastIndex) RecoowDivider()
+            item(key = "summary") {
+                Column {
+                    RecoowSectionHeader(stringResource(R.string.reminder_summary))
+                    RecoowGroup {
+                        RecoowMetricStrip(listOf(
+                            RecoowMetric(stringResource(R.string.reminder_metric_active), state.records.count { !it.completed(state.zone) && !it.paused }.toString(), icon = CommonR.drawable.ic_tool_reminders),
+                            RecoowMetric(stringResource(R.string.reminder_metric_ready), state.records.count { it.canCheckIn(state.now, state.zone) }.toString(), icon = CommonR.drawable.ic_clock),
+                            RecoowMetric(stringResource(R.string.reminder_metric_today), state.records.count { today in it.dates }.toString(), icon = CommonR.drawable.ic_check),
+                            RecoowMetric(stringResource(R.string.reminder_metric_completed), state.records.count { it.completed(state.zone) }.toString(), icon = CommonR.drawable.ic_metric_streak),
+                        ))
                     }
                 }
             }
+            if (!notifications.allowed || !notifications.exact || notifications.failed) item(key = "notifications") { NotificationControls(notifications, vm) }
+            item(key = "rows") {
+                if (state.loading && rows.isEmpty()) RecordSkeleton(rows = 4, leading = true)
+                else RecoowGroup {
+                    RecordListHeader(stringResource(R.string.reminder_task_count, rows.size), Modifier.padding(horizontal = RecoowLayout.rowHorizontal))
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = RecoowLayout.rowHorizontal),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(R.string.reminder_active, R.string.reminder_paused, R.string.reminder_history).forEachIndexed { index, label ->
+                            FilterChip(tab == index, { vm.tab(index) }, label = { Text(stringResource(label)) })
+                        }
+                    }
+                    RecoowDivider(inset = 0.dp)
+                    if (state.failed) RecordListFooter(failed = true, onRetry = vm::retry)
+                    else if (rows.isEmpty()) {
+                        val filtered = source.isNotEmpty() && query.isNotBlank()
+                        RecoowEmptyState(
+                            title = stringResource(if (filtered) CommonR.string.record_no_matches else when (tab) {
+                                1 -> R.string.reminder_empty_paused; 2 -> R.string.reminder_empty_history; else -> R.string.reminder_empty_active
+                            }),
+                            description = stringResource(if (filtered) CommonR.string.record_no_matches_hint else when (tab) {
+                                1 -> R.string.reminder_empty_paused_hint; 2 -> R.string.reminder_empty_history_hint; else -> R.string.reminder_empty_active_hint
+                            }),
+                            actionLabel = if (filtered) stringResource(CommonR.string.record_clear_filters) else null,
+                            onAction = if (filtered) closeSearch else null,
+                        )
+                    } else rows.forEachIndexed { index, r ->
+                        ReminderListRow(r, state, vm)
+                        if (index < rows.lastIndex) RecoowDivider(inset = RecoowLayout.coverDividerInset)
+                    }
+                }
+            }
+            if (state.busy || state.loading && rows.isNotEmpty()) item(key = "busy") { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         }
+    }
+}
+
+@Composable private fun ReminderListRow(r: Reminder, state: RemindersState, vm: RemindersViewModel) {
+    ReminderCoverRow(r, vm, onClick = { vm.show(r.id) }, modifier = Modifier.testTag("reminder_${r.id}"), trailing = {
+        Box(Modifier.size(RecoowLayout.controlSize), contentAlignment = Alignment.Center) {
+            if (r.canCheckIn(state.now, state.zone)) FilledTonalIconButton(onClick = { vm.act(r, ReminderAction.CHECK_IN) },
+                enabled = !state.busy, modifier = Modifier.testTag("reminder_checkin_${r.id}")) {
+                Icon(painterResource(CommonR.drawable.ic_check), stringResource(R.string.reminder_check_in), modifier = Modifier.size(20.dp))
+            } else RecoowChevron()
+        }
+    }) {
+        Text(r.title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 2, overflow = TextOverflow.Ellipsis)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp), itemVerticalAlignment = Alignment.CenterVertically) {
+            val status = r.status(state.now, state.zone)
+            if (status != ReminderStatus.READY && status != ReminderStatus.CHECKED_IN) ReminderStatusBadge(status)
+            ReminderProgressText(r, state)
+        }
+        Text(stringResource(scheduleLabel(r.kind)) + " · " + reminderTimeText(r, state), style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        val total = r.totalDays(state.zone)
+        if (total != null) LinearProgressIndicator(progress = { (r.totalCheckIns.toFloat() / total).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
     }
 }
 @Composable internal fun NotificationControls(state: ReminderNotificationState, vm: RemindersViewModel) {

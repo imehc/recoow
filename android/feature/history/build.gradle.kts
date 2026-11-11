@@ -25,9 +25,11 @@ dependencies {
     androidTestImplementation(libs.androidx.test)
     androidTestImplementation(libs.test.runner)
     androidTestImplementation(libs.compose.test)
+    androidTestImplementation(libs.coroutines.test)
     debugImplementation(libs.compose.test.manifest)
 
     implementation(project(":core:domain"))
+    implementation(project(":core:media"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

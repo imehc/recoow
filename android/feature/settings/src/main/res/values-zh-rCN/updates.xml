@@ -17,4 +17,6 @@
     <string name="update_storage_failed">无法保存更新包，请清理存储空间后重试。</string>
     <string name="update_installer_failed">无法打开系统安装界面，请尝试从发布页面下载 APK 安装。</string>
     <string name="update_check">检查更新</string>
+    <string name="update_version_label">版本号</string>
+    <string name="update_size_label">安装包大小</string>
 </resources>

@@ -1,0 +1,5 @@
+<resources>
+    <color name="recoow_icon_background">#EEF4FF</color>
+    <!-- 在 Compose 绘制首帧之前，与 RecoowPalette.background 保持一致。 -->
+    <color name="recoow_launch_background">#F4F5F7</color>
+</resources>

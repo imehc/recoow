@@ -17,4 +17,6 @@
     <string name="update_storage_failed">Could not save the update. Free some storage and try again.</string>
     <string name="update_installer_failed">The Android installer is unavailable. Try installing the APK from the releases page.</string>
     <string name="update_check">Check for updates</string>
+    <string name="update_version_label">Version</string>
+    <string name="update_size_label">Package size</string>
 </resources>

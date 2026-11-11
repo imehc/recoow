@@ -8,10 +8,21 @@
     <string name="items_manage_categories">管理分类</string>
     <string name="items_filter_category">按分类筛选</string>
     <string name="items_uncategorized">未分类</string>
-    <string name="items_deleted_category">原分类已不可用（保留引用）</string>
+    <string name="items_deleted_category">原分类已删除</string>
     <string name="items_tags">标签</string>
     <string name="items_keywords">搜索关键词</string>
     <string name="items_delete_category_note">删除此分类？物品及其原分类引用会保留。</string>
     <string name="items_delete_note">删除此物品？共享图片和日记中的历史摘要会保留。</string>
     <string name="items_empty_hint">登记你有哪些东西、放在哪里，之后搜关键词就能找到。</string>
+    <string name="items_empty">暂无物品记录</string>
+    <string name="items_empty_categories_hint">添加分类后，可以按类别筛选物品。</string>
+    <string name="items_summary">记录概览</string>
+    <string name="items_metric_total">物品</string>
+    <string name="items_metric_photos">有图片</string>
+    <string name="items_record_count">%1$d 件物品</string>
+    <string name="items_basic_info">基础信息</string>
+    <string name="items_location_info">位置信息</string>
+    <string name="items_memory">辅助记忆</string>
+    <string name="items_details">物品详情</string>
+    <string name="items_updated_at">更新时间</string>
 </resources>

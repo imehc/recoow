@@ -79,11 +79,11 @@
   <string name="start">From</string>
   <string name="end">To</string>
   <string name="swap">Swap locations</string>
-  <string name="lines">Transport lines (one per line)</string>
+  <string name="lines">Transport lines</string>
   <string name="utility_number">Utility account number</string>
   <string name="copy_number">Copy number</string>
   <string name="copied">Copied</string>
-  <string name="receipt">Receipt image</string>
+  <string name="receipt">Images</string>
   <string name="recharge">Stored value recharge</string>
   <string name="select_account">Select account</string>
   <string name="add_account">Add account</string>
@@ -124,4 +124,12 @@
   <string name="phone_balance">Phone balance</string>
   <string name="other_account">Other stored value</string>
   <string name="amount_original_required">Enter the original amount first</string>
+  <string name="bill_count">%1$d bills</string>
+  <string name="bill_type">Type</string>
+  <string name="apply_filters">Apply filters</string>
+  <string name="pending_redemption">Pending redemption</string>
+  <string name="bill_basic_section">Bill information</string>
+  <string name="bill_amount_section">Amounts</string>
+  <string name="bill_account_section">Stored value</string>
+  <string name="bill_transport_section">Journey</string>
 </resources>

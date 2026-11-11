@@ -4,6 +4,7 @@ import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import imehc.recoow.core.domain.bills.*
 import imehc.recoow.core.domain.navigation.ToolRoute
+import imehc.recoow.core.domain.media.MediaRepository
 import imehc.recoow.core.domain.reminders.*
 import imehc.recoow.core.domain.statistics.*
 import java.time.ZoneId
@@ -22,7 +23,7 @@ data class StatisticsState(val overview: UsageOverview = UsageOverview(), val pr
 
 @HiltViewModel
 class StatisticsViewModel @Inject constructor(private val repository: StatisticsRepository, private val bills: BillsRepository,
-    private val reminders: RemindersRepository, private val saved: SavedStateHandle) : ViewModel() {
+    private val reminders: RemindersRepository, private val saved: SavedStateHandle, val media: MediaRepository? = null) : ViewModel() {
     private val sources = MutableStateFlow(StatisticsSources())
     private val clock = MutableStateFlow(StatisticsClock())
     val period = saved.getStateFlow("statisticsPeriod", BillPeriod.MONTH)

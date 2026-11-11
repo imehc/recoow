@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.Recoow.Launch" parent="Theme.Recoow">
+        <item name="android:windowBackground">@color/recoow_launch_background</item>
+        <item name="android:windowSplashScreenBackground">@color/recoow_launch_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        <item name="android:windowSplashScreenAnimationDuration">0</item>
+    </style>
+</resources>

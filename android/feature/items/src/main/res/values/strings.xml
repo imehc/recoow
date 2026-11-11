@@ -8,10 +8,21 @@
     <string name="items_manage_categories">Manage categories</string>
     <string name="items_filter_category">Filter by category</string>
     <string name="items_uncategorized">Uncategorized</string>
-    <string name="items_deleted_category">Unavailable category (kept)</string>
+    <string name="items_deleted_category">Previous category deleted</string>
     <string name="items_tags">Tags</string>
     <string name="items_keywords">Search keywords</string>
     <string name="items_delete_category_note">Delete this category? Items and their category references are kept.</string>
     <string name="items_delete_note">Delete this item? Shared images and linked diary snapshots are kept.</string>
     <string name="items_empty_hint">Record what you own and where it is; search finds it later.</string>
+    <string name="items_empty">No items yet</string>
+    <string name="items_empty_categories_hint">Add categories to filter items by type.</string>
+    <string name="items_summary">Overview</string>
+    <string name="items_metric_total">Items</string>
+    <string name="items_metric_photos">With photos</string>
+    <string name="items_record_count">%1$d items</string>
+    <string name="items_basic_info">Basic information</string>
+    <string name="items_location_info">Location information</string>
+    <string name="items_memory">Memory aids</string>
+    <string name="items_details">Item details</string>
+    <string name="items_updated_at">Last updated</string>
 </resources>

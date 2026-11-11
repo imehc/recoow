@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Business backup is explicit. OS transfer must never clone a device identity. -->
+<!-- 业务备份需显式触发，系统迁移绝不能克隆设备身份。 -->
 <data-extraction-rules>
     <cloud-backup disableIfNoEncryptionCapabilities="true">
         <exclude domain="root" path="." />

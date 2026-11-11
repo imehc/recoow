@@ -3,4 +3,8 @@
     <item name="android:windowLightStatusBar">true</item>
     <item name="android:windowActionModeOverlay">true</item>
     <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
-</style></resources>
+</style>
+<style name="Theme.Recoow.Launch" parent="Theme.Recoow">
+    <item name="android:windowBackground">@color/recoow_launch_background</item>
+</style>
+</resources>

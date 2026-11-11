@@ -4,6 +4,7 @@ import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import imehc.recoow.core.domain.history.*
 import imehc.recoow.core.domain.navigation.ToolRoute
+import imehc.recoow.core.domain.media.MediaRepository
 import java.time.*
 import java.time.temporal.WeekFields
 import java.util.Locale
@@ -17,13 +18,17 @@ data class HistoryState(val entries: List<HistoryEntry> = emptyList(), val next:
     val selected: Map<String, HistoryEntry> = emptyMap(), val selecting: Boolean = false,
     val busy: Boolean = false, val plan: HistoryDeletionPlan? = null, val error: Boolean = false, val deleteResult: HistoryDeletionResult? = null)
 @HiltViewModel
-class HistoryViewModel @Inject constructor(private val repository: HistoryRepository, private val saved: SavedStateHandle) : ViewModel() {
+class HistoryViewModel @Inject constructor(private val repository: HistoryRepository, private val saved: SavedStateHandle,
+    presentation: HistoryPresentation? = null, val media: MediaRepository? = null) : ViewModel() {
     private val mutable = MutableStateFlow(HistoryState()); val state = mutable.asStateFlow()
     val search = saved.getStateFlow("historySearch", "")
     val date = saved.getStateFlow<String?>("historyDate", null)
     val route = saved.getStateFlow<ToolRoute?>("historyRoute", null)
     val week = saved.getStateFlow("historyWeek", LocalDate.now().toString())
     private val environment = MutableStateFlow(ZoneId.systemDefault() to Locale.getDefault())
+    private val appearances = presentation?.bind(viewModelScope, environment.map { it.first }.distinctUntilChanged())
+    internal fun appearance(entry: HistoryEntry): Flow<HistoryAppearance> = appearances?.get(entry.route)
+        ?.map { it[entry.recordId] ?: HistoryAppearance() } ?: flowOf(HistoryAppearance())
     private val refresh = MutableStateFlow(0)
     private var generation = 0L
     private var pageJob: Job? = null

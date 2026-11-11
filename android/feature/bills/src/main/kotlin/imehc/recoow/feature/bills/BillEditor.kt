@@ -1,14 +1,6 @@
 package imehc.recoow.feature.bills
 
-import imehc.recoow.core.designsystem.RecordChoice
-import imehc.recoow.core.designsystem.RecordForm
-import imehc.recoow.core.designsystem.RecordFormAction
-import imehc.recoow.core.designsystem.RecordFormDateTime
-import imehc.recoow.core.designsystem.RecordFormDivider
-import imehc.recoow.core.designsystem.RecordFormHint
-import imehc.recoow.core.designsystem.RecordFormText
-import imehc.recoow.core.designsystem.RecordFormValue
-import imehc.recoow.core.designsystem.RecordSwitch
+import imehc.recoow.core.designsystem.*
 import imehc.recoow.core.designsystem.R as CommonR
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,6 +15,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import imehc.recoow.core.domain.bills.*
@@ -48,25 +41,27 @@ import java.io.File
     }
     val accountError = if (attempted && draft.requiresAccount && draft.accountId == null) stringResource(CommonR.string.record_field_choose) else null
     val validUntilError = if (attempted && draft.isGroupBuy && draft.validUntil == null) stringResource(CommonR.string.record_field_choose) else null
-    Scaffold(topBar = {
-        TopAppBar(title = { Text(stringResource(if (draft.revision == null) R.string.add_bill else R.string.edit_bill)) },
-            navigationIcon = { BackButton(onBack) }, actions = {
-                TextButton(enabled = enabled, onClick = { if (draft.valid) viewModel.save() else attempted = true },
-                    modifier = Modifier.testTag("bill_save")) { Text(stringResource(R.string.save)) }
+    Scaffold(containerColor = MaterialTheme.colorScheme.background, topBar = {
+        RecoowCompactTopBar(title = stringResource(if (draft.revision == null) R.string.add_bill else R.string.edit_bill),
+            navigationIcon = { BackButton(onBack) }, action = {
+                IconButton(enabled = enabled, onClick = { if (draft.valid) viewModel.save() else attempted = true },
+                    modifier = Modifier.testTag("bill_save")) {
+                    Icon(painterResource(CommonR.drawable.ic_check), stringResource(R.string.save), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             })
     }) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding).imePadding().testTag("bill_form"),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(RecoowLayout.compactSectionGap),
         ) {
             if (state.busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
             item {
-                RecordForm {
+                RecordFormSection(stringResource(R.string.bill_basic_section)) {
                     RecordFormText(stringResource(R.string.title), draft.title, { viewModel.update(draft.copy(title = it)) },
-                        enabled = enabled, error = titleError, tag = "bill_title")
+                        enabled = enabled, placeholder = "", error = titleError, tag = "bill_title")
                     RecordFormDivider()
-                    RecordChoice(stringResource(R.string.bills), draft.type,
+                    RecordChoice(stringResource(R.string.bill_type), draft.type,
                         BillType.entries.map { it to resources.getString(labelId(it.wire)) },
                         { viewModel.update(draft.withType(it)) }, enabled = enabled, bordered = false,
                         modifier = Modifier.testTag("bill_type"))
@@ -93,7 +88,7 @@ import java.io.File
                 }
             }
             item {
-                RecordForm {
+                RecordFormSection(stringResource(R.string.bill_amount_section)) {
                     if (draft.type == BillType.EXPENSE) {
                         AmountRow(draft, AmountField.ORIGINAL, R.string.original, enabled, viewModel, amountError.takeIf { originalMissing })
                         RecordFormDivider()
@@ -114,7 +109,7 @@ import java.io.File
                 }
             }
             if (draft.type != BillType.INCOME) item {
-                RecordForm {
+                RecordFormSection(stringResource(R.string.bill_account_section)) {
                     if (draft.type == BillType.EXPENSE) {
                         RecordSwitch(stringResource(R.string.recharge), draft.recharge, { viewModel.update(draft.copy(recharge = it)) },
                             enabled = enabled, modifier = Modifier.padding(horizontal = 14.dp).testTag("bill_recharge"))
@@ -131,22 +126,30 @@ import java.io.File
                         RecordFormAction(stringResource(R.string.add_account), onClick = { viewModel.editAccount() },
                             enabled = enabled, tag = "bill_add_account")
                     }
+                    if (draft.requiresAccount) {
+                        RecordFormDivider()
+                        RecordFormHint(stringResource(R.string.recharge_hint))
+                    }
                 }
             }
-            if (draft.requiresAccount) item { RecordFormHint(stringResource(R.string.recharge_hint)) }
             if (draft.isTransport) item {
-                RecordForm {
-                    RecordFormText(stringResource(R.string.start), draft.start, { viewModel.update(draft.copy(start = it)) }, enabled = enabled)
+                RecordFormSection(stringResource(R.string.bill_transport_section)) {
+                    RecordFormSwap(stringResource(R.string.swap), onClick = {
+                        viewModel.update(draft.copy(start = draft.end, end = draft.start))
+                    }, enabled = enabled, modifier = Modifier.testTag("bill_swap_locations"),
+                        first = {
+                            RecordFormText(stringResource(R.string.start), draft.start,
+                                { viewModel.update(draft.copy(start = it)) }, enabled = enabled)
+                        }, second = {
+                            RecordFormText(stringResource(R.string.end), draft.end,
+                                { viewModel.update(draft.copy(end = it)) }, enabled = enabled)
+                        })
                     RecordFormDivider()
-                    RecordFormAction(stringResource(R.string.swap), onClick = { viewModel.update(draft.copy(start = draft.end, end = draft.start)) }, enabled = enabled)
-                    RecordFormDivider()
-                    RecordFormText(stringResource(R.string.end), draft.end, { viewModel.update(draft.copy(end = it)) }, enabled = enabled)
-                    RecordFormDivider()
-                    RecordFormText(stringResource(R.string.lines), draft.lines, { viewModel.update(draft.copy(lines = it)) }, enabled = enabled, multiline = true)
+                    RecordFormText(stringResource(R.string.lines), draft.lines, { viewModel.update(draft.copy(lines = it)) }, enabled = enabled, placeholder = "", multiline = true)
                 }
             }
             if (draft.isUtility) item {
-                RecordForm {
+                RecordFormSection(stringResource(R.string.utility)) {
                     RecordFormText(stringResource(R.string.utility_number), draft.utilityNumber,
                         { viewModel.update(draft.copy(utilityNumber = it)) }, enabled = enabled, tag = "bill_utility_number")
                 }
@@ -154,13 +157,11 @@ import java.io.File
             item {
                 RecordForm {
                     RecordFormText(stringResource(R.string.note), draft.note, { viewModel.update(draft.copy(note = it)) },
-                        enabled = enabled, multiline = true)
+                        enabled = enabled, placeholder = "", multiline = true)
                 }
             }
             if (state.preferences != null && enabled) item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.receipt), style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp))
+                Column {
                     val locator = when (draft.imageEdit) {
                         BillImageEdit.CLEAR -> null
                         BillImageEdit.FILE -> draft.imageFile?.let { MediaLocator(draft = File(it)) }
@@ -170,7 +171,7 @@ import java.io.File
                     PhotoInput(locator, { photo ->
                         viewModel.update(draft.copy(imageEdit = when { photo == null -> BillImageEdit.CLEAR; photo.assetId != null -> BillImageEdit.ASSET; else -> BillImageEdit.FILE },
                             imageAssetId = photo?.assetId, imageFile = photo?.content?.file?.path, hasImage = photo != null))
-                    }, viewModel.media, viewModel.processor, state.preferences)
+                    }, viewModel.media, viewModel.processor, state.preferences, compact = true)
                 }
             }
         }

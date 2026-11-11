@@ -2,7 +2,6 @@ package imehc.recoow.feature.home
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -16,7 +15,6 @@ import imehc.recoow.core.domain.navigation.ToolRoute
 import imehc.recoow.core.domain.preferences.AppPreferences
 import imehc.recoow.core.domain.tracks.Track
 import imehc.recoow.core.domain.tracks.TrackStatus
-import java.net.URLEncoder
 import java.time.format.DateTimeFormatter
 
 @Composable
@@ -44,36 +42,7 @@ fun HomeScreen(preferences: AppPreferences? = null, summary: HomeSummary = HomeS
     val hidden = preferences?.hiddenHomeTools.orEmpty()
     val firstVisibleGroup = groups.indexOfFirst { (_, routes) -> routes.any { it.id !in hidden } }
     val date = summary.date.format(DateTimeFormatter.ofPattern(if (locale.language == "zh") "M月d日 E" else "EEE, MMM d", locale))
-    val pending = if (ToolRoute.REMINDERS.id !in hidden && summary.remindersReady) summary.pending else emptyList()
-
     RecoowPage(stringResource(R.string.home_title), contentSpacing = RecoowLayout.sectionGap) {
-        if (pending.isNotEmpty()) item(key = "pending") {
-            Column {
-                RecoowSectionHeader(
-                    stringResource(R.string.home_pending, pending.size),
-                    trailing = if (firstVisibleGroup < 0) date else null,
-                )
-                RecoowGroup {
-                    val shown = pending.take(3)
-                    shown.forEachIndexed { index, reminder ->
-                        RecoowRow(
-                            title = reminder.title,
-                            showChevron = true,
-                            icon = { Text(reminder.icon, style = MaterialTheme.typography.titleMedium) },
-                            onClick = { onTool("reminders?recordId=${URLEncoder.encode(reminder.id, "UTF-8")}") },
-                        )
-                        if (index < shown.lastIndex || pending.size > 3) RecoowDivider(RecoowLayout.dividerInset)
-                    }
-                    if (pending.size > 3) {
-                        RecoowRow(
-                            title = stringResource(R.string.home_more_pending, pending.size - 3),
-                            showChevron = true,
-                            onClick = { onTool(ToolRoute.REMINDERS.id) },
-                        )
-                    }
-                }
-            }
-        }
         if (activeTrack != null) item(key = "active_track") {
             RecoowGroup {
                 RecoowToolRow(

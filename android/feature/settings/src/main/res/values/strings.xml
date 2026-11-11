@@ -112,7 +112,7 @@
     <string name="backup_replace_detail">Replace all local records and portable preferences with this backup. The current track will be paused. Your device identity and current server connection stay on this device; imported records will be queued for sync. A recovery copy protects against interrupted imports.</string>
     <string name="photos_picked">Add picked photos to media library</string>
     <string name="photos_camera">Save camera photos to system gallery</string>
-    <string name="photos_section">Photos</string>
+    <string name="photos_section">Photo settings</string>
     <string name="sync_section_server">Server</string>
     <string name="sync_section_sync">Sync</string>
     <string name="sync_section_devices">Paired devices</string>
@@ -193,7 +193,7 @@
   <string name="account_sync_waiting_network">Waiting for connection</string>
   <string name="account_sync_waiting">Waiting to sync</string>
   <string name="account_sync_done">Up to date</string>
-  <string name="account_connection_settings">Connection and devices</string>
+  <string name="account_connection_settings">Connection settings</string>
   <string name="sync_remerge">Merge again</string>
   <string name="sync_remerge_detail">Cloud data was cleared or rebuilt. Merging again backs up local data and uploads existing records to the cloud.</string>
 </resources>

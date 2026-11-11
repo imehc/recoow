@@ -16,13 +16,13 @@
     <string name="diary_source">Source</string>
     <string name="diary_filter_date">Filter by date</string>
     <string name="diary_clear_date">Clear date</string>
-    <string name="diary_photos">Photos</string>
+    <string name="diary_photos">Images</string>
     <string name="diary_audio">Audio</string>
     <string name="diary_metric_total">Entries</string>
     <string name="diary_metric_today">Today</string>
     <string name="diary_metric_days">Active days</string>
     <string name="diary_metric_streak">Streak</string>
-    <string name="diary_summary">Entries: %1$d · Today: %2$d\nActive days: %3$d · Streak: %4$d</string>
+    <string name="diary_summary">Entries %1$d · Today %2$d · Days %3$d · Streak %4$d</string>
     <string name="diary_relations_count">%1$d linked records · %2$d attachments</string>
     <string name="diary_delete_tag_note">Delete this tag? Existing diary entries keep their tag references.</string>
     <string name="diary_delete_note">Delete this entry and its links and attachments? Source records are kept.</string>
@@ -48,4 +48,13 @@
     </string-array>
     <string name="diary_empty_hint">Write down what happened, with photos, place and mood.</string>
     <string name="diary_need_content">Write a title or some text before saving.</string>
+    <string name="diary_filter">Filter</string>
+    <string name="diary_filter_title">Filter diary entries</string>
+    <string name="diary_filter_date_label">Date</string>
+    <string name="diary_any_date">Any date</string>
+    <string name="diary_apply_filters">Apply</string>
+    <string name="diary_entries_count">Entries · %1$d</string>
+    <string name="diary_record_info">Record details</string>
+    <string name="diary_selected_count">Selected %1$d</string>
+    <string name="diary_no_link_records">No records available to link</string>
 </resources>

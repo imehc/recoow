@@ -1,0 +1,11 @@
+<resources>
+    <string name="statistics_category_shares">分类占比</string>
+    <string name="statistics_more_categories">展开其余 %1$d 项</string>
+    <string name="statistics_collapse">收起</string>
+    <string name="statistics_target_compact">%1$d / %2$d 天</string>
+    <string name="statistics_remaining_compact">剩余 %1$d 天</string>
+    <string name="statistics_streak_compact">连续 %1$d 天 · 最长 %2$d 天</string>
+    <string name="statistics_no_share">当前周期暂无分类金额</string>
+    <string name="statistics_categories">%1$d 个分类</string>
+    <string name="statistics_tool_share">%1$d 条 · %2$s</string>
+</resources>

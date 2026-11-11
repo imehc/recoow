@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import imehc.recoow.core.designsystem.LocalRecordReturnToSource
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
@@ -40,15 +42,14 @@ private enum class AppTab(val route: String, val label: Int, val icon: Int) {
 fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLanguage: (AppLanguage) -> Unit,
     onRetry: () -> Unit, pendingTool: String? = null, onToolConsumed: (String) -> Unit = {},
     onToolVisible: (String, Boolean) -> Unit = { _, _ -> },
-    onBill: (String) -> Unit = {},
     onPickedPhotos: (Boolean) -> Unit = {}, onCameraPhotos: (Boolean) -> Unit = {},
-    dataScreen: @Composable (() -> Unit) -> Unit = {},
+    dataScreen: @Composable (() -> Unit, () -> Unit, () -> Unit) -> Unit = { _, _, _ -> },
     updateScreen: @Composable (() -> Unit) -> Unit = {},
     homeScreen: @Composable (() -> Unit, (String) -> Unit) -> Unit = { settings, tool -> HomeScreen(onSettings = settings, onTool = tool) },
     statisticsScreen: @Composable (() -> Unit, (ToolRoute, String?) -> Unit) -> Unit = { history, tool -> StatisticsScreen(onHistory = history, onTool = tool) },
     historyScreen: @Composable (() -> Unit, (ToolRoute, String) -> Unit) -> Unit = { _, _ -> },
     remindersScreen: @Composable (String?, () -> Unit) -> Unit = { _, _ -> },
-    billsScreen: @Composable (() -> Unit) -> Unit = {},
+    billsScreen: @Composable (String?, () -> Unit) -> Unit = { _, _ -> },
     journalScreen: @Composable (ToolRoute, String?, () -> Unit, (ToolRoute, String) -> Unit) -> Unit = { _, _, _, _ -> },
     mediaScreen: @Composable (() -> Unit) -> Unit = {},
     accountScreen: @Composable (() -> Unit, () -> Unit, () -> Unit) -> Unit = { _, _, _ -> },
@@ -71,7 +72,7 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
         modifier = Modifier.semantics { testTagsAsResourceId = true },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            if (entry?.destination?.route?.startsWith("tool/") != true && entry?.destination?.route !in setOf("sync", "sync-login", "account", "media", "history", "data", "update")) {
+            if (entry?.destination?.route?.startsWith("tool/") != true && entry?.destination?.route !in setOf("sync", "sync-login", "account", "media", "history", "data", "update", "display", "home-tools", "photos")) {
                 RecoowTabBar {
                     AppTab.entries.forEach { tab ->
                         RecoowTabItem(
@@ -95,18 +96,24 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
         NavHost(controller, startDestination = AppTab.HOME.route, modifier = Modifier.padding(padding).consumeWindowInsets(padding)) {
             composable(AppTab.HOME.route) { homeScreen({ controller.navigate("settings") { launchSingleTop = true } }) { tool -> controller.navigate("tool/$tool") { launchSingleTop = true } } }
             composable(AppTab.STATISTICS.route) { statisticsScreen({ controller.navigate("history") { launchSingleTop = true } }) { tool, id ->
-                controller.navigate("tool/${tool.id}" + (id?.let { "?recordId=${java.net.URLEncoder.encode(it, "UTF-8")}" } ?: ""))
+                controller.navigate(if (id != null) recordDestination(tool, id) else "tool/${tool.id}")
             } }
             composable("history") { historyScreen({ controller.popBackStack() }) { tool, id ->
-                controller.navigate("tool/${tool.id}?recordId=${java.net.URLEncoder.encode(id, "UTF-8")}")
+                controller.navigate(recordDestination(tool, id))
             } }
             composable(AppTab.SETTINGS.route) { SettingsScreen(state, onAppearance, onLanguage, onRetry,
                 onAccount = { controller.navigate("account") { launchSingleTop = true } },
                 onSync = { controller.navigate("sync") { launchSingleTop = true } },
                 onUpdate = { controller.navigate("update") { launchSingleTop = true } },
                 onMedia = { controller.navigate("media") { launchSingleTop = true } }, onToolVisible = onToolVisible,
-                onData = { controller.navigate("data") { launchSingleTop = true } }, onPickedPhotos = onPickedPhotos, onCameraPhotos = onCameraPhotos) }
-            composable("data") { dataScreen { controller.popBackStack() } }
+                onData = { controller.navigate("data") { launchSingleTop = true } }, onPickedPhotos = onPickedPhotos, onCameraPhotos = onCameraPhotos,
+                onDisplay = { controller.navigate("display") { launchSingleTop = true } },
+                onHomeTools = { controller.navigate("home-tools") { launchSingleTop = true } }) }
+            composable("data") { dataScreen({ controller.popBackStack() },
+                { controller.navigate("media") { launchSingleTop = true } }, { controller.navigate("photos") { launchSingleTop = true } }) }
+            composable("display") { imehc.recoow.feature.settings.DisplaySettingsScreen(state, { controller.popBackStack() }, onAppearance, onLanguage, onRetry) }
+            composable("home-tools") { imehc.recoow.feature.settings.HomeToolsSettingsScreen(state, { controller.popBackStack() }, onToolVisible, onRetry) }
+            composable("photos") { imehc.recoow.feature.settings.PhotoSettingsScreen(state, { controller.popBackStack() }, onPickedPhotos, onCameraPhotos, onRetry) }
             composable("update") { updateScreen { controller.popBackStack() } }
             composable("media") { mediaScreen { controller.popBackStack() } }
             composable("sync") { syncScreen { controller.popBackStack() } }
@@ -114,21 +121,27 @@ fun RecoowApp(state: SettingsUiState, onAppearance: (Appearance) -> Unit, onLang
             composable("account") { accountScreen({ controller.popBackStack() },
                 { controller.navigate("sync-login") { launchSingleTop = true } },
                 { controller.navigate("sync") { launchSingleTop = true } }) }
-            composable("tool/{toolId}?recordId={recordId}&delivery={delivery}", arguments = listOf(androidx.navigation.navArgument("recordId") { type = androidx.navigation.NavType.StringType; nullable = true; defaultValue = null }, androidx.navigation.navArgument("delivery") { type = androidx.navigation.NavType.StringType; nullable = true; defaultValue = null })) { destination ->
+            composable("tool/{toolId}?recordId={recordId}&delivery={delivery}&returnToSource={returnToSource}", arguments = listOf(androidx.navigation.navArgument("returnToSource") { type = androidx.navigation.NavType.BoolType; defaultValue = false }, androidx.navigation.navArgument("recordId") { type = androidx.navigation.NavType.StringType; nullable = true; defaultValue = null }, androidx.navigation.navArgument("delivery") { type = androidx.navigation.NavType.StringType; nullable = true; defaultValue = null })) { destination ->
                 val route = ToolRoute.entries.firstOrNull { it.id == destination.arguments?.getString("toolId") }
-                if (route == ToolRoute.BILLS) {
-                    LaunchedEffect(destination.arguments?.getString("recordId"), destination.arguments?.getString("delivery")) { destination.arguments?.getString("recordId")?.let(onBill) }
-                    billsScreen { controller.popBackStack() }
+                CompositionLocalProvider(LocalRecordReturnToSource provides (destination.arguments?.getBoolean("returnToSource") == true)) {
+                    if (route == ToolRoute.BILLS) {
+                        androidx.compose.runtime.key(destination.arguments?.getString("delivery")) {
+                            billsScreen(destination.arguments?.getString("recordId")) { controller.popBackStack() }
+                        }
+                    }
+                    else if (route == ToolRoute.REMINDERS) androidx.compose.runtime.key(destination.arguments?.getString("delivery")) { remindersScreen(destination.arguments?.getString("recordId")) { controller.popBackStack() } }
+                    else if (route in setOf(ToolRoute.DIARY, ToolRoute.FOOD, ToolRoute.ITEMS, ToolRoute.ANNIVERSARIES, ToolRoute.DECISION, ToolRoute.LOCATION)) androidx.compose.runtime.key(destination.arguments?.getString("delivery")) { journalScreen(requireNotNull(route), destination.arguments?.getString("recordId"), { controller.popBackStack() }) { tool, id ->
+                        controller.navigate(recordDestination(tool, id))
+                    } }
+                    else if (route != null) ToolDestination(route,
+                        onBack = { controller.popBackStack() },
+                        onHome = { controller.popBackStack(AppTab.HOME.route, false) })
                 }
-                else if (route == ToolRoute.REMINDERS) androidx.compose.runtime.key(destination.arguments?.getString("delivery")) { remindersScreen(destination.arguments?.getString("recordId")) { controller.popBackStack() } }
-                else if (route in setOf(ToolRoute.DIARY, ToolRoute.FOOD, ToolRoute.ITEMS, ToolRoute.ANNIVERSARIES, ToolRoute.DECISION, ToolRoute.LOCATION)) androidx.compose.runtime.key(destination.arguments?.getString("delivery")) { journalScreen(requireNotNull(route), destination.arguments?.getString("recordId"), { controller.popBackStack() }) { tool, id ->
-                    if (tool == ToolRoute.BILLS) onBill(id)
-                    controller.navigate("tool/${tool.id}?recordId=${java.net.URLEncoder.encode(id, "UTF-8")}")
-                } }
-                else if (route != null) ToolDestination(route,
-                    onBack = { controller.popBackStack() },
-                    onHome = { controller.popBackStack(AppTab.HOME.route, false) })
             }
         }
     }
 }
+
+/** 应用内记录跳转保留来源；外部深链仍沿用原有返回层级。 */
+private fun recordDestination(tool: ToolRoute, id: String) =
+    "tool/${tool.id}?recordId=${java.net.URLEncoder.encode(id, "UTF-8")}&returnToSource=true"

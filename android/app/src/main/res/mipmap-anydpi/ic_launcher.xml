@@ -1,4 +1,5 @@
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@drawable/ic_recoow" />
-    <foreground android:drawable="@android:color/transparent" />
+    <background android:drawable="@color/recoow_icon_background" />
+    <!-- 前景位图已包含自适应图层的溢出内边距。 -->
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
 </adaptive-icon>

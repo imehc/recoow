@@ -9,7 +9,10 @@ android {
     namespace = "imehc.recoow.feature.statistics"
     compileSdk = libs.versions.compileSdk.get().toInt()
     buildToolsVersion = libs.versions.buildTools.get()
-    defaultConfig { minSdk = libs.versions.minSdk.get().toInt() }
+    defaultConfig {
+        minSdk = libs.versions.minSdk.get().toInt()
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -18,12 +21,18 @@ android {
 }
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 dependencies {
+    androidTestImplementation(libs.androidx.test)
+    androidTestImplementation(libs.test.runner)
+    androidTestImplementation(libs.compose.test)
+    androidTestImplementation(libs.coroutines.test)
+    debugImplementation(libs.compose.test.manifest)
     implementation(libs.hilt)
     ksp(libs.hilt.compiler)
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.turbine)
     implementation(project(":core:domain"))
+    implementation(project(":core:media"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

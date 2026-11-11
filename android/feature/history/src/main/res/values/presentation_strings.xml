@@ -1,0 +1,15 @@
+<resources>
+    <string name="history_cancel_selection">Cancel multiple selection</string>
+    <string name="history_selected_count">%1$d selected</string>
+    <string name="history_filters">Filter records</string>
+    <string name="history_apply">Apply</string>
+    <string name="history_all_records">All records</string>
+    <string name="history_loaded">%1$d loaded</string>
+    <string name="history_calendar_count_hint">Daily counts include all record types and ignore filters.</string>
+    <string name="history_mood_neutral">Neutral</string>
+    <string name="history_mood_happy">Happy</string>
+    <string name="history_mood_calm">Calm</string>
+    <string name="history_mood_tired">Tired</string>
+    <string name="history_mood_stressed">Stressed</string>
+    <string name="history_mood_sad">Sad</string>
+</resources>

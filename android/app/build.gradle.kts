@@ -62,8 +62,8 @@ android {
         matchingFallbacks += "release"
     }
     sourceSets.getByName("baseline").kotlin.srcDir("src/benchmark/kotlin")
-    // The collector must not rediscover a previously packaged application profile.
-    // Only the comparable R8 benchmark and production variants consume reviewed rules.
+    // 采集工具不能重新发现此前已打包的应用 profile。
+    // 只有可对比的 R8 基准变体与生产变体使用已审阅的规则。
     for (variant in listOf("release", "benchmark")) {
         sourceSets.getByName(variant).baselineProfiles.srcDir("src/profiles")
     }
@@ -86,7 +86,7 @@ androidComponents.onVariants(androidComponents.selector().withBuildType("release
         description = "Check the packaged production APK, permissions, native alignment and profiles (without a signing identity)."
         inputs.dir(apkDirectory)
         inputs.file(rootProject.file("build-tools/verify_release.py"))
-        // Run the SDK validators each time, including when a local APK was signed after assembly.
+        // 每次都运行 SDK 校验，包括本地 APK 在打包后才签名的情况。
         doFirst {
             commandLine("python3", rootProject.file("build-tools/verify_release.py"),
                 "--apk-dir", apkDirectory.get().asFile,
@@ -135,6 +135,8 @@ dependencies {
     debugImplementation(libs.compose.test.manifest)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.test)
+    androidTestImplementation(libs.coroutines.test)
+    androidTestImplementation(project(":core:media"))
     androidTestImplementation(libs.androidx.test)
     androidTestImplementation(libs.test.runner)
 }

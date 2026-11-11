@@ -5,14 +5,13 @@ import android.content.ClipboardManager
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
@@ -24,7 +23,8 @@ import imehc.recoow.core.domain.media.MediaLocator
 import imehc.recoow.core.domain.media.ResolvedMedia
 import imehc.recoow.core.domain.media.MediaAvailability
 import imehc.recoow.core.media.ImagePreview
-import imehc.recoow.core.media.MediaImage
+import imehc.recoow.core.media.RecordPhotoTile
+import imehc.recoow.core.media.PhotoSectionHeader
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.catch
 
@@ -54,8 +54,7 @@ import kotlinx.coroutines.flow.catch
         },
         stringResource(R.string.delete) to { deleting = true },
     ) } ?: emptyList()
-    val deleteLabel = stringResource(R.string.delete)
-    RecoowPage(stringResource(R.string.bill_details), navigationIcon = { BackButton(onBack) }, contentSpacing = RecoowLayout.sectionGap,
+    RecoowPage(stringResource(R.string.bill_details), navigationIcon = { BackButton(onBack) }, contentSpacing = RecoowLayout.compactSectionGap,
         action = { if (bill != null && menuActions.isNotEmpty()) RecoowOverflowMenu(menuActions.map { (label, onClick) -> RecoowAction(label, enabled = !state.busy, onClick = onClick) }, tag = "bill_detail_more") }) {
         if (bill == null) item(key = "missing") {
             RecoowGroup {
@@ -66,58 +65,41 @@ import kotlinx.coroutines.flow.catch
             item(key = "head") {
                 Box {
                     RecoowGroup(Modifier.combinedClickable(onClick = {}, onLongClick = { if (!state.busy) menu = true })) {
-                        Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                            Row(verticalAlignment = androidx.compose.ui.Alignment.Top) {
-                                Text(bill.title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 3)
-                                Text(
-                                    stringResource(when { bill.voided(state.now) -> R.string.refunded; bill.settlement == Settlement.REDEEMED -> R.string.redeemed; else -> R.string.active }),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                        Column(Modifier.fillMaxWidth().padding(RecoowLayout.rowHorizontal), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(bill.title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface, maxLines = 3)
+                                RecoowMoneyValue(money(bill.amounts.final, locale), bill.type)
                             }
-                            Text(
-                                (if (bill.type == BillType.INCOME) "+" else "−") + money(bill.amounts.final, locale),
-                                modifier = Modifier.padding(top = 8.dp),
-                                style = MaterialTheme.typography.titleLarge,
-                                color = if (bill.type == BillType.INCOME) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                "${resources.getString(labelId(bill.type.wire))} · ${categoryLabel(resources, bill)} · ${dateTime(bill.occurredAt, state.zone)}",
-                                modifier = Modifier.padding(top = 6.dp),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            if (bill.expired(state.now)) Text(
-                                stringResource(R.string.expired_info),
-                                modifier = Modifier.padding(top = 6.dp),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
-                            )
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                RecordBadge(resources.getString(labelId(bill.type.wire)),
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
+                                RecordBadge(categoryLabel(resources, bill))
+                                val status = when {
+                                    bill.voided(state.now) -> R.string.refunded
+                                    bill.settlement == Settlement.REDEEMED -> R.string.redeemed
+                                    bill.canRedeem(state.now) -> R.string.pending_redemption
+                                    else -> null
+                                }
+                                status?.let { RecordBadge(stringResource(it)) }
+                            }
+                            Text(dateTime(bill.occurredAt, state.zone), style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (bill.expired(state.now)) Text(stringResource(R.string.expired_info),
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                         }
                     }
                     DropdownMenu(menu, { menu = false }, shape = MaterialTheme.shapes.medium,
                         containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp,
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
                         menuActions.forEach { (label, onClick) ->
-                            DropdownMenuItem(text = { Text(label, color = if (label == deleteLabel) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface) },
+                            DropdownMenuItem(text = { Text(label, color = MaterialTheme.colorScheme.onSurface) },
                                 enabled = !state.busy, onClick = { menu = false; onClick() })
                         }
                     }
                 }
             }
             if (state.busy) item(key = "busy") { LinearProgressIndicator(Modifier.fillMaxWidth()) }
-            if (bill.hasImage) item(key = "image") {
-                val locator = MediaLocator(bill.imageAssetId, "bills", bill.id)
-                val flow = remember(locator) { viewModel.media.observeContent(locator).catch { emit(ResolvedMedia(MediaAvailability.DAMAGED)) } }
-                val resolved by flow.collectAsStateWithLifecycle(ResolvedMedia(MediaAvailability.PENDING))
-                Column {
-                    MediaImage(
-                        locator, viewModel.media,
-                        Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(RecoowLayout.cardRadius)).clickable { preview = true },
-                    )
-                    resolved.title?.let { Text(it, modifier = Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                }
-            }
             item(key = "details") {
                 val account = bill.accountId?.let { id -> state.accounts.firstOrNull { it.id == id } }
                 val details = listOfNotNull(
@@ -144,6 +126,8 @@ import kotlinx.coroutines.flow.catch
                         details.forEachIndexed { index, (label, value) ->
                             if (label == stringResource(R.string.utility_number)) {
                                 RecoowCopyableValueRow(label, value, stringResource(R.string.copy_number), stringResource(R.string.copied))
+                            } else if (label == stringResource(R.string.lines)) {
+                                RecoowTextValueRow(label, value)
                             } else RecoowRow(title = label, trailingText = value)
                             if (index < details.lastIndex) RecoowDivider()
                         }
@@ -154,10 +138,30 @@ import kotlinx.coroutines.flow.catch
                 Column {
                     RecoowSectionHeader(stringResource(R.string.note))
                     RecoowGroup {
-                        Text(note, modifier = Modifier.fillMaxWidth().padding(14.dp), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                        SelectionContainer {
+                            Text(note, modifier = Modifier.fillMaxWidth().padding(RecoowLayout.rowHorizontal),
+                                style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                        }
                     }
                 }
             } }
+            if (bill.hasImage) item(key = "image") {
+                val locator = MediaLocator(bill.imageAssetId, "bills", bill.id)
+                val flow = remember(locator) { viewModel.media.observeContent(locator).catch { emit(ResolvedMedia(MediaAvailability.DAMAGED)) } }
+                val resolved by flow.collectAsStateWithLifecycle(ResolvedMedia(MediaAvailability.PENDING))
+                Column {
+                    PhotoSectionHeader(viewModel.media, listOfNotNull(bill.imageAssetId), stringResource(R.string.receipt))
+                    RecoowGroup {
+                        Box(Modifier.fillMaxWidth().padding(RecoowLayout.rowHorizontal)) {
+                            RecordPhotoTile(locator, viewModel.media, { preview = true }, Modifier.size(RecoowLayout.photoInputSize),
+                                description = resolved.title)
+                        }
+                        resolved.title?.takeIf { bill.imageAssetId == null }?.let { Text(it, modifier = Modifier.padding(start = RecoowLayout.rowHorizontal,
+                            end = RecoowLayout.rowHorizontal, bottom = RecoowLayout.rowHorizontal),
+                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    }
+                }
+            }
         }
     }
     if (preview && bill != null) ImagePreview(listOf(MediaLocator(bill.imageAssetId, "bills", bill.id)), 0, viewModel.media) { preview = false }

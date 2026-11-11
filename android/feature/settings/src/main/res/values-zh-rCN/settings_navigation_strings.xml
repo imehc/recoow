@@ -1,0 +1,32 @@
+<resources>
+    <string name="settings_account_group">账号</string>
+    <string name="settings_account_hint">账号安全、同步与设备</string>
+    <string name="settings_general">通用</string>
+    <string name="settings_display_language">外观与语言</string>
+    <string name="settings_display_hint">主题、应用语言</string>
+    <string name="settings_tools_hint">选择首页展示的工具</string>
+    <string name="settings_data_group">数据与备份</string>
+    <string name="settings_data_hint">备份、照片、素材与存储</string>
+    <string name="settings_application">应用</string>
+    <string name="settings_update_hint">版本信息与更新</string>
+    <string name="settings_tools_detail">选择首页中显示的工具，不影响已保存的记录。</string>
+    <string name="settings_photos_detail">选取照片时可自动加入素材库；拍摄照片时可同时保存到系统相册。</string>
+    <string name="settings_sync_details">同步详情</string>
+    <string name="settings_last_sync">上次同步</string>
+    <string name="settings_not_synced">尚未同步</string>
+    <string name="settings_pending_records">记录</string>
+    <string name="settings_pending_photos">附件</string>
+    <string name="settings_waiting_relations">等待关联</string>
+    <string name="settings_devices">设备管理</string>
+    <string name="settings_no_devices">暂无配对设备</string>
+    <string name="settings_conflicts">冲突处理</string>
+    <string name="settings_no_conflicts">没有待处理冲突</string>
+    <string name="settings_server_address">服务器地址</string>
+    <string name="settings_copy_account">复制账号标识</string>
+    <string name="settings_device_role">设备身份</string>
+    <string name="settings_connection_hint">同步状态、设备配对和冲突处理可在账号与云同步中管理。</string>
+    <string name="settings_registration_token">注册令牌</string>
+    <string name="settings_connect_confirm">连接并合并资料？</string>
+    <string name="settings_storage_maintenance">存储与维护</string>
+    <string name="settings_photos_assets">照片与素材</string>
+</resources>

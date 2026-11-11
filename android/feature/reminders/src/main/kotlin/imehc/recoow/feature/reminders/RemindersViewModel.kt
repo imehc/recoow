@@ -28,6 +28,7 @@ class RemindersViewModel @Inject constructor(private val repository: RemindersRe
     val detailId = saved.getStateFlow<String?>("reminderDetail", null)
     val makeupId = saved.getStateFlow<String?>("reminderMakeup", null)
     val tab = saved.getStateFlow("reminderTab", 0)
+    val query = saved.getStateFlow("reminderQuery", "")
     private var observation: Job? = null
     private var order = emptyList<String>()
     private var orderDay: LocalDate? = null
@@ -59,6 +60,7 @@ class RemindersViewModel @Inject constructor(private val repository: RemindersRe
         else filtered.sortedBy { order.indexOf(it.id).takeIf { rank -> rank >= 0 } ?: -1 }
     }
     fun tab(value: Int) { saved["reminderTab"] = value; settle() }
+    fun query(value: String) { saved["reminderQuery"] = value }
     fun show(id: String) { saved["reminderDraft"] = null; saved["reminderMakeup"] = null; saved["reminderDetail"] = id }
     fun back() { if (!state.value.busy) when { makeupId.value != null -> saved["reminderMakeup"] = null; draft.value != null -> saved["reminderDraft"] = null; else -> { saved["reminderDetail"] = null; settle() } } }
     fun edit(r: Reminder? = null) { saved["reminderDraft"] = r?.let(ReminderDraft::from) ?: ReminderDraft() }

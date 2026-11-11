@@ -91,13 +91,13 @@ class OverviewNavigationTest {
         clickRow("history_bills:$prefix-bill")
         compose.onNodeWithText("Overview bill").assertIsDisplayed()
         compose.activityRule.scenario.recreate(); compose.onNodeWithText("Overview bill").assertIsDisplayed()
-        back(); back(); waitTag("history_page")
+        back(); waitTag("history_page")
         compose.runOnIdle { history.route(ToolRoute.FOOD) }
         compose.waitUntil(10_000) { history.state.value.entries.any { it.day == day } && !history.state.value.loading }
         clickRow("history_foodJournal:$day"); waitTag("food_day_detail")
         compose.onNodeWithText("Overview lunch").assertIsDisplayed()
         compose.activityRule.scenario.recreate(); waitTag("food_day_detail")
-        back(); back(); waitTag("history_page"); back()
+        back(); waitTag("history_page"); back()
         compose.onNodeWithTag("tab_statistics").assertIsSelected()
     }
     @Test fun diarySixSourceRoutesReturnToTheSameDiaryAndShowMissingRecords() {
@@ -113,7 +113,7 @@ class OverviewNavigationTest {
             if (source == DiarySource.BILL) {
                 compose.waitUntil(10_000) { compose.onAllNodesWithText(compose.activity.getString(imehc.recoow.feature.bills.R.string.missing_bill)).fetchSemanticsNodes().isNotEmpty() }
             } else waitTag(tags.getValue(source))
-            back(); back(); waitTag("diary_detail")
+            back(); waitTag("diary_detail")
             compose.onNodeWithText("Overview links").assertIsDisplayed()
         }
         compose.activityRule.scenario.recreate(); waitTag("diary_detail")

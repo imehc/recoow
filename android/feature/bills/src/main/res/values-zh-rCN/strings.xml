@@ -79,11 +79,11 @@
   <string name="start">起点</string>
   <string name="end">终点</string>
   <string name="swap">交换起终点</string>
-  <string name="lines">交通线路（每行一条）</string>
+  <string name="lines">交通线路</string>
   <string name="utility_number">缴费号码</string>
   <string name="copy_number">复制号码</string>
   <string name="copied">已复制</string>
-  <string name="receipt">凭证图片</string>
+  <string name="receipt">图片</string>
   <string name="recharge">储值充值</string>
   <string name="select_account">选择储值账户</string>
   <string name="add_account">添加储值账户</string>
@@ -124,4 +124,12 @@
   <string name="phone_balance">话费余额</string>
   <string name="other_account">其他储值</string>
   <string name="amount_original_required">请先填写原价（面值）</string>
+  <string name="bill_count">%1$d 笔账单</string>
+  <string name="bill_type">收支类型</string>
+  <string name="apply_filters">应用筛选</string>
+  <string name="pending_redemption">待核销</string>
+  <string name="bill_basic_section">账单信息</string>
+  <string name="bill_amount_section">金额</string>
+  <string name="bill_account_section">储值</string>
+  <string name="bill_transport_section">行程</string>
 </resources>

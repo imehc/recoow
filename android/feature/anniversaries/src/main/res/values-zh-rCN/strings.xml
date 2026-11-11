@@ -46,4 +46,25 @@
     <string name="ann_notifications">通知</string>
     <string-array name="ann_categories"><item>生日</item><item>恋爱/婚姻</item><item>家庭</item><item>工作/学习</item><item>个人目标</item><item>其他</item></string-array>
     <string name="ann_time_label">提醒时间</string>
+    <string name="ann_details">纪念日详情</string>
+    <string name="ann_summary">记录概览</string>
+    <string name="ann_metric_total">纪念日</string>
+    <string name="ann_metric_soon">30 天内</string>
+    <string name="ann_today">今天</string>
+    <string name="ann_empty">暂无纪念日</string>
+    <string name="ann_record_count">%1$d 项</string>
+    <string name="ann_next_occurrence">下次 %1$s</string>
+    <string name="ann_occurred_on">发生于 %1$s</string>
+    <string name="ann_original_date">原始日期</string>
+    <string name="ann_status">状态</string>
+    <string name="ann_distance">距离下次</string>
+    <string name="ann_elapsed">已过天数</string>
+    <string name="ann_days_short">%1$d 天</string>
+    <string name="ann_years_short">%1$d 年</string>
+    <string name="ann_basic_info">基础信息</string>
+    <string name="ann_reminder_section">提醒设置</string>
+    <string name="ann_no_lead">不提前</string>
+    <string name="ann_lead_minutes">提前 %1$d 分钟</string>
+    <string name="ann_time_value">%1$02d:%2$02d</string>
+    <string name="ann_invalid_form">请检查提醒时间和提前提醒设置。</string>
 </resources>

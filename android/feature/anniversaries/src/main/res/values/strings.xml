@@ -46,4 +46,25 @@
     <string name="ann_notifications">Notifications</string>
     <string-array name="ann_categories"><item>Birthday</item><item>Relationship</item><item>Family</item><item>Work / study</item><item>Personal goal</item><item>Other</item></string-array>
     <string name="ann_time_label">Reminder time</string>
+    <string name="ann_details">Anniversary details</string>
+    <string name="ann_summary">Overview</string>
+    <string name="ann_metric_total">Anniversaries</string>
+    <string name="ann_metric_soon">Within 30 days</string>
+    <string name="ann_today">Today</string>
+    <string name="ann_empty">No anniversaries yet</string>
+    <string name="ann_record_count">%1$d items</string>
+    <string name="ann_next_occurrence">Next %1$s</string>
+    <string name="ann_occurred_on">Occurred on %1$s</string>
+    <string name="ann_original_date">Original date</string>
+    <string name="ann_status">Status</string>
+    <string name="ann_distance">Until next</string>
+    <string name="ann_elapsed">Days elapsed</string>
+    <string name="ann_days_short">%1$d days</string>
+    <string name="ann_years_short">%1$d years</string>
+    <string name="ann_basic_info">Basic information</string>
+    <string name="ann_reminder_section">Reminder settings</string>
+    <string name="ann_no_lead">No advance reminder</string>
+    <string name="ann_lead_minutes">%1$d minutes before</string>
+    <string name="ann_time_value">%1$02d:%2$02d</string>
+    <string name="ann_invalid_form">Check the reminder time and advance reminder settings.</string>
 </resources>

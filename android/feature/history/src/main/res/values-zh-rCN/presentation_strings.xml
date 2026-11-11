@@ -1,0 +1,15 @@
+<resources>
+    <string name="history_cancel_selection">取消多选</string>
+    <string name="history_selected_count">已选 %1$d 条</string>
+    <string name="history_filters">筛选记录</string>
+    <string name="history_apply">应用筛选</string>
+    <string name="history_all_records">全部记录</string>
+    <string name="history_loaded">已加载 %1$d 条</string>
+    <string name="history_calendar_count_hint">每日数量包含全部类型，不受筛选影响。</string>
+    <string name="history_mood_neutral">平常</string>
+    <string name="history_mood_happy">开心</string>
+    <string name="history_mood_calm">平静</string>
+    <string name="history_mood_tired">疲惫</string>
+    <string name="history_mood_stressed">有压力</string>
+    <string name="history_mood_sad">低落</string>
+</resources>

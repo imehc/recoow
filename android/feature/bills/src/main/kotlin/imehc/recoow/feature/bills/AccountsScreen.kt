@@ -25,7 +25,7 @@ import imehc.recoow.core.designsystem.RecordChoice
 import imehc.recoow.core.designsystem.RecordForm
 import imehc.recoow.core.designsystem.RecordFormDivider
 import imehc.recoow.core.designsystem.RecordFormText
-import imehc.recoow.core.designsystem.RecoowAddAction
+import imehc.recoow.core.designsystem.RecoowFloatingAddAction
 import imehc.recoow.core.designsystem.RecoowDivider
 import imehc.recoow.core.designsystem.RecoowEmptyState
 import imehc.recoow.core.designsystem.RecoowGroup
@@ -39,12 +39,12 @@ import imehc.recoow.core.domain.bills.*
     val locale = LocalConfiguration.current.locales[0]
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        topBar = { RecoowCompactTopBar(stringResource(R.string.accounts), navigationIcon = { BackButton(onBack) },
-            action = { if (!state.busy) RecoowAddAction(stringResource(R.string.add_account), onClick = { viewModel.editAccount() }, tag = "account_add") }) },
+        topBar = { RecoowCompactTopBar(stringResource(R.string.accounts), navigationIcon = { BackButton(onBack) }) },
+        floatingActionButton = { if (!state.busy) RecoowFloatingAddAction(stringResource(R.string.add_account), onClick = { viewModel.editAccount() }, tag = "account_add") },
     ) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(RecoowLayout.sectionGap),
         ) {
             if (state.busy) item(key = "busy") { LinearProgressIndicator(Modifier.fillMaxWidth()) }

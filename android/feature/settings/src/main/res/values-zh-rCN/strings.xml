@@ -112,7 +112,7 @@
     <string name="backup_replace_detail">使用这份备份替换全部本地记录和可移植偏好，当前轨迹将暂停。本机身份及当前服务器连接保留，导入记录将重新加入同步队列。导入中断时会使用恢复副本回滚。</string>
     <string name="photos_picked">将选取的照片加入素材库</string>
     <string name="photos_camera">将拍摄的照片保存到系统相册</string>
-    <string name="photos_section">照片</string>
+    <string name="photos_section">照片设置</string>
     <string name="sync_section_server">服务器</string>
     <string name="sync_section_sync">同步</string>
     <string name="sync_section_devices">已配对设备</string>
@@ -193,7 +193,7 @@
   <string name="account_sync_waiting_network">等待联网</string>
   <string name="account_sync_waiting">等待同步</string>
   <string name="account_sync_done">已同步</string>
-  <string name="account_connection_settings">连接与设备设置</string>
+  <string name="account_connection_settings">连接设置</string>
   <string name="sync_remerge">重新合并</string>
   <string name="sync_remerge_detail">云端资料已清空或重建。重新合并会备份本机资料，并将现有资料上传到云端。</string>
 </resources>
