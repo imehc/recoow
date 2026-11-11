@@ -14,7 +14,7 @@ type fieldCaseWriter struct {
 func (writer *fieldCaseWriter) Unwrap() http.ResponseWriter { return writer.ResponseWriter }
 
 func apiFieldCase(next http.Handler) http.Handler {
-	// Remove response negotiation after all clients adopt the snake_case contract.
+	// 所有客户端都改用 snake_case 契约后，删除响应格式协商。
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		requested := request.Header.Get("X-Recoow-Field-Case")
 		if requested != "" && requested != "snake_case" {

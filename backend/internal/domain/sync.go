@@ -33,7 +33,7 @@ type BootstrapPage struct {
 	More       bool     `json:"more"`
 }
 
-// SnapshotQuery fetches immutable revisions selected from a fixed-watermark manifest.
+// SnapshotQuery 拉取按固定水位清单选出的不可变修订。
 type SnapshotQuery struct {
 	Generation string  `json:"generation"`
 	Watermark  int64   `json:"watermark"`

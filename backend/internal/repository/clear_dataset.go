@@ -67,7 +67,7 @@ func (storage *postgresStore) ClearDataset(accountID, expectedGeneration string)
 	if generation != expectedGeneration {
 		return domain.DatasetState{}, domain.ErrResetRequired
 	}
-	// Include every registered business table, retaining identity and devices.
+	// 包含所有已注册的业务表，同时保留身份与设备。
 	for _, table := range storage.registry.Tables() {
 		if _, err := tx.Exec("DELETE FROM \""+table+"\" WHERE tenant_id = ?", accountID); err != nil {
 			return domain.DatasetState{}, err
@@ -85,7 +85,7 @@ func (storage *postgresStore) ClearDataset(accountID, expectedGeneration string)
 	if _, err := tx.Exec("UPDATE account SET next_version = 1 WHERE id = ?", accountID); err != nil {
 		return state, err
 	}
-	// Stage bytes before commit; restore their directory if the transaction fails.
+	// 先把字节落到临时位置，事务失败时恢复其目录。
 	mediaPath := storage.MediaPath(accountID, "")
 	stagedPath := mediaPath + ".cleared-" + state.Generation
 	staged := false

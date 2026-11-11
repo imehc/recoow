@@ -116,8 +116,8 @@ func (s *Server) deviceFrom(ctx context.Context) (domain.Device, bool) {
 
 func (s *Server) authRequired(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Keep generation checks, business writes and media transfers on one side
-		// of a dataset reset, including in-flight uploads from other devices.
+		// 把代际校验、业务写入和媒体传输放在数据集重置的同一侧，
+		// 包括其他设备正在进行的上传。
 		if r.Method == http.MethodDelete && r.URL.Path == "/api/sync/dataset" {
 			s.datasetAccess.Lock()
 			defer s.datasetAccess.Unlock()

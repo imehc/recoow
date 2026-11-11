@@ -2,7 +2,7 @@ package domain
 
 import "encoding/json"
 
-// ClientEnvironment is client-declared information, never an authorization input.
+// ClientEnvironment 是客户端自报的信息，绝不作为鉴权依据。
 type ClientEnvironment struct {
 	Client     string `json:"client"`
 	AppVersion string `json:"appVersion,omitempty"`
@@ -21,7 +21,7 @@ type ChangeOrigin struct {
 	DeviceName string `json:"deviceName,omitempty"`
 }
 
-// SubmissionSource is supplied only by the authenticated server request context.
+// SubmissionSource 只由通过鉴权的服务端请求上下文提供。
 type SubmissionSource struct {
 	ClientEnvironment
 	DeviceID   string `json:"deviceId"`

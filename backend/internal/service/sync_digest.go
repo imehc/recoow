@@ -11,9 +11,9 @@ import (
 	"strings"
 )
 
-// DigestVersion 1 compares every snapshot field except transport bookkeeping.
-// Derived values and unknown fields intentionally remain: false negatives cost a
-// snapshot download, whereas ignoring a business difference would lose data.
+// DigestVersion 1 比较快照的每个字段，仅排除传输层记账信息。
+// 派生值和未知字段刻意保留：漏报只是多下一次快照，
+// 而忽略业务差异会丢数据。
 const DigestVersion = 1
 
 var DigestMetadataFields = []string{"updated_at", "device_id", "server_version", "sync_status"}

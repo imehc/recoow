@@ -1,4 +1,4 @@
-// Package wire isolates HTTP field naming from persisted JSON and mutation hashes.
+// Package wire 把 HTTP 字段命名与持久化 JSON、变更哈希隔离开。
 package wire
 
 import (
@@ -25,7 +25,7 @@ func legacyName(name string) string {
 	return name
 }
 
-// These values are business data or dictionaries, not API envelopes.
+// 这些取值是业务数据或字典，不是 API 信封。
 func opaque(name string) bool {
 	switch CanonicalName(name) {
 	case "snapshot", "metadata", "before_value", "after_value", "contracts", "record_counts":
@@ -34,8 +34,8 @@ func opaque(name string) bool {
 	return false
 }
 
-// Rename changes only declared envelope keys. Raw JSON numbers, nulls and snapshot
-// keys stay intact, including unknown fields that happen to look like API names.
+// Rename 只改声明过的信封键；原始 JSON 数字、null 与快照
+// 键保持原样，包括恰好与 API 字段同名的未知字段。
 func Rename(data []byte, legacy bool) ([]byte, error) {
 	data = bytes.TrimSpace(data)
 	if len(data) == 0 {
@@ -86,8 +86,8 @@ func Rename(data []byte, legacy bool) ([]byte, error) {
 	return data, nil
 }
 
-// Decode accepts canonical fields and explicit legacy aliases, without changing
-// the storage representation of domain structs or accepting unknown API fields.
+// Decode 接受规范字段和显式的旧版别名，但不会改变
+// 领域结构体的存储表示，也不接受未知的 API 字段。
 func Decode(data []byte, target any) error {
 	normalized, err := forType(data, reflect.TypeOf(target))
 	if err != nil {
@@ -98,7 +98,7 @@ func Decode(data []byte, target any) error {
 	return decoder.Decode(target)
 }
 
-// Unmarshal reads a response into a partial model while accepting legacy names.
+// Unmarshal 把响应读入部分模型，同时接受旧版字段名。
 func Unmarshal(data []byte, target any) error {
 	normalized, err := forType(data, reflect.TypeOf(target))
 	if err != nil {

@@ -61,7 +61,7 @@ func (storage *postgresStore) SnapshotRevisions(accountID string, request domain
 		return nil, err
 	}
 	defer tx.Rollback()
-	// Prevent a dataset clear between checking its generation and reading history.
+	// 防止在检查数据集代际与读取历史之间发生数据集清空。
 	var generation string
 	if err := tx.QueryRow("SELECT generation FROM sync_metadata WHERE account_id = ? FOR SHARE", accountID).Scan(&generation); err != nil {
 		return nil, err

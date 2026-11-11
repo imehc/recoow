@@ -92,7 +92,7 @@ func TestClearDatasetIsScopedRotatesGenerationAndRetainsDevices(t *testing.T) {
 			t.Fatal("history retained", err)
 		}
 		pushRevision(t, store, other, otherMutation, domain.PushApplied)
-		// Reusing a mutation ID after resetting must create data, never replay an old receipt.
+		// 重置后复用同一个变更 ID 必须创建新数据，绝不复用旧回执。
 		pushRevision(t, store, account, revisionItem("media_assets", "asset", "asset-edit", 0, map[string]any{"checksum": "new"}), domain.PushApplied)
 	})
 }

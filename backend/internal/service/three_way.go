@@ -5,8 +5,8 @@ import (
 	"slices"
 )
 
-// Settlement fields form one value: combining separately edited parts could
-// create an amount or balance movement neither device intended.
+// 结算相关字段构成一个整体：分开合并各自编辑的部分，
+// 可能产生两端都未预期的金额或余额变动。
 var billSettlementFields = []string{
 	"original_amount_cents", "discount_amount_cents", "final_amount_cents",
 	"transaction_type", "category", "payment_method", "stored_value_account_id",
@@ -38,8 +38,8 @@ func sameFields(first, second map[string]json.RawMessage, fields []string) bool 
 	return true
 }
 
-// Incoming snapshots can omit unknown or newly defaulted fields. Complete them
-// against the common ancestor, never against today's remote value.
+// 下行快照可能缺少未知字段或新增的默认字段，需以共同祖先
+// 为基准补全，绝不使用当前远端值。
 func threeWaySnapshot(table string, base, incoming, current json.RawMessage, resolution string, defaulted []string) (json.RawMessage, bool, error) {
 	localJSON, err := mergeSnapshot(base, incoming, defaulted...)
 	if err != nil {

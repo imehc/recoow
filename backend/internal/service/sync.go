@@ -93,7 +93,7 @@ func ApplyRevision(transaction domain.RevisionTransaction, item domain.PushItem)
 				if sameBusinessSnapshot(item.Table, candidate, current.Snapshot) {
 					result.Status = domain.PushDuplicate
 				}
-				// With no common ancestor, an explicit choice can only select a whole record.
+				// 没有共同祖先时，显式选择只能整条记录地取舍。
 				if item.Resolution == "local" {
 					write = true
 					mergedRevision = true
@@ -138,7 +138,7 @@ func ApplyRevision(transaction domain.RevisionTransaction, item domain.PushItem)
 			item.Snapshot = current.Snapshot
 		}
 		if mergedRevision || item.Resolution != "" {
-			// A stale device's cumulative balance effects cannot describe the merged bill.
+			// 陈旧设备的累计余额影响无法描述合并后的账单。
 			requestSnapshot = json.RawMessage(`{}`)
 		}
 		item.Snapshot, err = prepareBillBalanceEffects(transaction, current, item, requestSnapshot)

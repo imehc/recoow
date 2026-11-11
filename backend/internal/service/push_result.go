@@ -61,8 +61,8 @@ func EqualSnapshots(candidate, current json.RawMessage) bool {
 	return candidateError == nil && currentError == nil && equalJSONValue(candidateValue, currentValue)
 }
 
-// Compare JSON numbers by their exact decimal value. PostgreSQL/Swift may emit
-// 0, 0.0 or exponents for the same value; float64 would lose large integer IDs.
+// 按精确十进制值比较 JSON 数字。PostgreSQL/Swift 可能为同一个值
+// 输出 0、0.0 或指数形式；float64 会丢失大整数 ID 的精度。
 func equalJSONValue(a, b any) bool {
 	switch first := a.(type) {
 	case json.Number:
@@ -99,9 +99,9 @@ func equalJSONValue(a, b any) bool {
 	}
 }
 
-// Normalize the significand and exponent without expanding powers of ten.
-// Valid JSON can contain enormous exponents; comparison must stay proportional
-// to the input length rather than allocate that many decimal places.
+// 归一化有效数字与指数，但不展开十的幂。
+// 合法 JSON 中指数可以极大，比较开销必须与输入长度成正比，
+// 而不是按指数分配那么多小数位。
 func normalizedJSONNumber(value string) string {
 	negative := strings.HasPrefix(value, "-")
 	value = strings.TrimPrefix(value, "-")

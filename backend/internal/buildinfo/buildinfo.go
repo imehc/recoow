@@ -1,9 +1,9 @@
-// Package buildinfo separates executable provenance from sync/schema versions.
+// Package buildinfo 把可执行文件的来源信息与同步、schema 版本分开。
 package buildinfo
 
 import "runtime/debug"
 
-// Overridden by the package script when building a distribution binary.
+// 构建发行版二进制时由包脚本覆盖。
 var Commit = "unknown"
 var Dirty = "unknown"
 
