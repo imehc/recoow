@@ -243,13 +243,13 @@ fun BillsScreen(viewModel: BillsViewModel, onBack: () -> Unit, recordId: String?
             ))
             RecoowDivider(inset = 0.dp)
             RecoowMetricRail(listOf(
-                RecoowMetric(stringResource(R.string.month_expense), money(summary.monthExpense, locale)),
-                RecoowMetric(stringResource(R.string.month_income), money(summary.monthIncome, locale)),
-                RecoowMetric(stringResource(R.string.today_discount), money(summary.todayDiscount, locale)),
-                RecoowMetric(stringResource(R.string.today_recharge), money(summary.todayRecharge, locale)),
-                RecoowMetric(stringResource(R.string.today_use), money(summary.todayUse, locale)),
-                RecoowMetric(stringResource(R.string.month_discount), money(summary.monthDiscount, locale)),
-                RecoowMetric(stringResource(R.string.month_use), money(summary.monthUse, locale)),
+                RecoowMetric(stringResource(R.string.month_expense), money(summary.monthExpense, locale), icon = CommonR.drawable.ic_bill_receipt),
+                RecoowMetric(stringResource(R.string.month_income), money(summary.monthIncome, locale), icon = CommonR.drawable.ic_tool_bills),
+                RecoowMetric(stringResource(R.string.today_discount), money(summary.todayDiscount, locale), icon = CommonR.drawable.ic_bill_gift),
+                RecoowMetric(stringResource(R.string.today_recharge), money(summary.todayRecharge, locale), icon = CommonR.drawable.ic_tool_bills),
+                RecoowMetric(stringResource(R.string.today_use), money(summary.todayUse, locale), icon = CommonR.drawable.ic_tool_bills),
+                RecoowMetric(stringResource(R.string.month_discount), money(summary.monthDiscount, locale), icon = CommonR.drawable.ic_bill_gift),
+                RecoowMetric(stringResource(R.string.month_use), money(summary.monthUse, locale), icon = CommonR.drawable.ic_tool_bills),
             ))
         }
     }

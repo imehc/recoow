@@ -118,7 +118,7 @@ fun RecoowCompactTopBar(
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
             .heightIn(min = RecoowLayout.topBarMinHeight)
             .padding(start = if (navigationIcon == null) RecoowLayout.pagePadding else 4.dp,
-                end = if (action == null) RecoowLayout.pagePadding else 6.dp, top = 6.dp, bottom = 10.dp),
+                end = if (action == null) RecoowLayout.pagePadding else 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         navigationIcon?.invoke()
@@ -527,7 +527,7 @@ fun RecoowMetricRail(metrics: List<RecoowMetric>, modifier: Modifier = Modifier)
             Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
                 Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    metric.icon?.let { Icon(painterResource(it), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp)) }
+                    metric.icon?.let { Icon(painterResource(it), null, tint = metric.tint ?: MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp)) }
                     Text(metric.label, style = MaterialTheme.typography.bodySmall)
                     Text(metric.value, style = MaterialTheme.typography.labelMedium)
                 }

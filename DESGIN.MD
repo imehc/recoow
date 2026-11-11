@@ -50,6 +50,9 @@
 - 顶部对齐比较导航栏下的首个分组与内容，不比较屏幕绝对坐标；保留安全区，不用负 padding、offset 或空白占位补齐。
 - iOS 使用 `.appPageStyle()`、`.appGroupedListStyle()`、`.appFormStyle()`；统计和设置根页使用 `AppDesign.tabContentTopMargin`，普通子页沿用默认边距。导航标题使用 inline。
 - Android 使用 `RecoowPage`、`RecoowCompactTopBar`、`RecoowTabBar` 与共享分组行；紧凑页面复用 `RecordPage(compact = true)`。新增用共享悬浮按钮，次要操作放顶栏或更多菜单。
+- Android 顶栏内容最小高为 48 dp，标题与按钮居中，不在按钮上下额外叠加留白；有无返回或操作按钮时保持同一顶部节奏，大字体按内容自然增高。全屏编辑面板也复用共享顶栏，正文顶部沿用 8 dp。
+- Android 工具列表的概览使用共享分组标题与 `RecoowMetricStrip`；次要统计统一使用 `RecoowMetricRail`，每项带对应语义图标，图标可沿用功能色。
+- Android 趋势图复用 `RecordCartesianChart`，底部读数按实际行数自然撑开，沿用统一卡片内边距，不为单行说明预留多行高度。
 - iOS Sheet 使用 `.appSheet(...)`；Android 使用 `RecoowBottomSheet`。复用背景、圆角、拖拽条及标题组件，保留平台关闭方式和实际保存、应用操作。
 - Sheet 高度按内容选择，长表单可滚动，大字体优先大高度。系统权限、文件选择和确认对话框沿用系统实现。
 - Web 保留固定工具栏与侧栏、独立内容滚动；窄屏改用抽屉、单列详情及带字段标签的列表。

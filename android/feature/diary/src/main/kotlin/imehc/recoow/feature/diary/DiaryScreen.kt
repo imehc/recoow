@@ -89,13 +89,16 @@ import java.time.*
         if (state.loading || state.failed) item { RecordLoadState(state.loading, state.failed, vm::retry) }
         if (!state.loading && !state.failed) {
             item(key = "summary") {
-                RecoowGroup {
-                    RecoowMetricStrip(listOf(
-                        RecoowMetric(stringResource(R.string.diary_metric_total), summary.total.toString(), icon = CommonR.drawable.ic_tool_diary),
-                        RecoowMetric(stringResource(R.string.diary_metric_today), summary.today.toString(), icon = CommonR.drawable.ic_check),
-                        RecoowMetric(stringResource(R.string.diary_metric_days), summary.activeDays.toString(), icon = CommonR.drawable.ic_tool_anniversaries),
-                        RecoowMetric(stringResource(R.string.diary_metric_streak), summary.streak.toString(), icon = CommonR.drawable.ic_metric_streak),
-                    ))
+                Column {
+                    RecoowSectionHeader(stringResource(CommonR.string.record_overview))
+                    RecoowGroup {
+                        RecoowMetricStrip(listOf(
+                            RecoowMetric(stringResource(R.string.diary_metric_total), summary.total.toString(), icon = CommonR.drawable.ic_tool_diary),
+                            RecoowMetric(stringResource(R.string.diary_metric_today), summary.today.toString(), icon = CommonR.drawable.ic_check),
+                            RecoowMetric(stringResource(R.string.diary_metric_days), summary.activeDays.toString(), icon = CommonR.drawable.ic_tool_anniversaries),
+                            RecoowMetric(stringResource(R.string.diary_metric_streak), summary.streak.toString(), icon = CommonR.drawable.ic_metric_streak),
+                        ))
+                    }
                 }
             }
             item(key = "entries") {

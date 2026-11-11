@@ -99,18 +99,21 @@ import java.time.format.FormatStyle
         if (state.loading || state.failed) item { RecordLoadState(state.loading, state.failed, vm::retry) }
         if (!state.loading && !state.failed) {
             item(key = "summary") {
-                RecoowGroup {
-                    RecoowMetricStrip(listOf(
-                        RecoowMetric(stringResource(R.string.food_metric_days), summary.days.toString(), icon = CommonR.drawable.ic_tool_anniversaries),
-                        RecoowMetric(stringResource(R.string.food_metric_today), summary.today.toString(), icon = CommonR.drawable.ic_tool_food),
-                        RecoowMetric(stringResource(R.string.food_metric_meals), summary.mealsToday.toString(), icon = CommonR.drawable.ic_metric_meals),
-                        RecoowMetric(stringResource(R.string.food_latest_label), summary.latest?.let { latest ->
-                            Instant.ofEpochMilli(latest).atZone(zone).toLocalDate().format(DateTimeFormatter.ofPattern("MM/dd"))
-                        } ?: "—", icon = CommonR.drawable.ic_clock, emphasis = false),
-                    ))
-                    if (summary.total > 0) {
-                        RecoowDivider(inset = 0.dp)
-                        FoodQuickStats(summary)
+                Column {
+                    RecoowSectionHeader(stringResource(CommonR.string.record_overview))
+                    RecoowGroup {
+                        RecoowMetricStrip(listOf(
+                            RecoowMetric(stringResource(R.string.food_metric_days), summary.days.toString(), icon = CommonR.drawable.ic_tool_anniversaries),
+                            RecoowMetric(stringResource(R.string.food_metric_today), summary.today.toString(), icon = CommonR.drawable.ic_tool_food),
+                            RecoowMetric(stringResource(R.string.food_metric_meals), summary.mealsToday.toString(), icon = CommonR.drawable.ic_metric_meals),
+                            RecoowMetric(stringResource(R.string.food_latest_label), summary.latest?.let { latest ->
+                                Instant.ofEpochMilli(latest).atZone(zone).toLocalDate().format(DateTimeFormatter.ofPattern("MM/dd"))
+                            } ?: "—", icon = CommonR.drawable.ic_clock, emphasis = false),
+                        ))
+                        if (summary.total > 0) {
+                            RecoowDivider(inset = 0.dp)
+                            FoodQuickStats(summary)
+                        }
                     }
                 }
             }
@@ -158,24 +161,17 @@ import java.time.format.FormatStyle
 }
 
 @Composable private fun FoodQuickStats(summary: FoodSummary) {
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = RecoowLayout.rowHorizontal, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FoodStatPill(stringResource(R.string.food_month_snacks), summary.snacks, CommonR.drawable.ic_food_snack)
-        FoodStatPill(stringResource(R.string.food_month_drinks), summary.drinks, CommonR.drawable.ic_food_drink)
-        FoodStatPill(stringResource(R.string.food_month_late_night), summary.lateNight, CommonR.drawable.ic_food_night)
-        FoodStatPill(stringResource(R.string.food_month_milk_tea), summary.milkTea, CommonR.drawable.ic_food_drink)
-    }
-}
-
-@Composable private fun FoodStatPill(title: String, count: Int, icon: Int) {
-    Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
-        Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Icon(painterResource(icon), null, tint = RecoowToolIcons.tint(ToolRoute.FOOD), modifier = Modifier.size(16.dp))
-            Text(title, style = MaterialTheme.typography.bodySmall)
-            Text(stringResource(R.string.food_times, count), style = MaterialTheme.typography.labelMedium)
-        }
-    }
+    val tint = RecoowToolIcons.tint(ToolRoute.FOOD)
+    RecoowMetricRail(listOf(
+        RecoowMetric(stringResource(R.string.food_month_snacks), stringResource(R.string.food_times, summary.snacks),
+            icon = CommonR.drawable.ic_food_snack, tint = tint),
+        RecoowMetric(stringResource(R.string.food_month_drinks), stringResource(R.string.food_times, summary.drinks),
+            icon = CommonR.drawable.ic_food_drink, tint = tint),
+        RecoowMetric(stringResource(R.string.food_month_late_night), stringResource(R.string.food_times, summary.lateNight),
+            icon = CommonR.drawable.ic_food_night, tint = tint),
+        RecoowMetric(stringResource(R.string.food_month_milk_tea), stringResource(R.string.food_times, summary.milkTea),
+            icon = CommonR.drawable.ic_food_drink, tint = tint),
+    ))
 }
 
 @Composable private fun FoodMetadata(icon: Int, label: String) {

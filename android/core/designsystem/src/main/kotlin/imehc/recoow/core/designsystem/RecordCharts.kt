@@ -128,8 +128,9 @@ fun RecordCartesianChart(points: List<RecordChartPoint>, series: List<RecordChar
                 }
             }
         }
+        // 读数说明按实际行数撑开，避免单行内容下方保留多行占位。
         Text(points[selected].description, style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.heightIn(min = 32.dp))
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

@@ -93,11 +93,11 @@ import imehc.recoow.core.domain.bills.*
     val balanceError = if (attempted && !balanceOk) stringResource(R.string.amount_invalid) else null
     Dialog(onDismissRequest = viewModel::cancelAccount, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Scaffold(Modifier.fillMaxSize(), topBar = {
-            TopAppBar(title = { Text(stringResource(if (draft.revision == null) R.string.add_account else R.string.edit_account)) }, navigationIcon = { BackButton(viewModel::cancelAccount) }, actions = {
+            RecoowCompactTopBar(title = stringResource(if (draft.revision == null) R.string.add_account else R.string.edit_account), navigationIcon = { BackButton(viewModel::cancelAccount) }, action = {
                 TextButton(enabled = !busy, onClick = { if (balanceOk) viewModel.saveAccount(defaultName) else attempted = true }, modifier = Modifier.testTag("account_save")) { Text(stringResource(R.string.save)) }
             })
         }) { padding ->
-            LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 if (busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
                 item {
                     RecordForm {
