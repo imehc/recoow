@@ -23,6 +23,10 @@ class DecisionViewModel @Inject constructor(private val repository: DecisionsRep
     val optionDraft = saved.getStateFlow<OptionDraft?>("decisionOptionDraft", null)
     val history = saved.getStateFlow("decisionHistory", false)
     val detail = saved.getStateFlow<String?>("decisionDetail", null)
+    val query = saved.getStateFlow("decisionCollectionQuery", "")
+    val historyQuery = saved.getStateFlow("decisionHistoryQuery", "")
+    fun query(value: String) { saved["decisionCollectionQuery"] = value }
+    fun queryHistory(value: String) { saved["decisionHistoryQuery"] = value }
     val shownResult = saved.getStateFlow<String?>("decisionShownResult", null)
     fun markResultShown(id: String) { saved["decisionShownResult"] = id }
     val result = saved.getStateFlow<String?>("decisionResult", null)
@@ -50,7 +54,10 @@ class DecisionViewModel @Inject constructor(private val repository: DecisionsRep
     fun saveCollection() = action { val id = repository.saveCollection(requireNotNull(collectionDraft.value)); saved["decisionCollectionDraft"] = null; open(id) }
     fun saveOption() = action { val d = requireNotNull(optionDraft.value); repository.saveOption(d); saved["decisionOptionDraft"] = null; d.imageContent?.file?.delete() }
     fun deleteCollection(c: DecisionCollection) = action { repository.deleteCollection(c.id, c.revision); if (collection.value == c.id) saved["decisionCollection"] = null }
-    fun deleteOption(o: DecisionOption) = action { repository.deleteOption(o.id, o.revision) }
+    fun deleteOption(o: DecisionOption) = action {
+        repository.deleteOption(o.id, o.revision)
+        if (optionDraft.value?.id == o.id) saved["decisionOptionDraft"] = null
+    }
     fun deleteChoice(c: DecisionChoice) = action { repository.deleteChoice(c.id, c.revision); saved["decisionDetail"] = null; if (result.value == c.id) saved["decisionResult"] = null }
     fun choose() = action { saved["decisionResult"] = repository.choose(requireNotNull(collection.value)) }
     fun clearError() { mutable.update { it.copy(error = null) } }

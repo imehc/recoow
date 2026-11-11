@@ -9,7 +9,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
-/** Small shared source buffers; GPU assets belong to each surface and are released on detach. */
+/** 只共享小型源缓冲；GPU 资源归各渲染表面所有，在分离时释放。 */
 internal object DecisionAssets {
     private val lock = Mutex()
     private val buffers = mutableMapOf<String, ByteArray>()
@@ -20,14 +20,26 @@ internal object DecisionAssets {
     suspend fun bytes(context: Context, path: String): ByteBuffer = lock.withLock {
         ByteBuffer.wrap(buffers[path] ?: withContext(Dispatchers.IO) { context.assets.open("decision/$path").use { it.readBytes() } }.also { buffers[path] = it })
     }
-    fun path(catalog: JSONObject, title: String): String {
-        val key = catalog.getJSONObject("aliases").optString(normalizedDecisionTitle(title), catalog.getString("fallback"))
+    fun path(catalog: JSONObject, title: String, modelKey: String? = null): String {
         val assets = catalog.getJSONArray("assets")
+        if (modelKey != null) for (index in 0 until assets.length()) assets.getJSONObject(index).let {
+            if (it.getString("key") == modelKey) return it.getString("path")
+        }
+        val key = catalog.getJSONObject("aliases").optString(normalizedDecisionTitle(title), catalog.getString("fallback"))
         for (index in 0 until assets.length()) assets.getJSONObject(index).let { if (it.getString("key") == key) return it.getString("path") }
         return "option-default.glb"
     }
 }
+
+/** 预览使用实际打包的目录，不创建集合或候选项。 */
+data class DecisionModelEntry(val key: String)
+suspend fun decisionModelCatalog(context: Context): List<DecisionModelEntry> {
+    val assets = DecisionAssets.catalog(context).getJSONArray("assets")
+    return (0 until assets.length()).map { DecisionModelEntry(assets.getJSONObject(it).getString("key")) }
+}
 suspend fun prewarmDecisionScene(context: Context) {
-    DecisionAssets.catalog(context)
-    for (path in listOf("decision-stage.glb", "option-pad.glb", "option-default.glb")) DecisionAssets.bytes(context, path)
+    val catalog = DecisionAssets.catalog(context)
+    val assets = catalog.getJSONArray("assets")
+    val paths = listOf("decision-stage.glb", "option-pad.glb") + (0 until assets.length()).map { assets.getJSONObject(it).getString("path") }
+    for (path in paths) DecisionAssets.bytes(context, path)
 }
