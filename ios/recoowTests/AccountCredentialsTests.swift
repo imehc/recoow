@@ -147,6 +147,7 @@ private final class AccountCredentialsProtocol: URLProtocol, @unchecked Sendable
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func startLoading() {
         do {
+            XCTAssertNil(request.value(forHTTPHeaderField: "X-Recoow-Field-Case"))
             let data: Data
             if let body = request.httpBody { data = body }
             else if let stream = request.httpBodyStream {

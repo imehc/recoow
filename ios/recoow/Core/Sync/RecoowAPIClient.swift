@@ -303,7 +303,6 @@ final class RecoowAPIClient: @unchecked Sendable {
             request.setValue(environment[key], forHTTPHeaderField: header)
         }
         request.setValue(localDeviceID, forHTTPHeaderField: "X-Recoow-Device-Id")
-        request.setValue("snake_case", forHTTPHeaderField: "X-Recoow-Field-Case")
     }
 
     private func baseURL() -> String {
