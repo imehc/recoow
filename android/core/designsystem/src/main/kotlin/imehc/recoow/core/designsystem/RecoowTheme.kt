@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import imehc.recoow.core.domain.navigation.ToolRoute
+import imehc.recoow.core.domain.food.MealKind
 
 /**
  * Recoow 的唯一色板。页面通过 MaterialTheme 读取，不在功能页复制十六进制值。
@@ -41,6 +42,18 @@ object RecoowPalette {
     val toolItems = Color(0xFF087B92)
     val toolAnniversaries = Color(0xFF9B6109)
     val toolTracks = Color(0xFF677180)
+
+    fun warningColor(dark: Boolean): Color = if (dark) Color(0xFFC2892A) else warning
+
+    /** 与 iOS 餐别图标对应的语义色，供列表图标及推荐共用。 */
+    fun foodMealColor(meal: MealKind, dark: Boolean): Color = when (meal) {
+        MealKind.BREAKFAST -> warningColor(dark)
+        MealKind.LUNCH -> if (dark) Color(0xFF16A87B) else success
+        MealKind.DINNER, MealKind.LATE_NIGHT -> if (dark) Color(0xFFA77BEC) else toolDiary
+        MealKind.SNACK -> if (dark) Color(0xFFE6689B) else toolDecision
+        MealKind.DRINK -> if (dark) Color(0xFF159DB6) else toolItems
+        MealKind.OTHER -> if (dark) Color(0xFF737E8F) else toolTracks
+    }
 
     /** 功能图标只上色、不加底板；深色下逐个提亮以维持辨识度。 */
     fun toolColor(route: ToolRoute, dark: Boolean): Color = when (route) {

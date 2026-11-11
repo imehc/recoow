@@ -1,0 +1,10 @@
+<resources>
+    <string name="assets_selected">%1$d selected</string>
+    <string name="assets_select">Select assets</string>
+    <string name="assets_select_all">Select all</string>
+    <string name="assets_deselect_all">Deselect all</string>
+    <string name="assets_selection_hint">Assets used by records cannot be deleted.</string>
+    <string name="assets_gesture_hint">Hold and drag to reorder. Pinch to adjust the grid.</string>
+    <string name="assets_delete_info">Delete %1$d selected assets? This cannot be undone.</string>
+    <string name="assets_reference_count">Used %1$d times</string>
+</resources>

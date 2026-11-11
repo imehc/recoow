@@ -11,35 +11,42 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import imehc.recoow.core.domain.media.*
 import imehc.recoow.core.domain.preferences.AppPreferences
+import imehc.recoow.core.designsystem.*
 
-/** UDF draft editor. The owner ViewModel calls saveAttachments with its owner change on Save.
- * Removing a draft never deletes a shared asset or mutates the persisted owner. */
+/** UDF 草稿编辑器；保存时由属主 ViewModel 带着属主变更调用 saveAttachments。
+ * 移除草稿不会删除共享资源，也不会改动已持久化的属主。 */
 @Composable
 fun AttachmentInput(attachments: List<MediaAttachment>, onChange: (List<MediaAttachment>) -> Unit,
-    repository: MediaRepository, processor: ImageProcessor, preferences: AppPreferences, modifier: Modifier = Modifier) {
+    repository: MediaRepository, processor: ImageProcessor, preferences: AppPreferences, modifier: Modifier = Modifier,
+    sectioned: Boolean = false, enabled: Boolean = true, onRecordingChange: (Boolean) -> Unit = {}, allowAudio: Boolean = true) {
     var picking by rememberSaveable { mutableStateOf(false) }
     var previewId by rememberSaveable { mutableStateOf<String?>(null) }
     var menu by rememberSaveable { mutableStateOf(false) }
     var recording by rememberSaveable { mutableStateOf(false) }
     val photos = attachments.filter { it.kind == AttachmentKind.PHOTO }
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val onRecorded: (PreparedMedia) -> Unit = { content ->
+        recording = false
+        onChange(attachments + MediaAttachment(kind = AttachmentKind.AUDIO, mimeType = content.mimeType,
+            durationSeconds = content.durationSeconds, content = content))
+    }
+    val onPhotoPicked: (SelectedPhoto) -> Unit = { selected ->
+        onChange(attachments + MediaAttachment(kind = AttachmentKind.PHOTO, assetId = selected.assetId,
+            mimeType = selected.content?.mimeType ?: "image/jpeg", width = selected.content?.width,
+            height = selected.content?.height, content = selected.content))
+    }
+    if (sectioned) AttachmentSections(attachments, onChange, repository, modifier, enabled, allowAudio,
+        onPhoto = { picking = true }, onPreview = { previewId = it },
+        onRecorded = onRecorded, onRecordingChange = onRecordingChange)
+    else Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.attachments), style = MaterialTheme.typography.titleMedium)
-        // Rows wrap naturally at large font sizes; three columns are a layout choice, never an input limit.
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            photos.forEachIndexed { index, attachment ->
-                key(attachment.id) {
-                    Card(Modifier.width(144.dp)) {
-                        MediaImage(attachment.locator, repository, Modifier.fillMaxWidth().aspectRatio(1f).clickable { previewId = attachment.id })
-                        Row {
-                            TextButton(enabled = index > 0, onClick = { onChange(attachments.movePhoto(attachment.id, -1)) }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.move_up)) }
-                            TextButton(enabled = index < photos.lastIndex, onClick = { onChange(attachments.movePhoto(attachment.id, 1)) }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.move_down)) }
-                        }
-                        TextButton(onClick = { onChange(attachments.filterNot { it.id == attachment.id }) }) { Text(stringResource(R.string.remove)) }
-                    }
-                }
-            }
-        }
-        attachments.filter { it.kind == AttachmentKind.AUDIO }.forEach { attachment ->
+        AttachmentPhotoGrid(photos, repository, onPreview = { previewId = it.id }, enabled = enabled,
+            onRemove = { photo -> onChange(attachments.filterNot { it.id == photo.id }) },
+            onMove = { id, target ->
+                val from = photos.indexOfFirst { it.id == id }
+                val to = photos.indexOfFirst { it.id == target }
+                if (from >= 0 && to >= 0) onChange(attachments.movePhoto(id, to - from))
+            })
+        attachments.filter { allowAudio && it.kind == AttachmentKind.AUDIO }.forEach { attachment ->
             key(attachment.id) {
                 Card {
                     Column(Modifier.padding(12.dp)) {
@@ -59,24 +66,52 @@ fun AttachmentInput(attachments: List<MediaAttachment>, onChange: (List<MediaAtt
             }
             DropdownMenu(menu, { menu = false }) {
                 DropdownMenuItem(text = { Text(stringResource(R.string.add_photo)) }, onClick = { menu = false; picking = true })
-                DropdownMenuItem(text = { Text(stringResource(R.string.record)) }, onClick = { menu = false; recording = true })
+                if (allowAudio) DropdownMenuItem(text = { Text(stringResource(R.string.record)) }, onClick = { menu = false; recording = true })
             }
         }
     }
-    if (recording) AlertDialog(onDismissRequest = { recording = false }, text = {
-        AudioRecorderInput { content ->
-            recording = false
-            onChange(attachments + MediaAttachment(kind = AttachmentKind.AUDIO, mimeType = content.mimeType,
-                durationSeconds = content.durationSeconds, content = content))
-        }
+    if (recording && allowAudio) AlertDialog(onDismissRequest = { recording = false }, text = {
+        AudioRecorderInput(onRecorded = onRecorded)
     }, confirmButton = {}, dismissButton = { TextButton(onClick = { recording = false }) { Text(stringResource(R.string.cancel)) } })
-    if (picking) PhotoSourcePicker(processor, repository, preferences, onDismiss = { picking = false }, onPicked = { selected ->
-        onChange(attachments + MediaAttachment(kind = AttachmentKind.PHOTO, assetId = selected.assetId,
-            mimeType = selected.content?.mimeType ?: "image/jpeg", width = selected.content?.width,
-            height = selected.content?.height, content = selected.content))
-    })
+    if (picking) PhotoSourcePicker(processor, repository, preferences, onDismiss = { picking = false },
+        onPicked = onPhotoPicked)
     previewId?.let { id ->
         val index = photos.indexOfFirst { it.id == id }
         if (index >= 0) ImagePreview(photos.map { it.locator }, index, repository) { previewId = null }
+    }
+}
+
+/** 图片网格和录音各自成组，继续共用原有选择、预览、排序、播放与录制流程。 */
+@Composable private fun AttachmentSections(attachments: List<MediaAttachment>, onChange: (List<MediaAttachment>) -> Unit,
+    repository: MediaRepository, modifier: Modifier, enabled: Boolean, allowAudio: Boolean, onPhoto: () -> Unit,
+    onPreview: (String) -> Unit, onRecorded: (PreparedMedia) -> Unit, onRecordingChange: (Boolean) -> Unit) {
+    val photos = attachments.filter { it.kind == AttachmentKind.PHOTO }
+    val audio = attachments.filter { it.kind == AttachmentKind.AUDIO }
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(RecoowLayout.compactSectionGap)) {
+        Column {
+            PhotoSectionHeader(repository, photos.mapNotNull { it.assetId })
+            RecoowGroup {
+                AttachmentPhotoGrid(photos, repository, onPreview = { onPreview(it.id) }, enabled = enabled,
+                    onAdd = onPhoto, onRemove = { photo -> onChange(attachments.filterNot { it.id == photo.id }) },
+                    onMove = { id, target ->
+                        val from = photos.indexOfFirst { it.id == id }
+                        val to = photos.indexOfFirst { it.id == target }
+                        if (from >= 0 && to >= 0) onChange(attachments.movePhoto(id, to - from))
+                    })
+            }
+        }
+        if (allowAudio) Column {
+            RecoowSectionHeader(stringResource(R.string.record))
+            RecoowGroup {
+                AudioRecorderInput(inline = true, enabled = enabled, onRecorded = onRecorded, onRecordingChange = onRecordingChange)
+                audio.forEach { attachment ->
+                    key(attachment.id) {
+                        RecoowDivider(inset = RecoowLayout.rowHorizontal)
+                        AttachmentAudioRow(attachment, repository, enabled = enabled,
+                            onRemove = { onChange(attachments.filterNot { it.id == attachment.id }) })
+                    }
+                }
+            }
+        }
     }
 }

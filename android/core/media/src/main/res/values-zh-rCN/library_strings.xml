@@ -1,0 +1,10 @@
+<resources>
+    <string name="assets_selected">已选 %1$d 项</string>
+    <string name="assets_select">选择素材</string>
+    <string name="assets_select_all">全选</string>
+    <string name="assets_deselect_all">取消全选</string>
+    <string name="assets_selection_hint">已被记录引用的素材不可删除。</string>
+    <string name="assets_gesture_hint">长按拖动排序，双指缩放调整网格。</string>
+    <string name="assets_delete_info">删除选中的 %1$d 项素材？此操作无法撤销。</string>
+    <string name="assets_reference_count">引用 %1$d</string>
+</resources>

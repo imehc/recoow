@@ -3,6 +3,12 @@ package imehc.recoow.core.designsystem
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -10,6 +16,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -18,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -36,11 +44,15 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import imehc.recoow.core.domain.navigation.ToolRoute
+import imehc.recoow.core.domain.bills.BillType
 
 /**
  * 全应用共用的一套排布令牌：页面边距 16、组间距 22、组标题到卡片 8、
@@ -49,14 +61,20 @@ import imehc.recoow.core.domain.navigation.ToolRoute
 object RecoowLayout {
     val pagePadding = 16.dp
     val sectionGap = 22.dp
+    val compactSectionGap = 12.dp
     val headerGap = 8.dp
     val cardRadius = 14.dp
+    val thumbnailRadius = 10.dp
+    val listCoverSize = 44.dp
+    val photoInputSize = 88.dp
     val rowMinHeight = 56.dp
     val rowHorizontal = 14.dp
     val rowVertical = 9.dp
     val iconBox = 24.dp
     val iconSize = 23.dp
     val iconTextGap = 14.dp
+    val coverDividerInset = rowHorizontal + listCoverSize + iconTextGap
+    val controlSize = 48.dp
     val dividerInset = 52.dp
     val contentMaxWidth = 640.dp
     val topBarMinHeight = 48.dp
@@ -93,6 +111,7 @@ fun RecoowCompactTopBar(
     modifier: Modifier = Modifier,
     navigationIcon: (@Composable () -> Unit)? = null,
     action: (@Composable RowScope.() -> Unit)? = null,
+    titleContent: (@Composable () -> Unit)? = null,
 ) {
     Row(
         modifier.fillMaxWidth()
@@ -103,14 +122,15 @@ fun RecoowCompactTopBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         navigationIcon?.invoke()
-        Text(
-            title,
-            modifier = Modifier.weight(1f).padding(start = if (navigationIcon == null) 0.dp else 4.dp),
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Box(Modifier.weight(1f).padding(start = if (navigationIcon == null) 0.dp else 4.dp)) {
+            if (titleContent != null) titleContent() else Text(
+                title,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         if (action != null) Row(verticalAlignment = Alignment.CenterVertically, content = action)
     }
 }
@@ -128,17 +148,16 @@ data class RecoowAction(
  * 顶栏只留一个新建图标，避免按钮排成一排抢走标题。没有动作时整个入口不渲染。
  */
 @Composable
-fun RecoowOverflowMenu(actions: List<RecoowAction>, modifier: Modifier = Modifier, tag: String = "top_more") {
+fun RecoowOverflowMenu(actions: List<RecoowAction>, modifier: Modifier = Modifier, tag: String = "top_more", onImage: Boolean = false) {
     if (actions.isEmpty()) return
     var open by remember { mutableStateOf(false) }
     Box(modifier) {
         IconButton(onClick = { open = true }, modifier = Modifier.testTag(tag)) {
-            Icon(
-                painterResource(R.drawable.ic_more),
-                contentDescription = stringResource(R.string.record_more),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-            )
+            Box(if (onImage) Modifier.size(28.dp).background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                androidx.compose.foundation.shape.CircleShape) else Modifier, contentAlignment = Alignment.Center) {
+                Icon(painterResource(R.drawable.ic_more), contentDescription = stringResource(R.string.record_more),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+            }
         }
         DropdownMenu(
             expanded = open,
@@ -174,33 +193,35 @@ fun RecoowSearchToggle(
 ) {
     IconButton(onClick = onToggle, modifier = if (tag != null) modifier.testTag(tag) else modifier) {
         Icon(
-            painterResource(R.drawable.ic_search),
-            contentDescription = label,
+            painterResource(if (searching) R.drawable.ic_close else R.drawable.ic_search),
+            contentDescription = if (searching) stringResource(R.string.record_cancel) else label,
             tint = if (searching) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(21.dp),
         )
     }
 }
 
-/** 顶栏里唯一的新建入口：`+` 图标取代悬浮按钮。 */
+/** 列表的新建入口统一悬浮在右下角，滚动内容为它预留底部空间。 */
 @Composable
-fun RecoowAddAction(
+fun RecoowFloatingAddAction(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     tag: String? = null,
 ) {
-    IconButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = if (tag != null) modifier.testTag(tag) else modifier,
+    FloatingActionButton(
+        onClick = { if (enabled) onClick() },
+        modifier = (if (tag != null) modifier.testTag(tag) else modifier)
+            .then(if (!enabled) Modifier.semantics { disabled() } else Modifier),
+        shape = RoundedCornerShape(16.dp),
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
     ) {
         Icon(
             painterResource(R.drawable.ic_plus),
             contentDescription = label,
-            tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(23.dp),
+            modifier = Modifier.size(RecoowLayout.iconSize),
         )
     }
 }
@@ -208,7 +229,7 @@ fun RecoowAddAction(
 /** 无胶囊指示器：选中态只用品牌色与 Tab 语义表达。 */
 @Composable
 fun RecoowTabBar(modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
-    Surface(modifier = modifier, color = MaterialTheme.colorScheme.surface) {
+    Surface(modifier = modifier.testTag("app_tab_bar"), color = MaterialTheme.colorScheme.surface) {
         Column(Modifier.windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))) {
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
             Row(
@@ -228,18 +249,28 @@ fun RowScope.RecoowTabItem(
     modifier: Modifier = Modifier,
     icon: @Composable () -> Unit,
 ) {
-    val color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    val color by animateColorAsState(
+        if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(160), label = "tabColor")
+    val interactions = remember { MutableInteractionSource() }
     CompositionLocalProvider(LocalContentColor provides color) {
-        Column(
+        Box(
             modifier.weight(1f)
-                .selectable(selected = selected, role = Role.Tab, onClick = onClick)
+                .selectable(selected = selected, role = Role.Tab, onClick = onClick,
+                    interactionSource = interactions, indication = null)
                 .heightIn(min = RecoowLayout.tabBarMinHeight)
-                .padding(horizontal = 8.dp, vertical = 7.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(Modifier.size(RecoowLayout.iconSize), contentAlignment = Alignment.Center) { icon() }
-            Text(label, style = MaterialTheme.typography.labelMedium, color = color, maxLines = 1)
+            Column(Modifier.widthIn(min = 64.dp).clip(RoundedCornerShape(12.dp))
+                .indication(interactions, ripple(bounded = false))
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Box(Modifier.size(RecoowLayout.iconSize), contentAlignment = Alignment.Center) { icon() }
+                Text(label, style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium), color = color, maxLines = 1)
+            }
         }
     }
 }
@@ -251,6 +282,7 @@ fun RecoowSectionHeader(
     trailing: String? = null,
     modifier: Modifier = Modifier,
     onTrailingClick: (() -> Unit)? = null,
+    trailingModifier: Modifier = Modifier,
 ) {
     val largeText = LocalDensity.current.fontScale >= 1.5f
     val padding = Modifier.padding(start = 4.dp, end = 4.dp, bottom = RecoowLayout.headerGap)
@@ -261,7 +293,7 @@ fun RecoowSectionHeader(
             Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (trailing != null) Text(
                 trailing,
-                modifier = if (onTrailingClick != null) Modifier.clickable(onClick = onTrailingClick) else Modifier,
+                modifier = trailingModifier.then(if (onTrailingClick != null) Modifier.clickable(onClick = onTrailingClick) else Modifier),
                 style = trailingStyle,
                 color = trailingColor,
             )
@@ -271,10 +303,11 @@ fun RecoowSectionHeader(
             Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (trailing != null) Text(
                 trailing,
-                modifier = if (onTrailingClick != null) Modifier.clickable(onClick = onTrailingClick) else Modifier,
+                modifier = trailingModifier.then(if (onTrailingClick != null) Modifier.clickable(onClick = onTrailingClick) else Modifier),
                 style = trailingStyle,
                 color = trailingColor,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -304,7 +337,7 @@ fun RecoowDivider(inset: Dp = RecoowLayout.rowHorizontal) {
 }
 
 @Composable
-private fun RecoowChevron() {
+fun RecoowChevron() {
     Icon(
         painterResource(R.drawable.ic_chevron_right),
         contentDescription = null,
@@ -451,7 +484,70 @@ data class RecoowMetric(
     val tag: String? = null,
     val emphasis: Boolean = true,
     val onClick: (() -> Unit)? = null,
+    val icon: Int? = null,
+    val tint: Color? = null,
 )
+
+/** 紧凑概览：图标和数值同行，名称在下；共用指标模型与语义字号。 */
+@Composable
+fun RecoowMetricStrip(metrics: List<RecoowMetric>, modifier: Modifier = Modifier, scrollable: Boolean = false) {
+    if (metrics.isEmpty()) return
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        val cellWidth = (maxWidth - (metrics.size - 1).dp) / metrics.size
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)
+            .then(if (scrollable) Modifier.horizontalScroll(rememberScrollState()) else Modifier)) {
+            metrics.forEachIndexed { index, metric ->
+                if (index > 0) Box(Modifier.fillMaxHeight().width(1.dp).background(MaterialTheme.colorScheme.outlineVariant))
+                val cell = if (scrollable) Modifier.widthIn(min = cellWidth).width(IntrinsicSize.Max) else Modifier.weight(1f)
+                Column(cell.then(if (metric.tag != null) Modifier.testTag(metric.tag) else Modifier)
+                    .then(if (metric.onClick != null) Modifier.clickable(onClick = metric.onClick) else Modifier)
+                    .padding(horizontal = 6.dp, vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        metric.icon?.let {
+                            Icon(painterResource(it), null, tint = metric.tint ?: MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                        }
+                        Text(metric.value, style = MaterialTheme.typography.bodyLarge, color = metric.tint ?: MaterialTheme.colorScheme.onSurface)
+                    }
+                    Text(metric.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+    }
+}
+
+/** 次要概览横向展开，长金额自然占宽，不挤压首屏的主要指标。 */
+@Composable
+fun RecoowMetricRail(metrics: List<RecoowMetric>, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+        .padding(horizontal = RecoowLayout.rowHorizontal, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        metrics.forEach { metric ->
+            Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+                Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    metric.icon?.let { Icon(painterResource(it), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp)) }
+                    Text(metric.label, style = MaterialTheme.typography.bodySmall)
+                    Text(metric.value, style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+    }
+}
+
+/** 类型由左侧元信息呈现，右侧金额用符号与 iOS 相同的红 / 绿 / 橙语义色区分。 */
+@Composable
+fun RecoowMoneyValue(amount: String, type: BillType?, modifier: Modifier = Modifier) {
+    val color = when (type) {
+        BillType.EXPENSE -> MaterialTheme.colorScheme.error
+        BillType.INCOME -> MaterialTheme.colorScheme.tertiary
+        BillType.STORED_VALUE_USE -> RecoowPalette.warningColor(MaterialTheme.colorScheme.background.luminance() < 0.5f)
+        null -> MaterialTheme.colorScheme.onSurface
+    }
+    val prefix = when (type) { BillType.INCOME -> "+"; BillType.EXPENSE, BillType.STORED_VALUE_USE -> "−"; null -> "" }
+    Text(prefix + amount, modifier, style = MaterialTheme.typography.bodyLarge, color = color)
+}
 
 @Composable
 fun RecoowMetricGrid(metrics: List<RecoowMetric>, modifier: Modifier = Modifier, columns: Int = 2) {
@@ -470,7 +566,11 @@ fun RecoowMetricGrid(metrics: List<RecoowMetric>, modifier: Modifier = Modifier,
                         .heightIn(min = 74.dp)
                         .padding(horizontal = 14.dp, vertical = 13.dp)
                     Column(cell) {
-                        Text(metric.label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            metric.icon?.let { Icon(painterResource(it), null, tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)) }
+                            Text(metric.label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                         Text(
                             metric.value,
                             modifier = Modifier.padding(top = 3.dp),

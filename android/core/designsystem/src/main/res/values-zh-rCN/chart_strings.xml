@@ -1,0 +1,4 @@
+<resources>
+    <string name="record_chart_previous">上一个数据点</string>
+    <string name="record_chart_next">下一个数据点</string>
+</resources>

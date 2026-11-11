@@ -67,4 +67,10 @@
   <string name="view_list">List view</string>
   <string name="empty_library_detail">Photos you add and attachments you keep appear here.</string>
   <string name="assets_section">Assets</string>
+  <string name="attachment_photos">Images</string>
+  <string name="attachment_photo_number">Photo %1$d</string>
+  <string name="assets">Assets</string>
+  <string name="select_photo">Select image</string>
+  <string name="photo_select_hint">Choose an image or take a photo</string>
+  <string name="photo_replace_hint">Preview on the left, replace on the right</string>
 </resources>

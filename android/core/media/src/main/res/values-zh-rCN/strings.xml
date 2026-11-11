@@ -67,4 +67,10 @@
   <string name="view_list">列表视图</string>
   <string name="empty_library_detail">添加的照片和保留的附件会出现在这里。</string>
   <string name="assets_section">素材</string>
+  <string name="attachment_photos">图片</string>
+  <string name="attachment_photo_number">图片 %1$d</string>
+  <string name="assets">素材</string>
+  <string name="select_photo">选择图片</string>
+  <string name="photo_select_hint">选择图片或拍照</string>
+  <string name="photo_replace_hint">左侧预览，右侧更换</string>
 </resources>

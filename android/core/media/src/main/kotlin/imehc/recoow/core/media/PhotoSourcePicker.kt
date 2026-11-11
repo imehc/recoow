@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -22,13 +23,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.core.net.toUri
 import imehc.recoow.core.domain.media.*
 import imehc.recoow.core.domain.preferences.AppPreferences
+import imehc.recoow.core.designsystem.*
+import imehc.recoow.core.designsystem.R as CommonR
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 data class SelectedPhoto(val content: PreparedMedia? = null, val assetId: String? = null)
 
-/** No mutation reaches the owner until onPicked; dismissing the picker/editor preserves its prior image. */
+/** 在 onPicked 之前不会改动属主；关闭选择器或编辑器会保留原有图片。 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PhotoSourcePicker(processor: ImageProcessor, repository: MediaRepository, preferences: AppPreferences,
@@ -100,22 +103,36 @@ fun PhotoSourcePicker(processor: ImageProcessor, repository: MediaRepository, pr
             onPicked(SelectedPhoto(assetId = it)); onDismiss()
         })
     } else {
-        ModalBottomSheet(onDismissRequest = onDismiss) {
-            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.source_title), style = MaterialTheme.typography.titleLarge)
+        RecoowBottomSheet(onDismissRequest = onDismiss) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = RecoowLayout.pagePadding).padding(bottom = RecoowLayout.pagePadding)) {
                 if (uri == null) {
-                    FilledTonalButton(onClick = {
-                        try { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
-                        catch (_: Exception) { error = R.string.failed }
-                    }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.photos)) }
-                    FilledTonalButton(onClick = {
-                        try {
-                            val file = processor.cameraFile(); cameraPath = file.path; galleryHandled = false
-                            capture.launch(processor.cameraUri(file))
-                        } catch (_: Exception) { cameraPath?.let { File(it).delete() }; cameraPath = null; error = R.string.failed }
-                    }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.camera)) }
-                    if (!independent) FilledTonalButton(onClick = { pickingAsset = true }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.media_library)) }
-                } else CircularProgressIndicator()
+                    RecoowGroup {
+                        RecoowRow(stringResource(R.string.photos), showChevron = true, icon = {
+                            Icon(painterResource(CommonR.drawable.ic_photo), null, tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(RecoowLayout.iconSize))
+                        }, onClick = {
+                            try { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+                            catch (_: Exception) { error = R.string.failed }
+                        })
+                        RecoowDivider(inset = RecoowLayout.dividerInset)
+                        if (!independent) {
+                            RecoowRow(stringResource(R.string.assets), showChevron = true, icon = {
+                                Icon(painterResource(CommonR.drawable.ic_setting_media), null, tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(RecoowLayout.iconSize))
+                            }, onClick = { pickingAsset = true })
+                            RecoowDivider(inset = RecoowLayout.dividerInset)
+                        }
+                        RecoowRow(stringResource(R.string.camera), showChevron = true, icon = {
+                            Icon(painterResource(CommonR.drawable.ic_camera), null, tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(RecoowLayout.iconSize))
+                        }, onClick = {
+                            try {
+                                val file = processor.cameraFile(); cameraPath = file.path; galleryHandled = false
+                                capture.launch(processor.cameraUri(file))
+                            } catch (_: Exception) { cameraPath?.let { File(it).delete() }; cameraPath = null; error = R.string.failed }
+                        })
+                    }
+                } else LinearProgressIndicator(Modifier.fillMaxWidth())
             }
         }
     }
@@ -131,16 +148,17 @@ fun PhotoSourcePicker(processor: ImageProcessor, repository: MediaRepository, pr
 fun AssetPicker(repository: MediaRepository, onDismiss: () -> Unit, onPick: (String) -> Unit) {
     val assets by repository.assets.collectAsStateWithLifecycle(emptyList())
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Scaffold(Modifier.fillMaxSize(), topBar = {
-            TopAppBar(title = { Text(stringResource(R.string.media_library)) }, navigationIcon = {
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.back)) }
+        Scaffold(Modifier.fillMaxSize(), containerColor = MaterialTheme.colorScheme.background, topBar = {
+            RecoowCompactTopBar(title = stringResource(R.string.media_library), navigationIcon = {
+                IconButton(onClick = onDismiss) { Icon(painterResource(CommonR.drawable.ic_record_back), stringResource(R.string.back)) }
             })
         }) { padding ->
-            if (assets.isEmpty()) Text(stringResource(R.string.empty_library), Modifier.padding(padding).padding(24.dp))
+            if (assets.isEmpty()) RecoowEmptyState(stringResource(R.string.empty_library), Modifier.padding(padding))
             LazyVerticalGrid(GridCells.Adaptive(140.dp), Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(assets, key = { it.id }) { asset ->
-                    Card(Modifier.clickable { onPick(asset.id) }) {
+                    Card(Modifier.clickable { onPick(asset.id) }, shape = MaterialTheme.shapes.medium,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                         MediaImage(MediaLocator(asset.id), repository, Modifier.fillMaxWidth().aspectRatio(1f))
                         Text(asset.title ?: stringResource(R.string.untitled), Modifier.padding(8.dp), maxLines = 2)
                     }
