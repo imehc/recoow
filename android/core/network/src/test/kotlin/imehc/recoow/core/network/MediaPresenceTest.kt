@@ -17,7 +17,11 @@ class MediaPresenceTest {
                     server.accept().use { socket ->
                         val reader = socket.getInputStream().bufferedReader()
                         val first = requireNotNull(reader.readLine())
-                        while (!reader.readLine().isNullOrEmpty()) { }
+                        while (true) {
+                            val header = reader.readLine().orEmpty()
+                            if (header.isEmpty()) break
+                            assertFalse(header.startsWith("X-Recoow-Field-Case:", ignoreCase = true))
+                        }
                         socket.getOutputStream().write(("HTTP/1.1 $status\r\nContent-Length: $size\r\nETag: \"$checksum\"\r\nConnection: close\r\n\r\n").toByteArray())
                         first
                     }

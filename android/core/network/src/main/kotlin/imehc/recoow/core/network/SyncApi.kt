@@ -70,7 +70,6 @@ class SyncApiFactory(private val allowLocalHttp: Boolean = false, private val pr
             val original = chain.request()
             check(original.url.scheme == base.scheme && original.url.host == base.host && original.url.port == base.port)
             val request = original.newBuilder().header("Accept", "application/json")
-                .header("X-Recoow-Field-Case", "snake_case")
             if (profile != null) {
                 for ((key, header) in mapOf("client" to "X-Recoow-Client", "os" to "X-Recoow-OS", "appVersion" to "X-Recoow-App-Version", "osVersion" to "X-Recoow-OS-Version", "localDeviceId" to "X-Recoow-Device-Id")) {
                     profile[key]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }?.let { request.header(header, it) }
