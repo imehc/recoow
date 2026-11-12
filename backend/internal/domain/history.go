@@ -35,6 +35,8 @@ type PushContext struct {
 	DirectEdit bool
 	// Web 写入在持有账号事务锁时再次核对授权，避免撤销与提交竞态。
 	RequireWebWrite bool
+	// SessionID 在写入事务内核对会话设备仍有效，阻止撤销后提交。
+	SessionID string
 }
 
 type ChangeEvent struct {

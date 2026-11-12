@@ -27,7 +27,7 @@ FOR SHARE;
 
 -- name: RevokeUserSessions :exec
 -- 删除会话设备会级联删除会话；长期设备凭据不受密码更新影响。
-DELETE FROM devices WHERE id IN (SELECT device_id FROM sessions WHERE user_id = sqlc.arg(user_id));
+DELETE FROM devices WHERE id IN (SELECT sessions.device_id FROM sessions JOIN devices ON devices.id = sessions.device_id JOIN users ON users.account_id = devices.account_id WHERE users.id = sqlc.arg(user_id));
 
 -- name: CreateSession :execrows
 -- 和密码变更使用相同的用户行锁，防止旧密码验证后在吊销之后创建新会话。
@@ -37,9 +37,11 @@ FROM users WHERE users.id = sqlc.arg(user_id) AND users.password_hash = sqlc.arg
 FOR SHARE;
 
 -- name: SessionByToken :one
-SELECT sessions.id, sessions.user_id, sessions.device_id, sessions.token_hash, sessions.expires_at, sessions.access
-FROM sessions JOIN users ON users.id = sessions.user_id
-WHERE sessions.token_hash = sqlc.arg(token_hash) AND sessions.expires_at > now() AND NOT users.disabled;
+SELECT sessions.id, COALESCE(sessions.user_id, '')::text AS user_id, sessions.device_id, sessions.token_hash, sessions.expires_at, sessions.access
+FROM sessions JOIN devices ON devices.id = sessions.device_id LEFT JOIN users ON users.account_id = devices.account_id
+WHERE sessions.token_hash = sqlc.arg(token_hash) AND sessions.expires_at > now()
+    AND (users.id IS NULL OR NOT users.disabled);
+
 
 -- name: DeleteSession :exec
 DELETE FROM devices WHERE id IN (SELECT sessions.device_id FROM sessions WHERE sessions.token_hash = sqlc.arg(token_hash));
@@ -49,3 +51,19 @@ DELETE FROM devices WHERE id IN (
     SELECT device_id FROM sessions WHERE expires_at <= sqlc.arg(expires_at)
     ORDER BY expires_at, id LIMIT sqlc.arg(batch_size)::integer
 );
+
+-- name: UserByAccountForShare :one
+-- 已绑定账号与改密共用用户行锁；未绑定账号无需创建密码身份。
+SELECT id, account_id, username, password_hash, disabled FROM users WHERE account_id = sqlc.arg(account_id) FOR SHARE;
+
+-- name: CreatePairingSession :exec
+INSERT INTO sessions (id, user_id, device_id, token_hash, expires_at, access, auth_method)
+VALUES (sqlc.arg(id), sqlc.narg(user_id), sqlc.arg(device_id), sqlc.arg(token_hash), sqlc.arg(expires_at), sqlc.arg(access), 'pairing');
+
+-- name: RequireSessionDevice :one
+-- 锁定设备行，使删除设备与本次提交按事务先后生效。
+SELECT devices.id FROM devices
+WHERE devices.account_id = sqlc.arg(account_id) AND EXISTS (
+    SELECT 1 FROM sessions WHERE sessions.device_id = devices.id AND sessions.id = sqlc.arg(session_id) AND sessions.expires_at > now()
+) AND NOT EXISTS (SELECT 1 FROM users WHERE users.account_id = devices.account_id AND users.disabled)
+FOR SHARE OF devices;

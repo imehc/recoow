@@ -470,12 +470,13 @@ type RowState struct {
 }
 
 type Session struct {
-	ID        string
-	UserID    string
-	DeviceID  string
-	TokenHash string
-	ExpiresAt time.Time
-	Access    string
+	ID         string
+	UserID     sql.NullString
+	DeviceID   string
+	TokenHash  string
+	ExpiresAt  time.Time
+	Access     string
+	AuthMethod string
 }
 
 type StoredItem struct {

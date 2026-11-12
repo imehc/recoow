@@ -7,6 +7,7 @@ package sqlgen
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"time"
 )
@@ -69,6 +70,32 @@ func (q *Queries) CreateLoginDevice(ctx context.Context, arg CreateLoginDevicePa
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+const createPairingSession = `-- name: CreatePairingSession :exec
+INSERT INTO sessions (id, user_id, device_id, token_hash, expires_at, access, auth_method)
+VALUES ($1, $2, $3, $4, $5, $6, 'pairing')
+`
+
+type CreatePairingSessionParams struct {
+	ID        string
+	UserID    sql.NullString
+	DeviceID  string
+	TokenHash string
+	ExpiresAt time.Time
+	Access    string
+}
+
+func (q *Queries) CreatePairingSession(ctx context.Context, arg CreatePairingSessionParams) error {
+	_, err := q.db.ExecContext(ctx, createPairingSession,
+		arg.ID,
+		arg.UserID,
+		arg.DeviceID,
+		arg.TokenHash,
+		arg.ExpiresAt,
+		arg.Access,
+	)
+	return err
 }
 
 const createSession = `-- name: CreateSession :execrows
@@ -145,8 +172,29 @@ func (q *Queries) DeleteSession(ctx context.Context, tokenHash string) error {
 	return err
 }
 
+const requireSessionDevice = `-- name: RequireSessionDevice :one
+SELECT devices.id FROM devices
+WHERE devices.account_id = $1 AND EXISTS (
+    SELECT 1 FROM sessions WHERE sessions.device_id = devices.id AND sessions.id = $2 AND sessions.expires_at > now()
+) AND NOT EXISTS (SELECT 1 FROM users WHERE users.account_id = devices.account_id AND users.disabled)
+FOR SHARE OF devices
+`
+
+type RequireSessionDeviceParams struct {
+	AccountID string
+	SessionID string
+}
+
+// 锁定设备行，使删除设备与本次提交按事务先后生效。
+func (q *Queries) RequireSessionDevice(ctx context.Context, arg RequireSessionDeviceParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, requireSessionDevice, arg.AccountID, arg.SessionID)
+	var id string
+	err := row.Scan(&id)
+	return id, err
+}
+
 const revokeUserSessions = `-- name: RevokeUserSessions :exec
-DELETE FROM devices WHERE id IN (SELECT device_id FROM sessions WHERE user_id = $1)
+DELETE FROM devices WHERE id IN (SELECT sessions.device_id FROM sessions JOIN devices ON devices.id = sessions.device_id JOIN users ON users.account_id = devices.account_id WHERE users.id = $1)
 `
 
 // 删除会话设备会级联删除会话；长期设备凭据不受密码更新影响。
@@ -156,14 +204,24 @@ func (q *Queries) RevokeUserSessions(ctx context.Context, userID string) error {
 }
 
 const sessionByToken = `-- name: SessionByToken :one
-SELECT sessions.id, sessions.user_id, sessions.device_id, sessions.token_hash, sessions.expires_at, sessions.access
-FROM sessions JOIN users ON users.id = sessions.user_id
-WHERE sessions.token_hash = $1 AND sessions.expires_at > now() AND NOT users.disabled
+SELECT sessions.id, COALESCE(sessions.user_id, '')::text AS user_id, sessions.device_id, sessions.token_hash, sessions.expires_at, sessions.access
+FROM sessions JOIN devices ON devices.id = sessions.device_id LEFT JOIN users ON users.account_id = devices.account_id
+WHERE sessions.token_hash = $1 AND sessions.expires_at > now()
+    AND (users.id IS NULL OR NOT users.disabled)
 `
 
-func (q *Queries) SessionByToken(ctx context.Context, tokenHash string) (Session, error) {
+type SessionByTokenRow struct {
+	ID        string
+	UserID    string
+	DeviceID  string
+	TokenHash string
+	ExpiresAt time.Time
+	Access    string
+}
+
+func (q *Queries) SessionByToken(ctx context.Context, tokenHash string) (SessionByTokenRow, error) {
 	row := q.db.QueryRowContext(ctx, sessionByToken, tokenHash)
-	var i Session
+	var i SessionByTokenRow
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
@@ -217,6 +275,24 @@ SELECT id, account_id, username, password_hash, disabled FROM users WHERE accoun
 
 func (q *Queries) UserByAccount(ctx context.Context, accountID string) (User, error) {
 	row := q.db.QueryRowContext(ctx, userByAccount, accountID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.AccountID,
+		&i.Username,
+		&i.PasswordHash,
+		&i.Disabled,
+	)
+	return i, err
+}
+
+const userByAccountForShare = `-- name: UserByAccountForShare :one
+SELECT id, account_id, username, password_hash, disabled FROM users WHERE account_id = $1 FOR SHARE
+`
+
+// 已绑定账号与改密共用用户行锁；未绑定账号无需创建密码身份。
+func (q *Queries) UserByAccountForShare(ctx context.Context, accountID string) (User, error) {
+	row := q.db.QueryRowContext(ctx, userByAccountForShare, accountID)
 	var i User
 	err := row.Scan(
 		&i.ID,

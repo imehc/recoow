@@ -65,11 +65,39 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 401, "invalid credentials")
 		return
 	}
-	// 浏览器会话使用 HttpOnly Cookie；生产环境默认要求 HTTPS。
+	s.writeLogin(w, login)
+}
+func (s *Server) handlePairingLogin(w http.ResponseWriter, r *http.Request) {
+	if !s.allowIdentityAttempt(w, r) {
+		return
+	}
+	var input generated.PairingSessionRequest
+	if err := decodeJSON(w, r, &input); err != nil {
+		writeError(w, 400, "invalid request")
+		return
+	}
+	profiles, ok := s.registrationProfiles(w, r, true)
+	if !ok {
+		return
+	}
+	login, err := s.identity.LoginPairing(input.Code, profiles...)
+	if errors.Is(err, service.ErrBadCode) {
+		writeError(w, 401, "invalid or expired pairing code")
+		return
+	}
+	if err != nil {
+		writeError(w, 500, "pairing login failed")
+		return
+	}
+	s.writeLogin(w, login)
+}
+func (s *Server) writeLogin(w http.ResponseWriter, login service.Login) {
+	// 浏览器只接收短期会话，隐藏设备凭据不离开服务器。
 	http.SetCookie(w, &http.Cookie{Name: "recoow_session", Value: login.Token, Path: "/api", HttpOnly: true, Secure: !s.cfg.AllowInsecureCookies, SameSite: http.SameSiteStrictMode, Expires: login.ExpiresAt})
 	access := generated.SessionAccess(login.Access)
 	writeJSON(w, 200, loginResponse{UserId: login.User.ID, Username: login.User.Username, AccountId: login.User.AccountID, DeviceId: login.DeviceID, AccessToken: login.Token, ExpiresAt: login.ExpiresAt, Access: &access, WritableTables: s.sessionWritableTables(domain.Session{Access: login.Access})})
 }
+
 func (s *Server) handleBindCredentials(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	device, _ := s.deviceFrom(r.Context())
@@ -97,6 +125,12 @@ func (s *Server) handleIdentity(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	device, _ := s.deviceFrom(r.Context())
 	user, err := s.st.UserByAccount(device.AccountID)
+	if errors.Is(err, domain.ErrNotFound) {
+		if _, session := r.Context().Value(sessionKey).(domain.Session); session {
+			user = domain.User{AccountID: device.AccountID}
+			err = nil
+		}
+	}
 	if err != nil {
 		writeError(w, 404, "account has no login identity")
 		return

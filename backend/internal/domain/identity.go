@@ -36,6 +36,8 @@ type IdentityStore interface {
 	SetPasswordIfCurrent(userID, expectedHash, passwordHash string) error
 	// CreateLoginDevice 在同一事务核对密码版本并创建非主设备。
 	CreateLoginDevice(user User, name string, tokenHash []byte, profiles ...DeviceProfile) (Device, error)
+	// CreatePairingSession 原子消费配对码并创建非主设备和短期会话。
+	CreatePairingSession(codeHash string, session Session, deviceTokenHash []byte, profiles ...DeviceProfile) (User, Device, error)
 	CreateSession(session Session) error
 	SessionByToken(tokenHash string) (Session, error)
 	DeleteSession(tokenHash string) error

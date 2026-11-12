@@ -82,7 +82,7 @@ func (s *Server) pushContext(writer http.ResponseWriter, request *http.Request, 
 		submission.SessionID = session.ID
 		submission.Client = "web"
 	}
-	return domain.PushContext{Generation: generation, Submission: submission, DirectEdit: directEdit, RequireWebWrite: submission.SessionID != ""}, true
+	return domain.PushContext{Generation: generation, Submission: submission, DirectEdit: directEdit, RequireWebWrite: submission.SessionID != "", SessionID: submission.SessionID}, true
 }
 
 func (s *Server) requestEnvironment(writer http.ResponseWriter, request *http.Request) (domain.ClientEnvironment, bool) {

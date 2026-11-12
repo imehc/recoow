@@ -210,6 +210,22 @@ func (s *memoryStore) PushWithContext(accountID string, items []domain.PushItem,
 	if !ok {
 		return nil, domain.ErrNoAccount
 	}
+	if context.SessionID != "" {
+		valid := false
+		for _, session := range s.sessions {
+			if session.ID == context.SessionID && s.devices[session.DeviceID].AccountID == accountID && session.ExpiresAt.After(time.Now()) {
+				valid = true
+			}
+		}
+		for _, user := range s.users {
+			if user.AccountID == accountID && user.Disabled {
+				valid = false
+			}
+		}
+		if !valid {
+			return nil, domain.ErrSessionRevoked
+		}
+	}
 	if context.RequireWebWrite && !account.WebRecordWrites {
 		return nil, domain.ErrWebWriteDenied
 	}

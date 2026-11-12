@@ -238,6 +238,14 @@ func (s *postgresStore) PushWithContext(accountID string, items []domain.PushIte
 	}
 	defer tx.Rollback()
 
+	if context.SessionID != "" {
+		if _, err := sqlgen.New(tx.Tx).RequireSessionDevice(s.ctx, sqlgen.RequireSessionDeviceParams{AccountID: accountID, SessionID: context.SessionID}); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, domain.ErrSessionRevoked
+			}
+			return nil, err
+		}
+	}
 	if err := requireAccountLocked(tx, s.ctx, accountID); err != nil {
 		return nil, err
 	}

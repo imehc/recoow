@@ -182,6 +182,10 @@ func (s *Server) handleResource(w http.ResponseWriter, r *http.Request, table st
 	}
 	results, err := s.st.PushWithContext(device.AccountID, []domain.PushItem{item}, context)
 	if err != nil {
+		if errors.Is(err, domain.ErrSessionRevoked) {
+			writeError(w, http.StatusUnauthorized, "session revoked")
+			return
+		}
 		if errors.Is(err, domain.ErrWebWriteDenied) {
 			writeError(w, http.StatusForbidden, "session scope denied")
 			return

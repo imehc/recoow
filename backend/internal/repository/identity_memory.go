@@ -92,7 +92,7 @@ func (storage *memoryStore) setPassword(userID, expectedHash, passwordHash strin
 	user.PasswordHash = passwordHash
 	storage.users[userID] = user
 	for hash, session := range storage.sessions {
-		if session.UserID == userID {
+		if storage.devices[session.DeviceID].AccountID == user.AccountID {
 			delete(storage.devices, session.DeviceID)
 			delete(storage.sessions, hash)
 		}
@@ -141,8 +141,14 @@ func (storage *memoryStore) SessionByToken(hash string) (domain.Session, error) 
 	storage.mu.Lock()
 	defer storage.mu.Unlock()
 	session, exists := storage.sessions[hash]
-	if !exists || !session.ExpiresAt.After(time.Now()) || storage.users[session.UserID].Disabled {
+	device, deviceExists := storage.devices[session.DeviceID]
+	if !exists || !deviceExists || !session.ExpiresAt.After(time.Now()) {
 		return domain.Session{}, domain.ErrNotFound
+	}
+	for _, user := range storage.users {
+		if user.AccountID == device.AccountID && user.Disabled {
+			return domain.Session{}, domain.ErrNotFound
+		}
 	}
 	return session, nil
 }

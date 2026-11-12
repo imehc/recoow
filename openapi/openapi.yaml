@@ -1239,6 +1239,77 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/BindCredentialsRequest'
+  /api/pairing-sessions:
+    post:
+      operationId: loginWithPairingCode
+      summary: 使用主设备配对码登录 Web
+      description: 原子消费主设备的一次性配对码，签发按账号授权的短期 Web 会话；主设备删除对应设备后立即失效。
+      tags:
+        - Authentication
+      parameters:
+        - name: X-Recoow-Client
+          in: header
+          description: 此次请求的客户端类型，不参与鉴权
+          schema:
+            type: string
+        - name: X-Recoow-App-Version
+          in: header
+          description: 此次请求的应用版本
+          schema:
+            type: string
+        - name: X-Recoow-OS
+          in: header
+          description: 此次请求的运行系统
+          schema:
+            type: string
+        - name: X-Recoow-OS-Version
+          in: header
+          description: 此次请求的系统版本
+          schema:
+            type: string
+        - name: X-Recoow-Device-Id
+          in: header
+          description: 当前安装的本地来源标识，不是服务端设备 ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: 请求不合法
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 凭据无效或已失效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 无权访问
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 冲突或需要重新同步
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PairingSessionRequest'
   /api/sessions:
     post:
       operationId: login
@@ -10448,6 +10519,18 @@ components:
       required:
         - exported_at
         - tables
+    PairingSessionRequest:
+      type: object
+      description: 使用主设备生成的一次性配对码创建可撤销的 Web 会话；不返回长期设备凭据
+      properties:
+        code:
+          type: string
+          pattern: '^[0-9]{10}$'
+          minLength: 10
+          maxLength: 10
+          description: 主设备生成的十位数字配对码，成功登录后一次性消费
+      required:
+        - code
     CredentialsRequest:
       type: object
       properties:
@@ -10590,10 +10673,10 @@ components:
         user_id:
           type: string
           x-recoow-legacy-name: userId
-          description: 用户ID
+          description: 密码身份用户 ID；未绑定密码身份的配对会话为空字符串
         username:
           type: string
-          description: 用户名
+          description: 密码身份用户名；未绑定密码身份的配对会话为空字符串
         account_id:
           type: string
           x-recoow-legacy-name: accountId
@@ -10633,10 +10716,10 @@ components:
         user_id:
           type: string
           x-recoow-legacy-name: userId
-          description: 用户ID
+          description: 密码身份用户 ID；未绑定密码身份的配对会话为空字符串
         username:
           type: string
-          description: 用户名
+          description: 密码身份用户名；未绑定密码身份的配对会话为空字符串
         account_id:
           type: string
           x-recoow-legacy-name: accountId

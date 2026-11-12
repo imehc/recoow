@@ -60,6 +60,7 @@ var (
 	ErrNoAccount        = errors.New("no account exists")
 	ErrDeviceExists     = errors.New("device already exists")
 	ErrAccountQuota     = errors.New("account quota exceeded")
+	ErrSessionRevoked   = errors.New("session revoked")
 	ErrWebWriteDenied   = errors.New("account web writes disabled")
 )
 

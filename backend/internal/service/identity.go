@@ -160,6 +160,46 @@ func (identity *Identity) Login(username, password string, profiles ...domain.De
 	}
 	return Login{User: user, DeviceID: device.ID, Token: token, ExpiresAt: session.ExpiresAt, Access: session.Access}, nil
 }
+
+// LoginPairing 复用主设备的一次性配对码，但仅签发短期 Web 会话。
+func (identity *Identity) LoginPairing(code string, profiles ...domain.DeviceProfile) (Login, error) {
+	code = strings.TrimSpace(code)
+	if len(code) != 10 {
+		return Login{}, ErrBadCode
+	}
+	for _, digit := range code {
+		if digit < '0' || digit > '9' {
+			return Login{}, ErrBadCode
+		}
+	}
+	token, err := NewDeviceToken()
+	if err != nil {
+		return Login{}, err
+	}
+	hidden, err := NewDeviceToken()
+	if err != nil {
+		return Login{}, err
+	}
+	id, err := NewSecret(24)
+	if err != nil {
+		return Login{}, err
+	}
+	session := domain.Session{ID: id, TokenHash: hex.EncodeToString(HashToken(token)), ExpiresAt: time.Now().UTC().Add(identity.ttl), Access: domain.SessionReadOnly}
+	user, device, err := identity.store.CreatePairingSession(hex.EncodeToString(HashToken(code)), session, HashToken(hidden), profiles...)
+	if errors.Is(err, domain.ErrNotFound) {
+		return Login{}, ErrBadCode
+	}
+	if err != nil {
+		return Login{}, err
+	}
+	access, err := identity.accountSessionAccess(device.AccountID)
+	if err != nil {
+		_ = identity.Logout(token)
+		return Login{}, err
+	}
+	return Login{User: user, DeviceID: device.ID, Token: token, ExpiresAt: session.ExpiresAt, Access: access}, nil
+}
+
 func (identity *Identity) Authorize(token string) (domain.Device, error) {
 	device, _, err := identity.AuthorizeSession(token)
 	return device, err
