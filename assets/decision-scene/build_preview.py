@@ -15,7 +15,8 @@ payload = {
 source = source.replace("__SCENE_DATA__", json.dumps(payload, separators=(",", ":")))
 source = source.replace("__ASSET_ALIASES__", json.dumps(manifest["aliases"], ensure_ascii=False, separators=(",", ":")))
 source = source.replace("__MODEL_KEYS__", json.dumps([asset["key"] for asset in manifest["assets"]]))
-destination = project_root / "docs/decision-scene/decision-scene-preview.html"
+# 预览属于生成产物，避免重新写入仅保留部署与真机清单的文档目录。
+destination = project_root / "dist/decision-scene/decision-scene-preview.html"
 encoded = source.encode("utf-8")
 if len(encoded) >= 1_000_000:
     raise ValueError("Review fragment exceeds the inline size limit")
