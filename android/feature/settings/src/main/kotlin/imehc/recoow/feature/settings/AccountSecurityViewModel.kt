@@ -30,6 +30,7 @@ class AccountSecurityViewModel @Inject constructor(
     fun disconnect() = action { sync.disconnect() }
     fun confirmReset() = action { sync.confirmCloudReset(); if (sync.state.value.problem == null) sync.sync() }
     fun refresh() = action { accounts.refreshAccount() }
+    fun setWebEditing(enabled: Boolean) = action { accounts.setWebEditing(enabled) }
     fun set(password: String) = action { accounts.setAccountPassword(password) }
     fun change(current: String, next: String) = action { accounts.changeAccountPassword(current, next) }
     fun reset(endpoint: String, recovery: String, next: String) = action { accounts.resetAccountPassword(endpoint, recovery, next) }

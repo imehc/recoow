@@ -210,6 +210,8 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
                 require(identity == null || identity.accountId == connection.account)
                 mutableAccountState.update { it.copy(loaded = true, supported = true, username = identity?.username) }
             }
+            val webEditing = if (connection.canPair) AccountApi(api).webAccess() else null
+            mutableAccountState.update { it.copy(webEditing = webEditing) }
         }
     }
 
@@ -222,6 +224,13 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
         val identity = AccountApi(api).bind(password)
         require(identity.accountId == connection.account)
         mutableAccountState.update { it.copy(loaded = true, supported = true, username = identity.username, result = AccountResult.PASSWORD_SET) }
+    }
+
+    override suspend fun setWebEditing(enabled: Boolean) = accountOperation { current ->
+        val connection = requireNotNull(current)
+        if (!connection.canPair) throw SyncHttpException(403)
+        val saved = AccountApi(apiProvider.create(connection.endpoint, connection.token)).setWebAccess(enabled)
+        mutableAccountState.update { it.copy(webEditing = saved, result = AccountResult.WEB_ACCESS_UPDATED) }
     }
 
     override suspend fun changeAccountPassword(current: String, next: String) = accountOperation { selected ->

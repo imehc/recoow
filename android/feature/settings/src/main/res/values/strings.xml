@@ -196,4 +196,10 @@
   <string name="account_connection_settings">Connection settings</string>
   <string name="sync_remerge">Merge again</string>
   <string name="sync_remerge_detail">Cloud data was cleared or rebuilt. Merging again backs up local data and uploads existing records to the cloud.</string>
+    <string name="account_web_access_section">Web access</string>
+    <string name="account_web_access">Allow editing</string>
+    <string name="account_web_unsupported">Server does not support this yet</string>
+    <string name="account_web_hint">Enable to edit bills, diaries, items, and tags on Web. When off, Web is view-only. Refresh the page to apply changes. Turning it off immediately blocks writes.</string>
+    <string name="account_web_saved">Web editing access saved. Refresh Web to apply it.</string>
+    <string name="account_web_unread">Not loaded</string>
 </resources>

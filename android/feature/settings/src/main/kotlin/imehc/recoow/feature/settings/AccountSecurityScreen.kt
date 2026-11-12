@@ -23,7 +23,7 @@ fun AccountSecurityRoute(model: AccountSecurityViewModel, onBack: () -> Unit, on
     val sync by model.syncState.collectAsStateWithLifecycle()
     AccountSecurityScreen(account, sync, onBack, onLogin, onSync, model::refresh, model::set, model::change,
         model::reset, model::synchronize, model::setSyncEnabled, model::disconnect, model::confirmReset,
-        onDevices, onRevoke, onResolve, onPair, onDismissPair, onRecoverySaved)
+        onDevices, onRevoke, onResolve, onPair, onDismissPair, onRecoverySaved, model::setWebEditing)
 }
 
 private enum class PasswordMode { SET, CHANGE, RESET }
@@ -35,7 +35,8 @@ fun AccountSecurityScreen(account: AccountSecurityState, sync: SyncState,
     onSet: (String) -> Unit, onChange: (String, String) -> Unit, onReset: (String, String, String) -> Unit,
     onSynchronize: () -> Unit, onEnabled: (Boolean) -> Unit, onDisconnect: () -> Unit, onCloudReset: () -> Unit,
     onDevices: () -> Unit = {}, onRevoke: (String) -> Unit = {}, onResolve: (RecordConflict, Boolean) -> Unit = { _, _ -> },
-    onPair: () -> Unit = {}, onDismissPair: () -> Unit = {}, onRecoverySaved: () -> Unit = {}) {
+    onPair: () -> Unit = {}, onDismissPair: () -> Unit = {}, onRecoverySaved: () -> Unit = {},
+    onWebEditing: (Boolean) -> Unit = {}) {
     var editing by rememberSaveable { mutableStateOf<PasswordMode?>(null) }
     var panel by rememberSaveable { mutableStateOf<AccountPanel?>(null) }
     var showingLogout by rememberSaveable { mutableStateOf(false) }
@@ -107,6 +108,19 @@ fun AccountSecurityScreen(account: AccountSecurityState, sync: SyncState,
             if (sync.problem == SyncProblem.AUTHENTICATION) item("login") { RecoowGroup {
                 RecoowRow(stringResource(R.string.account_login), showChevron = true, onClick = onLogin)
             } }
+            if (connection.canPair) {
+            item("web_access") { SettingsSection(stringResource(R.string.account_web_access_section)) {
+                RecoowGroup {
+                    if (account.webEditing != null) RecoowSwitchRow(
+                        stringResource(R.string.account_web_access), requireNotNull(account.webEditing), onWebEditing,
+                        enabled = !account.busy && !sync.running, modifier = Modifier.testTag("account_web_access"))
+                    else RecoowTextValueRow(stringResource(R.string.account_web_access), stringResource(
+                        if (!account.loaded) R.string.account_loading
+                        else if (account.problem != null) R.string.account_web_unread else R.string.account_web_unsupported))
+                }
+            } }
+            item("web_hint") { SettingsFooter(stringResource(R.string.account_web_hint)) }
+            }
             if (account.loaded && account.supported && account.problem == null) item("security") { RecoowGroup {
                 SettingsNavigationRow(R.drawable.ic_account_security, stringResource(R.string.account_password_security), "account_password_security",
                     onClick = { panel = AccountPanel.SECURITY })
@@ -129,6 +143,7 @@ fun AccountSecurityScreen(account: AccountSecurityState, sync: SyncState,
             AccountResult.PASSWORD_SET -> R.string.account_password_set
             AccountResult.PASSWORD_CHANGED -> R.string.account_password_changed
             AccountResult.PASSWORD_RESET -> R.string.account_password_reset
+            AccountResult.WEB_ACCESS_UPDATED -> R.string.account_web_saved
         }) + (account.resetUsername?.let { "\n" + it } ?: "")) } }
         account.problem?.let { problem -> item("error") { SettingsBanner(accountProblemText(problem), error = true,
             actionLabel = stringResource(R.string.retry), onAction = onRefresh) } }

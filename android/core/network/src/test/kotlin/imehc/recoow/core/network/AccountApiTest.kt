@@ -20,6 +20,19 @@ class AccountApiTest {
     }
     private val identity = """{"user_id":"user","username":"u123456","account_id":"existing-account"}"""
 
+    @Test fun webAccessUsesAccountEndpointAndConfirmedServerValue() = runBlocking {
+        val transport = RecordingApi("""{"enabled":false,"future":true}""")
+        val api = AccountApi(transport)
+        assertEquals(false, api.webAccess())
+        assertEquals("GET", transport.method)
+        assertEquals("api/accounts/current/web-access", transport.path)
+        // 服务端返回值才是最终状态，不能用请求值乐观覆盖。
+        assertEquals(false, api.setWebAccess(true))
+        assertEquals("PUT", transport.method)
+        assertEquals(setOf("enabled"), transport.body.keys)
+        assertTrue(transport.body.getValue("enabled").jsonPrimitive.boolean)
+    }
+
     @Test fun portableServerScopeMatchesIosCanonicalVector() {
         val normalized = SyncApiFactory().endpoint("https://EXAMPLE.com:443/base/")
         assertEquals("https://example.com/base/", normalized)

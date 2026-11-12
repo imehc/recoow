@@ -3,16 +3,18 @@ package imehc.recoow.core.domain.sync
 import kotlinx.coroutines.flow.StateFlow
 
 enum class AccountProblem { CONNECTION, AUTHENTICATION, PERMISSION, UNSUPPORTED, CONFLICT, RATE_LIMIT, PASSWORD, STORAGE }
-enum class AccountResult { PASSWORD_SET, PASSWORD_CHANGED, PASSWORD_RESET }
+enum class AccountResult { PASSWORD_SET, PASSWORD_CHANGED, PASSWORD_RESET, WEB_ACCESS_UPDATED }
 data class AccountSecurityState(
     val loaded: Boolean = false, val busy: Boolean = false, val supported: Boolean = false,
     val username: String? = null, val resetUsername: String? = null,
     val problem: AccountProblem? = null, val result: AccountResult? = null,
+    val webEditing: Boolean? = null,
 )
 
 interface AccountSecurityRepository {
     val accountState: StateFlow<AccountSecurityState>
     suspend fun refreshAccount()
+    suspend fun setWebEditing(enabled: Boolean)
     suspend fun setAccountPassword(password: String)
     suspend fun changeAccountPassword(current: String, next: String)
     suspend fun resetAccountPassword(endpoint: String, recoveryKey: String, next: String)

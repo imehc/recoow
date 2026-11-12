@@ -37,6 +37,33 @@ class SettingsPresentationTest {
         enabled = true, pending = 12, pendingMedia = 3, lastSuccessAt = 1_794_288_000_000,
         devices = listOf(SyncDevice("android", "Android", true, ""), SyncDevice("iphone", "iPhone", false, "2026-11-10 14:32")))
 
+    @Test fun webEditingWaitsForServerAndRestrictsControlToPrimaryDevice() {
+        var account by mutableStateOf(AccountSecurityState(loaded = true, supported = true, username = "合成示例", webEditing = false))
+        var connection by mutableStateOf(sync)
+        var requested: Boolean? = null
+        compose.setContent { RecoowTheme { AccountSecurityScreen(account, connection, {}, {}, {}, {}, {}, { _, _ -> },
+            { _, _, _ -> }, {}, {}, {}, {}, onWebEditing = { requested = it; account = account.copy(busy = true) }) } }
+        row("account_web_access").assertIsOff().performClick()
+        compose.runOnIdle { assertEquals(true, requested) }
+        row("account_web_access").assertIsOff().assertIsNotEnabled()
+        capture("web-access-saving.png")
+        compose.runOnIdle { account = account.copy(busy = false, webEditing = true, result = AccountResult.WEB_ACCESS_UPDATED) }
+        row("account_web_access").assertIsOn().assertIsEnabled()
+        capture("web-access-enabled.png")
+        compose.runOnIdle { account = account.copy(problem = AccountProblem.CONNECTION, result = null) }
+        row("account_web_access").assertIsOn()
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(compose.activity.getString(SettingsR.string.account_error_connection)))
+        capture("web-access-error.png")
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(compose.activity.getString(SettingsR.string.retry)))
+        compose.onNodeWithText(compose.activity.getString(SettingsR.string.retry)).assertIsDisplayed()
+        capture("web-access-error-bottom.png")
+        compose.runOnIdle { connection = connection.copy(connection = requireNotNull(connection.connection).copy(canPair = false)) }
+        compose.onNodeWithTag("account_web_access").assertDoesNotExist()
+        compose.onNodeWithText(compose.activity.getString(SettingsR.string.account_web_access_section)).assertDoesNotExist()
+        row("account_connection").assertExists()
+        capture("web-access-secondary.png")
+    }
+
     @Test fun settingsSubpagesRestoreAndReturnToTheirEntry() {
         val restore = StateRestorationTester(compose)
         var prefs by mutableStateOf(AppPreferences())

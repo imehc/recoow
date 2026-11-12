@@ -196,4 +196,10 @@
   <string name="account_connection_settings">连接设置</string>
   <string name="sync_remerge">重新合并</string>
   <string name="sync_remerge_detail">云端资料已清空或重建。重新合并会备份本机资料，并将现有资料上传到云端。</string>
+    <string name="account_web_access_section">Web 访问</string>
+    <string name="account_web_access">允许编辑</string>
+    <string name="account_web_unsupported">服务器暂不支持</string>
+    <string name="account_web_hint">开启后可在网页编辑账单、日记、物品和标签；关闭时仅可查看。更改后刷新网页生效，关闭后立即禁止写入。</string>
+    <string name="account_web_saved">Web 编辑授权已保存，刷新 Web 即可应用</string>
+    <string name="account_web_unread">暂未读取</string>
 </resources>

@@ -8,6 +8,15 @@ import kotlinx.serialization.json.*
 class AccountApi(private val api: SyncApi) {
     private val json = Json { ignoreUnknownKeys = true }
 
+    suspend fun webAccess(): Boolean? = try {
+        json.decodeFromString<RWAPIAccountWebAccess>(api.get("api/accounts/current/web-access").decodeToString()).enabled
+    } catch (error: SyncHttpException) { if (error.status == 404) null else throw error }
+
+    suspend fun setWebAccess(enabled: Boolean): Boolean {
+        val body = json.parseToJsonElement(json.encodeToString(RWAPIAccountWebAccess(enabled))).jsonObject
+        return json.decodeFromString<RWAPIAccountWebAccess>(api.put("api/accounts/current/web-access", body).decodeToString()).enabled
+    }
+
     suspend fun identity(): RWAPIIdentityResponse? = try {
         decodeIdentity(api.get("api/users/me"))
     } catch (error: SyncHttpException) { if (error.status == 404) null else throw error }
