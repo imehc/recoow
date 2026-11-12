@@ -56,7 +56,7 @@ func (s *Server) readOnlySessionRequest(request *http.Request) bool {
 		return false
 	}
 	switch path {
-	case "/api/users/me", "/api/devices", "/api/statistics", "/api/change-events", "/api/sync/capabilities", "/api/sync/changes", "/api/sync/snapshots", "/api/sync/manifests":
+	case "/api/users/me", "/api/devices", "/api/statistics", "/api/statistics/bills", "/api/change-events", "/api/sync/capabilities", "/api/sync/changes", "/api/sync/snapshots", "/api/sync/manifests":
 		return true
 	}
 	if strings.HasPrefix(path, "/api/change-events/") {

@@ -9,6 +9,108 @@ import (
 	"context"
 )
 
+const billCategoryTotals = `-- name: BillCategoryTotals :many
+SELECT COALESCE(category, '')::text AS category, COALESCE(SUM(final_amount_cents), 0)::bigint AS expense_cents, COUNT(*)::bigint AS count
+FROM bills WHERE tenant_id = $1 AND tombstone_at_ms = 0
+  AND COALESCE(settlement_status, 'active') <> 'refunded' AND transaction_type = 'expense'
+  AND occurred_at >= $2::bigint AND occurred_at < $3::bigint
+GROUP BY COALESCE(category, '') ORDER BY expense_cents DESC, category
+`
+
+type BillCategoryTotalsParams struct {
+	AccountID string
+	FromMs    int64
+	ToMs      int64
+}
+
+type BillCategoryTotalsRow struct {
+	Category     string
+	ExpenseCents int64
+	Count        int64
+}
+
+func (q *Queries) BillCategoryTotals(ctx context.Context, arg BillCategoryTotalsParams) ([]BillCategoryTotalsRow, error) {
+	rows, err := q.db.QueryContext(ctx, billCategoryTotals, arg.AccountID, arg.FromMs, arg.ToMs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []BillCategoryTotalsRow{}
+	for rows.Next() {
+		var i BillCategoryTotalsRow
+		if err := rows.Scan(&i.Category, &i.ExpenseCents, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const billMonthlyTotals = `-- name: BillMonthlyTotals :many
+SELECT EXTRACT(MONTH FROM to_timestamp(occurred_at / 1000.0) AT TIME ZONE $1::text)::integer AS month,
+    COALESCE(SUM(final_amount_cents) FILTER (WHERE transaction_type = 'expense'), 0)::bigint AS expense_cents,
+    COALESCE(SUM(final_amount_cents) FILTER (WHERE transaction_type = 'income'), 0)::bigint AS income_cents,
+    COALESCE(SUM(final_amount_cents) FILTER (WHERE transaction_type = 'storedValueUse'), 0)::bigint AS stored_value_use_cents
+FROM bills WHERE tenant_id = $2 AND tombstone_at_ms = 0
+  AND COALESCE(settlement_status, 'active') <> 'refunded'
+  AND occurred_at >= $3::bigint AND occurred_at < $4::bigint
+GROUP BY month ORDER BY month
+`
+
+type BillMonthlyTotalsParams struct {
+	Timezone  string
+	AccountID string
+	FromMs    int64
+	ToMs      int64
+}
+
+type BillMonthlyTotalsRow struct {
+	Month               int32
+	ExpenseCents        int64
+	IncomeCents         int64
+	StoredValueUseCents int64
+}
+
+// 仅将毫秒时间转换到用户时区；金额聚合始终使用整数分。
+func (q *Queries) BillMonthlyTotals(ctx context.Context, arg BillMonthlyTotalsParams) ([]BillMonthlyTotalsRow, error) {
+	rows, err := q.db.QueryContext(ctx, billMonthlyTotals,
+		arg.Timezone,
+		arg.AccountID,
+		arg.FromMs,
+		arg.ToMs,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []BillMonthlyTotalsRow{}
+	for rows.Next() {
+		var i BillMonthlyTotalsRow
+		if err := rows.Scan(
+			&i.Month,
+			&i.ExpenseCents,
+			&i.IncomeCents,
+			&i.StoredValueUseCents,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const billTotals = `-- name: BillTotals :one
 SELECT
     COALESCE(SUM(final_amount_cents) FILTER (WHERE transaction_type = 'expense'), 0)::bigint AS expense_cents,

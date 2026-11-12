@@ -35,9 +35,20 @@ func (storage *postgresStore) QueryRecords(accountID string, query domain.Record
 		dateField = pgx.Identifier{query.DateField}.Sanitize()
 	}
 	// 表名和时间列来自已验证的契约；搜索词、游标与账号均使用参数。
+	billClause := ""
+	args := []any{accountID, query.Table, accountID, query.After, query.Search, "%" + query.Search + "%", query.FromMs, query.FromMs, query.ToMs, query.ToMs}
+	if query.Table == "bills" {
+		billClause = " AND (?::text = '' OR transaction_type = ?) AND (?::boolean = false OR COALESCE(settlement_status, 'active') <> 'refunded') AND (?::boolean = false OR COALESCE(category, '') = ?)"
+		category := ""
+		if query.BillCategory != nil {
+			category = *query.BillCategory
+		}
+		args = append(args, query.BillKind, query.BillKind, query.ExcludeRefunded, query.BillCategory != nil, category)
+	}
+	args = append(args, query.Limit+1)
 	sqlText := fmt.Sprintf(`SELECT table_name,id,snapshot,updated_at_ms,device_id,deleted_at_ms,version,data_version FROM row_state WHERE account_id = ? AND table_name = ? AND deleted_at_ms = 0 AND id IN
-      (SELECT id FROM %s WHERE tenant_id = ? AND tombstone_at_ms = 0 AND id > ? AND (?::text = '' OR to_jsonb(%s)::text ILIKE ?) AND (?::bigint = 0 OR %s >= ?) AND (?::bigint = 0 OR %s < ?)) ORDER BY id LIMIT ?`, pgx.Identifier{query.Table}.Sanitize(), pgx.Identifier{query.Table}.Sanitize(), dateField, dateField)
-	rows, err := tx.Query(sqlText, accountID, query.Table, accountID, query.After, query.Search, "%"+query.Search+"%", query.FromMs, query.FromMs, query.ToMs, query.ToMs, query.Limit+1)
+      (SELECT id FROM %s WHERE tenant_id = ? AND tombstone_at_ms = 0 AND id > ? AND (?::text = '' OR to_jsonb(%s)::text ILIKE ?) AND (?::bigint = 0 OR %s >= ?) AND (?::bigint = 0 OR %s < ?)%s) ORDER BY id LIMIT ?`, pgx.Identifier{query.Table}.Sanitize(), pgx.Identifier{query.Table}.Sanitize(), dateField, dateField, billClause)
+	rows, err := tx.Query(sqlText, args...)
 	if err != nil {
 		return domain.RecordPage{}, err
 	}
@@ -117,6 +128,17 @@ func (storage *memoryStore) QueryRecords(accountID string, query domain.RecordQu
 	sort.Slice(rows, func(i, j int) bool { return rows[i].ID < rows[j].ID })
 	page := domain.RecordPage{Rows: []domain.Row{}}
 	for _, row := range rows {
+		if query.Table == "bills" {
+			var bill struct {
+				Kind     string `json:"transaction_type"`
+				Category string `json:"category"`
+				Status   string `json:"settlement_status"`
+			}
+			_ = json.Unmarshal(row.Snapshot, &bill)
+			if query.BillKind != "" && query.BillKind != bill.Kind || query.BillCategory != nil && *query.BillCategory != bill.Category || query.ExcludeRefunded && bill.Status == "refunded" {
+				continue
+			}
+		}
 		date := row.UpdatedAtMs
 		if query.DateField != "" {
 			var fields map[string]json.RawMessage

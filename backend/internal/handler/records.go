@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
+	_ "time/tzdata"
 )
 
 func (s *Server) resourceRoutes(mux *http.ServeMux) {
@@ -21,6 +23,7 @@ func (s *Server) resourceRoutes(mux *http.ServeMux) {
 		}
 	}
 	mux.Handle("GET /api/statistics", s.authRequired(http.HandlerFunc(s.handleStatistics)))
+	mux.Handle("GET /api/statistics/bills", s.authRequired(http.HandlerFunc(s.handleBillStatistics)))
 }
 func rangeQuery(r *http.Request) (int64, int64, error) {
 	var from, to int64
@@ -82,7 +85,31 @@ func (s *Server) handleResource(w http.ResponseWriter, r *http.Request, table st
 				}
 			}
 		}
-		page, err := s.st.QueryRecords(device.AccountID, domain.RecordQuery{Table: table, After: string(after), Limit: int(limit), Search: r.URL.Query().Get("q"), FromMs: from, ToMs: to, DateField: dateField})
+		query := domain.RecordQuery{Table: table, After: string(after), Limit: int(limit), Search: r.URL.Query().Get("q"), FromMs: from, ToMs: to, DateField: dateField}
+		params := r.URL.Query()
+		if params.Has("transaction_type") || params.Has("category") || params.Has("exclude_refunded") {
+			if table != "bills" {
+				writeError(w, 400, "bill filters require bills")
+				return
+			}
+			query.BillKind = params.Get("transaction_type")
+			if query.BillKind != "" && query.BillKind != "expense" && query.BillKind != "income" && query.BillKind != "storedValueUse" {
+				writeError(w, 400, "invalid transaction type")
+				return
+			}
+			if params.Has("category") {
+				category := params.Get("category")
+				query.BillCategory = &category
+			}
+			if params.Has("exclude_refunded") {
+				query.ExcludeRefunded, err = strconv.ParseBool(params.Get("exclude_refunded"))
+				if err != nil {
+					writeError(w, 400, "invalid refund filter")
+					return
+				}
+			}
+		}
+		page, err := s.st.QueryRecords(device.AccountID, query)
 		if err != nil {
 			writeError(w, 500, "query failed")
 			return
@@ -175,6 +202,23 @@ func (s *Server) handleResource(w http.ResponseWriter, r *http.Request, table st
 		status = 201
 	}
 	writeJSON(w, status, results[0])
+}
+
+func (s *Server) handleBillStatistics(w http.ResponseWriter, r *http.Request) {
+	device, _ := s.deviceFrom(r.Context())
+	year, err := strconv.Atoi(r.URL.Query().Get("year"))
+	zone := r.URL.Query().Get("timezone")
+	_, zoneErr := time.LoadLocation(zone)
+	if err != nil || year < 1971 || year > 9998 || zone == "" || zone == "Local" || zoneErr != nil {
+		writeError(w, 400, "invalid year or timezone")
+		return
+	}
+	result, err := s.st.BillStatistics(device.AccountID, year, zone)
+	if err != nil {
+		writeError(w, 500, "statistics failed")
+		return
+	}
+	writeJSON(w, 200, result)
 }
 func (s *Server) handleStatistics(w http.ResponseWriter, r *http.Request) {
 	device, _ := s.deviceFrom(r.Context())

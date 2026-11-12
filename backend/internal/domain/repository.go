@@ -16,6 +16,7 @@ type Store interface {
 	QueryRecords(accountID string, query RecordQuery) (RecordPage, error)
 	Record(accountID, table, id string) (Row, error)
 	Statistics(accountID string, from, to int64) (Statistics, error)
+	BillStatistics(accountID string, year int, timezone string) (BillStatistics, error)
 	IdentityStore
 	ConfigureSyncTables(tables []string) error
 	// ---- 账号与设备 ----

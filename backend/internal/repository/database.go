@@ -73,7 +73,11 @@ func (tx *storeTx) ExecContext(ctx context.Context, query string, args ...any) (
 }
 
 func (storage *postgresStore) beginAccount(accountID string) (*storeTx, error) {
-	tx, err := storage.db.Begin()
+	return storage.beginAccountWithOptions(accountID, nil)
+}
+
+func (storage *postgresStore) beginAccountWithOptions(accountID string, options *sql.TxOptions) (*storeTx, error) {
+	tx, err := storage.db.BeginTx(storage.ctx, options)
 	if err != nil {
 		return nil, err
 	}

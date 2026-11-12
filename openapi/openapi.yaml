@@ -1967,6 +1967,24 @@ paths:
             type: integer
           x-recoow-legacy-name: toMs
           description: 结束时间（毫秒时间戳，不含）
+        - name: transaction_type
+          in: query
+          schema:
+            type: string
+            enum:
+              - expense
+              - income
+              - storedValueUse
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: 精确分类名称，空值匹配未分类
+        - name: exclude_refunded
+          in: query
+          schema:
+            type: boolean
+            default: false
     post:
       operationId: createBillsRecord
       tags:
@@ -5615,6 +5633,41 @@ paths:
           schema:
             type: string
           description: 记录ID
+  /api/statistics/bills:
+    get:
+      operationId: getBillStatistics
+      summary: 按账号和时区统计年度账单，包含月度收支、上年度对比和分类支出
+      tags:
+        - Management
+      security:
+        - deviceToken: []
+        - sessionToken: []
+        - sessionCookie: []
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1971
+            maximum: 9998
+        - name: timezone
+          in: query
+          required: true
+          schema:
+            type: string
+          description: IANA 时区，例如 Asia/Shanghai
+      responses:
+        '200':
+          description: 按发生时间统计，排除退款和墓碑，金额使用整数分
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillStatistics'
+        '400':
+          description: 年份或时区无效
+        '401':
+          description: 凭据无效
 components:
   parameters:
     ClientHeader:
@@ -9881,7 +9934,9 @@ components:
       enum:
         - read_only
         - read_write
-      description: 服务端按账号实时计算的有效访问范围。账号主设备开启 Web 编辑后，已有会话刷新当前身份即可使用 writable_tables 中的实体；关闭后写请求立即被拒绝。read_write 不授予同步上传、媒体修改或账号管理权限，Web 会话和 Header 不能自行开启写权限。
+      description:
+        服务端按账号实时计算的有效访问范围。账号主设备开启 Web 编辑后，已有会话刷新当前身份即可使用 writable_tables 中的实体；关闭后写请求立即被拒绝。read_write 不授予同步上传、媒体修改或账号管理权限，Web
+        会话和 Header 不能自行开启写权限。
     AccountWebAccess:
       type: object
       properties:
@@ -10406,7 +10461,7 @@ components:
           format: password
           minLength: 6
           maxLength: 18
-          pattern: '^[!-~]{6,18}$'
+          pattern: ^[!-~]{6,18}$
           description: 密码
       required:
         - username
@@ -10424,7 +10479,7 @@ components:
           format: password
           minLength: 6
           maxLength: 18
-          pattern: '^[!-~]{6,18}$'
+          pattern: ^[!-~]{6,18}$
           description: 用户设置的密码（6–18 个字符）
       required:
         - password
@@ -10441,7 +10496,7 @@ components:
           format: password
           minLength: 6
           maxLength: 18
-          pattern: '^[!-~]{6,18}$'
+          pattern: ^[!-~]{6,18}$
           description: 密码
         device_name:
           type: string
@@ -10493,7 +10548,7 @@ components:
           format: password
           minLength: 6
           maxLength: 18
-          pattern: '^[!-~]{6,18}$'
+          pattern: ^[!-~]{6,18}$
           x-recoow-legacy-name: newPassword
           description: 新密码（6–18 个字符）
       required:
@@ -10512,7 +10567,7 @@ components:
           format: password
           minLength: 6
           maxLength: 18
-          pattern: '^[!-~]{6,18}$'
+          pattern: ^[!-~]{6,18}$
           description: 密码
         bootstrap_token:
           type: string
@@ -10598,7 +10653,7 @@ components:
           format: password
           minLength: 6
           maxLength: 18
-          pattern: '^[!-~]{6,18}$'
+          pattern: ^[!-~]{6,18}$
           x-recoow-legacy-name: currentPassword
           description: 当前密码
         new_password:
@@ -10606,7 +10661,7 @@ components:
           format: password
           minLength: 6
           maxLength: 18
-          pattern: '^[!-~]{6,18}$'
+          pattern: ^[!-~]{6,18}$
           x-recoow-legacy-name: newPassword
           description: 新密码（6–18 个字符）
       required:
@@ -11450,3 +11505,91 @@ components:
         - rows
         - next_cursor
         - more
+    BillMonthStatistics:
+      type: object
+      properties:
+        month:
+          type: integer
+          description: 月份（1–12）
+        from_ms:
+          type: integer
+          format: int64
+          x-recoow-legacy-name: fromMs
+          description: 起始时间（毫秒，含）
+        to_ms:
+          type: integer
+          format: int64
+          x-recoow-legacy-name: toMs
+          description: 结束时间（毫秒，不含）
+        expense_cents:
+          type: integer
+          format: int64
+          x-recoow-legacy-name: expenseCents
+          description: 支出金额（分）
+        income_cents:
+          type: integer
+          format: int64
+          x-recoow-legacy-name: incomeCents
+          description: 收入金额（分）
+        stored_value_use_cents:
+          type: integer
+          format: int64
+          x-recoow-legacy-name: storedValueUseCents
+          description: 储值消费金额（分）
+      required:
+        - month
+        - from_ms
+        - to_ms
+        - expense_cents
+        - income_cents
+        - stored_value_use_cents
+    BillCategoryStatistics:
+      type: object
+      properties:
+        category:
+          type: string
+          description: 空字符串代表未分类
+        expense_cents:
+          type: integer
+          format: int64
+          x-recoow-legacy-name: expenseCents
+          description: 支出金额（分）
+        count:
+          type: integer
+          format: int64
+          description: 账单数量
+      required:
+        - category
+        - expense_cents
+        - count
+    BillStatistics:
+      type: object
+      properties:
+        year:
+          type: integer
+          description: 统计年份
+        timezone:
+          type: string
+          description: 统计所用 IANA 时区
+        months:
+          type: array
+          items:
+            $ref: '#/components/schemas/BillMonthStatistics'
+          description: 所选年份各月统计
+        previous_months:
+          type: array
+          items:
+            $ref: '#/components/schemas/BillMonthStatistics'
+          x-recoow-legacy-name: previousMonths
+          description: 上年度各月统计
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/BillCategoryStatistics'
+          description: 所选年份分类支出
+      required:
+        - year
+        - timezone
+        - months
+        - previous_months
+        - categories
