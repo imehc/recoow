@@ -130,6 +130,10 @@ final class AccountCredentialsTests: XCTestCase {
         let original = RecoowAPIClient(config: config, session: session)
         let identity = try await original.bindAccountPassword("Passw0rd-123")
         XCTAssertEqual(identity.accountId, "original-account")
+        let access = try await original.accountWebAccess()
+        XCTAssertEqual(access, false)
+        let savedAccess = try await original.setAccountWebAccess(true)
+        XCTAssertFalse(savedAccess)
         try await original.changeAccountPassword(current: "original-password", next: "NewPass-456")
         let target = original.sessionForEndpoint("https://target.example")
         let login = try await target.loginAccount(username: " target ", password: "Passw0rd-123")
@@ -162,6 +166,18 @@ private final class AccountCredentialsProtocol: URLProtocol, @unchecked Sendable
                 }
                 data = collected
             } else { data = Data() }
+            if request.url!.path == "/api/accounts/current/web-access" {
+                XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer original-device-token")
+                if request.httpMethod == "PUT" {
+                    let body = try JSONSerialization.jsonObject(with: data) as! [String: Bool]
+                    XCTAssertEqual(body, ["enabled": true])
+                } else { XCTAssertEqual(request.httpMethod, "GET"); XCTAssertTrue(data.isEmpty) }
+                let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
+                client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+                client?.urlProtocol(self, didLoad: Data(#"{"enabled":false,"future":true}"#.utf8))
+                client?.urlProtocolDidFinishLoading(self)
+                return
+            }
             let body = try JSONSerialization.jsonObject(with: data) as! [String: String]
             var response = #"{"user_id":"user","username":"target","account_id":"target-account"}"#
             switch request.url!.path {

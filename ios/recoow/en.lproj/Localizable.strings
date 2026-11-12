@@ -1295,3 +1295,9 @@
 "上次同步" = "Last synced";
 "账号创建成功，请先保存恢复密钥" = "Account created. Save your recovery key first.";
 "连接成功，可返回账号与云同步查看状态" = "Connected. Return to Account & Cloud Sync to view its status.";
+
+"服务器暂不支持" = "Server does not support this yet";
+"Web 编辑授权已保存，刷新 Web 即可应用" = "Web editing access saved. Refresh Web to apply it.";
+"Web 访问" = "Web access";
+"允许编辑" = "Allow editing";
+"开启后可在网页编辑账单、日记、物品和标签；关闭时仅可查看。更改后刷新网页生效，关闭后立即禁止写入。" = "Enable to edit bills, diaries, items, and tags on Web. When off, Web is view-only. Refresh the page to apply changes. Turning it off immediately blocks writes.";

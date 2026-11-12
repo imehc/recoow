@@ -51,6 +51,21 @@ enum CloudAccountValidation {
 }
 
 extension RecoowAPIClient {
+    func accountWebAccess() async throws -> Bool? {
+        do {
+            let data = try await send(path: "/api/accounts/current/web-access", method: "GET", body: nil, auth: true)
+            let access: RWAPIAccountWebAccess = try decodeAccount(data)
+            return access.enabled
+        } catch CloudAPIError.badStatus(404, _) { return nil }
+    }
+
+    func setAccountWebAccess(_ enabled: Bool) async throws -> Bool {
+        let body = try JSONEncoder().encode(RWAPIAccountWebAccess(enabled: enabled))
+        let data = try await send(path: "/api/accounts/current/web-access", method: "PUT", body: body, auth: true)
+        let access: RWAPIAccountWebAccess = try decodeAccount(data)
+        return access.enabled
+    }
+
     func accountIdentity() async throws -> CloudAccountIdentity? {
         do {
             let data = try await send(path: "/api/users/me", method: "GET", body: nil, auth: true)

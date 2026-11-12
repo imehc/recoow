@@ -17,6 +17,9 @@ struct CloudAccountSecurityView: View {
     @State private var loadTask: Task<Void, Never>?
     @State private var showingLogout = false
     @State private var showingReset = false
+    @State private var webAccess: Bool?
+    @State private var webAccessLoaded = false
+    @State private var savingWebAccess = false
 
     private var config: RecoowSyncConfig { container.cloudSyncConfig }
     private var language: AppLanguagePreference { container.appPreferences.language }
@@ -85,6 +88,23 @@ struct CloudAccountSecurityView: View {
                         Text(AppLocalization.format("本地待同步记录：%d 条", pendingCount))
                     }
                 } header: { Text(text("同步与设备")) }
+            }
+
+            if configured && !loading && isOwner {
+                Section {
+                    if let webAccess {
+                        Toggle(text("允许编辑"), isOn: Binding(get: { webAccess }, set: { enabled in
+                            Task { await saveWebAccess(enabled) }
+                        }))
+                        .disabled(savingWebAccess)
+                        .accessibilityIdentifier("account_web_access")
+                        if savingWebAccess { ProgressView(text("正在保存")) }
+                    } else {
+                        LabeledContent(text("允许编辑"), value: text(webAccessLoaded ? "服务器暂不支持" : "暂未读取"))
+                    }
+                } header: { Text(text("Web 访问")) } footer: {
+                    Text(text("开启后可在网页编辑账单、日记、物品和标签；关闭时仅可查看。更改后刷新网页生效，关闭后立即禁止写入。"))
+                }
             }
 
             if configured && supported {
@@ -224,6 +244,8 @@ struct CloudAccountSecurityView: View {
             identity = nil
             supported = false
             isOwner = false
+            webAccess = nil
+            webAccessLoaded = false
             error = nil
             result = nil
         }
@@ -251,6 +273,11 @@ struct CloudAccountSecurityView: View {
                 if let user, user.accountId != config.accountID { throw CloudAPIError.invalidResponse("account mismatch") }
                 identity = user
                 isOwner = devices.first { $0.id == config.deviceID }?.isOwner == true
+                supported = supportsCredentials
+                let access = isOwner ? try await client.accountWebAccess() : nil
+                guard connection == config.connectionID, token == config.deviceToken, !Task.isCancelled else { return }
+                webAccess = access
+                webAccessLoaded = true
             }
             supported = supportsCredentials
             error = nil
@@ -260,6 +287,26 @@ struct CloudAccountSecurityView: View {
             self.error = CloudAccountValidation.message(for: error)
         }
         loading = false
+    }
+
+    private func saveWebAccess(_ enabled: Bool) async {
+        guard !savingWebAccess, isOwner else { return }
+        savingWebAccess = true
+        defer { savingWebAccess = false }
+        let connection = config.connectionID
+        let token = config.deviceToken
+        let client = RecoowAPIClient(config: config).frozenSession()
+        do {
+            let saved = try await client.setAccountWebAccess(enabled)
+            guard connection == config.connectionID, token == config.deviceToken else { return }
+            webAccess = saved
+            result = text("Web 编辑授权已保存，刷新 Web 即可应用")
+            error = nil
+        } catch {
+            guard connection == config.connectionID, token == config.deviceToken else { return }
+            self.error = CloudAccountValidation.message(for: error)
+            result = nil
+        }
     }
 
     private func save(mode: AccountPasswordMode, current: String, next: String, recovery: String) async throws {
