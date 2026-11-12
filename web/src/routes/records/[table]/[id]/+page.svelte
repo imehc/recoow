@@ -4,6 +4,7 @@
   import { createQuery } from '@tanstack/svelte-query';
   import { api } from '#lib/api.js';
   import { session } from '#lib/session.svelte.js';
+  import WebAccessHint from '#lib/components/WebAccessHint.svelte';
   import { entity, entityTitle, title, time } from '#lib/format.js';
   import { t } from '#lib/preferences.svelte.js';
   import QueryStatus from '#lib/components/QueryStatus.svelte';
@@ -39,6 +40,7 @@
       >{/if}
   {/snippet}
 </PageHeader>
+<WebAccessHint {table} />
 <QueryStatus
   pending={query.isPending && !!entity(table)}
   error={query.error}

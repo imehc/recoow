@@ -67,7 +67,8 @@ async function request<T>(
 ): Promise<T> {
   const url = new URL(path, window.location.origin);
   for (const [key, value] of Object.entries(query))
-    if (value !== undefined && value !== '') url.searchParams.set(apiFieldName(key), String(value));
+    if (value !== undefined && (value !== '' || key === 'category'))
+      url.searchParams.set(apiFieldName(key), String(value));
   const response = await fetch(url, {
     ...options,
     credentials: 'same-origin',
@@ -142,6 +143,12 @@ export const api = {
     request<Row>(`/api/${table.replaceAll('_', '-')}/${encodeURIComponent(id)}`, {}, { signal }),
   statistics: (query: Record<string, string | number | undefined>, signal?: AbortSignal) =>
     request<StatisticsResponse>('/api/statistics', query, { signal }),
+  billStatistics: (year: number, timezone: string, signal?: AbortSignal) =>
+    request<import('#lib/generated/api/models/BillStatistics.js').BillStatistics>(
+      '/api/statistics/bills',
+      { year, timezone },
+      { signal },
+    ),
   history: (query: Record<string, string | number | undefined>, signal?: AbortSignal) =>
     request<ChangeEventPage>('/api/change-events', query, { signal }),
   event: (id: string, signal?: AbortSignal) =>

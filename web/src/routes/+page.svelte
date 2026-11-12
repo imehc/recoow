@@ -38,7 +38,10 @@
 <PageHeader
   title={t('record_overview')}
   description={t('explore_your_synced_records_and_how_they_changed')}
-/>
+  >{#snippet actions()}<Button variant="outline" href={appPath('/statistics')}
+      >{t('bill_statistics')}<ChevronRight size={16} /></Button
+    >{/snippet}</PageHeader
+>
 <section class="panel filter-panel">
   <form
     class="filters overview-filters"

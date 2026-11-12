@@ -9,7 +9,7 @@
   --color-popover: var(--card);
   --color-popover-foreground: var(--foreground);
   --color-primary: var(--primary);
-  --color-primary-foreground: #fff;
+  --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--muted);
   --color-secondary-foreground: var(--foreground);
   --color-muted: var(--muted);
@@ -35,6 +35,9 @@
   --card: #ffffff;
   --primary: #1668dc;
   --primary-hover: #0958d9;
+  --primary-button: #1668dc;
+  --primary-button-hover: #0958d9;
+  --primary-foreground: #ffffff;
   --primary-soft: #eaf2ff;
   --muted: #f0f2f5;
   --muted-foreground: #646b76;
@@ -163,8 +166,12 @@ svg {
 [data-slot='button']:disabled {
   opacity: 0.5;
 }
-.dark [data-slot='button'].bg-primary {
-  color: #102542;
+[data-slot='button'][data-variant='default'] {
+  background: var(--primary-button);
+  color: var(--primary-foreground);
+}
+[data-slot='button'][data-variant='default']:hover:not(:disabled):not([aria-disabled='true']) {
+  background: var(--primary-button-hover);
 }
 .brand {
   height: 64px;
@@ -272,7 +279,8 @@ svg {
   gap: 8px;
   min-width: 0;
 }
-.breadcrumbs > span {
+.breadcrumbs > span,
+.breadcrumbs > a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -280,6 +288,10 @@ svg {
 .breadcrumb-home,
 .breadcrumbs > svg {
   color: var(--muted-foreground);
+}
+.breadcrumbs > a:hover {
+  color: var(--primary);
+  text-decoration: underline;
 }
 .breadcrumb-detail {
   color: var(--muted-foreground);
@@ -433,23 +445,48 @@ svg {
   margin-bottom: 24px;
 }
 .filters {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  align-items: end;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 16px;
   padding: 20px;
 }
-.overview-filters {
-  grid-template-columns: 168px 168px minmax(0, 1fr);
+.filters > .form-field {
+  flex: 1 1 240px;
+}
+.filters .form-field,
+.statistics-controls .form-field,
+.bulk-fields .form-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+.filters .form-field > label,
+.filters .form-field > .field-label,
+.statistics-controls .form-field > label,
+.bulk-fields .form-field > label {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.filters .form-field > .date-control,
+.filters .form-field > .select-trigger,
+.filters .form-field > .search-input,
+.bulk-fields .form-field > input,
+.bulk-fields .form-field > .select-trigger {
+  flex: 1;
+  min-width: 0;
+}
+.overview-filters > .form-field {
+  flex: 0 1 260px;
 }
 .overview-hint {
-  grid-column: 1/-1;
+  flex-basis: 100%;
 }
 .page-freshness {
   margin-top: 20px;
 }
 .filter-actions {
-  grid-column: 1/-1;
+  flex: 1 1 220px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -765,7 +802,7 @@ input[type='search']::-webkit-search-cancel-button {
   transform: rotate(180deg);
 }
 .advanced-filters {
-  grid-column: 1/-1;
+  flex-basis: 100%;
 }
 .advanced-grid {
   display: grid;
@@ -1455,9 +1492,6 @@ a.record-title:hover {
   }
 }
 @media (max-width: 1200px) {
-  .filters {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
   .summary-item {
     padding: 0 20px;
   }
@@ -1556,12 +1590,6 @@ a.record-title:hover {
   .filters {
     padding: 16px;
     gap: 16px 12px;
-  }
-  .overview-filters {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .overview-filters > .filter-buttons {
-    grid-column: 1/-1;
   }
   .filter-panel {
     margin-bottom: 20px;
@@ -1832,4 +1860,158 @@ body:has(.app-shell) {
 .sidebar .nav-list,
 .navigation-drawer .nav-list {
   overscroll-behavior: contain;
+}
+
+.permission-guide {
+  margin-block: 0 16px;
+  color: var(--muted-foreground);
+  font-size: var(--text-label);
+}
+.permission-guide summary {
+  cursor: pointer;
+  width: fit-content;
+}
+.permission-guide p {
+  max-width: 70ch;
+  margin-top: 8px;
+}
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 0 20px 16px;
+  color: var(--muted-foreground);
+  font-size: var(--text-label);
+}
+.amount-cell {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.statistics-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.statistics-controls .select-trigger {
+  width: 112px;
+}
+.statistics-controls .filter-hint {
+  align-self: center;
+}
+.monthly-meter {
+  display: block;
+  height: 3px;
+  max-width: 160px;
+  margin-top: 8px;
+  background: var(--border);
+}
+.monthly-meter span {
+  display: block;
+  height: 100%;
+  background: var(--danger);
+}
+.bulk-selection-bar,
+.bulk-summary,
+.bulk-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+.bulk-selection-bar {
+  padding: 0 20px 16px;
+}
+.bulk-selection-bar label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+}
+.selection-cell {
+  width: 72px;
+}
+.selection-cell input,
+.bulk-selection-bar input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+.bulk-organizer {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.bulk-fields {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 16px;
+}
+.bulk-fields > .form-field {
+  flex: 0 1 320px;
+}
+.bulk-summary {
+  margin-block: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.bulk-results {
+  margin-block: 16px;
+}
+.bulk-feedback {
+  margin-top: 12px;
+  max-width: 70ch;
+}
+.bulk-result {
+  padding-block: 16px;
+  border-top: 1px solid var(--border);
+}
+.bulk-result-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.bulk-result-heading > span {
+  color: var(--muted-foreground);
+}
+.bulk-diff {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 8px;
+}
+.bulk-diff dt {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+.bulk-diff dd {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.error-copy {
+  color: var(--danger);
+}
+@media (max-width: 600px) {
+  .bulk-diff {
+    grid-template-columns: 1fr;
+  }
+  .bulk-selection-bar {
+    padding-inline: 16px;
+  }
+}
+
+.year-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.year-grid .calendar-day {
+  width: 100%;
+}
+.year-grid [aria-pressed='true'] {
+  background: var(--primary-button);
+  color: var(--primary-foreground);
 }

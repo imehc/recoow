@@ -22,6 +22,7 @@
   import type { Row } from '#lib/generated/api/models/Row.js';
   import type { PushResult } from '#lib/generated/api/models/PushResult.js';
   import EditorInput from './EditorInput.svelte';
+  import WebAccessHint from './WebAccessHint.svelte';
   import Fields from './Fields.svelte';
   import Media from './Media.svelte';
   import { Button } from './ui/button/index.js';
@@ -255,6 +256,7 @@
           {#if !session.canWrite(table)}<p role="alert">
               {t('this_session_cannot_perform_this_action')}
             </p>{/if}
+          <WebAccessHint {table} />
           {#if !session.online}<p role="status">{t('offline_edits_stay_on_this_page')}</p>{/if}
           {#if phase === 'unknown'}<div role="alert">
               <h2>{t('write_result_unknown')}</h2>

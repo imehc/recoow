@@ -9,6 +9,7 @@
   import { ModeWatcher } from 'mode-watcher';
   import {
     LayoutDashboard,
+    ChartColumn,
     Files,
     History,
     MonitorSmartphone,
@@ -38,6 +39,7 @@
   afterNavigate(() => main?.scrollTo({ top: 0 }));
   const nav = $derived([
     { href: '/', text: t('overview'), icon: LayoutDashboard },
+    { href: '/statistics', text: t('bill_statistics'), icon: ChartColumn },
     { href: '/records', text: t('records'), icon: Files },
     { href: '/history', text: t('change_history'), icon: History },
     { href: '/devices', text: t('devices'), icon: MonitorSmartphone },
@@ -154,12 +156,35 @@
               </Dialog.Portal>
             </Dialog.Root>
             <nav class="breadcrumbs" aria-label={t('workbench')}>
-              <span class="breadcrumb-home">{t('workbench')}</span><ChevronRight
-                class="breadcrumb-home"
-                size={14}
-              /><span>{active.text}</span>{#if detail}<ChevronRight size={14} /><span
-                  class="breadcrumb-detail">{detail}</span
-                >{/if}
+              <a class="breadcrumb-home" href={appPath('/')}>{t('workbench')}</a>
+              <ChevronRight class="breadcrumb-home" size={14} aria-hidden="true" />
+              {#if detail}
+                <a href={appPath(active.href)}>{active.text}</a>
+                <ChevronRight size={14} aria-hidden="true" />
+                {#if page.params.table && (page.params.id || page.url.pathname.endsWith('/new'))}
+                  <a class="breadcrumb-detail" href={appPath('/records/' + page.params.table)}
+                    >{detail}</a
+                  >
+                  <ChevronRight size={14} aria-hidden="true" />
+                  {#if page.params.id && (page.url.pathname.endsWith('/edit') || page.url.pathname.endsWith('/relations'))}
+                    <a href={appPath('/records/' + page.params.table + '/' + page.params.id)}
+                      >{t('record_details')}</a
+                    >
+                    <ChevronRight size={14} aria-hidden="true" />
+                  {/if}
+                  <span aria-current="page"
+                    >{page.url.pathname.endsWith('/new')
+                      ? t('new_record')
+                      : page.url.pathname.endsWith('/relations')
+                        ? t('record_relations')
+                        : page.url.pathname.endsWith('/edit')
+                          ? t('edit_record')
+                          : t('record_details')}</span
+                  >
+                {:else}
+                  <span class="breadcrumb-detail" aria-current="page">{detail}</span>
+                {/if}
+              {:else}<span aria-current="page">{active.text}</span>{/if}
             </nav>
           </div>
           <div class="topbar-actions">

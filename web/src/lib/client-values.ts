@@ -123,17 +123,34 @@ const mappings: Record<string, Labels> = {
   'media_assets.storage_backend': { local: ['本地', 'Local'] },
 };
 
+function valueLabels(
+  table: string,
+  key: string,
+  snapshot?: Record<string, unknown> | null,
+): Labels | undefined {
+  return table === 'bills' && key === 'category'
+    ? snapshot?.transaction_type === 'income'
+      ? incomeCategory
+      : expenseCategory
+    : mappings[`${table}.${key}`];
+}
 export function clientValue(
   table: string,
   key: string,
   value: string,
   snapshot?: Record<string, unknown> | null,
 ): string | undefined {
-  const values =
-    table === 'bills' && key === 'category'
-      ? snapshot?.transaction_type === 'income'
-        ? incomeCategory
-        : expenseCategory
-      : mappings[`${table}.${key}`];
+  const values = valueLabels(table, key, snapshot);
   return values?.[value]?.[preferences.locale === 'zh' ? 0 : 1];
+}
+
+export function clientOptions(
+  table: string,
+  key: string,
+  snapshot?: Record<string, unknown> | null,
+): { value: string; label: string }[] {
+  return Object.entries(valueLabels(table, key, snapshot) ?? {}).map(([value, labels]) => ({
+    value,
+    label: labels[preferences.locale === 'zh' ? 0 : 1],
+  }));
 }

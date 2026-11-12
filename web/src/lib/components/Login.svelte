@@ -6,7 +6,7 @@
   import { session } from '#lib/session.svelte.js';
   import { APIError } from '#lib/api.js';
   import { t } from '#lib/preferences.svelte.js';
-  import { Eye, EyeOff, ArrowRight } from '@lucide/svelte';
+  import { Eye, EyeOff } from '@lucide/svelte';
   let username = $state('');
   let password = $state('');
   let busy = $state(false);
@@ -86,7 +86,7 @@
         type="submit"
         class="login-submit"
         disabled={busy || !session.online || session.checking}
-        >{busy ? t('signing_in') : t('sign_in')}<ArrowRight size={16} /></Button
+        >{busy ? t('signing_in') : t('sign_in')}</Button
       >
     </form>
   </section>
