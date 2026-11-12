@@ -76,8 +76,9 @@
   }
 </script>
 
-<svelte:head
-  ><title>recoow · {t('cloud_records')}</title><meta name="robots" content="noindex, nofollow" />
+<svelte:head>
+  <title>recoow · {t('cloud_records')}</title>
+  <meta name="robots" content="noindex, nofollow" />
   <link
     rel="icon"
     type="image/png"
@@ -92,9 +93,10 @@
 />
 
 {#snippet sidebarContent()}
-  <a class="brand" href={appPath('/')} onclick={() => (mobileOpen = false)}
-    ><AppIcon /><span class="brand-name">recoow</span></a
-  >
+  <a class="brand" href={appPath('/')} onclick={() => (mobileOpen = false)}>
+    <AppIcon />
+    <span class="brand-name">recoow</span>
+  </a>
   <nav class="nav-list" aria-label={t('main_navigation')}>
     {#each nav as item (item.href)}
       <a
@@ -104,25 +106,34 @@
         title={collapsed ? item.text : undefined}
         onclick={() => (mobileOpen = false)}
       >
-        <item.icon size={18} /><span>{item.text}</span>
+        <item.icon size={18} />
+        <span>{item.text}</span>
       </a>
-      {#if item.href === '/records' && active.href === '/records'}<div class="subnav">
-          {#each recordGroups as group (group.id)}<a
+      {#if item.href === '/records' && active.href === '/records'}
+        <div class="subnav">
+          {#each recordGroups as group (group.id)}
+            <a
               href={appPath('/records/' + group.tables[0])}
               class:active={group.id === selectedGroup?.id}
-              onclick={() => (mobileOpen = false)}>{groupTitle(group)}</a
-            >{/each}
-        </div>{/if}
+              onclick={() => (mobileOpen = false)}
+            >
+              {groupTitle(group)}
+            </a>
+          {/each}
+        </div>
+      {/if}
     {/each}
   </nav>
 {/snippet}
 
 <QueryClientProvider client={queryClient}>
-  {#if !session.ready}<main class="session-loading" role="status">
+  {#if !session.ready}
+    <main class="session-loading" role="status">
       <AppIcon />
       <p>{t('verifying_session')}</p>
     </main>
-  {:else if !session.user}<Login />
+  {:else if !session.user}
+    <Login />
   {:else}
     <a class="skip-link" href="#main">{t('skip_to_content')}</a>
     <div class="app-shell" class:sidebar-collapsed={collapsed}>
@@ -138,19 +149,23 @@
               title={collapsed ? t('expand_navigation') : t('collapse_navigation')}
               onclick={() => (collapsed = !collapsed)}
             >
-              {#if collapsed}<PanelLeftOpen size={18} />{:else}<PanelLeftClose size={18} />{/if}
+              {#if collapsed}
+                <PanelLeftOpen size={18} />
+              {:else}
+                <PanelLeftClose size={18} />
+              {/if}
             </Button>
             <Dialog.Root bind:open={mobileOpen}>
-              <Dialog.Trigger class="mobile-navigation-toggle" aria-label={t('open_navigation')}
-                ><Menu size={20} /></Dialog.Trigger
-              >
+              <Dialog.Trigger class="mobile-navigation-toggle" aria-label={t('open_navigation')}>
+                <Menu size={20} />
+              </Dialog.Trigger>
               <Dialog.Portal>
                 <Dialog.Overlay class="drawer-overlay" />
                 <Dialog.Content class="navigation-drawer">
                   <Dialog.Title class="sr-only">{t('main_navigation')}</Dialog.Title>
-                  <Dialog.Close class="drawer-close" aria-label={t('close')}
-                    ><X size={18} /></Dialog.Close
-                  >
+                  <Dialog.Close class="drawer-close" aria-label={t('close')}>
+                    <X size={18} />
+                  </Dialog.Close>
                   {@render sidebarContent()}
                 </Dialog.Content>
               </Dialog.Portal>
@@ -162,29 +177,31 @@
                 <a href={appPath(active.href)}>{active.text}</a>
                 <ChevronRight size={14} aria-hidden="true" />
                 {#if page.params.table && (page.params.id || page.url.pathname.endsWith('/new'))}
-                  <a class="breadcrumb-detail" href={appPath('/records/' + page.params.table)}
-                    >{detail}</a
-                  >
+                  <a class="breadcrumb-detail" href={appPath('/records/' + page.params.table)}>
+                    {detail}
+                  </a>
                   <ChevronRight size={14} aria-hidden="true" />
                   {#if page.params.id && (page.url.pathname.endsWith('/edit') || page.url.pathname.endsWith('/relations'))}
-                    <a href={appPath('/records/' + page.params.table + '/' + page.params.id)}
-                      >{t('record_details')}</a
-                    >
+                    <a href={appPath('/records/' + page.params.table + '/' + page.params.id)}>
+                      {t('record_details')}
+                    </a>
                     <ChevronRight size={14} aria-hidden="true" />
                   {/if}
-                  <span aria-current="page"
-                    >{page.url.pathname.endsWith('/new')
+                  <span aria-current="page">
+                    {page.url.pathname.endsWith('/new')
                       ? t('new_record')
                       : page.url.pathname.endsWith('/relations')
                         ? t('record_relations')
                         : page.url.pathname.endsWith('/edit')
                           ? t('edit_record')
-                          : t('record_details')}</span
-                  >
+                          : t('record_details')}
+                  </span>
                 {:else}
                   <span class="breadcrumb-detail" aria-current="page">{detail}</span>
                 {/if}
-              {:else}<span aria-current="page">{active.text}</span>{/if}
+              {:else}
+                <span aria-current="page">{active.text}</span>
+              {/if}
             </nav>
           </div>
           <div class="topbar-actions">
@@ -195,53 +212,65 @@
               title={t('refresh_cloud_data')}
               disabled={session.checking || !session.online}
               onclick={() => session.revalidate()}
-              ><RefreshCw size={17} class={session.checking ? 'spin' : ''} /></Button
             >
+              <RefreshCw size={17} class={session.checking ? 'spin' : ''} />
+            </Button>
             <Preferences />
             <span class="topbar-divider" aria-hidden="true"></span>
             <DropdownMenu.Root>
               <DropdownMenu.Trigger class="account-trigger" aria-label={t('account_menu')}>
-                <span class="avatar"
-                  >{(session.user.username || t('paired_account')).slice(0, 1).toUpperCase()}</span
-                ><span class="username">{session.user.username || t('paired_account')}</span
-                ><ChevronDown size={13} />
+                <span class="avatar">
+                  {(session.user.username || t('paired_account')).slice(0, 1).toUpperCase()}
+                </span>
+                <span class="username">{session.user.username || t('paired_account')}</span>
+                <ChevronDown size={13} />
               </DropdownMenu.Trigger>
-              <DropdownMenu.Portal
-                ><DropdownMenu.Content
+              <DropdownMenu.Portal>
+                <DropdownMenu.Content
                   class="action-menu"
                   align="end"
                   sideOffset={8}
                   collisionPadding={12}
                 >
                   <div class="account-menu-heading">
-                    <small>{t('current_account')}</small><strong
-                      >{session.user.username || t('paired_account')}</strong
-                    >
+                    <small>{t('current_account')}</small>
+                    <strong>{session.user.username || t('paired_account')}</strong>
                   </div>
                   <DropdownMenu.Separator class="menu-separator" />
                   <DropdownMenu.Item
                     class="action-menu-item destructive"
                     disabled={loggingOut}
-                    onSelect={logout}><LogOut size={16} />{t('sign_out')}</DropdownMenu.Item
+                    onSelect={logout}
                   >
-                </DropdownMenu.Content></DropdownMenu.Portal
-              >
+                    <LogOut size={16} />
+                    {t('sign_out')}
+                  </DropdownMenu.Item>
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
             </DropdownMenu.Root>
           </div>
         </header>
         <main bind:this={main} class="main" id="main" tabindex="-1">
-          {#if !session.online}<div class="notice" role="status">
+          {#if !session.online}
+            <div class="notice" role="status">
               {t('you_are_offline_loaded_content_may_be_out_of_date_it_will_be_checked_whe')}
-            </div>{/if}
-          {#if session.error === 'network'}<div class="notice" role="status">
+            </div>
+          {/if}
+          {#if session.error === 'network'}
+            <div class="notice" role="status">
               {t('unable_to_check_the_latest_cloud_data_try_again')}
-            </div>{/if}
-          {#if logoutError}<div class="notice error" role="alert">
+            </div>
+          {/if}
+          {#if logoutError}
+            <div class="notice error" role="alert">
               {logoutError instanceof APIError
                 ? logoutError.message
                 : t('unable_to_sign_out_try_again')}
-            </div>{/if}
-          {#key `${session.user.accountId}:${session.epoch}`}{@render children()}{/key}
+            </div>
+          {/if}
+          {#key `${session.user.accountId}:${session.epoch}`}
+            {@render children()}
+          {/key}
         </main>
       </div>
     </div>

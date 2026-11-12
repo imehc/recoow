@@ -83,13 +83,17 @@
   class:wide={dependency || ['content', 'note', 'refund_reason', 'tags_json'].includes(field.name)}
 >
   <div class="editor-label">
-    <label for={id}
-      >{label}{#if field.required}<span aria-hidden="true">
-          *</span
-        >{/if}{#if field.format === 'amount_cents'}
-        ({t('currency_yuan')}){/if}</label
-    >
-    {#if field.nullable}<Button
+    <label for={id}>
+      {label}
+      {#if field.required}
+        <span aria-hidden="true">*</span>
+      {/if}
+      {#if field.format === 'amount_cents'}
+        ({t('currency_yuan')})
+      {/if}
+    </label>
+    {#if field.nullable}
+      <Button
         type="button"
         variant="ghost"
         {disabled}
@@ -99,32 +103,31 @@
         onclick={() => {
           draft.mode = draft.mode === 'value' ? 'null' : 'value';
           draft.text = '';
-        }}>{draft.mode === 'value' ? t('clear') : t('enter_value')}</Button
-      >{/if}
+        }}
+      >
+        {draft.mode === 'value' ? t('clear') : t('enter_value')}
+      </Button>
+    {/if}
   </div>
-  {#if draft.mode !== 'value'}<p class="unset-value">
+  {#if draft.mode !== 'value'}
+    <p class="unset-value">
       {draft.mode === 'missing' ? t('missing') : t('null')}
     </p>
-  {:else if dependency}<RecordReference
-      table={dependency.table}
-      {label}
-      bind:value={draft.text}
-      disabled={blocked}
-    />
-  {:else if choices.length}<SelectField
-      {label}
-      options={choices}
-      bind:value={draft.text}
-      disabled={blocked}
-    />
-  {:else if field.format === 'ts_ms'}<div class="editor-date">
+  {:else if dependency}
+    <RecordReference table={dependency.table} {label} bind:value={draft.text} disabled={blocked} />
+  {:else if choices.length}
+    <SelectField {label} options={choices} bind:value={draft.text} disabled={blocked} />
+  {:else if field.format === 'ts_ms'}
+    <div class="editor-date">
       <DateField
         {label}
         value={draft.text.split('T')[0] ?? ''}
         onchange={setDate}
         disabled={blocked}
-      /><label class="form-field" for={id}
-        ><span class="sr-only">{t('time_of_day')}</span><input
+      />
+      <label class="form-field" for={id}>
+        <span class="sr-only">{t('time_of_day')}</span>
+        <input
           {id}
           type="time"
           step="0.001"
@@ -133,10 +136,11 @@
           oninput={(event) => {
             draft.text = `${draft.text.split('T')[0] || ''}T${event.currentTarget.value}`;
           }}
-        /></label
-      >
+        />
+      </label>
     </div>
-  {:else if field.name === 'tags_json' && tags}<div class="tag-editor">
+  {:else if field.name === 'tags_json' && tags}
+    <div class="tag-editor">
       <RecordReference
         table="diary_tags"
         label={t('existing_tags')}
@@ -152,14 +156,19 @@
         }}
       />
       <div class="tag-values">
-        {#each tags as tag, index (index)}<Button
+        {#each tags as tag, index (index)}
+          <Button
             variant="outline"
             disabled={blocked}
             aria-label={t('remove_tag', { tag: tag.value })}
             onclick={() => {
               draft.text = stringify(tags.filter((_, current) => index !== current)) ?? '[]';
-            }}>{tag.value}<X size={14} /></Button
-          >{/each}
+            }}
+          >
+            {tag.value}
+            <X size={14} />
+          </Button>
+        {/each}
       </div>
       <div class="tag-entry">
         <input
@@ -174,24 +183,28 @@
               addTag();
             }
           }}
-        /><Button variant="outline" disabled={blocked || !tagInput.trim()} onclick={addTag}
-          >{t('add_tag')}</Button
-        >
+        />
+        <Button variant="outline" disabled={blocked || !tagInput.trim()} onclick={addTag}>
+          {t('add_tag')}
+        </Button>
       </div>
     </div>
-  {:else if ['content', 'note', 'refund_reason'].includes(field.name) || field.format === 'multiline' || field.format === 'json'}<textarea
+  {:else if ['content', 'note', 'refund_reason'].includes(field.name) || field.format === 'multiline' || field.format === 'json'}
+    <textarea
       {id}
       bind:value={draft.text}
       disabled={blocked}
       rows={field.name === 'content' ? 12 : 4}
       aria-required={field.required}></textarea>
-  {:else}<input
+  {:else}
+    <input
       {id}
       bind:value={draft.text}
       disabled={blocked}
       inputmode={['int', 'real'].includes(field.type) ? 'decimal' : 'text'}
       aria-required={field.required}
-    />{/if}
+    />
+  {/if}
 </div>
 
 <style>

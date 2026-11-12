@@ -54,9 +54,11 @@
   title={t('change_history')}
   description={t('see_what_changed_when_it_changed_and_which_devices_edited_and_submitted')}
 />
-{#if !session.historySupported}<div class="notice">
+{#if !session.historySupported}
+  <div class="notice">
     {t('change_history_is_unavailable_on_this_server')}
-  </div>{:else}
+  </div>
+{:else}
   <section class="panel filter-panel" aria-label={t('filters')}>
     <form
       class="filters"
@@ -101,11 +103,13 @@
       <p class="filter-hint overview-hint">{t('history_date_hint')}</p>
       <Collapsible.Root bind:open={advancedOpen} class="advanced-filters">
         <div class="filter-actions">
-          <Collapsible.Trigger class="advanced-toggle"
-            >{t('advanced_filters')}<ChevronDown size={14} /></Collapsible.Trigger
-          >
+          <Collapsible.Trigger class="advanced-toggle">
+            {t('advanced_filters')}
+            <ChevronDown size={14} />
+          </Collapsible.Trigger>
           <div class="filter-buttons">
-            <Button type="submit">{t('search')}</Button><Button
+            <Button type="submit">{t('search')}</Button>
+            <Button
               variant="outline"
               onclick={() => {
                 table = '';
@@ -116,15 +120,18 @@
                 from = '';
                 to = '';
                 filters = {};
-              }}>{t('reset_filters')}</Button
+              }}
             >
+              {t('reset_filters')}
+            </Button>
           </div>
         </div>
-        <Collapsible.Content
-          ><div class="advanced-grid">
-            <label class="form-field"
-              >{t('record_id')}<input bind:value={id} disabled={!table} /></label
-            >
+        <Collapsible.Content>
+          <div class="advanced-grid">
+            <label class="form-field">
+              {t('record_id')}
+              <input bind:value={id} disabled={!table} />
+            </label>
             <SelectField
               label={t('change')}
               bind:value={operation}
@@ -147,8 +154,8 @@
                 })),
               ]}
             />
-          </div></Collapsible.Content
-        >
+          </div>
+        </Collapsible.Content>
       </Collapsible.Root>
     </form>
   </section>
@@ -163,18 +170,22 @@
       empty={!events.length}
       retry={() => query.refetch()}
     />
-    {#if events.length}<HistoryList {events} />{/if}
+    {#if events.length}
+      <HistoryList {events} />
+    {/if}
     <div class="table-footer">
-      <Freshness at={query.dataUpdatedAt} /><Button
+      <Freshness at={query.dataUpdatedAt} />
+      <Button
         variant="outline"
         disabled={!query.hasNextPage || query.isFetchingNextPage}
         onclick={() => query.fetchNextPage()}
-        >{query.isFetchingNextPage
+      >
+        {query.isFetchingNextPage
           ? t('loading')
           : query.hasNextPage
             ? t('load_more')
-            : t('all_loaded')}</Button
-      >
+            : t('all_loaded')}
+      </Button>
     </div>
   </section>
 {/if}

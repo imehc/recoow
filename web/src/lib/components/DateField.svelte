@@ -36,11 +36,13 @@
   <Popover.Root bind:open>
     <div class="date-control">
       <Popover.Trigger {disabled} class="date-picker-trigger" aria-labelledby={id}>
-        <span class:placeholder={!value}
-          >{value ? value.replaceAll('-', '/') : t('select_date')}</span
-        ><CalendarDays size={16} />
+        <span class:placeholder={!value}>
+          {value ? value.replaceAll('-', '/') : t('select_date')}
+        </span>
+        <CalendarDays size={16} />
       </Popover.Trigger>
-      {#if value}<button
+      {#if value}
+        <button
           type="button"
           class="date-clear"
           aria-label={t('clear_date', { label })}
@@ -48,8 +50,11 @@
           onclick={() => {
             value = '';
             onchange?.(value);
-          }}><X size={13} /></button
-        >{/if}
+          }}
+        >
+          <X size={13} />
+        </button>
+      {/if}
     </div>
     <Popover.Portal>
       <Popover.Content class="calendar-popover" align="start" sideOffset={6} collisionPadding={12}>
@@ -72,35 +77,41 @@
         >
           {#snippet children({ months, weekdays })}
             <Calendar.Header class="calendar-header">
-              <Calendar.PrevButton class="calendar-nav"
-                ><ChevronLeft size={16} /></Calendar.PrevButton
-              >
+              <Calendar.PrevButton class="calendar-nav">
+                <ChevronLeft size={16} />
+              </Calendar.PrevButton>
               <Calendar.Heading class="calendar-heading" />
-              <Calendar.NextButton class="calendar-nav"
-                ><ChevronRight size={16} /></Calendar.NextButton
-              >
+              <Calendar.NextButton class="calendar-nav">
+                <ChevronRight size={16} />
+              </Calendar.NextButton>
             </Calendar.Header>
             {#each months as month (month.value.toString())}
               <Calendar.Grid class="calendar-grid">
-                <Calendar.GridHead
-                  ><Calendar.GridRow
-                    >{#each weekdays as day, i (i)}<Calendar.HeadCell>{day}</Calendar.HeadCell
-                      >{/each}</Calendar.GridRow
-                  ></Calendar.GridHead
-                >
+                <Calendar.GridHead>
+                  <Calendar.GridRow>
+                    {#each weekdays as day, i (i)}
+                      <Calendar.HeadCell>{day}</Calendar.HeadCell>
+                    {/each}
+                  </Calendar.GridRow>
+                </Calendar.GridHead>
                 <Calendar.GridBody>
-                  {#each month.weeks as week, i (i)}<Calendar.GridRow
-                      >{#each week as day (day.toString())}<Calendar.Cell
-                          date={day}
-                          month={month.value}><Calendar.Day class="calendar-day" /></Calendar.Cell
-                        >{/each}</Calendar.GridRow
-                    >{/each}
+                  {#each month.weeks as week, i (i)}
+                    <Calendar.GridRow>
+                      {#each week as day (day.toString())}
+                        <Calendar.Cell date={day} month={month.value}>
+                          <Calendar.Day class="calendar-day" />
+                        </Calendar.Cell>
+                      {/each}
+                    </Calendar.GridRow>
+                  {/each}
                 </Calendar.GridBody>
               </Calendar.Grid>
             {/each}
           {/snippet}
         </Calendar.Root>
-        {#if hint}<p class="calendar-hint">{hint}</p>{/if}
+        {#if hint}
+          <p class="calendar-hint">{hint}</p>
+        {/if}
       </Popover.Content>
     </Popover.Portal>
   </Popover.Root>

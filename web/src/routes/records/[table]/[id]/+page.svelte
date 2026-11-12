@@ -29,15 +29,21 @@
   back={'/records/' + table}
 >
   {#snippet actions()}
-    {#if query.data && !query.data.deletedAtMs && session.canWrite(table)}<Button
-        href={appPath('/records/' + table + '/' + encodeURIComponent(id) + '/edit')}
-        ><Pencil size={16} />{t('edit_record')}</Button
-      >{/if}
-    {#if query.data}<Button
+    {#if query.data && !query.data.deletedAtMs && session.canWrite(table)}
+      <Button href={appPath('/records/' + table + '/' + encodeURIComponent(id) + '/edit')}>
+        <Pencil size={16} />
+        {t('edit_record')}
+      </Button>
+    {/if}
+    {#if query.data}
+      <Button
         variant="outline"
         href={appPath('/records/' + table + '/' + encodeURIComponent(id) + '/relations')}
-        ><Network size={16} />{t('record_relations')}</Button
-      >{/if}
+      >
+        <Network size={16} />
+        {t('record_relations')}
+      </Button>
+    {/if}
   {/snippet}
 </PageHeader>
 <WebAccessHint {table} />
@@ -46,18 +52,27 @@
   error={query.error}
   retry={() => query.refetch()}
 />
-{#if !entity(table)}<div class="status">{t('unknown_record_type')}</div>{/if}
-{#if query.data}<div class="detail-grid">
+{#if !entity(table)}
+  <div class="status">{t('unknown_record_type')}</div>
+{/if}
+{#if query.data}
+  <div class="detail-grid">
     <div class="stack">
       <section class="panel">
-        <div class="panel-heading"><h2>{t('record_content')}</h2></div>
-        <div class="panel-body"><Fields {table} snapshot={query.data.snapshot} /></div>
+        <div class="panel-heading">
+          <h2>{t('record_content')}</h2>
+        </div>
+        <div class="panel-body">
+          <Fields {table} snapshot={query.data.snapshot} />
+        </div>
       </section>
       <Media snapshot={query.data.snapshot} />
     </div>
     <aside class="stack">
       <section class="panel">
-        <div class="panel-heading"><h2>{t('cloud_information')}</h2></div>
+        <div class="panel-heading">
+          <h2>{t('cloud_information')}</h2>
+        </div>
         <div class="panel-body">
           <dl class="field-list">
             <div class="field">
@@ -75,15 +90,20 @@
               </dd>
             </div>
           </dl>
-          {#if session.historySupported}<a
+          {#if session.historySupported}
+            <a
               class="text-link"
               href={appPath(
                 '/history?table=' + encodeURIComponent(table) + '&id=' + encodeURIComponent(id),
-              )}>{t('view_all_changes_to_this_record')}</a
-            >{/if}
+              )}
+            >
+              {t('view_all_changes_to_this_record')}
+            </a>
+          {/if}
         </div>
       </section>
       <p class="record-id">ID: {id}</p>
       <Freshness at={query.dataUpdatedAt} />
     </aside>
-  </div>{/if}
+  </div>
+{/if}

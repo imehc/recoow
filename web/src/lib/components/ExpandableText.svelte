@@ -7,10 +7,10 @@
 </script>
 
 <div class="expandable-copy">
-  {expanded || !truncated ? text : preview + '…'}{#if truncated}<button
-      type="button"
-      aria-expanded={expanded}
-      onclick={() => (expanded = !expanded)}
-      >{expanded ? t('collapse_content') : t('expand_content')}</button
-    >{/if}
+  {expanded || !truncated ? text : preview + '…'}
+  {#if truncated}
+    <button type="button" aria-expanded={expanded} onclick={() => (expanded = !expanded)}>
+      {expanded ? t('collapse_content') : t('expand_content')}
+    </button>
+  {/if}
 </div>

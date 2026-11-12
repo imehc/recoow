@@ -77,13 +77,18 @@
   aria-label={t('cloud_record_counts_by_entity_a_complete_data_list_is_provided_below')}
 ></div>
 <Collapsible.Root class="counts-toggle">
-  <Collapsible.Trigger>{t('view_all_counts')}<ChevronDown size={14} /></Collapsible.Trigger>
+  <Collapsible.Trigger>
+    {t('view_all_counts')}
+    <ChevronDown size={14} />
+  </Collapsible.Trigger>
   <Collapsible.Content>
     <dl class="field-list">
-      {#each Object.entries(counts) as [table, count] (table)}<div class="field">
+      {#each Object.entries(counts) as [table, count] (table)}
+        <div class="field">
           <dt>{entityTitle(table)}</dt>
           <dd>{String(count)}</dd>
-        </div>{/each}
+        </div>
+      {/each}
     </dl>
   </Collapsible.Content>
 </Collapsible.Root>

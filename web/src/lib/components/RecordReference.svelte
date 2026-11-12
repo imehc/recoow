@@ -82,17 +82,22 @@
         }
       }}
     />
-    <Button variant="outline" disabled={disabled || pending} onclick={() => load()}
-      >{t('search')}</Button
-    >
-    {#if more}<Button variant="outline" disabled={disabled || pending} onclick={() => load(true)}
-        >{t('load_more')}</Button
-      >{/if}
+    <Button variant="outline" disabled={disabled || pending} onclick={() => load()}>
+      {t('search')}
+    </Button>
+    {#if more}
+      <Button variant="outline" disabled={disabled || pending} onclick={() => load(true)}>
+        {t('load_more')}
+      </Button>
+    {/if}
   </div>
-  {#if pending}<p class="muted" role="status">{t('loading')}</p>{:else if error}<QueryStatus
-      {error}
-      retry={() => load()}
-    />{:else if !rows.length}<p class="muted">{t('no_matching_references')}</p>{/if}
+  {#if pending}
+    <p class="muted" role="status">{t('loading')}</p>
+  {:else if error}
+    <QueryStatus {error} retry={() => load()} />
+  {:else if !rows.length}
+    <p class="muted">{t('no_matching_references')}</p>
+  {/if}
 </div>
 
 <style>

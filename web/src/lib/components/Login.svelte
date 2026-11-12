@@ -35,23 +35,33 @@
 
 <main class="login-shell">
   <header class="login-header">
-    <a class="brand" href={appPath('/')}><AppIcon />recoow</a><Preferences />
+    <a class="brand" href={appPath('/')}>
+      <AppIcon />
+      recoow
+    </a>
+    <Preferences />
   </header>
   <section class="login-card">
     <h1>{t('your_records_in_the_cloud')}</h1>
-    {#if session.error === 'expired'}<div class="notice" role="status">
+    {#if session.error === 'expired'}
+      <div class="notice" role="status">
         {t('your_session_expired_sign_in_again')}
-      </div>{/if}
-    {#if session.error === 'network'}<div class="notice" role="status">
+      </div>
+    {/if}
+    {#if session.error === 'network'}
+      <div class="notice" role="status">
         {t('unable_to_reach_the_cloud_check_your_connection_and_try_again')}
-        <Button variant="link" disabled={session.checking} onclick={() => session.revalidate()}
-          >{t('retry')}</Button
-        >
-      </div>{/if}
-    {#if session.error === 'reset'}<div class="notice" role="status">
+        <Button variant="link" disabled={session.checking} onclick={() => session.revalidate()}>
+          {t('retry')}
+        </Button>
+      </div>
+    {/if}
+    {#if session.error === 'reset'}
+      <div class="notice" role="status">
         {t('cloud_data_was_reset_verify_your_session_again')}
       </div>
-      <Button variant="outline" onclick={() => session.revalidate()}>{t('reload')}</Button>{/if}
+      <Button variant="outline" onclick={() => session.revalidate()}>{t('reload')}</Button>
+    {/if}
     <Tabs.Root
       bind:value={method}
       onValueChange={() => {
@@ -67,15 +77,16 @@
       <Tabs.Content value={method}>
         <form class="login-form" onsubmit={login}>
           {#if method === 'password'}
-            <label class="form-field"
-              >{t('username')}<input
+            <label class="form-field">
+              {t('username')}
+              <input
                 autocomplete="username"
                 required
                 maxlength="120"
                 bind:value={username}
                 disabled={busy}
-              /></label
-            >
+              />
+            </label>
             <div class="form-field">
               <label for="login-password">{t('password')}</label>
               <div class="password-input">
@@ -86,13 +97,19 @@
                   required
                   bind:value={password}
                   disabled={busy}
-                /><button
+                />
+                <button
                   type="button"
                   class="password-toggle"
                   aria-label={showPassword ? t('hide_password') : t('show_password')}
                   onclick={() => (showPassword = !showPassword)}
-                  >{#if showPassword}<EyeOff size={17} />{:else}<Eye size={17} />{/if}</button
                 >
+                  {#if showPassword}
+                    <EyeOff size={17} />
+                  {:else}
+                    <Eye size={17} />
+                  {/if}
+                </button>
               </div>
             </div>
           {:else}
@@ -111,7 +128,8 @@
             </label>
             <p class="filter-hint">{t('pairing_login_hint')}</p>
           {/if}
-          {#if error}<div class="notice error" role="alert">
+          {#if error}
+            <div class="notice error" role="alert">
               {error instanceof APIError && error.status === 401
                 ? t(
                     method === 'pairing'
@@ -121,13 +139,15 @@
                 : error instanceof APIError
                   ? error.message
                   : t('unable_to_sign_in_check_your_connection_and_try_again')}
-            </div>{/if}
+            </div>
+          {/if}
           <Button
             type="submit"
             class="login-submit"
             disabled={busy || !session.online || session.checking}
-            >{busy ? t('signing_in') : t('sign_in')}</Button
           >
+            {busy ? t('signing_in') : t('sign_in')}
+          </Button>
         </form>
       </Tabs.Content>
     </Tabs.Root>

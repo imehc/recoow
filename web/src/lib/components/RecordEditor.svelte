@@ -195,15 +195,20 @@
       <h2>{frozen?.method === 'DELETE' ? t('record_deleted') : t('saved')}</h2>
       <p>{result?.applied ? t('revision_saved_in_cloud') : t('cloud_already_has_this_change')}</p>
       <div class="editor-actions">
-        <Button href={appPath('/records/' + table + '/' + encodeURIComponent(id))}
-          >{t('view_record')}</Button
-        >{#if session.historySupported}<Button
+        <Button href={appPath('/records/' + table + '/' + encodeURIComponent(id))}>
+          {t('view_record')}
+        </Button>
+        {#if session.historySupported}
+          <Button
             variant="outline"
             href={appPath('/history?table=' + table + '&id=' + encodeURIComponent(id))}
-            >{t('view_record_history')}</Button
-          >{/if}<Button variant="outline" href={appPath('/records/' + table)}
-          >{t('back_to_records')}</Button
-        >
+          >
+            {t('view_record_history')}
+          </Button>
+        {/if}
+        <Button variant="outline" href={appPath('/records/' + table)}>
+          {t('back_to_records')}
+        </Button>
       </div>
     </div>
   </section>
@@ -217,10 +222,12 @@
         void submit();
       }}
     >
-      {#each groups as group (group)}<fieldset disabled={locked}>
+      {#each groups as group (group)}
+        <fieldset disabled={locked}>
           <legend>{groupLabel(group)}</legend>
           <div class="editor-fields">
-            {#each fields.filter((field) => (field.group ?? '') === group) as field (field.name)}<EditorInput
+            {#each fields.filter((field) => (field.group ?? '') === group) as field (field.name)}
+              <EditorInput
                 {table}
                 {field}
                 bind:draft={draft[field.name]}
@@ -229,11 +236,14 @@
                   ...original,
                   transaction_type: draft.transaction_type?.text ?? original.transaction_type,
                 }}
-              />{/each}
+              />
+            {/each}
           </div>
-        </fieldset>{/each}
+        </fieldset>
+      {/each}
       <p class="editor-hint">{t('required_fields_hint')} · {t('timezone', { zone: timezone() })}</p>
-      {#if row}<details class="preserved-fields">
+      {#if row}
+        <details class="preserved-fields">
           <summary>{t('other_saved_content')}</summary>
           <div class="preserved-content">
             <Fields
@@ -245,56 +255,73 @@
               )}
             />
           </div>
-        </details>{/if}
+        </details>
+      {/if}
     </form>
     <aside class="editor-sidebar stack" aria-label={t('save_record')}>
       <section class="panel">
         <div class="panel-body editor-save">
-          {#if row}<p class="muted">
+          {#if row}
+            <p class="muted">
               {t('editing_version', { version: String(row.version) })}
-            </p>{/if}
-          {#if !session.canWrite(table)}<p role="alert">
+            </p>
+          {/if}
+          {#if !session.canWrite(table)}
+            <p role="alert">
               {t('this_session_cannot_perform_this_action')}
-            </p>{/if}
+            </p>
+          {/if}
           <WebAccessHint {table} />
-          {#if !session.online}<p role="status">{t('offline_edits_stay_on_this_page')}</p>{/if}
-          {#if phase === 'unknown'}<div role="alert">
+          {#if !session.online}
+            <p role="status">{t('offline_edits_stay_on_this_page')}</p>
+          {/if}
+          {#if phase === 'unknown'}
+            <div role="alert">
               <h2>{t('write_result_unknown')}</h2>
               <p>{t('retry_frozen_write_hint')}</p>
             </div>
             <Button
               disabled={!session.online || !session.canWrite(table)}
-              onclick={() => frozen && send(frozen)}>{t('confirm_write_result')}</Button
+              onclick={() => frozen && send(frozen)}
             >
-          {:else if phase === 'sending'}<p role="status">{t('saving')}</p>
+              {t('confirm_write_result')}
+            </Button>
+          {:else if phase === 'sending'}
+            <p role="status">{t('saving')}</p>
             <Button disabled>{t('saving')}</Button>
-          {:else if phase === 'conflict'}<p role="alert">{t('record_changed_review_conflict')}</p>
-          {:else if phase === 'rejected'}<p role="alert">{t('write_not_applied')}</p>
+          {:else if phase === 'conflict'}
+            <p role="alert">{t('record_changed_review_conflict')}</p>
+          {:else if phase === 'rejected'}
+            <p role="alert">{t('write_not_applied')}</p>
             <Button variant="outline" onclick={resume}>{t('continue_editing')}</Button>
-          {:else}<Button
-              type="submit"
-              form="record-editor-form"
-              disabled={locked || (!dirty && !!row)}><Save size={16} />{t('save')}</Button
-            >{/if}
-          {#if failure}<p class="editor-error" role="alert">
-              <AlertCircle size={16} />{failure}
-            </p>{/if}
+          {:else}
+            <Button type="submit" form="record-editor-form" disabled={locked || (!dirty && !!row)}>
+              <Save size={16} />
+              {t('save')}
+            </Button>
+          {/if}
+          {#if failure}
+            <p class="editor-error" role="alert">
+              <AlertCircle size={16} />
+              {failure}
+            </p>
+          {/if}
           <Button variant="outline" href={back()}>{t('cancel')}</Button>
-          {#if row && phase === 'editing'}<Button
-              variant="destructive"
-              disabled={locked}
-              onclick={() => (confirmDelete = true)}
-              ><Trash2 size={16} />{t('delete_record')}</Button
-            >{/if}
+          {#if row && phase === 'editing'}
+            <Button variant="destructive" disabled={locked} onclick={() => (confirmDelete = true)}>
+              <Trash2 size={16} />
+              {t('delete_record')}
+            </Button>
+          {/if}
         </div>
       </section>
-      {#if row}<Media snapshot={original} />{/if}
+      {#if row}
+        <Media snapshot={original} />
+      {/if}
     </aside>
   </div>
-  {#if phase === 'conflict' && result?.current}<section
-      class="panel conflict-panel"
-      aria-label={t('resolve_conflict')}
-    >
+  {#if phase === 'conflict' && result?.current}
+    <section class="panel conflict-panel" aria-label={t('resolve_conflict')}>
       <div class="panel-heading">
         <h2>{t('resolve_conflict')}</h2>
         <span>{t('current_version', { version: String(result.current.version) })}</span>
@@ -309,24 +336,23 @@
         </p>
         <div class="table-wrap">
           <table class="data-table conflict-table">
-            <thead
-              ><tr
-                ><th>{t('field')}</th><th>{t('edit_base')}</th><th>{t('your_edit')}</th><th
-                  >{t('current_cloud_content')}</th
-                ></tr
-              ></thead
-            ><tbody
-              >{#each differences as key (key)}<tr
-                  ><td>{fieldLabel(table, key)}</td><td data-label={t('edit_base')}
-                    >{valueText(
-                      table,
-                      key,
-                      original[key],
-                      Object.hasOwn(original, key),
-                      original,
-                    )}</td
-                  ><td data-label={t('your_edit')}
-                    >{frozen?.method === 'DELETE'
+            <thead>
+              <tr>
+                <th>{t('field')}</th>
+                <th>{t('edit_base')}</th>
+                <th>{t('your_edit')}</th>
+                <th>{t('current_cloud_content')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each differences as key (key)}
+                <tr>
+                  <td>{fieldLabel(table, key)}</td>
+                  <td data-label={t('edit_base')}>
+                    {valueText(table, key, original[key], Object.hasOwn(original, key), original)}
+                  </td>
+                  <td data-label={t('your_edit')}>
+                    {frozen?.method === 'DELETE'
                       ? t('delete_record')
                       : valueText(
                           table,
@@ -334,9 +360,10 @@
                           candidate[key],
                           Object.hasOwn(candidate, key),
                           candidate,
-                        )}</td
-                  ><td data-label={t('current_cloud_content')}
-                    >{result.current.deletedAtMs
+                        )}
+                  </td>
+                  <td data-label={t('current_cloud_content')}>
+                    {result.current.deletedAtMs
                       ? t('deleted_dbdda0')
                       : valueText(
                           table,
@@ -344,72 +371,88 @@
                           result.current.snapshot?.[key],
                           Object.hasOwn(result.current.snapshot ?? {}, key),
                           result.current.snapshot,
-                        )}</td
-                  ></tr
-                >{/each}</tbody
-            >
+                        )}
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
           </table>
         </div>
-        {#if !differences.length}<p>{t('record_state_conflict')}</p>{/if}
+        {#if !differences.length}
+          <p>{t('record_state_conflict')}</p>
+        {/if}
         <div class="editor-actions">
           <Button
             variant={frozen?.method === 'DELETE' ? 'destructive' : 'default'}
             disabled={!session.online || !session.canWrite(table)}
             onclick={() => resolve('local')}
-            >{frozen?.method === 'DELETE'
+          >
+            {frozen?.method === 'DELETE'
               ? t('confirm_delete')
               : result.current.deletedAtMs
                 ? t('restore_with_your_edit')
-                : t('keep_your_conflicting_values')}</Button
-          ><Button
+                : t('keep_your_conflicting_values')}
+          </Button>
+          <Button
             variant="outline"
             disabled={!session.online || !session.canWrite(table)}
-            onclick={() => resolve('remote')}>{t('keep_cloud_conflicting_values')}</Button
+            onclick={() => resolve('remote')}
           >
+            {t('keep_cloud_conflicting_values')}
+          </Button>
         </div>
         <p class="editor-hint">{t('conflict_version_checked_again')}</p>
       </div>
-    </section>{/if}
+    </section>
+  {/if}
 {/if}
 
-<Dialog.Root bind:open={confirmDelete}
-  ><Dialog.Content
-    ><Dialog.Header
-      ><Dialog.Title>{t('delete_record')}</Dialog.Title><Dialog.Description
-        >{t('delete_record_confirmation', { title: title(original, id) })}</Dialog.Description
-      ></Dialog.Header
-    ><Dialog.Footer
-      ><Button variant="outline" onclick={() => (confirmDelete = false)}>{t('cancel')}</Button
-      ><Button
+<Dialog.Root bind:open={confirmDelete}>
+  <Dialog.Content>
+    <Dialog.Header>
+      <Dialog.Title>{t('delete_record')}</Dialog.Title>
+      <Dialog.Description>
+        {t('delete_record_confirmation', { title: title(original, id) })}
+      </Dialog.Description>
+    </Dialog.Header>
+    <Dialog.Footer>
+      <Button variant="outline" onclick={() => (confirmDelete = false)}>{t('cancel')}</Button>
+      <Button
         variant="destructive"
         onclick={() => {
           confirmDelete = false;
           void submit('DELETE');
-        }}>{t('confirm_delete')}</Button
-      ></Dialog.Footer
-    ></Dialog.Content
-  ></Dialog.Root
->
-<Dialog.Root bind:open={confirmLeave}
-  ><Dialog.Content
-    ><Dialog.Header
-      ><Dialog.Title>{t('leave_editor')}</Dialog.Title><Dialog.Description
-        >{phase === 'unknown' || phase === 'sending'
+        }}
+      >
+        {t('confirm_delete')}
+      </Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
+<Dialog.Root bind:open={confirmLeave}>
+  <Dialog.Content>
+    <Dialog.Header>
+      <Dialog.Title>{t('leave_editor')}</Dialog.Title>
+      <Dialog.Description>
+        {phase === 'unknown' || phase === 'sending'
           ? t('leave_pending_write_hint')
-          : t('discard_input_hint')}</Dialog.Description
-      ></Dialog.Header
-    ><Dialog.Footer
-      ><Button variant="outline" onclick={() => (confirmLeave = false)}>{t('stay_on_page')}</Button
-      ><Button
+          : t('discard_input_hint')}
+      </Dialog.Description>
+    </Dialog.Header>
+    <Dialog.Footer>
+      <Button variant="outline" onclick={() => (confirmLeave = false)}>{t('stay_on_page')}</Button>
+      <Button
         onclick={() => {
           leaving = true;
           confirmLeave = false;
           void goto(leaveTo);
-        }}>{t('leave_page')}</Button
-      ></Dialog.Footer
-    ></Dialog.Content
-  ></Dialog.Root
->
+        }}
+      >
+        {t('leave_page')}
+      </Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
 
 <style>
   .editor-layout {

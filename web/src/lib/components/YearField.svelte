@@ -29,7 +29,8 @@
     }}
   >
     <Popover.Trigger {id} class="select-trigger" aria-label={label}>
-      <span>{value}</span><ChevronDown size={14} />
+      <span>{value}</span>
+      <ChevronDown size={14} />
     </Popover.Trigger>
     <Popover.Portal>
       <Popover.Content class="calendar-popover" align="start" sideOffset={6} collisionPadding={12}>
@@ -39,8 +40,10 @@
             class="calendar-nav"
             aria-label={t('previous_year_range')}
             disabled={start <= min}
-            onclick={() => (start = Math.max(min, start - 12))}><ChevronLeft size={16} /></button
+            onclick={() => (start = Math.max(min, start - 12))}
           >
+            <ChevronLeft size={16} />
+          </button>
           <span class="calendar-heading">{start} – {end}</span>
           <button
             type="button"
@@ -48,8 +51,9 @@
             aria-label={t('next_year_range')}
             disabled={end >= max}
             onclick={() => (start = Math.min(max - 11, start + 12))}
-            ><ChevronRight size={16} /></button
           >
+            <ChevronRight size={16} />
+          </button>
         </div>
         <div class="year-grid">
           {#each years as year (year)}
@@ -60,8 +64,10 @@
               onclick={() => {
                 value = year;
                 open = false;
-              }}>{year}</button
+              }}
             >
+              {year}
+            </button>
           {/each}
         </div>
       </Popover.Content>

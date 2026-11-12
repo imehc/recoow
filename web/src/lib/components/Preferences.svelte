@@ -58,9 +58,13 @@
               textValue={item.label}
             >
               {#snippet children({ checked })}
-                <item.icon size={17} /><span>{item.label}</span><span class="preference-check"
-                  >{#if checked}<Check size={16} />{/if}</span
-                >
+                <item.icon size={17} />
+                <span>{item.label}</span>
+                <span class="preference-check">
+                  {#if checked}
+                    <Check size={16} />
+                  {/if}
+                </span>
               {/snippet}
             </DropdownMenu.RadioItem>
           {/each}
@@ -104,9 +108,13 @@
               textValue={item.label}
             >
               {#snippet children({ checked })}
-                <item.icon size={17} /><span>{item.label}</span><span class="preference-check"
-                  >{#if checked}<Check size={16} />{/if}</span
-                >
+                <item.icon size={17} />
+                <span>{item.label}</span>
+                <span class="preference-check">
+                  {#if checked}
+                    <Check size={16} />
+                  {/if}
+                </span>
               {/snippet}
             </DropdownMenu.RadioItem>
           {/each}

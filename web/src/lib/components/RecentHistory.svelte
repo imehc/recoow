@@ -9,13 +9,15 @@
 
 {#each events as event (event.eventId)}
   <a class="timeline-item" href={appPath('/history/' + encodeURIComponent(event.eventId))}>
-    <span class="timeline-icon"
-      >{#if event.operation === 'insert'}<Plus
-          size={15}
-        />{:else if event.operation === 'delete'}<Trash2 size={15} />{:else}<History
-          size={15}
-        />{/if}</span
-    >
+    <span class="timeline-icon">
+      {#if event.operation === 'insert'}
+        <Plus size={15} />
+      {:else if event.operation === 'delete'}
+        <Trash2 size={15} />
+      {:else}
+        <History size={15} />
+      {/if}
+    </span>
     <div class="timeline-content">
       <strong class="record-title">{event.title || event.id}</strong>
       <p>

@@ -36,14 +36,15 @@
   description={event ? entityTitle(event.table) + ' · ' + operationText(event.operation) : ''}
   back="/history"
 />
-{#if !session.historySupported}<div class="notice">
+{#if !session.historySupported}
+  <div class="notice">
     {t('change_history_is_unavailable_on_this_server')}
-  </div>{:else}<QueryStatus
-    pending={query.isPending}
-    error={query.error}
-    retry={() => query.refetch()}
-  />{/if}
-{#if event && query.data}<div class="detail-grid">
+  </div>
+{:else}
+  <QueryStatus pending={query.isPending} error={query.error} retry={() => query.refetch()} />
+{/if}
+{#if event && query.data}
+  <div class="detail-grid">
     <div class="stack">
       <section class="panel">
         <div class="panel-heading">
@@ -51,11 +52,13 @@
           <a
             class="text-link"
             href={appPath('/records/' + event.table + '/' + encodeURIComponent(event.id))}
-            >{t('view_current_record')}</a
           >
+            {t('view_current_record')}
+          </a>
         </div>
         <div class="panel-body">
-          {#each query.data.changes as change (change.field)}<section class="diff-section">
+          {#each query.data.changes as change (change.field)}
+            <section class="diff-section">
               <h3>{fieldLabel(event.table, change.field)}</h3>
               <div class="diff">
                 <div>
@@ -79,43 +82,47 @@
                     )}</pre>
                 </div>
               </div>
-            </section>{/each}
-          {#if !query.data.changes.length}<p class="muted">{t('no_field_content_changed')}</p>{/if}
+            </section>
+          {/each}
+          {#if !query.data.changes.length}
+            <p class="muted">{t('no_field_content_changed')}</p>
+          {/if}
         </div>
       </section>
       <Collapsible.Root class="panel">
-        <Collapsible.Trigger class="section-disclosure"
-          >{t('view_full_historical_snapshots')}<ChevronDown size={16} /></Collapsible.Trigger
-        >
-        <Collapsible.Content
-          ><div class="historical-snapshots diff">
+        <Collapsible.Trigger class="section-disclosure">
+          {t('view_full_historical_snapshots')}
+          <ChevronDown size={16} />
+        </Collapsible.Trigger>
+        <Collapsible.Content>
+          <div class="historical-snapshots diff">
             <div>
               <h3>{t('before')}</h3>
-              <Fields
-                includeMetadata
-                table={event.table}
-                snapshot={query.data.before?.snapshot}
-              /><Media embedded snapshot={query.data.before?.snapshot} />
+              <Fields includeMetadata table={event.table} snapshot={query.data.before?.snapshot} />
+              <Media embedded snapshot={query.data.before?.snapshot} />
             </div>
             <div>
               <h3>{t('after')}</h3>
-              <Fields
-                includeMetadata
-                table={event.table}
-                snapshot={query.data.after.snapshot}
-              /><Media embedded snapshot={query.data.after.snapshot} />
+              <Fields includeMetadata table={event.table} snapshot={query.data.after.snapshot} />
+              <Media embedded snapshot={query.data.after.snapshot} />
             </div>
-          </div></Collapsible.Content
-        >
+          </div>
+        </Collapsible.Content>
       </Collapsible.Root>
-      {#if query.data.related.length}<section class="panel">
-          <div class="panel-heading"><h2>{t('related_changes')}</h2></div>
+      {#if query.data.related.length}
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>{t('related_changes')}</h2>
+          </div>
           <HistoryList events={query.data.related} />
-        </section>{/if}
+        </section>
+      {/if}
     </div>
     <aside class="stack">
       <section class="panel">
-        <div class="panel-heading"><h2>{t('time_and_sources')}</h2></div>
+        <div class="panel-heading">
+          <h2>{t('time_and_sources')}</h2>
+        </div>
         <div class="panel-body">
           <dl class="field-list time-summary">
             <div class="field">
@@ -130,7 +137,9 @@
         </div>
       </section>
       <section class="panel">
-        <div class="panel-heading"><h2>{t('source_summary')}</h2></div>
+        <div class="panel-heading">
+          <h2>{t('source_summary')}</h2>
+        </div>
         <div class="panel-body">
           <dl class="field-list">
             <div class="field">
@@ -148,27 +157,30 @@
           </dl>
         </div>
       </section>
-      <Collapsible.Root class="panel"
-        ><Collapsible.Trigger class="section-disclosure"
-          >{t('view_source_details')}<ChevronDown size={16} /></Collapsible.Trigger
-        ><Collapsible.Content
-          ><div class="panel-body">
+      <Collapsible.Root class="panel">
+        <Collapsible.Trigger class="section-disclosure">
+          {t('view_source_details')}
+          <ChevronDown size={16} />
+        </Collapsible.Trigger>
+        <Collapsible.Content>
+          <div class="panel-body">
             <dl class="field-list">
               {#each [[t('display_timezone'), timezone()], [t('original_device_id'), event.originalSource?.deviceId ?? t('not_recorded')], [t('original_source_versions'), [event.originalSource?.appVersion, event.originalSource?.osVersion]
                     .filter(Boolean)
                     .join(' · ') || t('not_recorded')], [t('submitting_device_id'), event.submission?.deviceId ?? t('not_recorded')], [t('submission_versions'), [event.submission?.appVersion, event.submission?.osVersion]
                     .filter(Boolean)
-                    .join(' · ') || t('not_recorded')], [t('cloud_version'), String(event.version)], [t('event_id'), event.eventId]] as [label, value] (label)}<div
-                  class="field"
-                >
+                    .join(' · ') || t('not_recorded')], [t('cloud_version'), String(event.version)], [t('event_id'), event.eventId]] as [label, value] (label)}
+                <div class="field">
                   <dt>{label}</dt>
                   <dd>{value}</dd>
-                </div>{/each}
+                </div>
+              {/each}
             </dl>
             <p class="source-note">{t('source_time_note')}</p>
-          </div></Collapsible.Content
-        ></Collapsible.Root
-      >
+          </div>
+        </Collapsible.Content>
+      </Collapsible.Root>
       <Freshness at={query.dataUpdatedAt} />
     </aside>
-  </div>{/if}
+  </div>
+{/if}

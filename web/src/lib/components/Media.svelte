@@ -12,47 +12,57 @@
   const references = $derived(mediaReferences(snapshot));
 </script>
 
-{#if references.length}<section class:panel={!embedded} class:embedded-media={embedded}>
-    <div class="panel-heading"><h2>{t('media')}</h2></div>
+{#if references.length}
+  <section class:panel={!embedded} class:embedded-media={embedded}>
+    <div class="panel-heading">
+      <h2>{t('media')}</h2>
+    </div>
     <div class="panel-body media-grid">
-      {#each references as ref (ref.key)}<div class="stack">
-          {#if failed.includes(ref.key)}<p class="muted">
+      {#each references as ref (ref.key)}
+        <div class="stack">
+          {#if failed.includes(ref.key)}
+            <p class="muted">
               {t('media_is_unavailable_it_may_not_have_been_uploaded_or_may_have_been_dele')}
             </p>
-          {:else if /^image\/(jpeg|png|gif|webp|avif)$/.test(ref.contentType ?? '')}<button
+          {:else if /^image\/(jpeg|png|gif|webp|avif)$/.test(ref.contentType ?? '')}
+            <button
               type="button"
               class="media-button"
               aria-label={t('enlarge_image')}
               onclick={() => (selected = ref.key)}
-              ><img
+            >
+              <img
                 src={mediaURL(ref.key)}
                 alt={t('record_attachment')}
                 loading="lazy"
                 onerror={() => (failed = [...failed, ref.key])}
-              /></button
-            >
-          {:else}<p class="muted">{ref.contentType || t('attachment')}</p>{/if}
-          <a class="text-link" href={mediaURL(ref.key)} target="_blank" rel="noopener noreferrer"
-            >{t('open_original_file')}</a
-          >
-        </div>{/each}
+              />
+            </button>
+          {:else}
+            <p class="muted">{ref.contentType || t('attachment')}</p>
+          {/if}
+          <a class="text-link" href={mediaURL(ref.key)} target="_blank" rel="noopener noreferrer">
+            {t('open_original_file')}
+          </a>
+        </div>
+      {/each}
     </div>
-  </section>{/if}
+  </section>
+{/if}
 <Dialog.Root
   open={!!selected}
   onOpenChange={(open) => {
     if (!open) selected = '';
   }}
-  ><Dialog.Content class="sm:max-w-3xl" showCloseButton={false}
-    ><Dialog.Header
-      ><Dialog.Title>{t('image_preview')}</Dialog.Title><Dialog.Description
-        >{t('original_attachment_saved_in_the_cloud')}</Dialog.Description
-      ></Dialog.Header
-    >{#if selected}<img
-        class="preview-image"
-        src={mediaURL(selected)}
-        alt={t('enlarged_record_attachment')}
-      />{/if}<Button variant="outline" onclick={() => (selected = '')}>{t('close')}</Button
-    ></Dialog.Content
-  ></Dialog.Root
 >
+  <Dialog.Content class="sm:max-w-3xl" showCloseButton={false}>
+    <Dialog.Header>
+      <Dialog.Title>{t('image_preview')}</Dialog.Title>
+      <Dialog.Description>{t('original_attachment_saved_in_the_cloud')}</Dialog.Description>
+    </Dialog.Header>
+    {#if selected}
+      <img class="preview-image" src={mediaURL(selected)} alt={t('enlarged_record_attachment')} />
+    {/if}
+    <Button variant="outline" onclick={() => (selected = '')}>{t('close')}</Button>
+  </Dialog.Content>
+</Dialog.Root>

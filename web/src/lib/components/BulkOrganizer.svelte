@@ -236,7 +236,8 @@
   </div>
   <div class="panel-body">
     <p class="muted">{t('bulk_targets', { count: rows.length })}</p>
-    {#if !items.length}<div class="bulk-fields">
+    {#if !items.length}
+      <div class="bulk-fields">
         {#if table === 'diary_entries'}
           <SelectField
             label={t('bulk_action')}
@@ -250,7 +251,8 @@
               tagName = '';
             }}
           />
-          {#if operation === 'add_tag'}<RecordReference
+          {#if operation === 'add_tag'}
+            <RecordReference
               table="diary_tags"
               label={t('existing_tags')}
               bind:value={key}
@@ -258,39 +260,43 @@
                 tagName = typeof row?.snapshot?.name === 'string' ? row.snapshot.name : '';
               }}
             />
-            <label class="form-field"
-              >{t('new_tag_name')}<input bind:value disabled={!!key} /></label
-            >
-          {:else}<SelectField
-              label={t('tag_to_remove')}
-              bind:value={key}
-              options={removableTags}
-            />{/if}
-        {:else if table === 'stored_items'}<label class="form-field"
-            >{fieldLabel(table, 'location')}<input bind:value /></label
-          >
-        {:else}<SelectField
-            label={fieldLabel(table, 'category')}
-            bind:value
-            options={categoryOptions}
-          />{/if}
+            <label class="form-field">
+              {t('new_tag_name')}
+              <input bind:value disabled={!!key} />
+            </label>
+          {:else}
+            <SelectField label={t('tag_to_remove')} bind:value={key} options={removableTags} />
+          {/if}
+        {:else if table === 'stored_items'}
+          <label class="form-field">
+            {fieldLabel(table, 'location')}
+            <input bind:value />
+          </label>
+        {:else}
+          <SelectField label={fieldLabel(table, 'category')} bind:value options={categoryOptions} />
+        {/if}
         <Button onclick={preview}>{t('preview_changes')}</Button>
-      </div>{:else}
+      </div>
+    {:else}
       <div class="bulk-summary" role="status">
-        {#each totals.filter((item) => item.count) as total (total.state)}<span
-            >{t(stateLabels[total.state])}: {total.count}</span
-          >{/each}
+        {#each totals.filter((item) => item.count) as total (total.state)}
+          <span>{t(stateLabels[total.state])}: {total.count}</span>
+        {/each}
       </div>
       <div class="bulk-results">
-        {#each items as item (item.row.id)}<div class="bulk-result">
+        {#each items as item (item.row.id)}
+          <div class="bulk-result">
             <div class="bulk-result-heading">
               <a
                 class="record-title"
                 href={appPath('/records/' + table + '/' + encodeURIComponent(item.row.id))}
-                >{title(item.row.snapshot, item.row.id)}</a
-              ><span>{t(stateLabels[item.state])}</span>
+              >
+                {title(item.row.snapshot, item.row.id)}
+              </a>
+              <span>{t(stateLabels[item.state])}</span>
             </div>
-            {#if item.candidate}<dl class="bulk-diff">
+            {#if item.candidate}
+              <dl class="bulk-diff">
                 <div>
                   <dt>{t('before')}</dt>
                   <dd>
@@ -305,53 +311,75 @@
                   <dt>{t('after')}</dt>
                   <dd>{previewValue(item.field, item.candidate[item.field])}</dd>
                 </div>
-              </dl>{/if}
-            {#if item.state === 'invalid'}<p class="error-copy">{t('bulk_invalid_hint')}</p>{/if}
-            {#if item.state === 'failed'}<p class="error-copy">
+              </dl>
+            {/if}
+            {#if item.state === 'invalid'}
+              <p class="error-copy">{t('bulk_invalid_hint')}</p>
+            {/if}
+            {#if item.state === 'failed'}
+              <p class="error-copy">
                 {item.error || t('bulk_failed_hint')}
-              </p>{/if}
-            {#if item.state === 'conflict'}<p>
+              </p>
+            {/if}
+            {#if item.state === 'conflict'}
+              <p>
                 {t('bulk_conflict_hint')}
                 <a
                   class="text-link"
                   href={appPath(
                     '/records/' + table + '/' + encodeURIComponent(item.row.id) + '/edit',
-                  )}>{t('edit_record')}</a
+                  )}
                 >
-              </p>{/if}
-          </div>{/each}
+                  {t('edit_record')}
+                </a>
+              </p>
+            {/if}
+          </div>
+        {/each}
       </div>
       <div class="bulk-actions">
         <Button
           disabled={busy || !pending || !session.online || !session.canWrite(table)}
           onclick={save}
-          >{busy ? t('saving') : unknown ? t('retry') : t('save_bulk_changes')}</Button
         >
-        {#if !items.some( (item) => ['sending', 'saved', 'failed', 'conflict', 'unknown'].includes(item.state) )}<Button
+          {busy ? t('saving') : unknown ? t('retry') : t('save_bulk_changes')}
+        </Button>
+        {#if !items.some( (item) => ['sending', 'saved', 'failed', 'conflict', 'unknown'].includes(item.state) )}
+          <Button
             variant="outline"
             onclick={() => {
               items = [];
-            }}>{t('adjust_changes')}</Button
-          >{/if}
+            }}
+          >
+            {t('adjust_changes')}
+          </Button>
+        {/if}
       </div>
     {/if}
-    {#if message}<p class="bulk-feedback" role="alert">{message}</p>{/if}
-    {#if !session.online}<p role="status">{t('bulk_paused')}</p>{/if}
+    {#if message}
+      <p class="bulk-feedback" role="alert">{message}</p>
+    {/if}
+    {#if !session.online}
+      <p role="status">{t('bulk_paused')}</p>
+    {/if}
   </div>
 </section>
-<Dialog.Root bind:open={confirmLeave}
-  ><Dialog.Content
-    ><Dialog.Header
-      ><Dialog.Title>{t('leave_editor')}</Dialog.Title><Dialog.Description
-        >{t('bulk_leave_hint')}</Dialog.Description
-      ></Dialog.Header
-    ><Dialog.Footer
-      ><Button
+<Dialog.Root bind:open={confirmLeave}>
+  <Dialog.Content>
+    <Dialog.Header>
+      <Dialog.Title>{t('leave_editor')}</Dialog.Title>
+      <Dialog.Description>{t('bulk_leave_hint')}</Dialog.Description>
+    </Dialog.Header>
+    <Dialog.Footer>
+      <Button
         variant="outline"
         onclick={() => {
           confirmLeave = false;
-        }}>{t('continue_editing')}</Button
-      ><Button
+        }}
+      >
+        {t('continue_editing')}
+      </Button>
+      <Button
         variant="destructive"
         onclick={() => {
           leaving = true;
@@ -359,8 +387,10 @@
           confirmLeave = false;
           if (leaveTo) void goto(leaveTo);
           else onclose();
-        }}>{t('leave_page')}</Button
-      ></Dialog.Footer
-    ></Dialog.Content
-  ></Dialog.Root
->
+        }}
+      >
+        {t('leave_page')}
+      </Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>

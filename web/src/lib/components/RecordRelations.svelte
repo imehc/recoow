@@ -113,17 +113,26 @@
         <Button
           variant={view === 'graph' ? 'secondary' : 'ghost'}
           aria-pressed={view === 'graph'}
-          onclick={() => (view = 'graph')}><Network size={16} />{t('relation_graph')}</Button
+          onclick={() => (view = 'graph')}
         >
+          <Network size={16} />
+          {t('relation_graph')}
+        </Button>
         <Button
           variant={view === 'list' ? 'secondary' : 'ghost'}
           aria-pressed={view === 'list'}
-          onclick={() => (view = 'list')}><List size={16} />{t('relation_list')}</Button
+          onclick={() => (view = 'list')}
         >
+          <List size={16} />
+          {t('relation_list')}
+        </Button>
       </div>
-      {#if view === 'graph'}<Button variant="ghost" onclick={() => reset++}
-          ><RotateCcw size={16} />{t('relation_reset_view')}</Button
-        >{/if}
+      {#if view === 'graph'}
+        <Button variant="ghost" onclick={() => reset++}>
+          <RotateCcw size={16} />
+          {t('relation_reset_view')}
+        </Button>
+      {/if}
     </div>
     {#if view === 'graph'}
       <RelationChart
@@ -138,9 +147,14 @@
         }}
       />
       <div class="relation-legend">
-        <span><i class="solid-line"></i>{t('relation_current_link')}</span><span
-          ><i class="saved-line"></i>{t('relation_saved_reference')}</span
-        >
+        <span>
+          <i class="solid-line"></i>
+          {t('relation_current_link')}
+        </span>
+        <span>
+          <i class="saved-line"></i>
+          {t('relation_saved_reference')}
+        </span>
         <small>{t('relation_chart_hint')}</small>
       </div>
     {:else}
@@ -156,36 +170,41 @@
                 error = null;
               }}
             >
-              <span
-                ><strong>{name(node)}</strong><small
-                  >{entityTitle(node.table)} · {status(node)}{recordKey(node) === recordKey(root)
+              <span>
+                <strong>{name(node)}</strong>
+                <small>
+                  {entityTitle(node.table)} · {status(node)}{recordKey(node) === recordKey(root)
                     ? ' · ' + t('relation_start_record')
-                    : ''}</small
-                ></span
-              ><ArrowRight size={16} />
+                    : ''}
+                </small>
+              </span>
+              <ArrowRight size={16} />
             </button>
           </li>
         {/each}
       </ul>
     {/if}
     <div class="table-footer">
-      <span class="muted" role="status"
-        >{t('relation_loaded_summary', { nodes: nodes.length, edges: edges.length })}</span
-      >
+      <span class="muted" role="status">
+        {t('relation_loaded_summary', { nodes: nodes.length, edges: edges.length })}
+      </span>
     </div>
   </section>
 
   <aside class="stack relations-sidebar" aria-label={t('relation_selected_record')}>
     {#if current}
       <section class="panel">
-        <div class="panel-heading"><h2>{t('relation_selected_record')}</h2></div>
+        <div class="panel-heading">
+          <h2>{t('relation_selected_record')}</h2>
+        </div>
         <div class="panel-body stack">
           <div class="selected-title">
             <h3>{name(current)}</h3>
             <p class="muted">{entityTitle(current.table)} · {status(current)}</p>
           </div>
           <p class="record-id">ID: {current.id}</p>
-          {#if current.status === 'current' && current.row}<dl class="field-list">
+          {#if current.status === 'current' && current.row}
+            <dl class="field-list">
               <div class="field">
                 <dt>{t('cloud_version')}</dt>
                 <dd>{String(current.row.version)}</dd>
@@ -195,38 +214,52 @@
                 <dd>{time(current.row.updatedAtMs)}</dd>
               </div>
             </dl>
-            <Button variant="outline" href={recordPath(current)}
-              >{t('view_record')}<ArrowRight size={16} /></Button
-            >
+            <Button variant="outline" href={recordPath(current)}>
+              {t('view_record')}
+              <ArrowRight size={16} />
+            </Button>
           {/if}
-          {#if session.historySupported}<Button
+          {#if session.historySupported}
+            <Button
               variant="ghost"
               href={appPath(
                 '/history?table=' +
                   encodeURIComponent(current.table) +
                   '&id=' +
                   encodeURIComponent(current.id),
-              )}><History size={16} />{t('relation_view_history')}</Button
-            >{/if}
-          <Button disabled={!canExpand || busy || !session.online} onclick={expand}
-            ><Plus size={16} />{busy
+              )}
+            >
+              <History size={16} />
+              {t('relation_view_history')}
+            </Button>
+          {/if}
+          <Button disabled={!canExpand || busy || !session.online} onclick={expand}>
+            <Plus size={16} />
+            {busy
               ? t('relation_loading')
               : complete
                 ? t('relation_expanded')
                 : progress[selected]
                   ? t('relation_load_more')
-                  : t('relation_expand')}</Button
-          >
-          {#if nodeLimit}<p class="muted">
+                  : t('relation_expand')}
+          </Button>
+          {#if nodeLimit}
+            <p class="muted">
               {t('relation_node_limit', { count: RELATION_NODE_LIMIT })}
             </p>
-          {:else if depthLimit}<p class="muted">{t('relation_depth_limit')}</p>
-          {:else if complete && !connected.length}<p class="muted">{t('relation_empty')}</p>{/if}
+          {:else if depthLimit}
+            <p class="muted">{t('relation_depth_limit')}</p>
+          {:else if complete && !connected.length}
+            <p class="muted">{t('relation_empty')}</p>
+          {/if}
           <QueryStatus {error} retry={expand} />
         </div>
       </section>
-      {#if connected.length}<section class="panel">
-          <div class="panel-heading"><h2>{t('relation_links')}</h2></div>
+      {#if connected.length}
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>{t('relation_links')}</h2>
+          </div>
           <ul class="relation-links">
             {#each connected as edge (edgeKey(edge))}
               {@const other = nodes.find(
@@ -236,26 +269,33 @@
                     ? recordKey(edge.target)
                     : recordKey(edge.source)),
               )}
-              {#if other}<li>
+              {#if other}
+                <li>
                   <button
                     class="text-link"
                     onclick={() => {
                       selected = recordKey(other);
                       error = null;
-                    }}>{name(other)}<ArrowRight size={14} /></button
+                    }}
                   >
-                  <small
-                    >{edge.fields.map((field) => fieldLabel(edge.source.table, field)).join('、')} · {edge.kind ===
+                    {name(other)}
+                    <ArrowRight size={14} />
+                  </button>
+                  <small>
+                    {edge.fields.map((field) => fieldLabel(edge.source.table, field)).join('、')} · {edge.kind ===
                     'current'
                       ? t('relation_current_link')
-                      : t('relation_saved_reference')}</small
-                  >
-                  {#if edge.savedTitle}<small>{t('relation_saved_title')}: {edge.savedTitle}</small
-                    >{/if}
-                </li>{/if}
+                      : t('relation_saved_reference')}
+                  </small>
+                  {#if edge.savedTitle}
+                    <small>{t('relation_saved_title')}: {edge.savedTitle}</small>
+                  {/if}
+                </li>
+              {/if}
             {/each}
           </ul>
-        </section>{/if}
+        </section>
+      {/if}
       <p class="muted relation-note">{t('relation_scope_hint')}</p>
     {/if}
   </aside>

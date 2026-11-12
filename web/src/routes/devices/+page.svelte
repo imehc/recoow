@@ -23,31 +23,41 @@
   empty={!query.data?.devices.length}
   retry={() => query.refetch()}
 />
-{#if query.data}<div class="device-grid">
-    {#each query.data.devices as device (device.id)}<section class="panel">
+{#if query.data}
+  <div class="device-grid">
+    {#each query.data.devices as device (device.id)}
+      <section class="panel">
         <div class="panel-heading">
           <div class="device-heading">
-            {#if device.profile?.client === 'web'}<Monitor size={22} />{:else}<Smartphone
-                size={22}
-              />{/if}
+            {#if device.profile?.client === 'web'}
+              <Monitor size={22} />
+            {:else}
+              <Smartphone size={22} />
+            {/if}
             <div>
               <h2>{device.name || t('unnamed_device')}</h2>
               <p>{source(device.profile)}</p>
             </div>
           </div>
-          {#if device.isOwner}<span class="operation-badge">{t('owner_device')}</span>{/if}
+          {#if device.isOwner}
+            <span class="operation-badge">{t('owner_device')}</span>
+          {/if}
         </div>
         <div class="panel-body">
           <dl class="field-list">
-            {#each [[t('app_version'), device.profile?.appVersion ?? t('not_recorded')], [t('os_version'), device.profile?.osVersion ?? t('not_recorded')], [t('last_seen'), time(new Date(device.lastSeenAt).getTime())]] as [label, value] (label)}<div
-                class="field"
-              >
+            {#each [[t('app_version'), device.profile?.appVersion ?? t('not_recorded')], [t('os_version'), device.profile?.osVersion ?? t('not_recorded')], [t('last_seen'), time(new Date(device.lastSeenAt).getTime())]] as [label, value] (label)}
+              <div class="field">
                 <dt>{label}</dt>
                 <dd>{value}</dd>
-              </div>{/each}
+              </div>
+            {/each}
           </dl>
         </div>
         <div class="device-id">ID: {device.id}</div>
-      </section>{/each}
+      </section>
+    {/each}
   </div>
-  <div class="page-freshness"><Freshness at={query.dataUpdatedAt} /></div>{/if}
+  <div class="page-freshness">
+    <Freshness at={query.dataUpdatedAt} />
+  </div>
+{/if}

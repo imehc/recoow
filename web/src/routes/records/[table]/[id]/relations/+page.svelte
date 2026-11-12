@@ -26,7 +26,11 @@
   error={query.error}
   retry={() => query.refetch()}
 />
-{#if !entity(table)}<div class="status">{t('unknown_record_type')}</div>{/if}
-{#if query.data}{#key `${table}:${id}:${query.dataUpdatedAt}`}<RecordRelations
-      root={query.data}
-    />{/key}{/if}
+{#if !entity(table)}
+  <div class="status">{t('unknown_record_type')}</div>
+{/if}
+{#if query.data}
+  {#key `${table}:${id}:${query.dataUpdatedAt}`}
+    <RecordRelations root={query.data} />
+  {/key}
+{/if}

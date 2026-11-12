@@ -38,6 +38,8 @@ pnpm verify
 
 格式化同时覆盖 Web 与公共 `openapi/openapi.yaml`，YAML 保持多行结构。实体元数据和 API 类型从公共 OpenAPI 生成，生成结果不纳入 Git。
 
+Svelte 使用 `htmlWhitespaceSensitivity: ignore`，避免行内元素的空白保护把标签贴在相邻内容上。条件、循环等控制块采用多行结构，图标与相邻元素分行；Prettier 会保留已有控制块的换行，不会自动展开所有单行块。
+
 浏览器检查默认使用已安装的 Chrome，覆盖桌面和移动视口模拟；CI 同样安装并使用 Chrome。需要其他 Chrome 通道时可设置 `RECOOW_BROWSER_CHANNEL`。与 Go 服务的集成检查使用独立测试库，开启测试账号注册后执行：
 
 ```sh

@@ -31,14 +31,21 @@
   description={entityTitle(table)}
   back={'/records/' + table + '/' + encodeURIComponent(id)}
 />
-{#if !allowed}<div class="status" role="alert">
+{#if !allowed}
+  <div class="status" role="alert">
     {t('this_session_cannot_perform_this_action')}
-  </div>{:else}
+  </div>
+{:else}
   <QueryStatus pending={query.isPending} error={query.error} retry={() => query.refetch()} />
-  {#if loaded?.key === key}{#if loaded.row.deletedAtMs}<div class="status">
+  {#if loaded?.key === key}
+    {#if loaded.row.deletedAtMs}
+      <div class="status">
         {t('this_record_was_not_found_or_was_deleted')}
-      </div>{:else if loaded.row.snapshot}{#key key}<RecordEditor
-          {table}
-          row={loaded.row}
-        />{/key}{/if}{/if}
+      </div>
+    {:else if loaded.row.snapshot}
+      {#key key}
+        <RecordEditor {table} row={loaded.row} />
+      {/key}
+    {/if}
+  {/if}
 {/if}

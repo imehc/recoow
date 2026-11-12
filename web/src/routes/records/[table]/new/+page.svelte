@@ -10,8 +10,12 @@
 </script>
 
 <PageHeader title={t('new_record')} description={entityTitle(table)} back={'/records/' + table} />
-{#if editableTables.includes(table) && session.canWrite(table)}{#key table}<RecordEditor
-      {table}
-    />{/key}{:else}<div class="status" role="alert">
+{#if editableTables.includes(table) && session.canWrite(table)}
+  {#key table}
+    <RecordEditor {table} />
+  {/key}
+{:else}
+  <div class="status" role="alert">
     {t('this_session_cannot_perform_this_action')}
-  </div>{/if}
+  </div>
+{/if}

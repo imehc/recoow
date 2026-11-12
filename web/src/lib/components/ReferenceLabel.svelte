@@ -12,9 +12,11 @@
   }));
 </script>
 
-<a class="text-link" href={appPath('/records/' + table + '/' + encodeURIComponent(id))}
-  >{title(query.data?.snapshot, id)}</a
->
-{#if query.isPending}<span class="muted">{t('loading')}</span>{:else if query.error}<span
-    class="muted">{t('reference_unavailable')}</span
-  >{/if}
+<a class="text-link" href={appPath('/records/' + table + '/' + encodeURIComponent(id))}>
+  {title(query.data?.snapshot, id)}
+</a>
+{#if query.isPending}
+  <span class="muted">{t('loading')}</span>
+{:else if query.error}
+  <span class="muted">{t('reference_unavailable')}</span>
+{/if}

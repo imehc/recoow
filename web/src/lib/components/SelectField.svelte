@@ -32,7 +32,8 @@
     }}
   >
     <Select.Trigger {id} class="select-trigger" aria-label={label}>
-      <span>{selected}</span><ChevronDown size={14} />
+      <span>{selected}</span>
+      <ChevronDown size={14} />
     </Select.Trigger>
     <Select.Portal>
       <Select.Content
@@ -42,18 +43,23 @@
         preventScroll={false}
       >
         <Select.Viewport class="select-viewport">
-          {#each groups as group (group)}<Select.Group>
-              {#if group}<Select.GroupHeading class="select-group-heading"
-                  >{group}</Select.GroupHeading
-                >{/if}
+          {#each groups as group (group)}
+            <Select.Group>
+              {#if group}
+                <Select.GroupHeading class="select-group-heading">{group}</Select.GroupHeading>
+              {/if}
               {#each options.filter((option) => (option.group ?? '') === group) as option (option.value)}
                 <Select.Item value={option.value} label={option.label} class="select-option">
-                  {#snippet children({ selected })}<span>{option.label}</span>{#if selected}<Check
-                        size={15}
-                      />{/if}{/snippet}
+                  {#snippet children({ selected })}
+                    <span>{option.label}</span>
+                    {#if selected}
+                      <Check size={15} />
+                    {/if}
+                  {/snippet}
                 </Select.Item>
               {/each}
-            </Select.Group>{/each}
+            </Select.Group>
+          {/each}
         </Select.Viewport>
       </Select.Content>
     </Select.Portal>

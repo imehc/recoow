@@ -77,11 +77,19 @@
   const rows = $derived(query.data?.pages.flatMap((part) => part.rows) ?? []);
 </script>
 
-<PageHeader title={entityTitle(table)} description={t('browse_synced_records_by_type_text_or_date')}
-  >{#snippet actions()}{#if session.canWrite(table)}<Button
-        href={appPath('/records/' + table + '/new')}><Plus size={16} />{t('new_record')}</Button
-      >{/if}{/snippet}</PageHeader
+<PageHeader
+  title={entityTitle(table)}
+  description={t('browse_synced_records_by_type_text_or_date')}
 >
+  {#snippet actions()}
+    {#if session.canWrite(table)}
+      <Button href={appPath('/records/' + table + '/new')}>
+        <Plus size={16} />
+        {t('new_record')}
+      </Button>
+    {/if}
+  {/snippet}
+</PageHeader>
 <WebAccessHint {table} />
 <section class="panel filter-panel" aria-label={t('filters')}>
   <form
@@ -109,36 +117,38 @@
         if (target) void goto(appPath('/records/' + target.tables[0]));
       }}
     />
-    <label class="form-field"
-      >{t('search_b97cb8')}
+    <label class="form-field">
+      {t('search_b97cb8')}
       <div class="search-input">
-        <Search size={16} /><input
-          type="search"
-          bind:value={search}
-          placeholder={t('search_record_content')}
-        />
-      </div></label
-    >
+        <Search size={16} />
+        <input type="search" bind:value={search} placeholder={t('search_record_content')} />
+      </div>
+    </label>
     <DateRange bind:from bind:to />
     <div class="filter-actions">
       <p class="filter-hint">{t('date_field')}: {fieldLabel(table, dateField)}</p>
       <div class="filter-buttons">
-        <Button type="submit">{t('search')}</Button><Button
+        <Button type="submit">{t('search')}</Button>
+        <Button
           variant="outline"
           onclick={() => {
             search = '';
             from = '';
             to = '';
             void goto(appPath('/records/' + table));
-          }}>{t('reset_filters')}</Button
+          }}
         >
+          {t('reset_filters')}
+        </Button>
       </div>
     </div>
   </form>
 </section>
 <section class="panel">
-  {#if group}<nav class="record-tabs" aria-label={t('record_type')}>
-      {#each group.tables as child (child)}<a
+  {#if group}
+    <nav class="record-tabs" aria-label={t('record_type')}>
+      {#each group.tables as child (child)}
+        <a
           href={appPath('/records/' + child)}
           class:active={child === table}
           aria-current={child === table ? 'page' : undefined}
@@ -146,16 +156,21 @@
             search = '';
             from = '';
             to = '';
-          }}>{entityTitle(child)}</a
-        >{/each}
-    </nav>{/if}
+          }}
+        >
+          {entityTitle(child)}
+        </a>
+      {/each}
+    </nav>
+  {/if}
   <div class="results-heading">
     <h2>{t('results')}</h2>
     <span class="result-count">{t('records_loaded', { count: rows.length })}</span>
   </div>
-  {#if canOrganize}<div class="bulk-selection-bar">
-      <label
-        ><input
+  {#if canOrganize}
+    <div class="bulk-selection-bar">
+      <label>
+        <input
           type="checkbox"
           aria-label={t('select_loaded_records')}
           checked={!!rows.length &&
@@ -166,58 +181,82 @@
               ? rows.slice(0, BULK_LIMIT).map((row) => row.id)
               : [];
           }}
-        />{t('bulk_selected', { count: selected.length })}</label
-      ><Button
+        />
+        {t('bulk_selected', { count: selected.length })}
+      </label>
+      <Button
         variant="outline"
         disabled={!selected.length || !!bulkRows.length}
         onclick={() => {
           bulkRows = rows.filter((row) => selected.includes(row.id));
-        }}>{t('bulk_organize')}</Button
-      ><span class="muted">{t('bulk_limit_hint')}</span>
-    </div>{/if}
-  {#if bulkRows.length}{#key table}<BulkOrganizer
+        }}
+      >
+        {t('bulk_organize')}
+      </Button>
+      <span class="muted">{t('bulk_limit_hint')}</span>
+    </div>
+  {/if}
+  {#if bulkRows.length}
+    {#key table}
+      <BulkOrganizer
         {table}
         rows={bulkRows}
         onclose={() => {
           bulkRows = [];
           selected = [];
         }}
-      />{/key}{/if}
-  {#if filters.transaction_type || filters.category !== undefined || filters.exclude_refunded}<p
-      class="active-filters"
-    >
+      />
+    {/key}
+  {/if}
+  {#if filters.transaction_type || filters.category !== undefined || filters.exclude_refunded}
+    <p class="active-filters">
       {filters.transaction_type
         ? valueText('bills', 'transaction_type', filters.transaction_type)
         : ''}
-      {#if filters.category !== undefined}<span
-          >{fieldLabel('bills', 'category')}: {filters.category === ''
+      {#if filters.category !== undefined}
+        <span>
+          {fieldLabel('bills', 'category')}: {filters.category === ''
             ? t('uncategorized')
-            : valueText('bills', 'category', filters.category)}</span
-        >{/if}
-      {#if filters.exclude_refunded}<span>{t('refunds_excluded')}</span>{/if}
-    </p>{/if}
-  {#if !entity(table)}<div class="status">{t('unknown_record_type')}</div>{:else}
+            : valueText('bills', 'category', filters.category)}
+        </span>
+      {/if}
+      {#if filters.exclude_refunded}
+        <span>{t('refunds_excluded')}</span>
+      {/if}
+    </p>
+  {/if}
+  {#if !entity(table)}
+    <div class="status">{t('unknown_record_type')}</div>
+  {:else}
     <QueryStatus
       pending={query.isPending}
       error={query.error}
       empty={!rows.length}
       retry={() => query.refetch()}
     />
-    {#if rows.length}<div class="table-wrap">
+    {#if rows.length}
+      <div class="table-wrap">
         <table class="data-table">
-          <thead
-            ><tr
-              >{#if canOrganize}<th class="selection-cell">{t('select_records')}</th>{/if}<th
-                >{t('record')}</th
-              >{#each businessFields as key (key)}<th>{columnLabel(key)}</th>{/each}<th
-                >{t('client_modified_at')}</th
-              ><th>{t('cloud_version')}</th><th class="row-action">{t('details')}</th></tr
-            ></thead
-          >
-          <tbody
-            >{#each rows as row (row.id)}<tr>
-                {#if canOrganize}<td class="selection-cell" data-label={t('select_records')}
-                    ><input
+          <thead>
+            <tr>
+              {#if canOrganize}
+                <th class="selection-cell">{t('select_records')}</th>
+              {/if}
+              <th>{t('record')}</th>
+              {#each businessFields as key (key)}
+                <th>{columnLabel(key)}</th>
+              {/each}
+              <th>{t('client_modified_at')}</th>
+              <th>{t('cloud_version')}</th>
+              <th class="row-action">{t('details')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each rows as row (row.id)}
+              <tr>
+                {#if canOrganize}
+                  <td class="selection-cell" data-label={t('select_records')}>
+                    <input
                       type="checkbox"
                       aria-label={t('select_record_named', { name: title(row.snapshot, row.id) })}
                       checked={selected.includes(row.id)}
@@ -228,50 +267,65 @@
                           ? [...selected, row.id]
                           : selected.filter((id) => id !== row.id);
                       }}
-                    /></td
-                  >{/if}
-                <td
-                  ><a
+                    />
+                  </td>
+                {/if}
+                <td>
+                  <a
                     class="record-title"
                     href={appPath('/records/' + table + '/' + encodeURIComponent(row.id))}
-                    >{title(row.snapshot, row.id)}</a
                   >
-                  <div class="record-subtitle"><span class="record-id">{row.id}</span></div></td
-                >
-                {#each businessFields as key (key)}<td
+                    {title(row.snapshot, row.id)}
+                  </a>
+                  <div class="record-subtitle">
+                    <span class="record-id">{row.id}</span>
+                  </div>
+                </td>
+                {#each businessFields as key (key)}
+                  <td
                     data-label={columnLabel(key)}
                     class:time-cell={key === 'occurred_at'}
                     class:amount-cell={key === 'final_amount_cents'}
-                    >{#if key === 'category_id' && typeof row.snapshot?.category_id === 'string' && row.snapshot.category_id}<ReferenceLabel
-                        table="item_categories"
-                        id={row.snapshot.category_id}
-                      />{:else}{rowValue(row.snapshot, key)}{/if}</td
-                  >{/each}
-                <td data-label={t('client_modified_at')} class="time-cell"
-                  >{time(row.updatedAtMs)}</td
-                ><td data-label={t('cloud_version')}>{String(row.version)}</td>
-                <td class="row-action"
-                  ><a
+                  >
+                    {#if key === 'category_id' && typeof row.snapshot?.category_id === 'string' && row.snapshot.category_id}
+                      <ReferenceLabel table="item_categories" id={row.snapshot.category_id} />
+                    {:else}
+                      {rowValue(row.snapshot, key)}
+                    {/if}
+                  </td>
+                {/each}
+                <td data-label={t('client_modified_at')} class="time-cell">
+                  {time(row.updatedAtMs)}
+                </td>
+                <td data-label={t('cloud_version')}>{String(row.version)}</td>
+                <td class="row-action">
+                  <a
                     class="text-link"
                     href={appPath('/records/' + table + '/' + encodeURIComponent(row.id))}
-                    >{t('view_record')}<ArrowRight size={14} /></a
-                  ></td
-                >
-              </tr>{/each}</tbody
-          >
+                  >
+                    {t('view_record')}
+                    <ArrowRight size={14} />
+                  </a>
+                </td>
+              </tr>
+            {/each}
+          </tbody>
         </table>
-      </div>{/if}
+      </div>
+    {/if}
     <div class="table-footer">
-      <Freshness at={query.dataUpdatedAt} /><Button
+      <Freshness at={query.dataUpdatedAt} />
+      <Button
         variant="outline"
         disabled={!query.hasNextPage || query.isFetchingNextPage}
         onclick={() => query.fetchNextPage()}
-        >{query.isFetchingNextPage
+      >
+        {query.isFetchingNextPage
           ? t('loading')
           : query.hasNextPage
             ? t('load_more')
-            : t('all_loaded')}</Button
-      >
+            : t('all_loaded')}
+      </Button>
     </div>
   {/if}
 </section>
