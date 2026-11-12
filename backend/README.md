@@ -28,7 +28,7 @@ backend/
 
 ## 统一契约与生成
 
-唯一契约为 [`openapi/openapi.yaml`](../openapi/openapi.yaml)，遵循资源式路径。`x-recoow-sync` 定义同步版本、依赖和兼容规则。存储与修订设计见 [后端架构](../docs/backend-architecture.md)。
+唯一契约为 [`openapi/openapi.yaml`](../openapi/openapi.yaml)，遵循资源式路径。`x-recoow-sync` 定义同步版本、依赖和兼容规则。存储、修订与运行边界以本文及当前实现为准。
 
 根 Makefile 固定 OpenAPI Generator 7.22.0 和 sqlc v1.30.0，提供：
 

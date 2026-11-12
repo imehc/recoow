@@ -7,7 +7,6 @@ iOS、Android、Web 与共享后端组成的个人记录应用。后端使用 Po
 - [项目协作指南](AGENTS.md)
 - [设计规范与移动端差异](DESGIN.MD)
 - [后端配置与接口](backend/README.md)
-- [后端架构](docs/backend-architecture.md)
 - [部署、迁移与备份恢复](deploy/README.md)
 - [Android 开发](android/README.md)
 - [Web 开发](web/README.md)与[工作台设计规范](web/DESIGN.md)
