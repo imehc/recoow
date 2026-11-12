@@ -1,5 +1,5 @@
 import { t } from './preferences.svelte.js';
-import { parse, LosslessNumber } from 'lossless-json';
+import { parse, stringify, LosslessNumber } from 'lossless-json';
 import { apiFields, apiFieldName } from './api-fields.js';
 import { version as appVersion } from '../../package.json';
 import type { ChangeEventDetail } from '#lib/generated/api/models/ChangeEventDetail.js';
@@ -11,6 +11,7 @@ import type { SyncCapabilities } from '#lib/generated/api/models/SyncCapabilitie
 import type { IdentityResponse } from '#lib/generated/api/models/IdentityResponse.js';
 import type { LoginResponse } from '#lib/generated/api/models/LoginResponse.js';
 import type { Row } from '#lib/generated/api/models/Row.js';
+import type { PushResult } from '#lib/generated/api/models/PushResult.js';
 
 export class APIError extends Error {
   constructor(
@@ -46,20 +47,23 @@ function operatingSystem(): string {
 }
 
 export function parseCloudJSON(text: string): unknown {
-  return apiFields(
-    parse(text, undefined, (value) => {
-      const number = Number(value);
-      return Number.isSafeInteger(number) && /^-?\d+$/.test(value)
-        ? number
-        : new LosslessNumber(value);
-    }),
-  );
+  return apiFields(parseExactJSON(text));
+}
+
+export function parseExactJSON(text: string): unknown {
+  return parse(text, undefined, (value) => {
+    const number = Number(value);
+    return Number.isSafeInteger(number) && /^-?\d+$/.test(value)
+      ? number
+      : new LosslessNumber(value);
+  });
 }
 
 async function request<T>(
   path: string,
   query: Record<string, string | number | undefined> = {},
   options: RequestInit = {},
+  revisionResult = false,
 ): Promise<T> {
   const url = new URL(path, window.location.origin);
   for (const [key, value] of Object.entries(query))
@@ -82,17 +86,35 @@ async function request<T>(
   });
   options.signal?.throwIfAborted();
   if (!response.ok) {
-    const error = (await response.json().catch(() => ({}))) as { error?: string };
+    const error = parseCloudJSON(await response.text().catch(() => '{}')) as {
+      error?: string;
+      status?: string;
+    };
     if (response.status === 401 && path !== '/api/sessions')
       window.dispatchEvent(new Event('recoow:unauthorized'));
     const reset = response.status === 409 && error.error === 'reset_required';
     if (reset) window.dispatchEvent(new Event('recoow:reset'));
+    if (revisionResult && !reset && [409, 422].includes(response.status) && error.status)
+      return error as T;
     throw new APIError(response.status, reset, response.headers.get('X-Request-Id') ?? '');
   }
   return parseCloudJSON(await response.text()) as T;
 }
 
 export const api = {
+  write: (
+    table: string,
+    id: string,
+    method: 'POST' | 'PUT' | 'DELETE',
+    body: string,
+    signal?: AbortSignal,
+  ) =>
+    request<PushResult>(
+      `/api/${table.replaceAll('_', '-')}${method === 'POST' ? '' : '/' + encodeURIComponent(id)}`,
+      {},
+      { method, body, signal },
+      true,
+    ),
   me: () => request<IdentityResponse>('/api/users/me'),
   capabilities: () => request<SyncCapabilities>('/api/sync/capabilities'),
   login: (username: string, password: string) =>
@@ -126,3 +148,7 @@ export const api = {
     request<ChangeEventDetail>(`/api/change-events/${encodeURIComponent(id)}`, {}, { signal }),
   devices: (signal?: AbortSignal) => request<DevicesResponse>('/api/devices', {}, { signal }),
 };
+
+// 快照作为不透明业务内容保留；只转换接口层字段并精确序列化数字。
+export const serializeCloudJSON = (value: unknown): string =>
+  stringify(apiFields(value, false)) ?? '{}';

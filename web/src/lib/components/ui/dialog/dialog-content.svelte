@@ -2,6 +2,7 @@
   import { Dialog as DialogPrimitive } from 'bits-ui';
   import XIcon from '@lucide/svelte/icons/x';
   import { Button } from '#lib/components/ui/button/index.js';
+  import { t } from '#lib/preferences.svelte.js';
   import { cn, type WithoutChildrenOrChild } from '#lib/utils.js';
   import DialogOverlay from './dialog-overlay.svelte';
   import DialogPortal from './dialog-portal.svelte';
@@ -39,7 +40,7 @@
         {#snippet child({ props })}
           <Button variant="ghost" class="absolute top-2 right-2" size="icon-sm" {...props}>
             <XIcon />
-            <span class="sr-only">Close</span>
+            <span class="sr-only">{t('close')}</span>
           </Button>
         {/snippet}
       </DialogPrimitive.Close>

@@ -9,7 +9,17 @@
     min,
     max,
     hint,
-  }: { label: string; value?: string; min?: string; max?: string; hint?: string } = $props();
+    disabled = false,
+    onchange,
+  }: {
+    label: string;
+    value?: string;
+    min?: string;
+    max?: string;
+    hint?: string;
+    disabled?: boolean;
+    onchange?: (value: string) => void;
+  } = $props();
   let open = $state(false);
   const id = $props.id();
   function date(raw?: string): DateValue | undefined {
@@ -25,7 +35,7 @@
   <span class="field-label" {id}>{label}</span>
   <Popover.Root bind:open>
     <div class="date-control">
-      <Popover.Trigger class="date-picker-trigger" aria-labelledby={id}>
+      <Popover.Trigger {disabled} class="date-picker-trigger" aria-labelledby={id}>
         <span class:placeholder={!value}
           >{value ? value.replaceAll('-', '/') : t('select_date')}</span
         ><CalendarDays size={16} />
@@ -34,7 +44,11 @@
           type="button"
           class="date-clear"
           aria-label={t('clear_date', { label })}
-          onclick={() => (value = '')}><X size={13} /></button
+          {disabled}
+          onclick={() => {
+            value = '';
+            onchange?.(value);
+          }}><X size={13} /></button
         >{/if}
     </div>
     <Popover.Portal>
@@ -51,6 +65,7 @@
           onValueChange={(next) => {
             if (next) {
               value = next.toString();
+              onchange?.(value);
               open = false;
             }
           }}

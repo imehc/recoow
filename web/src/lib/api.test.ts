@@ -92,4 +92,27 @@ describe('authenticated transport', () => {
   it('formats the HTTP status in translated errors', () => {
     expect(new APIError(502).message).toBe('请求失败（502）');
   });
+  it('returns conflict and dependency receipts while dataset resets still clear the session', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(
+            '{"status":"conflict","table":"diary_tags","id":"tag","version":9007199254740993,"current":{"snapshot":{"future":9007199254740993}}}',
+            { status: 409 },
+          ),
+        ),
+    );
+    const receipt = await api.write('diary_tags', 'tag', 'PUT', '{}');
+    expect(String(receipt.version)).toBe('9007199254740993');
+    expect(receipt.status).toBe('conflict');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response('{"error":"reset_required"}', { status: 409 })),
+    );
+    await expect(api.write('diary_tags', 'tag', 'DELETE', '{}')).rejects.toMatchObject({
+      resetRequired: true,
+    });
+  });
 });

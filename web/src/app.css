@@ -93,7 +93,8 @@ a {
   text-underline-offset: 3px;
 }
 button,
-input {
+input,
+textarea {
   font: inherit;
   -webkit-tap-highlight-color: transparent;
 }
@@ -476,7 +477,8 @@ svg {
   font-size: 0.8125rem;
   font-weight: 500;
 }
-input {
+input,
+textarea {
   width: 100%;
   height: var(--control-height);
   padding: 0 12px;
@@ -487,18 +489,29 @@ input {
   outline: none;
   transition: border-color 160ms var(--ease-ui);
 }
-input::placeholder {
+textarea {
+  height: auto;
+  padding: 10px 12px;
+  resize: vertical;
+  font-size: 0.8125rem;
+  line-height: 1.65;
+}
+input::placeholder,
+textarea::placeholder {
   color: var(--muted-foreground);
 }
-input:hover {
+input:hover,
+textarea:hover {
   border-color: var(--primary);
 }
-input:focus {
+input:focus,
+textarea:focus {
   border-color: var(--primary);
   outline: 2px solid var(--primary-soft);
   outline-offset: 0;
 }
-input:disabled {
+input:disabled,
+textarea:disabled {
   background: var(--muted);
   border-color: var(--border);
   color: var(--muted-foreground);

@@ -41,3 +41,5 @@ backend/internal/wire/field_names.generated.go
 ios/recoow/Core/Sync/APIFieldNames.generated.swift
 android/core/network/src/main/kotlin/imehc/recoow/core/network/APIFieldNames.generated.kt
 web/src/lib/api-field-names.generated.ts
+**/.impeccable/
+/web/PRODUCT.md

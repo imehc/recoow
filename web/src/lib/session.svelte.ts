@@ -24,6 +24,11 @@ export class Session {
   error = $state<'' | 'expired' | 'network' | 'reset'>('');
   checkedAt = $state(0);
   checking = $state(false);
+  canWrite(table: string): boolean {
+    return (
+      this.user?.access === 'read_write' && (this.user.writableTables?.includes(table) ?? false)
+    );
+  }
   private revision = 0;
   private pending: Promise<void> | null = null;
 

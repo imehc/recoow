@@ -4,6 +4,7 @@
   import { goto } from '$app/navigation';
   import { createInfiniteQuery } from '@tanstack/svelte-query';
   import { api } from '#lib/api.js';
+  import { session } from '#lib/session.svelte.js';
   import { entity, entityTitle, title, time, dateRange, fieldLabel } from '#lib/format.js';
   import { t } from '#lib/preferences.svelte.js';
   import { Button } from '#lib/components/ui/button/index.js';
@@ -12,7 +13,7 @@
   import QueryStatus from '#lib/components/QueryStatus.svelte';
   import PageHeader from '#lib/components/PageHeader.svelte';
   import SelectField from '#lib/components/SelectField.svelte';
-  import { Search, ArrowRight } from '@lucide/svelte';
+  import { Search, ArrowRight, Plus } from '@lucide/svelte';
   import { recordGroups, recordGroup, groupTitle } from '#lib/record-groups.js';
   let search = $state('');
   let from = $state('');
@@ -36,10 +37,11 @@
   const rows = $derived(query.data?.pages.flatMap((part) => part.rows) ?? []);
 </script>
 
-<PageHeader
-  title={entityTitle(table)}
-  description={t('browse_synced_records_by_type_text_or_date')}
-/>
+<PageHeader title={entityTitle(table)} description={t('browse_synced_records_by_type_text_or_date')}
+  >{#snippet actions()}{#if session.canWrite(table)}<Button
+        href={appPath('/records/' + table + '/new')}><Plus size={16} />{t('new_record')}</Button
+      >{/if}{/snippet}</PageHeader
+>
 <section class="panel filter-panel" aria-label={t('filters')}>
   <form
     class="filters"

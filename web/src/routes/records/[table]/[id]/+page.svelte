@@ -11,6 +11,8 @@
   import Fields from '#lib/components/Fields.svelte';
   import Media from '#lib/components/Media.svelte';
   import PageHeader from '#lib/components/PageHeader.svelte';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Network, Pencil } from '@lucide/svelte';
   const table = $derived(page.params.table ?? '');
   const id = $derived(page.params.id ?? '');
   const query = createQuery(() => ({
@@ -24,7 +26,19 @@
   title={title(query.data?.snapshot, t('record_details'))}
   description={entityTitle(table)}
   back={'/records/' + table}
-/>
+>
+  {#snippet actions()}
+    {#if query.data && !query.data.deletedAtMs && session.canWrite(table)}<Button
+        href={appPath('/records/' + table + '/' + encodeURIComponent(id) + '/edit')}
+        ><Pencil size={16} />{t('edit_record')}</Button
+      >{/if}
+    {#if query.data}<Button
+        variant="outline"
+        href={appPath('/records/' + table + '/' + encodeURIComponent(id) + '/relations')}
+        ><Network size={16} />{t('record_relations')}</Button
+      >{/if}
+  {/snippet}
+</PageHeader>
 <QueryStatus
   pending={query.isPending && !!entity(table)}
   error={query.error}
