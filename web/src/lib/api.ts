@@ -91,7 +91,7 @@ async function request<T>(
       error?: string;
       status?: string;
     };
-    if (response.status === 401 && path !== '/api/sessions')
+    if (response.status === 401 && !['/api/sessions', '/api/pairing-sessions'].includes(path))
       window.dispatchEvent(new Event('recoow:unauthorized'));
     const reset = response.status === 409 && error.error === 'reset_required';
     if (reset) window.dispatchEvent(new Event('recoow:reset'));
@@ -123,6 +123,12 @@ export const api = {
       '/api/sessions',
       {},
       { method: 'POST', body: JSON.stringify({ username, password }) },
+    ),
+  loginPairing: (code: string) =>
+    request<LoginResponse>(
+      '/api/pairing-sessions',
+      {},
+      { method: 'POST', body: JSON.stringify({ code }) },
     ),
   logout: () => request<{ ok: boolean }>('/api/sessions/current', {}, { method: 'DELETE' }),
   profile: () =>

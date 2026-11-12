@@ -86,11 +86,19 @@ export class Session {
     }
   }
 
+  async loginPairing(code: string) {
+    await this.signIn(() => api.loginPairing(code));
+  }
+
   async login(username: string, password: string) {
+    await this.signIn(() => api.login(username, password));
+  }
+
+  private async signIn(authenticate: () => Promise<unknown>) {
     if (this.pending) await this.pending;
     this.clear();
     this.error = '';
-    await api.login(username, password);
+    await authenticate();
     await this.revalidate();
     if (!this.user) throw new Error(t('unable_to_verify_the_session_try_again'));
   }
@@ -99,6 +107,31 @@ export class Session {
     await api.logout();
     this.clear();
     this.error = '';
+  }
+
+  private probing = false;
+  private async checkAuthorization() {
+    if (this.probing || this.pending || !this.user || !this.online) return;
+    this.probing = true;
+    const revision = this.revision;
+    try {
+      const user = await api.me();
+      if (revision !== this.revision) return;
+      if (user.accountId !== this.user?.accountId) {
+        await this.revalidate();
+        return;
+      }
+      this.user = user;
+      this.checkedAt = Date.now();
+    } catch (error) {
+      // 401 由共享传输触发退出；网络失败保留会话，恢复联网后重新核对。
+      if (error instanceof APIError && error.status === 401 && revision === this.revision) {
+        this.clear();
+        this.error = 'expired';
+      }
+    } finally {
+      this.probing = false;
+    }
   }
 
   start() {
@@ -129,8 +162,12 @@ export class Session {
     window.addEventListener('offline', offline);
     window.addEventListener('focus', focus);
     document.addEventListener('visibilitychange', focus);
+    const authorizationTimer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void this.checkAuthorization();
+    }, 15_000);
     void this.revalidate();
     return () => {
+      window.clearInterval(authorizationTimer);
       window.removeEventListener('recoow:unauthorized', unauthorized);
       window.removeEventListener('recoow:reset', reset);
       window.removeEventListener('online', online);

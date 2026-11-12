@@ -346,5 +346,12 @@
   "bulk_state_invalid": "无法整理",
   "bulk_state_failed": "保存失败",
   "bulk_state_conflict": "待处理冲突",
-  "bulk_state_unknown": "回执未知"
+  "bulk_state_unknown": "回执未知",
+  "login_method": "登录方式",
+  "password_login": "密码登录",
+  "pairing_login": "配对码登录",
+  "pairing_code": "配对码",
+  "pairing_login_hint": "在主设备生成配对码后输入。",
+  "invalid_pairing_code": "配对码无效、已过期或已使用，请在主设备重新生成。",
+  "paired_account": "配对账号"
 }

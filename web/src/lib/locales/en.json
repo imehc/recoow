@@ -346,5 +346,12 @@
   "bulk_state_invalid": "Invalid",
   "bulk_state_failed": "Failed",
   "bulk_state_conflict": "Conflict",
-  "bulk_state_unknown": "Receipt unknown"
+  "bulk_state_unknown": "Receipt unknown",
+  "login_method": "Sign-in method",
+  "password_login": "Password",
+  "pairing_login": "Pairing code",
+  "pairing_code": "Pairing code",
+  "pairing_login_hint": "Enter a pairing code from your primary device.",
+  "invalid_pairing_code": "This pairing code is invalid, expired or already used. Generate a new one on your primary device.",
+  "paired_account": "Paired account"
 }

@@ -1897,13 +1897,14 @@ body:has(.app-shell) {
   width: 112px;
 }
 .statistics-controls .filter-hint {
-  align-self: center;
+  flex-basis: 100%;
 }
 .monthly-meter {
-  display: block;
+  display: inline-block;
+  vertical-align: middle;
+  width: 160px;
   height: 3px;
-  max-width: 160px;
-  margin-top: 8px;
+  margin-left: 12px;
   background: var(--border);
 }
 .monthly-meter span {
@@ -2000,6 +2001,13 @@ body:has(.app-shell) {
   .bulk-selection-bar {
     padding-inline: 16px;
   }
+  /* 窄屏卡片单元格只有半宽，金额加横条放不下，保持上下两行 */
+  .monthly-meter {
+    display: block;
+    width: auto;
+    max-width: 160px;
+    margin: 8px 0 0;
+  }
 }
 
 .year-grid {
@@ -2014,4 +2022,24 @@ body:has(.app-shell) {
 .year-grid [aria-pressed='true'] {
   background: var(--primary-button);
   color: var(--primary-foreground);
+}
+
+.login-methods {
+  margin-top: 24px;
+  padding: 0;
+}
+.login-methods > button {
+  padding: 12px 16px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted-foreground);
+  font: inherit;
+}
+.login-methods > button[data-state='active'] {
+  border-bottom-color: var(--primary);
+  color: var(--primary);
+}
+.login-methods > button:disabled {
+  opacity: 0.5;
 }

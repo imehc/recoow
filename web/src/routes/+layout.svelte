@@ -201,8 +201,9 @@
             <span class="topbar-divider" aria-hidden="true"></span>
             <DropdownMenu.Root>
               <DropdownMenu.Trigger class="account-trigger" aria-label={t('account_menu')}>
-                <span class="avatar">{session.user.username.slice(0, 1).toUpperCase()}</span><span
-                  class="username">{session.user.username}</span
+                <span class="avatar"
+                  >{(session.user.username || t('paired_account')).slice(0, 1).toUpperCase()}</span
+                ><span class="username">{session.user.username || t('paired_account')}</span
                 ><ChevronDown size={13} />
               </DropdownMenu.Trigger>
               <DropdownMenu.Portal
@@ -213,7 +214,9 @@
                   collisionPadding={12}
                 >
                   <div class="account-menu-heading">
-                    <small>{t('current_account')}</small><strong>{session.user.username}</strong>
+                    <small>{t('current_account')}</small><strong
+                      >{session.user.username || t('paired_account')}</strong
+                    >
                   </div>
                   <DropdownMenu.Separator class="menu-separator" />
                   <DropdownMenu.Item
