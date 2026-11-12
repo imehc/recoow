@@ -60,6 +60,7 @@ var (
 	ErrNoAccount        = errors.New("no account exists")
 	ErrDeviceExists     = errors.New("device already exists")
 	ErrAccountQuota     = errors.New("account quota exceeded")
+	ErrWebWriteDenied   = errors.New("account web writes disabled")
 )
 
 // Account 表示一份由多台设备共享的逻辑数据集。
@@ -68,6 +69,7 @@ type Account struct {
 	RecoveryKeyHash []byte    `json:"recovery_key_hash"`
 	CreatedAt       time.Time `json:"created_at"`
 	NextVersion     int64     `json:"next_version"` // 全局单调版本号
+	WebRecordWrites bool      `json:"-"`
 }
 
 // Device 是绑定到某账号的同步参与者。只保存 token 的 SHA-256 哈希；

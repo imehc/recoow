@@ -52,28 +52,31 @@ HTTP JSON 信封与查询参数统一使用 `snake_case`，响应不按客户端
 
 Web 登录使用独立的可过期会话，保存 token 哈希；默认 Cookie 为 HttpOnly、Secure、SameSite=Strict。Cookie 写请求检查 Origin。登录响应也返回 Bearer 会话凭据，退出和修改密码会吊销会话；长期设备凭据继续由设备管理单独吊销。账号禁用对会话与设备登录均生效。登录失败按直连来源地址限流。
 
-登录响应的 `access` 表示服务端授权的会话范围。首版 Web 登录及升级前已有会话均为 `read_only`，允许查询、统计、历史、媒体读取、退出及更新当前设备的来源资料；业务写入、同步上传、媒体修改、设备管理、改密及账号导出被拒绝，Cookie 和 Bearer 采用相同限制。长期设备凭据保留原有权限，客户端类型 Header 不能改变授权范围。
+登录和当前身份响应的 `access`、`writable_tables` 表示服务端按账号实时计算的有效范围。每个账号默认关闭 Web 编辑，主设备以长期凭据调用 `PUT /api/accounts/current/web-access`，传入 `{"enabled":true}` 开启，或 `{"enabled":false}` 关闭；GET 同一路径读取设置。开启后已有 Web 会话刷新页面或点击「刷新云端数据」即可显示编辑入口，无需重新登录，仅允许账单、日记、物品和日记标签的资源 CRUD。关闭后服务端立即拒绝写请求，并在修订事务持有账号行锁时再次核对授权，保证多实例下撤销与提交的顺序。设置仅影响当前账号，清空云端业务数据集时保留。
 
-| API | 用途 |
-| --- | --- |
-| `GET /api/version` | 无需登录，查询运行中的后端版本和构建提交 |
-| `GET /api/openapi.yaml` | 读取完整公共契约 |
-| `POST /api/accounts`、`POST /api/account-recoveries` | 设备初始化、恢复账号 |
-| `POST /api/device-pairing-codes`、`POST /api/device-pairings` | 创建、原子消费配对码 |
-| `GET /api/devices`、`DELETE /api/devices/{id}` | 管理本账号设备 |
-| `POST /api/users`、`POST /api/users/me/credentials` | 密码账号注册、原账号绑定 |
-| `POST /api/device-logins`、`POST /api/password-resets` | 密码登录设备、恢复密钥重设密码 |
-| `POST /api/sessions`、`DELETE /api/sessions/current` | 登录、退出 |
-| `GET /api/users/me`、`PUT /api/users/me/password` | 当前身份、修改密码 |
-| `GET/POST /api/{实体}`、`GET/PUT/DELETE /api/{实体}/{id}` | 本账号分页列表、详情与修订写入 |
-| `GET /api/statistics` | 本账号基础统计 |
-| `GET /api/change-events`、`GET /api/change-events/{event_id}` | 云端变更摘要、时间来源、历史快照与字段差异 |
-| `GET /api/sync/capabilities`、`GET /api/sync/snapshots` | 同步能力、固定水位快照 |
-| `GET /api/sync/manifests`、`POST /api/sync/snapshot-queries` | 首次绑定或备份恢复时比较数据目录，只读取缺失或不同的快照 |
-| `POST /api/sync/mutations`、`GET /api/sync/changes` | 修订写入、增量变化 |
-| `DELETE /api/sync/dataset?generation=<当前世代>` | 仅主设备清空本账号云端备份，返回新的世代 |
-| `GET /api/exports`、`GET /api/exports/sql` | 本账号数据、PostgreSQL SQL 导出 |
-| `PUT/GET/HEAD/DELETE /api/media/objects/{key}` | 媒体传输 |
+Web 会话和非主设备不能访问授权设置；移动端设置页面尚未提供该入口，可由主设备凭据调用接口。两类 Web 会话都允许查询、统计、历史、媒体读取、退出及更新当前设备来源资料；同步上传、媒体修改、设备管理、清空数据、改密及账号导出继续被拒绝，Cookie 和 Bearer 采用相同限制。长期设备凭据保留原有权限，客户端类型 Header 不能改变授权范围。
+
+| API                                                           | 用途                                                     |
+| ------------------------------------------------------------- | -------------------------------------------------------- |
+| `GET /api/version`                                            | 无需登录，查询运行中的后端版本和构建提交                 |
+| `GET /api/openapi.yaml`                                       | 读取完整公共契约                                         |
+| `POST /api/accounts`、`POST /api/account-recoveries`          | 设备初始化、恢复账号                                     |
+| `POST /api/device-pairing-codes`、`POST /api/device-pairings` | 创建、原子消费配对码                                     |
+| `GET /api/devices`、`DELETE /api/devices/{id}`                | 管理本账号设备                                           |
+| `POST /api/users`、`POST /api/users/me/credentials`           | 密码账号注册、原账号绑定                                 |
+| `POST /api/device-logins`、`POST /api/password-resets`        | 密码登录设备、恢复密钥重设密码                           |
+| `POST /api/sessions`、`DELETE /api/sessions/current`          | 登录、退出                                               |
+| `GET /api/users/me`、`PUT /api/users/me/password`             | 当前身份、修改密码                                       |
+| `GET/PUT /api/accounts/current/web-access`                    | 仅主设备读取、修改本账号 Web 编辑授权                     |
+| `GET/POST /api/{实体}`、`GET/PUT/DELETE /api/{实体}/{id}`     | 本账号分页列表、详情与修订写入                           |
+| `GET /api/statistics`                                         | 本账号基础统计                                           |
+| `GET /api/change-events`、`GET /api/change-events/{event_id}` | 云端变更摘要、时间来源、历史快照与字段差异               |
+| `GET /api/sync/capabilities`、`GET /api/sync/snapshots`       | 同步能力、固定水位快照                                   |
+| `GET /api/sync/manifests`、`POST /api/sync/snapshot-queries`  | 首次绑定或备份恢复时比较数据目录，只读取缺失或不同的快照 |
+| `POST /api/sync/mutations`、`GET /api/sync/changes`           | 修订写入、增量变化                                       |
+| `DELETE /api/sync/dataset?generation=<当前世代>`              | 仅主设备清空本账号云端备份，返回新的世代                 |
+| `GET /api/exports`、`GET /api/exports/sql`                    | 本账号数据、PostgreSQL SQL 导出                          |
+| `PUT/GET/HEAD/DELETE /api/media/objects/{key}`                | 媒体传输                                                 |
 
 实体资源名采用连字符，例如 `diary-tags`、`stored-value-accounts`。鉴权后的账号由服务端解析，请求不能指定数据归属。
 
@@ -111,19 +114,19 @@ bash backend/dev.sh
 docker compose -f backend/dev/compose.yaml stop
 ```
 
-| 配置 | 用途 |
-| --- | --- |
-| `RECOOW_DATABASE_URL` | 必填，普通运行角色 PostgreSQL 连接串 |
-| `RECOOW_MIGRATION_DATABASE_URL` | 独立迁移角色，仅迁移时提供 |
-| `RECOOW_OPENAPI` | 默认 `../openapi/openapi.yaml` |
-| `RECOOW_DATA` | 默认 `./data`，保存媒体字节 |
-| `RECOOW_LISTEN` | 默认 `:8080` |
-| `RECOOW_SESSION_TTL` | 会话秒数，默认 86400 |
-| `RECOOW_ALLOW_INSECURE_COOKIES` | 本地 HTTP 开发设为 1，部署默认 0 |
+| 配置                                            | 用途                                                               |
+| ----------------------------------------------- | ------------------------------------------------------------------ |
+| `RECOOW_DATABASE_URL`                           | 必填，普通运行角色 PostgreSQL 连接串                               |
+| `RECOOW_MIGRATION_DATABASE_URL`                 | 独立迁移角色，仅迁移时提供                                         |
+| `RECOOW_OPENAPI`                                | 默认 `../openapi/openapi.yaml`                                     |
+| `RECOOW_DATA`                                   | 默认 `./data`，保存媒体字节                                        |
+| `RECOOW_LISTEN`                                 | 默认 `:8080`                                                       |
+| `RECOOW_SESSION_TTL`                            | 会话秒数，默认 86400                                               |
+| `RECOOW_ALLOW_INSECURE_COOKIES`                 | 本地 HTTP 开发设为 1，部署默认 0                                   |
 | `RECOOW_BOOTSTRAP_TOKEN`、`RECOOW_MAX_ACCOUNTS` | 注册入口限制、账号配额；程序默认不限制，部署模板为 1，0 表示不限制 |
-| `RECOOW_PAIRING_TTL` | 配对码秒数，默认 300 |
-| `RECOOW_CORS_ORIGINS` | 明确的 Web 来源，逗号分隔；Cookie 跨源不使用通配符 |
-| `RECOOW_TLS_CERT`、`RECOOW_TLS_KEY` | 服务自身 TLS，或由可信代理提供 HTTPS |
+| `RECOOW_PAIRING_TTL`                            | 配对码秒数，默认 300                                               |
+| `RECOOW_CORS_ORIGINS`                           | 明确的 Web 来源，逗号分隔；Cookie 跨源不使用通配符                 |
+| `RECOOW_TLS_CERT`、`RECOOW_TLS_KEY`             | 服务自身 TLS，或由可信代理提供 HTTPS                               |
 
 ```bash
 cd backend
@@ -135,6 +138,8 @@ go run ./cmd/api
 整实例备份使用 `pg_dump` 加媒体目录；账号 SQL 导出只供本账号数据恢复，不代替包含密码身份、会话和全部账号的整实例备份。
 
 资源 CRUD 接收完整同步快照，账单储值影响沿用同步修订规则。调用方需按契约构造账单字段；简化表单并非单独的后端接口。
+
+Web 会话资源写入须携带编辑开始时的 `generation`；世代变化返回 `409 reset_required`，不能将旧编辑写入新数据集。请求超时后保持原 mutation 与冻结内容重试；已返回冲突的请求具有自己的回执，人工确认使用新 `mutation_id`，保持原 `base_version` 和候选快照，并携带展示过的 `expected_version`。确认请求回执丢失时仍重试该确认的冻结内容。
 
 设备来源通过 `device_profiles_v1` 声明。账号初始化、配对、恢复和 Web 登录可使用来源 Header 登记环境，`X-Recoow-Device-Id` 只表示当前安装的本地来源标识。已绑定设备可调用 `PUT /api/devices/current/profile` 更新自身资料，Web 会话的客户端类型固定为 web，该接口不授予业务写权限。历史中的 `original_registered_device_id` 只在提交时对当前账号内的本地来源进行唯一匹配；重复、缺失及平台不一致时为空，关联不会用于鉴权，也不随设备解绑删除。
 

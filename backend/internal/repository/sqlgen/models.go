@@ -15,6 +15,7 @@ type Account struct {
 	RecoveryKeyHash string
 	CreatedAt       string
 	NextVersion     int64
+	WebRecordWrites bool
 }
 
 type Anniversary struct {

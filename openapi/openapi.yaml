@@ -1463,6 +1463,73 @@ paths:
         - deviceToken: []
         - sessionToken: []
         - sessionCookie: []
+  /api/accounts/current/web-access:
+    get:
+      operationId: getAccountWebAccess
+      summary: 主设备读取当前账号的 Web 编辑授权
+      description: 仅接受本账号主设备的长期凭据；Web 会话和非主设备不能读取或修改此设置。
+      tags:
+        - Authentication
+      security:
+        - deviceToken: []
+      responses:
+        '200':
+          description: 当前账号的 Web 编辑授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountWebAccess'
+        '401':
+          description: 凭据无效或已失效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 仅主设备可访问
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      operationId: setAccountWebAccess
+      summary: 主设备开启或关闭当前账号的 Web 编辑授权
+      description: 默认关闭，仅影响当前账号。开启后已有 Web 会话刷新当前身份即可使用四类记录编辑，无需重新登录；关闭后写请求立即被拒绝。授权不随清空云端数据集而重置。
+      tags:
+        - Authentication
+      security:
+        - deviceToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountWebAccess'
+      responses:
+        '200':
+          description: 已保存的账号授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountWebAccess'
+        '400':
+          description: 必须提供布尔值 enabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 凭据无效或已失效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: 仅主设备可访问
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/users/me:
     get:
       operationId: getIdentity
@@ -9814,7 +9881,15 @@ components:
       enum:
         - read_only
         - read_write
-      description: 由服务端授权的会话访问范围。登录默认只读，客户端和 Header 不能开启写权限。
+      description: 服务端按账号实时计算的有效访问范围。账号主设备开启 Web 编辑后，已有会话刷新当前身份即可使用 writable_tables 中的实体；关闭后写请求立即被拒绝。read_write 不授予同步上传、媒体修改或账号管理权限，Web 会话和 Header 不能自行开启写权限。
+    AccountWebAccess:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: 是否为当前账号开启账单、日记、物品和日记标签的 Web 资源 CRUD；默认关闭
+      required:
+        - enabled
     SyncCapabilities:
       type: object
       properties:
@@ -10448,6 +10523,12 @@ components:
     LoginResponse:
       type: object
       properties:
+        writable_tables:
+          type: array
+          items:
+            type: string
+          x-recoow-legacy-name: writableTables
+          description: 此会话允许资源 CRUD 的实体清单；缺失或空数组表示不允许写入
         access:
           $ref: '#/components/schemas/SessionAccess'
           description: 会话权限
@@ -10485,6 +10566,15 @@ components:
     IdentityResponse:
       type: object
       properties:
+        access:
+          $ref: '#/components/schemas/SessionAccess'
+          description: 当前凭据的有效访问范围
+        writable_tables:
+          type: array
+          items:
+            type: string
+          x-recoow-legacy-name: writableTables
+          description: 当前凭据允许资源 CRUD 的实体清单；缺失或空数组表示不允许写入
         user_id:
           type: string
           x-recoow-legacy-name: userId
@@ -10597,6 +10687,9 @@ components:
         - snapshot
         - updated_at_ms
       properties:
+        generation:
+          type: string
+          description: 编辑开始时的数据集世代；Web 会话写入必填，世代变化返回 409 reset_required
         mutation_id: &id022
           type: string
           x-recoow-legacy-name: mutationId
@@ -10640,6 +10733,9 @@ components:
         - data_version
         - updated_at_ms
       properties:
+        generation:
+          type: string
+          description: 编辑开始时的数据集世代；Web 会话写入必填，世代变化返回 409 reset_required
         mutation_id: *id022
         base_version: *id023
         data_version: *id024

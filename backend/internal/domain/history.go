@@ -33,6 +33,8 @@ type PushContext struct {
 	Generation string
 	Submission *SubmissionSource
 	DirectEdit bool
+	// Web 写入在持有账号事务锁时再次核对授权，避免撤销与提交竞态。
+	RequireWebWrite bool
 }
 
 type ChangeEvent struct {

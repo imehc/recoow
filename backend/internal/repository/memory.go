@@ -95,6 +95,17 @@ func (s *memoryStore) GetAccountByRecoveryKeyHash(recoveryKeyHash []byte) (domai
 	return domain.Account{}, domain.ErrNoAccount
 }
 
+func (s *memoryStore) SetAccountWebRecordWrites(accountID string, enabled bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	account, ok := s.accounts[accountID]
+	if !ok {
+		return domain.ErrNoAccount
+	}
+	account.WebRecordWrites = enabled
+	return nil
+}
+
 func (s *memoryStore) CountAccounts() (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -198,6 +209,9 @@ func (s *memoryStore) PushWithContext(accountID string, items []domain.PushItem,
 	account, ok := s.accounts[accountID]
 	if !ok {
 		return nil, domain.ErrNoAccount
+	}
+	if context.RequireWebWrite && !account.WebRecordWrites {
+		return nil, domain.ErrWebWriteDenied
 	}
 	if context.Generation != "" && context.Generation != s.generations[accountID] {
 		return nil, domain.ErrResetRequired

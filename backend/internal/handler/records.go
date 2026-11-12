@@ -91,6 +91,7 @@ func (s *Server) handleResource(w http.ResponseWriter, r *http.Request, table st
 		return
 	}
 	var input struct {
+		Generation      string          `json:"generation"`
 		MutationID      string          `json:"mutation_id"`
 		Resolution      string          `json:"resolution"`
 		ExpectedVersion *int64          `json:"expected_version"`
@@ -105,6 +106,10 @@ func (s *Server) handleResource(w http.ResponseWriter, r *http.Request, table st
 	}
 	if input.UpdatedAtMs <= 0 || input.MutationID == "" || input.BaseVersion == nil {
 		writeError(w, 400, "mutationId, baseVersion and updatedAtMs required")
+		return
+	}
+	if _, session := r.Context().Value(sessionKey).(domain.Session); session && input.Generation == "" {
+		writeError(w, http.StatusBadRequest, "generation required for session writes")
 		return
 	}
 	operation := domain.OpUpdate
@@ -144,12 +149,20 @@ func (s *Server) handleResource(w http.ResponseWriter, r *http.Request, table st
 		writeError(w, 400, err.Error())
 		return
 	}
-	context, valid := s.pushContext(w, r, "", true)
+	context, valid := s.pushContext(w, r, input.Generation, true)
 	if !valid {
 		return
 	}
 	results, err := s.st.PushWithContext(device.AccountID, []domain.PushItem{item}, context)
 	if err != nil {
+		if errors.Is(err, domain.ErrWebWriteDenied) {
+			writeError(w, http.StatusForbidden, "session scope denied")
+			return
+		}
+		if errors.Is(err, domain.ErrResetRequired) {
+			writeError(w, http.StatusConflict, "reset_required")
+			return
+		}
 		writeError(w, 500, "mutation failed")
 		return
 	}

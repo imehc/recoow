@@ -17,10 +17,17 @@ INSERT INTO sync_metadata (account_id, generation)
 VALUES (sqlc.arg(account_id), sqlc.arg(generation)) ON CONFLICT (account_id) DO NOTHING;
 
 -- name: GetAccount :one
-SELECT id, recovery_key_hash, created_at, next_version FROM account WHERE id = sqlc.arg(id);
+SELECT id, recovery_key_hash, created_at, next_version, web_record_writes FROM account WHERE id = sqlc.arg(id);
 
 -- name: GetAccountByRecoveryHash :one
-SELECT id, recovery_key_hash, created_at, next_version FROM account WHERE recovery_key_hash = sqlc.arg(recovery_key_hash);
+SELECT id, recovery_key_hash, created_at, next_version, web_record_writes FROM account WHERE recovery_key_hash = sqlc.arg(recovery_key_hash);
+
+-- name: SetAccountWebRecordWrites :execrows
+-- 更新与修订提交竞争同一账号行锁，返回后旧授权不能继续提交。
+UPDATE account SET web_record_writes = sqlc.arg(enabled) WHERE id = sqlc.arg(id);
+
+-- name: AccountWebRecordWrites :one
+SELECT web_record_writes FROM account WHERE id = sqlc.arg(id);
 
 -- name: RequireAccount :one
 SELECT id FROM account WHERE id = sqlc.arg(id);

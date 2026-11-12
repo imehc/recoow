@@ -8,6 +8,33 @@ import (
 	"github.com/imehc/recoow/backend/internal/service"
 )
 
+// 写会话只开放首期实体的资源接口，不因关联设备或 Header 获得其他权限。
+var webWritableTables = []string{"bills", "diary_entries", "stored_items", "diary_tags"}
+
+func (s *Server) sessionWritableTables(session domain.Session) []string {
+	if session.Access == domain.SessionReadWrite {
+		return append([]string{}, webWritableTables...)
+	}
+	return []string{}
+}
+
+func (s *Server) sessionRequestAllowed(request *http.Request, session domain.Session) bool {
+	if s.readOnlySessionRequest(request) {
+		return true
+	}
+	for _, table := range s.sessionWritableTables(session) {
+		route := "/api/" + strings.ReplaceAll(table, "_", "-")
+		if request.Method == http.MethodPost && request.URL.Path == route {
+			return true
+		}
+		if (request.Method == http.MethodPut || request.Method == http.MethodDelete) &&
+			request.PathValue("id") != "" && request.URL.Path == route+"/"+request.PathValue("id") {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Server) readOnlySessionRequest(request *http.Request) bool {
 	path := request.URL.Path
 	if request.Method == http.MethodPut && path == "/api/devices/current/profile" {
@@ -55,7 +82,7 @@ func (s *Server) pushContext(writer http.ResponseWriter, request *http.Request, 
 		submission.SessionID = session.ID
 		submission.Client = "web"
 	}
-	return domain.PushContext{Generation: generation, Submission: submission, DirectEdit: directEdit}, true
+	return domain.PushContext{Generation: generation, Submission: submission, DirectEdit: directEdit, RequireWebWrite: submission.SessionID != ""}, true
 }
 
 func (s *Server) requestEnvironment(writer http.ResponseWriter, request *http.Request) (domain.ClientEnvironment, bool) {

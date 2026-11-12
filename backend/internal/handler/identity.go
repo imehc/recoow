@@ -67,8 +67,8 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	// 浏览器会话使用 HttpOnly Cookie；生产环境默认要求 HTTPS。
 	http.SetCookie(w, &http.Cookie{Name: "recoow_session", Value: login.Token, Path: "/api", HttpOnly: true, Secure: !s.cfg.AllowInsecureCookies, SameSite: http.SameSiteStrictMode, Expires: login.ExpiresAt})
-	access := generated.SessionAccess("read_only")
-	writeJSON(w, 200, loginResponse{UserId: login.User.ID, Username: login.User.Username, AccountId: login.User.AccountID, DeviceId: login.DeviceID, AccessToken: login.Token, ExpiresAt: login.ExpiresAt, Access: &access})
+	access := generated.SessionAccess(login.Access)
+	writeJSON(w, 200, loginResponse{UserId: login.User.ID, Username: login.User.Username, AccountId: login.User.AccountID, DeviceId: login.DeviceID, AccessToken: login.Token, ExpiresAt: login.ExpiresAt, Access: &access, WritableTables: s.sessionWritableTables(domain.Session{Access: login.Access})})
 }
 func (s *Server) handleBindCredentials(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
@@ -101,7 +101,15 @@ func (s *Server) handleIdentity(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 404, "account has no login identity")
 		return
 	}
-	writeJSON(w, 200, user)
+	access := generated.SessionAccess(domain.SessionReadWrite)
+	tables := s.schemas.Tables()
+	if session, ok := r.Context().Value(sessionKey).(domain.Session); ok {
+		tables = s.sessionWritableTables(session)
+		if len(tables) == 0 {
+			access = generated.SessionAccess(domain.SessionReadOnly)
+		}
+	}
+	writeJSON(w, 200, generated.IdentityResponse{UserId: user.ID, Username: user.Username, AccountId: user.AccountID, Access: &access, WritableTables: tables})
 }
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	if err := s.identity.Logout(requestToken(r)); err != nil {

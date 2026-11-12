@@ -72,6 +72,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/password-resets", s.handlePasswordReset)
 	mux.Handle("DELETE /api/sessions/current", s.authRequired(http.HandlerFunc(s.handleLogout)))
 	mux.Handle("GET /api/users/me", s.authRequired(http.HandlerFunc(s.handleIdentity)))
+	mux.Handle("GET /api/accounts/current/web-access", s.authRequired(s.ownerOnly(http.HandlerFunc(s.handleAccountWebAccess))))
+	mux.Handle("PUT /api/accounts/current/web-access", s.authRequired(s.ownerOnly(http.HandlerFunc(s.handleAccountWebAccess))))
 	mux.Handle("POST /api/users/me/credentials", s.authRequired(s.ownerOnly(http.HandlerFunc(s.handleBindCredentials))))
 	mux.Handle("PUT /api/users/me/password", s.authRequired(http.HandlerFunc(s.handlePassword)))
 	mux.HandleFunc("GET /api/openapi.yaml", func(w http.ResponseWriter, r *http.Request) {
@@ -149,8 +151,8 @@ func (s *Server) authRequired(next http.Handler) http.Handler {
 		_ = s.st.TouchDeviceLastSeen(d.ID)
 		ctx := context.WithValue(r.Context(), deviceKey, d)
 		if session.ID != "" {
-			if session.Access != domain.SessionReadWrite && !s.readOnlySessionRequest(r) {
-				writeError(w, http.StatusForbidden, "read-only session")
+			if !s.sessionRequestAllowed(r, session) {
+				writeError(w, http.StatusForbidden, "session scope denied")
 				return
 			}
 			ctx = context.WithValue(ctx, sessionKey, session)
@@ -162,7 +164,8 @@ func (s *Server) authRequired(next http.Handler) http.Handler {
 func (s *Server) ownerOnly(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		d, ok := s.deviceFrom(r.Context())
-		if !ok || !d.IsOwner {
+		_, session := r.Context().Value(sessionKey).(domain.Session)
+		if !ok || !d.IsOwner || session {
 			writeError(w, http.StatusForbidden, "owner required")
 			return
 		}

@@ -22,6 +22,7 @@ type Store interface {
 	// InitAccount 新建一个全新账号（同一实例可存在多个账号，彼此数据隔离）。
 	InitAccount(recoveryKeyHash []byte) (Account, error)
 	GetAccount(id string) (Account, error)
+	SetAccountWebRecordWrites(accountID string, enabled bool) error
 	GetAccountByRecoveryKeyHash(recoveryKeyHash []byte) (Account, error)
 	CountAccounts() (int, error)
 	CreateDevice(accountID, name string, tokenHash []byte, isOwner bool, profile ...DeviceProfile) (Device, error)

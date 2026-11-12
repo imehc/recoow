@@ -18,6 +18,7 @@ type Login struct {
 	DeviceID  string
 	Token     string
 	ExpiresAt time.Time
+	Access    domain.SessionAccess
 }
 
 func NewIdentity(store domain.Store, ttl time.Duration) (*Identity, error) {
@@ -130,6 +131,10 @@ func (identity *Identity) Login(username, password string, profiles ...domain.De
 	if err != nil {
 		return Login{}, err
 	}
+	access, err := identity.accountSessionAccess(user.AccountID)
+	if err != nil {
+		return Login{}, err
+	}
 	token, err := NewDeviceToken()
 	if err != nil {
 		return Login{}, err
@@ -139,7 +144,7 @@ func (identity *Identity) Login(username, password string, profiles ...domain.De
 		return Login{}, err
 	}
 	// 会话凭据与设备凭据分离，避免过期会话被当成长期设备 token。
-	device, err := identity.store.CreateDevice(user.AccountID, "Web 会话", HashToken(hiddenToken), true, profiles...)
+	device, err := identity.store.CreateDevice(user.AccountID, "Web 会话", HashToken(hiddenToken), false, profiles...)
 	if err != nil {
 		return Login{}, err
 	}
@@ -148,12 +153,12 @@ func (identity *Identity) Login(username, password string, profiles ...domain.De
 		_ = identity.store.DeleteDevice(device.ID)
 		return Login{}, err
 	}
-	session := domain.Session{ID: id, UserID: user.ID, DeviceID: device.ID, TokenHash: hex.EncodeToString(HashToken(token)), PasswordHash: user.PasswordHash, ExpiresAt: time.Now().UTC().Add(identity.ttl), Access: domain.SessionReadOnly}
+	session := domain.Session{ID: id, UserID: user.ID, DeviceID: device.ID, TokenHash: hex.EncodeToString(HashToken(token)), PasswordHash: user.PasswordHash, ExpiresAt: time.Now().UTC().Add(identity.ttl), Access: access}
 	if err := identity.store.CreateSession(session); err != nil {
 		_ = identity.store.DeleteDevice(device.ID)
 		return Login{}, err
 	}
-	return Login{User: user, DeviceID: device.ID, Token: token, ExpiresAt: session.ExpiresAt}, nil
+	return Login{User: user, DeviceID: device.ID, Token: token, ExpiresAt: session.ExpiresAt, Access: session.Access}, nil
 }
 func (identity *Identity) Authorize(token string) (domain.Device, error) {
 	device, _, err := identity.AuthorizeSession(token)
@@ -169,7 +174,23 @@ func (identity *Identity) AuthorizeSession(token string) (domain.Device, domain.
 	if err != nil {
 		return domain.Device{}, domain.Session{}, ErrUnauthorized
 	}
+	// 已有会话读取账号的最新授权，不把登录时的范围当成永久上限。
+	session.Access, err = identity.accountSessionAccess(device.AccountID)
+	if err != nil {
+		return domain.Device{}, domain.Session{}, ErrUnauthorized
+	}
 	return device, session, nil
+}
+
+func (identity *Identity) accountSessionAccess(accountID string) (domain.SessionAccess, error) {
+	account, err := identity.store.GetAccount(accountID)
+	if err != nil {
+		return domain.SessionReadOnly, err
+	}
+	if account.WebRecordWrites {
+		return domain.SessionReadWrite, nil
+	}
+	return domain.SessionReadOnly, nil
 }
 func (identity *Identity) Logout(token string) error {
 	return identity.store.DeleteSession(hex.EncodeToString(HashToken(token)))

@@ -111,13 +111,21 @@ func accountModel(record sqlgen.Account, err error) (domain.Account, error) {
 		return domain.Account{}, err
 	}
 	created, err := parseRFC3339(record.CreatedAt)
-	return domain.Account{ID: record.ID, RecoveryKeyHash: hash, CreatedAt: created, NextVersion: record.NextVersion}, err
+	return domain.Account{ID: record.ID, RecoveryKeyHash: hash, CreatedAt: created, NextVersion: record.NextVersion, WebRecordWrites: record.WebRecordWrites}, err
 }
 func (s *postgresStore) GetAccount(id string) (domain.Account, error) {
 	return accountModel(sqlgen.New(s.db.DB).GetAccount(s.ctx, id))
 }
 func (s *postgresStore) GetAccountByRecoveryKeyHash(hash []byte) (domain.Account, error) {
 	return accountModel(sqlgen.New(s.db.DB).GetAccountByRecoveryHash(s.ctx, hexHash(hash)))
+}
+
+func (s *postgresStore) SetAccountWebRecordWrites(accountID string, enabled bool) error {
+	count, err := sqlgen.New(s.db.DB).SetAccountWebRecordWrites(s.ctx, sqlgen.SetAccountWebRecordWritesParams{ID: accountID, Enabled: enabled})
+	if err == nil && count == 0 {
+		return domain.ErrNoAccount
+	}
+	return err
 }
 
 func (s *postgresStore) CountAccounts() (int, error) {
@@ -248,6 +256,15 @@ func (s *postgresStore) PushWithContext(accountID string, items []domain.PushIte
 	}
 	if _, err := sqlgen.New(tx.Tx).LockAccount(s.ctx, accountID); err != nil {
 		return nil, err
+	}
+	if context.RequireWebWrite {
+		enabled, err := sqlgen.New(tx.Tx).AccountWebRecordWrites(s.ctx, accountID)
+		if err != nil {
+			return nil, err
+		}
+		if !enabled {
+			return nil, domain.ErrWebWriteDenied
+		}
 	}
 	results := make([]domain.PushResult, 0, len(items))
 	for _, it := range items {

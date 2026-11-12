@@ -9,6 +9,17 @@ import (
 	"context"
 )
 
+const accountWebRecordWrites = `-- name: AccountWebRecordWrites :one
+SELECT web_record_writes FROM account WHERE id = $1
+`
+
+func (q *Queries) AccountWebRecordWrites(ctx context.Context, id string) (bool, error) {
+	row := q.db.QueryRowContext(ctx, accountWebRecordWrites, id)
+	var web_record_writes bool
+	err := row.Scan(&web_record_writes)
+	return web_record_writes, err
+}
+
 const countAccounts = `-- name: CountAccounts :one
 SELECT COUNT(*) FROM account
 `
@@ -43,7 +54,7 @@ func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) er
 }
 
 const getAccount = `-- name: GetAccount :one
-SELECT id, recovery_key_hash, created_at, next_version FROM account WHERE id = $1
+SELECT id, recovery_key_hash, created_at, next_version, web_record_writes FROM account WHERE id = $1
 `
 
 func (q *Queries) GetAccount(ctx context.Context, id string) (Account, error) {
@@ -54,12 +65,13 @@ func (q *Queries) GetAccount(ctx context.Context, id string) (Account, error) {
 		&i.RecoveryKeyHash,
 		&i.CreatedAt,
 		&i.NextVersion,
+		&i.WebRecordWrites,
 	)
 	return i, err
 }
 
 const getAccountByRecoveryHash = `-- name: GetAccountByRecoveryHash :one
-SELECT id, recovery_key_hash, created_at, next_version FROM account WHERE recovery_key_hash = $1
+SELECT id, recovery_key_hash, created_at, next_version, web_record_writes FROM account WHERE recovery_key_hash = $1
 `
 
 func (q *Queries) GetAccountByRecoveryHash(ctx context.Context, recoveryKeyHash string) (Account, error) {
@@ -70,6 +82,7 @@ func (q *Queries) GetAccountByRecoveryHash(ctx context.Context, recoveryKeyHash 
 		&i.RecoveryKeyHash,
 		&i.CreatedAt,
 		&i.NextVersion,
+		&i.WebRecordWrites,
 	)
 	return i, err
 }
@@ -145,4 +158,22 @@ SELECT set_config('recoow.tenant_id', $1::text, true)
 func (q *Queries) SetAccountContext(ctx context.Context, accountID string) error {
 	_, err := q.db.ExecContext(ctx, setAccountContext, accountID)
 	return err
+}
+
+const setAccountWebRecordWrites = `-- name: SetAccountWebRecordWrites :execrows
+UPDATE account SET web_record_writes = $1 WHERE id = $2
+`
+
+type SetAccountWebRecordWritesParams struct {
+	Enabled bool
+	ID      string
+}
+
+// 更新与修订提交竞争同一账号行锁，返回后旧授权不能继续提交。
+func (q *Queries) SetAccountWebRecordWrites(ctx context.Context, arg SetAccountWebRecordWritesParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setAccountWebRecordWrites, arg.Enabled, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
