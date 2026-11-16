@@ -6,6 +6,8 @@ struct CloudAccountSecurityView: View {
     @State private var identity: CloudAccountIdentity?
     @State private var supported = false
     @State private var isOwner = false
+    // 区分“账号确实未设置密码”和“身份还没读到”，避免读取失败时误显示设置/找回密码。
+    @State private var identityLoaded = false
     @State private var loading = true
     @State private var configured = false
     @State private var loadedConnectionID: String?
@@ -107,7 +109,7 @@ struct CloudAccountSecurityView: View {
                 }
             }
 
-            if configured && supported {
+            if configured && supported && identityLoaded {
                 Section {
                     if identity == nil {
                         if isOwner {
@@ -117,8 +119,9 @@ struct CloudAccountSecurityView: View {
                         }
                     } else {
                         passwordAction("修改密码", mode: .change)
+                        // 没有密码就没有可找回的东西；恢复密钥入口只在已设置密码后提供。
+                        passwordAction("找回密码", mode: .reset)
                     }
-                    passwordAction("找回密码", mode: .reset)
                 } header: { Text(text("密码与安全")) } footer: {
                     if identity == nil && !isOwner { Text(text("请在主设备设置密码")) }
                 }
@@ -244,6 +247,7 @@ struct CloudAccountSecurityView: View {
             identity = nil
             supported = false
             isOwner = false
+            identityLoaded = false
             webAccess = nil
             webAccessLoaded = false
             error = nil
@@ -272,6 +276,7 @@ struct CloudAccountSecurityView: View {
                 guard connection == config.connectionID, token == config.deviceToken, !Task.isCancelled else { return }
                 if let user, user.accountId != config.accountID { throw CloudAPIError.invalidResponse("account mismatch") }
                 identity = user
+                identityLoaded = true
                 isOwner = devices.first { $0.id == config.deviceID }?.isOwner == true
                 supported = supportsCredentials
                 let access = isOwner ? try await client.accountWebAccess() : nil

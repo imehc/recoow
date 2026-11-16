@@ -1,7 +1,7 @@
 import SwiftUI
 import RecoowAPI
 
-/// “设备管理”：查看已绑定设备、生成一次性配对码（仅主设备）、吊销设备。
+/// “设备管理”：查看已绑定设备；生成一次性配对码与吊销设备仅限主设备。
 struct CloudDeviceManagementView: View {
     @Environment(AppContainer.self) private var container
     @State private var devices: [CloudDevice] = []
@@ -52,7 +52,10 @@ struct CloudDeviceManagementView: View {
             } header: {
                 Text(AppLocalization.string("已绑定设备", language: language))
             } footer: {
-                Text(AppLocalization.format("设备数：%d｜只有主设备能签发配对码或吊销其他设备。", language: language, devices.count))
+                // 页脚是权限说明，非主设备没有管理操作，整段不出现，避免多出一段无用的说明。
+                if isOwner {
+                    Text(AppLocalization.format("设备数：%d｜只有主设备能签发配对码或吊销其他设备。", language: language, devices.count))
+                }
             }
 
             if isOwner {
@@ -141,12 +144,8 @@ struct CloudDeviceManagementView: View {
     }
 
     private func canRevoke(_ device: CloudDevice) -> Bool {
-        if device.isOwner {
-            // 主设备一般不自我吊销（会导致失去签发权），允许吊销其他主设备仅当是本机以外的。
-            return isOwner && device.id != config.deviceID
-        }
-        // 主设备可吊销任意普通设备；普通设备只能吊销自己。
-        return isOwner || device.id == config.deviceID
+        // 吊销是主设备的管理动作：非主设备不显示入口，主设备也不能吊销本机（会丢掉签发权）。
+        isOwner && device.id != config.deviceID
     }
 
     // MARK: - 动作
