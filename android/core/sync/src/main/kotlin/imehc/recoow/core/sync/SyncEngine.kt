@@ -74,6 +74,7 @@ class SyncEngine(private val credentials: CredentialStore, private val apiProvid
     }
     override suspend fun revokeDevice(id: String) = deviceOperation { connection, api ->
         require(id.isNotBlank())
+        // 非主设备只允许自吊销：登录或配对失败时回收本机刚拿到的凭据，设备管理不提供该入口。
         require(if (connection.canPair) id != connection.serverDevice else id == connection.serverDevice)
         api.delete("api/devices/" + java.net.URLEncoder.encode(id, "UTF-8"))
         if (id == connection.serverDevice) clearConnection()

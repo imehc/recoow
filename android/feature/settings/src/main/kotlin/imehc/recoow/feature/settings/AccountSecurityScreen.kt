@@ -57,15 +57,17 @@ fun AccountSecurityScreen(account: AccountSecurityState, sync: SyncState,
             RecoowPage(stringResource(R.string.account_password_security), navigationIcon = { AccountBackButton(panelBack) },
                 contentSpacing = RecoowLayout.compactSectionGap) {
                 item("password") { RecoowGroup {
-                    if (account.username != null) RecoowRow(stringResource(R.string.account_change_password),
-                        showChevron = true, onClick = { editing = PasswordMode.CHANGE }, modifier = Modifier.testTag("account_change_password"))
-                    else if (connection?.canPair == true) RecoowRow(stringResource(R.string.account_set_password),
+                    if (account.username != null) {
+                        RecoowRow(stringResource(R.string.account_change_password),
+                            showChevron = true, onClick = { editing = PasswordMode.CHANGE }, modifier = Modifier.testTag("account_change_password"))
+                        RecoowDivider()
+                        // 未设置密码时没有可找回的凭据，恢复密钥入口只在已设置密码后提供。
+                        RecoowRow(stringResource(R.string.account_reset_password), showChevron = true,
+                            onClick = { editing = PasswordMode.RESET }, modifier = Modifier.testTag("account_reset_password"))
+                    } else if (connection?.canPair == true) RecoowRow(stringResource(R.string.account_set_password),
                         trailingText = stringResource(R.string.account_unset_short), showChevron = true,
                         onClick = { editing = PasswordMode.SET }, modifier = Modifier.testTag("account_set_password"))
                     else RecoowRow(stringResource(R.string.account_password), subtitle = stringResource(R.string.account_owner_set))
-                    RecoowDivider()
-                    RecoowRow(stringResource(R.string.account_reset_password), showChevron = true,
-                        onClick = { editing = PasswordMode.RESET }, modifier = Modifier.testTag("account_reset_password"))
                 } }
                 item("hint") { SettingsFooter(stringResource(R.string.account_password_hint)) }
             }

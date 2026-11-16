@@ -82,9 +82,11 @@ import imehc.recoow.core.domain.sync.*
         } }, contentSpacing = RecoowLayout.compactSectionGap) {
         item("devices") { SettingsSection(stringResource(R.string.sync_section_devices), state.devices.size.toString()) { RecoowGroup {
             if (state.devices.isEmpty()) RecoowEmptyState(stringResource(R.string.settings_no_devices), icon = DesignR.drawable.ic_setting_sync)
+            // 吊销是主设备的管理动作，非主设备只看列表，连本机也不提供移除入口。
+            val canManage = state.connection?.canPair == true
             state.devices.forEachIndexed { index, device ->
                 val connection = state.connection
-                val revocable = connection != null && if (connection.canPair) device.id != connection.serverDeviceId else device.id == connection.serverDeviceId
+                val revocable = canManage && device.id != connection?.serverDeviceId
                 val actions = if (revocable) listOf(RecoowAction(stringResource(R.string.sync_revoke), enabled = !state.running) { revoke = device.id }) else emptyList()
                 RecoowRow(device.name, subtitle = listOfNotNull(stringResource(if (device.owner) R.string.sync_owner else R.string.sync_member),
                     if (device.id == connection?.serverDeviceId) stringResource(R.string.sync_this_device) else null, device.lastSeenAt.takeIf { it.isNotBlank() }).joinToString(" · "),
