@@ -183,7 +183,8 @@ func (s *Server) handleDeleteDevice(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "device not found")
 		return
 	}
-	// 主设备可吊销任意设备；非主设备只能吊销自己。
+	// 主设备可吊销任意设备；非主设备只能吊销自己，且仅用于客户端回滚刚签发的本机凭据
+	//（如登录或配对中途失败），设备管理界面不提供该入口。
 	if target.AccountID != me.AccountID {
 		writeError(w, http.StatusForbidden, "forbidden")
 		return
