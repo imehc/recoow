@@ -120,7 +120,7 @@ nonisolated enum SyncSnapshotRebase {
         // 之后的编辑同样基于重基后的可见记录进行。
         let entity = try SyncEntityCatalog.entity(update.table)
         let fields = entity.fields.filter { !$0.binary && !$0.derived && !["id", "server_version"].contains($0.name) && rebased[$0.name] != nil }
-        let values = try fields.map { field -> DatabaseValue in
+        let values = fields.map { field -> DatabaseValue in
             let value = rebased[field.name]!
             if value is NSNull { return .null }
             if field.type == .text { return (value as! String).databaseValue }

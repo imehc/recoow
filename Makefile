@@ -33,7 +33,7 @@ generate-clients: generate-ios-api generate-android-api generate-web-api generat
 
 # 生成 iOS 的 Swift API 包。
 generate-ios-api: check-openapi generate-api-field-names
-	$(OPENAPI_GENERATOR) generate -i $(OPENAPI_SPEC) -g swift5 -o generated/ios-api --type-mappings DateTime=String,date-time=String --model-name-prefix RWAPI --additional-properties projectName=RecoowAPI,library=urlsession,responseAs=AsyncAwait,useSPMFileStructure=true,useBacktickEscapes=true
+	$(OPENAPI_GENERATOR) generate -i $(OPENAPI_SPEC) -g swift6 -t ios/build-tools/openapi-templates -o generated/ios-api --type-mappings DateTime=String,date-time=String --model-name-prefix RWAPI --additional-properties projectName=RecoowAPI,library=urlsession,responseAs=AsyncAwait,useSPMFileStructure=true,useBacktickEscapes=true
 
 # 生成 Android 的 Kotlin 模型及 Retrofit 接口。
 generate-android-api: check-openapi generate-api-field-names

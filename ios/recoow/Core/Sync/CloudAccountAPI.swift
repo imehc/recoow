@@ -17,7 +17,7 @@ enum CloudAccountValidation {
         return nil
     }
 
-    static func endpoint(_ value: String) throws -> String {
+    nonisolated static func endpoint(_ value: String) throws -> String {
         let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard var url = URLComponents(string: value), let host = url.host, !host.isEmpty,
               url.user == nil, url.password == nil, url.query == nil, url.fragment == nil else {

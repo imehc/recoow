@@ -1,0 +1,21 @@
+// swift-tools-version:6.0
+
+import PackageDescription
+
+let package = Package(
+    name: "{{projectName}}",
+    // iOS 与应用保持一致；其他平台遵循当前工具链支持的最低版本。
+    platforms: [
+        .iOS(.v18),
+        .macOS(.v10_15),
+        .tvOS(.v15),
+        .watchOS(.v9),
+    ],
+    products: [
+        .library(name: "{{projectName}}", targets: ["{{projectName}}"]),
+    ],
+    targets: [
+        .target(name: "{{projectName}}", path: "Sources/{{projectName}}"),
+    ],
+    swiftLanguageModes: [.v6]
+)

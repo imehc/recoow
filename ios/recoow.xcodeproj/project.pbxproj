@@ -7,12 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
- A85000000000000000000001 /* RecoowAPI in Frameworks */ = {isa = PBXBuildFile; productRef = A85000000000000000000002 /* RecoowAPI */; };
 		3ABF80402FE16600003C5066 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 3ABF80412FE16600003C5066 /* GRDB */; };
 		3ABF805A2FE90000003C5066 /* recoowWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3ABF80502FE90000003C5066 /* recoowWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		3ABF80602FEA0000003C5066 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3ABF805F2FEA0000003C5066 /* AppIntents.framework */; };
 		3ABF80612FEF0000003C5066 /* Lightbox in Frameworks */ = {isa = PBXBuildFile; productRef = 3ABF80622FEF0000003C5066 /* Lightbox */; };
 		A83400000000000000000001 /* SyncEntityCatalog.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83400000000000000000002 /* SyncEntityCatalog.generated.swift */; };
+		A85000000000000000000001 /* RecoowAPI in Frameworks */ = {isa = PBXBuildFile; productRef = A85000000000000000000002 /* RecoowAPI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,12 +47,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		A83700000000000000000001 /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = SOURCE_ROOT; };
 		3ABF802C2FE1551D003C5066 /* recoow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = recoow.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3ABF80502FE90000003C5066 /* recoowWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = recoowWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		3ABF805F2FEA0000003C5066 /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
 		A83400000000000000000002 /* SyncEntityCatalog.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SyncEntityCatalog.generated.swift; path = recoow/Core/Sync/SyncEntityCatalog.generated.swift; sourceTree = SOURCE_ROOT; };
 		A83600000000000000000001 /* recoowTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = recoowTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A83700000000000000000001 /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -104,7 +104,7 @@
 			files = (
 				3ABF80602FEA0000003C5066 /* AppIntents.framework in Frameworks */,
 				3ABF80612FEF0000003C5066 /* Lightbox in Frameworks */,
- A85000000000000000000001 /* RecoowAPI in Frameworks */,
+				A85000000000000000000001 /* RecoowAPI in Frameworks */,
 				3ABF80402FE16600003C5066 /* GRDB in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -182,7 +182,7 @@
 			packageProductDependencies = (
 				3ABF80412FE16600003C5066 /* GRDB */,
 				3ABF80622FEF0000003C5066 /* Lightbox */,
- A85000000000000000000002 /* RecoowAPI */,
+				A85000000000000000000002 /* RecoowAPI */,
 			);
 			productName = recoow;
 			productReference = 3ABF802C2FE1551D003C5066 /* recoow.app */;
@@ -261,7 +261,7 @@
 			packageReferences = (
 				3ABF80422FE16600003C5066 /* XCRemoteSwiftPackageReference "GRDB" */,
 				3ABF80632FEF0000003C5066 /* XCRemoteSwiftPackageReference "Lightbox" */,
- A85000000000000000000003 /* XCLocalSwiftPackageReference "RecoowAPI" */,
+				A85000000000000000000003 /* XCLocalSwiftPackageReference "../generated/ios-api" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3ABF802D2FE1551D003C5066 /* Products */;
@@ -695,6 +695,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		A85000000000000000000003 /* XCLocalSwiftPackageReference "../generated/ios-api" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../generated/ios-api";
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		3ABF80422FE16600003C5066 /* XCRemoteSwiftPackageReference "GRDB" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -714,12 +721,7 @@
 		};
 /* End XCRemoteSwiftPackageReference section */
 
-/* Begin XCLocalSwiftPackageReference section */
- A85000000000000000000003 /* RecoowAPI */ = {isa = XCLocalSwiftPackageReference; relativePath = "../generated/ios-api"; };
-/* End XCLocalSwiftPackageReference section */
-
 /* Begin XCSwiftPackageProductDependency section */
- A85000000000000000000002 /* RecoowAPI */ = {isa = XCSwiftPackageProductDependency; package = A85000000000000000000003; productName = RecoowAPI; };
 		3ABF80412FE16600003C5066 /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 3ABF80422FE16600003C5066 /* XCRemoteSwiftPackageReference "GRDB" */;
@@ -729,6 +731,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3ABF80632FEF0000003C5066 /* XCRemoteSwiftPackageReference "Lightbox" */;
 			productName = Lightbox;
+		};
+		A85000000000000000000002 /* RecoowAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A85000000000000000000003 /* XCLocalSwiftPackageReference "../generated/ios-api" */;
+			productName = RecoowAPI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

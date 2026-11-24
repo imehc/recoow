@@ -28,6 +28,10 @@ make decision-models-ios
 
 工程通过 SwiftPM 引用远程包（`GRDB.swift`、`Lightbox` 等），网络不佳或本地缓存损坏时，`xcodebuild` 解析依赖会长时间卡住甚至失败。
 
+`make generate-ios-api` 使用固定版本的 OpenAPI Generator 的 `swift6` 生成器，生成包采用 Swift 6 语言模式。`ios/build-tools/openapi-templates/Package.swift.mustache` 使 iOS 最低版本与应用保持一致，并使用当前工具链支持的平台版本；URLSession 与模型实现沿用上游模板。不要直接修改 `generated/ios-api`。切换生成器时应重新生成整个目录，避免旧基础设施文件混入新包。
+
+应用复用生成模型，账号与同步请求由 `ios/recoow/Core/Sync/RecoowAPIClient.swift` 发送。升级生成器时应检查模型编码、解码及未知字段保留的兼容性；生成 SDK 的回调接口与应用网络客户端分别维护。
+
 ## 已有完整缓存时跳过远程更新
 
 依赖已下载且本地版本引用完整时，GitHub 连接超时或出现 HTTP/2 错误，可以使用已有缓存解析依赖：
