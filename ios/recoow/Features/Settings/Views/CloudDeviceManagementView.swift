@@ -121,8 +121,8 @@ struct CloudDeviceManagementView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                if device.lastSeenAt.isEmpty == false {
-                    Text(AppLocalization.format("最近活跃：%@", language: language, device.lastSeenAt))
+                if let lastSeen = lastSeenText(device) {
+                    Text(AppLocalization.format("最近活跃：%@", language: language, lastSeen))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -141,6 +141,14 @@ struct CloudDeviceManagementView: View {
             }
         }
         .padding(.vertical, 2)
+    }
+
+    /// 接口返回的是 RFC 3339 原文，展示前换成当前语言的本地时间；
+    /// 解析失败时退回原文，保留“有这台设备活跃过”的信息而不是整行消失。
+    private func lastSeenText(_ device: CloudDevice) -> String? {
+        guard device.lastSeenAt.isEmpty == false else { return nil }
+        return AppFormatters.dateTime(iso8601: device.lastSeenAt, locale: language.locale)
+            ?? device.lastSeenAt
     }
 
     private func canRevoke(_ device: CloudDevice) -> Bool {

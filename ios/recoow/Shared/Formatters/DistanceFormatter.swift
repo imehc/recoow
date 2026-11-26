@@ -58,6 +58,22 @@ enum AppFormatters {
         )
     }
 
+    /// 服务端时间统一按 RFC 3339（UTC）返回，展示时换成用户所选语言的本地时间。
+    /// 解析失败返回 nil，由调用方保留原始文本，避免把未识别的格式静默改写成错误时间。
+    static func dateTime(iso8601 value: String, locale: Locale = AppLocalization.currentLocale) -> String? {
+        guard let date = iso8601Date(value) else { return nil }
+        return date.formatted(
+            Date.FormatStyle(date: .abbreviated, time: .shortened)
+                .locale(locale)
+        )
+    }
+
+    /// 秒级与带小数秒两种写法并存：标准样式不接受小数秒，因此在第二次解析时显式开启。
+    private static func iso8601Date(_ value: String) -> Date? {
+        if let date = try? Date(value, strategy: .iso8601) { return date }
+        return try? Date(value, strategy: Date.ISO8601FormatStyle(includingFractionalSeconds: true))
+    }
+
     static func money(cents: Int64) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
