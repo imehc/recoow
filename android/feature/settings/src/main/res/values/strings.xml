@@ -68,6 +68,7 @@
     <string name="sync_owner">Owner device</string>
     <string name="sync_member">Paired device</string>
     <string name="sync_this_device">This device</string>
+    <string name="sync_last_seen">Last active: %1$s</string>
     <string name="sync_revoke">Revoke device</string>
     <string name="sync_revoke_hint">This device will need to pair again before it can sync.</string>
     <string name="sync_preparing">Checking server…</string>

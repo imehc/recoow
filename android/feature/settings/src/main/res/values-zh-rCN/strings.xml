@@ -68,6 +68,7 @@
     <string name="sync_owner">主设备</string>
     <string name="sync_member">配对设备</string>
     <string name="sync_this_device">当前设备</string>
+    <string name="sync_last_seen">最近活跃：%1$s</string>
     <string name="sync_revoke">吊销设备</string>
     <string name="sync_revoke_hint">吊销后此设备将无法继续同步，需要重新配对。</string>
     <string name="sync_preparing">正在检查服务器…</string>

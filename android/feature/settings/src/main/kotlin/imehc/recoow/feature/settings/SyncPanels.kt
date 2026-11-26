@@ -14,6 +14,7 @@ import androidx.compose.ui.res.stringResource
 import imehc.recoow.core.designsystem.*
 import imehc.recoow.core.designsystem.R as DesignR
 import imehc.recoow.core.domain.sync.*
+import java.time.Instant
 
 @Composable internal fun syncStatusText(state: SyncState): String = stringResource(when {
     state.running -> R.string.account_sync_running
@@ -89,7 +90,7 @@ import imehc.recoow.core.domain.sync.*
                 val revocable = canManage && device.id != connection?.serverDeviceId
                 val actions = if (revocable) listOf(RecoowAction(stringResource(R.string.sync_revoke), enabled = !state.running) { revoke = device.id }) else emptyList()
                 RecoowRow(device.name, subtitle = listOfNotNull(stringResource(if (device.owner) R.string.sync_owner else R.string.sync_member),
-                    if (device.id == connection?.serverDeviceId) stringResource(R.string.sync_this_device) else null, device.lastSeenAt.takeIf { it.isNotBlank() }).joinToString(" · "),
+                    if (device.id == connection?.serverDeviceId) stringResource(R.string.sync_this_device) else null, deviceLastSeenText(device.lastSeenAt)).joinToString(" · "),
                     icon = { SettingsIcon(DesignR.drawable.ic_setting_sync) }, trailing = if (actions.isNotEmpty()) ({ RecoowOverflowMenu(actions) }) else null)
                 if (index < state.devices.lastIndex) RecoowDivider(RecoowLayout.dividerInset)
             }
@@ -102,6 +103,13 @@ import imehc.recoow.core.domain.sync.*
         text = { Text(stringResource(R.string.sync_revoke_hint)) }, confirmButton = { TextButton(onClick = { revoke = null; onRevoke(id) }, enabled = !state.running) {
             Text(stringResource(R.string.sync_revoke), color = MaterialTheme.colorScheme.error)
         } }, dismissButton = { TextButton(onClick = { revoke = null }) { Text(stringResource(R.string.cancel)) } }) }
+}
+
+/** 设备时间是服务端的 RFC 3339 原文：能解析就按系统语言显示，解析失败保留原文，避免丢掉时间信息。 */
+@Composable private fun deviceLastSeenText(value: String): String? {
+    if (value.isBlank()) return null
+    val timestamp = runCatching { Instant.parse(value).toEpochMilli() }.getOrNull() ?: return value
+    return stringResource(R.string.sync_last_seen, recordDateTime(timestamp))
 }
 
 @Composable internal fun SyncConflictsScreen(state: SyncState, onBack: () -> Unit, onResolve: (RecordConflict, Boolean) -> Unit) {
